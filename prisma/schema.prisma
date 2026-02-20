@@ -1,0 +1,128 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Term {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  definition  String
+  background  String?
+  features    String?
+  structure   String?
+  significance String?
+  version     String?
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+
+  @@map("terms")
+}
+
+model Standard {
+  id        String   @id @default(cuid())
+  title     String
+  code      String
+  year      Int
+  content   String?
+  version   String?
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@map("standards")
+}
+
+model Brand {
+  id                String   @id @default(cuid())
+  name              String
+  positioning       String?
+  materialSystem    String?
+  productStructure  String?
+  priceRange        String?
+  targetAudience    String?
+  businessModel    String?
+  contactUrl        String?  // 联系企业
+  certUrl           String?  // 认证资质页
+  updatedAt        DateTime @updatedAt
+  createdAt        DateTime @default(now())
+
+  @@map("brands")
+}
+
+model IndustryData {
+  id          String   @id @default(cuid())
+  title       String
+  source      String?
+  methodology String?
+  content     String?
+  year        Int?
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+
+  @@map("industry_data")
+}
+
+model Member {
+  id              String   @id @default(cuid())
+  name            String?
+  email           String   @unique
+  role            String?  // SUPER_ADMIN=主账号, ADMIN=分管理员, 空或MEMBER=普通会员
+  membershipLevel String?
+  passwordHash    String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("members")
+}
+
+// 大类：主账号后台可修改 title/desc，用于导航与首页
+model Category {
+  id                String   @id @default(cuid())
+  href              String   @unique // 如 /news, /market
+  title             String   // 显示名称，主账号可改
+  desc              String?
+  definitionText   String?  // 栏目定义说明，首屏第一段
+  versionLabel      String?  // 如 2026版
+  versionYear       Int?     // 如 2026
+  relatedTermSlugs  String?  // JSON 数组词条 slug，底部相关词条
+  sortOrder         Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  subcategories     SubCategory[]
+  faqs              CategoryFaq[]
+
+  @@map("categories")
+}
+
+// 小类：主账号后台可修改 label；groupLabel 用于栏目首页分组展示
+model SubCategory {
+  id         String   @id @default(cuid())
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  href       String   // 如 /news/trends
+  label      String   // 显示名称，主账号可改
+  groupLabel String?  // 分组名，如 行业活动、材料标准
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("sub_categories")
+}
+
+// 栏目首页 FAQ，便于 AI 抓取
+model CategoryFaq {
+  id         String   @id @default(cuid())
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  question   String
+  answer     String
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("category_faqs")
+}

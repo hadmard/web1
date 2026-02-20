@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240" fill="none" aria-hidden="true">
+  <defs>
+    <linearGradient id="woodGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="hsl(28,35%,92%)"/>
+      <stop offset="100%" stop-color="hsl(32,25%,88%)"/>
+    </linearGradient>
+    <linearGradient id="accentLine" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="hsl(168,45%,45%)"/>
+      <stop offset="100%" stop-color="hsl(28,55%,50%)"/>
+    </linearGradient>
+  </defs>
+  <!-- Abstract layers: wood / knowledge -->
+  <rect x="40" y="40" width="120" height="160" rx="8" fill="url(#woodGrad)" opacity="0.9"/>
+  <rect x="140" y="60" width="120" height="140" rx="8" fill="url(#woodGrad)" opacity="0.7"/>
+  <rect x="240" y="80" width="120" height="120" rx="8" fill="url(#woodGrad)" opacity="0.85"/>
+  <!-- Grain lines -->
+  <path d="M60 70 L140 70 M60 100 L130 100 M60 130 L140 130" stroke="hsl(28,20%,75%)" stroke-width="0.5" opacity="0.6"/>
+  <path d="M160 90 L260 90 M160 120 L250 120" stroke="hsl(28,20%,75%)" stroke-width="0.5" opacity="0.5"/>
+  <!-- Accent bar -->
+  <rect x="40" y="200" width="320" height="4" rx="2" fill="url(#accentLine)" opacity="0.8"/>
+</svg>
