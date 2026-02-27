@@ -29,6 +29,7 @@ export function Header({
   const pathname = usePathname();
   const [hovered, setHovered] = useState<string | null>(null);
   const [me, setMe] = useState<MeState | null>(initialMe);
+  const [readingProgress, setReadingProgress] = useState(0);
   const [memberGreeting, setMemberGreeting] = useState<string | null>(
     initialMe ? `${initialMe.name}，你好` : null
   );
@@ -76,6 +77,49 @@ export function Header({
     };
   }, [loadMe]);
 
+  useEffect(() => {
+    const isNewsReadingPage = pathname.startsWith("/news/") && pathname !== "/news/all";
+    if (!isNewsReadingPage) {
+      setReadingProgress(0);
+      return;
+    }
+
+    let rafId = 0;
+
+    const updateProgress = () => {
+      const articleEl = document.getElementById("news-reading-article");
+      if (!articleEl) {
+        setReadingProgress(0);
+        return;
+      }
+
+      const rect = articleEl.getBoundingClientRect();
+      const startY = window.scrollY + rect.top;
+      const maxScrollable = Math.max(articleEl.scrollHeight - window.innerHeight, 1);
+      const raw = (window.scrollY - startY) / maxScrollable;
+      const next = Math.max(0, Math.min(1, raw));
+      setReadingProgress(next);
+    };
+
+    const onScrollOrResize = () => {
+      if (rafId) return;
+      rafId = window.requestAnimationFrame(() => {
+        rafId = 0;
+        updateProgress();
+      });
+    };
+
+    updateProgress();
+    window.addEventListener("scroll", onScrollOrResize, { passive: true });
+    window.addEventListener("resize", onScrollOrResize);
+
+    return () => {
+      if (rafId) window.cancelAnimationFrame(rafId);
+      window.removeEventListener("scroll", onScrollOrResize);
+      window.removeEventListener("resize", onScrollOrResize);
+    };
+  }, [pathname]);
+
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
     setMe(null);
@@ -87,7 +131,7 @@ export function Header({
 
   return (
     <header className="sticky top-3 z-50 px-3 sm:px-5">
-      <div className="glass-card max-w-6xl mx-auto h-14 sm:h-16 px-3 sm:px-5 flex items-center justify-between">
+      <div className="glass-card relative overflow-hidden max-w-6xl mx-auto h-14 sm:h-16 px-3 sm:px-5 flex items-center justify-between">
         <Link
           href="/"
           className="site-wordmark font-serif font-semibold text-[17px] sm:text-[19px] tracking-[0.08em] hover:opacity-95 transition-opacity"
@@ -198,6 +242,15 @@ export function Header({
             );
           })}
         </nav>
+
+        {pathname.startsWith("/news/") && pathname !== "/news/all" && (
+          <div className="pointer-events-none absolute left-0 right-0 bottom-0 h-1 bg-transparent">
+            <div
+              className="h-full bg-[var(--color-accent)] origin-left transition-transform duration-100 ease-linear"
+              style={{ transform: `scaleX(${readingProgress})` }}
+            />
+          </div>
+        )}
       </div>
     </header>
   );

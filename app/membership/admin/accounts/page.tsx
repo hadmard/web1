@@ -6,6 +6,7 @@ type MemberRow = {
   id: string;
   account: string;
   name: string | null;
+  passwordPlaintext: string | null;
   role: string | null;
   memberType: string;
   canManageMembers: boolean;
@@ -276,6 +277,7 @@ export default function AdminAccountsPage() {
             <thead>
               <tr className="border-b border-border">
                 <th className="text-left py-2">账号</th>
+                <th className="text-left py-2">密码</th>
                 <th className="text-left py-2">角色</th>
                 <th className="text-left py-2">会员类型</th>
                 <th className="text-left py-2">操作</th>
@@ -288,27 +290,28 @@ export default function AdminAccountsPage() {
                     <div className="text-primary">{m.account}</div>
                     <div className="text-xs text-muted">{m.name || "未命名"}</div>
                   </td>
+                  <td className="py-2 pr-4 text-primary">{m.passwordPlaintext || "未设置"}</td>
                   <td className="py-2 pr-4 text-muted">{m.role === "SUPER_ADMIN" ? "主管理员" : m.role === "ADMIN" ? "子管理员" : "会员"}</td>
                   <td className="py-2 pr-4 text-muted">{m.memberType}</td>
                   <td className="py-2 pr-4">
-                    {m.role !== "SUPER_ADMIN" && (
-                      <div className="flex gap-3">
-                        <button
-                          className="text-xs text-accent hover:underline"
-                          type="button"
-                          onClick={() => {
-                            const password = prompt("输入新密码（留空取消）");
-                            if (!password) return;
-                            updateMember(m.id, { password });
-                          }}
-                        >
-                          重置密码
-                        </button>
+                    <div className="flex gap-3">
+                      <button
+                        className="text-xs text-accent hover:underline"
+                        type="button"
+                        onClick={() => {
+                          const password = prompt("输入新密码（留空取消）");
+                          if (!password) return;
+                          updateMember(m.id, { password });
+                        }}
+                      >
+                        修改密码
+                      </button>
+                      {m.role !== "SUPER_ADMIN" && (
                         <button className="text-xs text-red-600 hover:underline" type="button" onClick={() => removeMember(m.id)}>
                           删除
                         </button>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

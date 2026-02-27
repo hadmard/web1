@@ -42,6 +42,7 @@ export async function PATCH(
   const data: {
     name?: string | null;
     passwordHash?: string;
+    passwordPlaintext?: string;
     membershipLevel?: string;
     memberType?: string;
     memberTypeExpiresAt?: Date | null;
@@ -60,6 +61,7 @@ export async function PATCH(
   if (typeof name === "string") data.name = name.trim() || null;
   if (typeof password === "string" && password.length > 0) {
     data.passwordHash = await bcrypt.hash(password, 10);
+    data.passwordPlaintext = password;
   }
   if (typeof memberType === "string" && ["enterprise_basic", "personal", "enterprise_advanced"].includes(memberType)) {
     data.memberType = memberType;
@@ -103,6 +105,7 @@ export async function PATCH(
       id: true,
       email: true,
       name: true,
+      passwordPlaintext: true,
       role: true,
       memberType: true,
       memberTypeExpiresAt: true,

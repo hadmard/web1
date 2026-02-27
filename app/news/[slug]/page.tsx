@@ -5,7 +5,6 @@ import { prisma } from "@/lib/prisma";
 import { JsonLd } from "@/components/JsonLd";
 import { previewText } from "@/lib/text";
 import { RichContent } from "@/components/RichContent";
-import { ReadingProgressBar } from "@/components/ReadingProgressBar";
 
 type Props = { params: Promise<{ slug: string }> };
 const NEWS_SUB_SLUGS = new Set(["trends", "enterprise", "tech", "events"]);
@@ -91,11 +90,9 @@ export default async function ArticlePage({ params }: Props) {
   };
 
   return (
-    <>
-      <ReadingProgressBar targetId="news-reading-article" />
-      <article id="news-reading-article" className="max-w-3xl mx-auto px-4 py-10">
-        <JsonLd data={articleSchema} />
-        <JsonLd data={breadcrumbSchema} />
+    <article id="news-reading-article" className="max-w-3xl mx-auto px-4 py-10">
+      <JsonLd data={articleSchema} />
+      <JsonLd data={breadcrumbSchema} />
 
         <nav className="mb-6 text-sm text-muted" aria-label="面包屑">
           <Link href="/" className="hover:text-accent">首页</Link>
@@ -127,7 +124,6 @@ export default async function ArticlePage({ params }: Props) {
           </section>
         )}
         {article.versionLabel && <p className="mt-6 text-xs text-muted">版本：{article.versionLabel}</p>}
-      </article>
-    </>
+    </article>
   );
 }
