@@ -34,14 +34,6 @@ const config: Config = {
         semibold: "600",
         bold: "700",
       },
-      backgroundImage: {
-        "gradient-accent": "linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-teal) 100%)",
-        "gradient-hero": "var(--gradient-hero)",
-      },
-      boxShadow: {
-        glow: "var(--glow-amber)",
-        "glow-teal": "var(--glow-teal)",
-      },
       transitionDuration: { 200: "200ms", 300: "300ms" },
       transitionProperty: { smooth: "transform, opacity, box-shadow, border-color" },
     },

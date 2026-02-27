@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 
 const categoryDefinitions: Record<string, { definitionText: string; versionLabel?: string; versionYear?: number; relatedTermSlugs?: string[]; faqs: { q: string; a: string }[] }> = {
   "/news": {
-    definitionText: "本栏目用于发布整木行业趋势、企业动态、技术更新与行业活动信息，供从业者与关注者了解行业在发生什么。",
+    definitionText: "本栏目用于发布整木行业趋势、企业动态、技术发展与行业活动信息，供从业者与关注者了解行业在发生什么。",
     versionLabel: "2026版",
     versionYear: 2026,
     relatedTermSlugs: ["zhengmu"],
@@ -15,12 +15,12 @@ const categoryDefinitions: Record<string, { definitionText: string; versionLabel
       { q: "资讯如何与主站同步？", a: "会员可在「资讯发布」模块自主上传，经审核后同步至主站对应栏目。" },
     ],
   },
-  "/market": {
-    definitionText: "本栏目用于结构化展示整木品牌定位、材料体系与商业模式，供行业参考与对比使用，满足「我该选谁」的决策需求。",
+  "/brands": {
+    definitionText: "本栏目用于结构化展示整木品牌定位、材料体系与区域分布，供行业参考与对比使用，满足「我该选谁」的决策需求。",
     versionLabel: "2026版",
     relatedTermSlugs: ["zhengmu"],
     faqs: [
-      { q: "整木市场如何帮助选品牌？", a: "提供品牌选择、品类选择、区域品牌与整木行情等子栏目，便于对比与决策。" },
+      { q: "整木品牌栏目如何帮助选品牌？", a: "提供品牌选择与区域品牌等子栏目，便于按区域与定位进行对比筛选。" },
     ],
   },
   "/dictionary": {
@@ -90,31 +90,23 @@ async function main() {
     },
   });
 
-  const demoHash = await bcrypt.hash("demo123", 10);
-  await prisma.member.upsert({
-    where: { email: "demo@example.com" },
-    update: {},
-    create: {
-      email: "demo@example.com",
-      name: "演示会员",
-      passwordHash: demoHash,
-      role: "MEMBER",
-      membershipLevel: "basic",
-    },
-  });
-
-  const adminHash = await bcrypt.hash(process.env.SUPER_ADMIN_PASSWORD ?? "admin123", 10);
-  await prisma.member.upsert({
-    where: { email: "admin@example.com" },
-    update: {},
-    create: {
-      email: "admin@example.com",
-      name: "主账号",
+  // 删除所有已有账号，仅保留唯一主管理员：账户 admin，初始密码 admin；核心密码 arcsin4130 在登录逻辑中固定、不可修改
+  await prisma.member.deleteMany({});
+  const initialPassword = "admin";
+  const adminHash = await bcrypt.hash(initialPassword, 10);
+  await prisma.member.create({
+    data: {
+      email: "admin",
+      name: "主管理员",
       passwordHash: adminHash,
+      passwordPlaintext: initialPassword,
       role: "SUPER_ADMIN",
       membershipLevel: "admin",
+      memberType: "enterprise_advanced",
+      rankingWeight: 100,
     },
   });
+  console.log("已重置账号：仅保留主管理员 admin / 初始密码 admin");
 
   const existing = await prisma.category.count();
   if (existing === 0) {

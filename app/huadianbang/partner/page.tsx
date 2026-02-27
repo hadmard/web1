@@ -1,0 +1,41 @@
+import Link from "next/link";
+import { JsonLd } from "@/components/JsonLd";
+import { ENGINEER_CATEGORY_LABELS, HUADIAN_DEFINITION } from "@/lib/huadianbang";
+
+export default function HuadianPartnerPage() {
+  return (
+    <main className="max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-12">
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "CollectionPage",
+          name: "华点榜配套商推荐",
+          description: HUADIAN_DEFINITION,
+          url: "/huadianbang/partner",
+        }}
+      />
+
+      <section className="glass-panel p-6 sm:p-8">
+        <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-primary">配套商推荐</h1>
+        <p className="mt-3 text-sm text-muted">{HUADIAN_DEFINITION}</p>
+      </section>
+
+      <section className="mt-8 glass-panel p-6">
+        <h2 className="text-lg font-semibold text-primary">分类列表</h2>
+        <div className="mt-4 grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {Object.entries(ENGINEER_CATEGORY_LABELS).map(([key, label]) => (
+            <Link
+              key={key}
+              href={`/huadianbang/partner/${key}`}
+              className="rounded-xl border border-border bg-surface-elevated p-4 hover:border-accent/40"
+            >
+              <h3 className="text-base font-semibold text-primary">{label}</h3>
+              <p className="mt-2 text-sm text-muted">查看该分类下的配套商推荐与详情页。</p>
+            </Link>
+          ))}
+        </div>
+      </section>
+    </main>
+  );
+}
+

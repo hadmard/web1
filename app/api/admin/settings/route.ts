@@ -1,0 +1,109 @@
+﻿import { NextRequest, NextResponse } from "next/server";
+import { getSession } from "@/lib/session";
+import { prisma } from "@/lib/prisma";
+import { APP_SETTING_KEYS } from "@/lib/app-settings";
+
+function isSuperAdmin(session: { role: string | null } | null) {
+  return session?.role === "SUPER_ADMIN";
+}
+
+export async function GET() {
+  const session = await getSession();
+  if (!session || !isSuperAdmin(session)) {
+    return NextResponse.json({ error: "需要主管理员权限" }, { status: 403 });
+  }
+
+  try {
+    const rows = await prisma.appSetting.findMany({
+      where: {
+        key: {
+          in: [
+            APP_SETTING_KEYS.GEMINI_API_KEY,
+            APP_SETTING_KEYS.CONTENT_REVIEW_REQUIRED,
+            APP_SETTING_KEYS.MEMBER_DOWNLOAD_STANDARD_ENABLED,
+            APP_SETTING_KEYS.MEMBER_DOWNLOAD_REPORT_ENABLED,
+          ],
+        },
+      },
+    });
+
+    const map = new Map(rows.map((r) => [r.key, r.value]));
+
+    return NextResponse.json({
+      hasGeminiApiKey: !!map.get(APP_SETTING_KEYS.GEMINI_API_KEY),
+      contentReviewRequired: map.get(APP_SETTING_KEYS.CONTENT_REVIEW_REQUIRED) !== "false",
+      memberDownloadStandardEnabled:
+        map.get(APP_SETTING_KEYS.MEMBER_DOWNLOAD_STANDARD_ENABLED) !== "false",
+      memberDownloadReportEnabled:
+        map.get(APP_SETTING_KEYS.MEMBER_DOWNLOAD_REPORT_ENABLED) !== "false",
+    });
+  } catch (e) {
+    const msg =
+      process.env.NODE_ENV === "development" && e instanceof Error
+        ? e.message
+        : "读取设置失败";
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  const session = await getSession();
+  if (!session || !isSuperAdmin(session)) {
+    return NextResponse.json({ error: "需要主管理员权限" }, { status: 403 });
+  }
+
+  try {
+    const body = await request.json().catch(() => ({}));
+    const updates: Array<{ key: string; value: string }> = [];
+
+    if (typeof body.geminiApiKey === "string") {
+      const value = body.geminiApiKey.trim();
+      if (!value) {
+        return NextResponse.json({ error: "请输入 Gemini API Key" }, { status: 400 });
+      }
+      updates.push({ key: APP_SETTING_KEYS.GEMINI_API_KEY, value });
+    }
+
+    if (typeof body.memberDownloadStandardEnabled === "boolean") {
+      updates.push({
+        key: APP_SETTING_KEYS.MEMBER_DOWNLOAD_STANDARD_ENABLED,
+        value: body.memberDownloadStandardEnabled ? "true" : "false",
+      });
+    }
+    if (typeof body.contentReviewRequired === "boolean") {
+      updates.push({
+        key: APP_SETTING_KEYS.CONTENT_REVIEW_REQUIRED,
+        value: body.contentReviewRequired ? "true" : "false",
+      });
+    }
+
+    if (typeof body.memberDownloadReportEnabled === "boolean") {
+      updates.push({
+        key: APP_SETTING_KEYS.MEMBER_DOWNLOAD_REPORT_ENABLED,
+        value: body.memberDownloadReportEnabled ? "true" : "false",
+      });
+    }
+
+    if (updates.length === 0) {
+      return NextResponse.json({ error: "请提供要更新的设置项" }, { status: 400 });
+    }
+
+    await prisma.$transaction(
+      updates.map((u) =>
+        prisma.appSetting.upsert({
+          where: { key: u.key },
+          update: { value: u.value },
+          create: { key: u.key, value: u.value },
+        })
+      )
+    );
+
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    const msg =
+      process.env.NODE_ENV === "development" && e instanceof Error
+        ? e.message
+        : "保存失败";
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
+}

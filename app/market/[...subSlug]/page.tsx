@@ -17,7 +17,7 @@ export default async function MarketSubPage({ params }: Props) {
       <nav className="mb-6" aria-label="面包屑">
         <Link href="/" className="text-sm text-muted hover:text-accent">首页</Link>
         <span className="text-muted mx-2">/</span>
-        <Link href="/market" className="text-sm text-muted hover:text-accent">整木市场</Link>
+        <Link href="/market" className="text-sm text-muted hover:text-accent">整木品牌</Link>
         <span className="text-muted mx-2">/</span>
         <span className="text-primary font-medium">{sub.label}</span>
       </nav>

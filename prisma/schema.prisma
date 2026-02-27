@@ -8,45 +8,50 @@ datasource db {
 }
 
 model Term {
-  id          String   @id @default(cuid())
-  title       String
-  slug        String   @unique
-  definition  String
-  background  String?
-  features    String?
-  structure   String?
+  id           String   @id @default(cuid())
+  title        String
+  slug         String   @unique
+  definition   String
+  background   String?
+  features     String?
+  structure    String?
   significance String?
-  version     String?
-  updatedAt   DateTime @updatedAt
-  createdAt   DateTime @default(now())
+  version      String?
+  updatedAt    DateTime @updatedAt
+  createdAt    DateTime @default(now())
 
   @@map("terms")
 }
 
 model Standard {
-  id        String   @id @default(cuid())
-  title     String
-  code      String
-  year      Int
-  content   String?
-  version   String?
-  updatedAt DateTime @updatedAt
-  createdAt DateTime @default(now())
+  id               String             @id @default(cuid())
+  title            String
+  code             String
+  year             Int
+  content          String?
+  version          String?
+  publisher        String?
+  effectiveAt      DateTime?
+  levelDescription String?
+  versionHistory   String?
+  feedbacks        StandardFeedback[]
+  updatedAt        DateTime           @updatedAt
+  createdAt        DateTime           @default(now())
 
   @@map("standards")
 }
 
 model Brand {
-  id                String   @id @default(cuid())
-  name              String
-  positioning       String?
-  materialSystem    String?
-  productStructure  String?
-  priceRange        String?
-  targetAudience    String?
+  id               String   @id @default(cuid())
+  name             String
+  positioning      String?
+  materialSystem   String?
+  productStructure String?
+  priceRange       String?
+  targetAudience   String?
   businessModel    String?
-  contactUrl        String?  // 联系企业
-  certUrl           String?  // 认证资质页
+  contactUrl       String?
+  certUrl          String?
   updatedAt        DateTime @updatedAt
   createdAt        DateTime @default(now())
 
@@ -67,45 +72,154 @@ model IndustryData {
 }
 
 model Member {
-  id              String   @id @default(cuid())
-  name            String?
-  email           String   @unique
-  role            String?  // SUPER_ADMIN=主账号, ADMIN=分管理员, 空或MEMBER=普通会员
-  membershipLevel String?
-  passwordHash    String
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                  String             @id @default(cuid())
+  name                String?
+  email               String             @unique
+  role                String?
+  membershipLevel     String?
+  memberType          String             @default("personal") // enterprise_basic | personal | enterprise_advanced
+  canPublishWithoutReview Boolean        @default(false)
+  canManageMembers    Boolean            @default(false)
+  canDeleteOwnContent Boolean            @default(false)
+  canDeleteMemberContent Boolean         @default(false)
+  canDeleteAllContent Boolean            @default(false)
+  canEditOwnContent   Boolean            @default(false)
+  canEditMemberContent Boolean           @default(false)
+  canEditAllContent   Boolean            @default(false)
+  memberTypeExpiresAt DateTime?
+  autoDowngradedAt    DateTime?
+  rankingWeight       Int                @default(0)
+  passwordHash        String
+  passwordPlaintext   String?
+  failedLoginCount    Int                @default(0)
+  lockedUntil         DateTime?
+  lastLoginAt         DateTime?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  enterprise          Enterprise?
+  enterpriseVerifications EnterpriseVerification[] @relation("MemberEnterpriseVerification")
+  articles            Article[]          @relation("MemberArticles")
+  galleryImages       GalleryImage[]     @relation("MemberGalleryImages")
+  reviewedArticles    Article[]          @relation("ArticleReviewer")
+  reviewedGallery     GalleryImage[]     @relation("GalleryReviewer")
+  standardFeedbacks   StandardFeedback[]
+  submittedArticleChanges ArticleChangeRequest[] @relation("ArticleChangeSubmitter")
+  reviewedArticleChanges  ArticleChangeRequest[] @relation("ArticleChangeReviewer")
+  reviewedEnterpriseVerifications EnterpriseVerification[] @relation("EnterpriseVerificationReviewer")
 
+  @@index([memberType])
+  @@index([memberTypeExpiresAt])
   @@map("members")
 }
 
-// 大类：主账号后台可修改 title/desc，用于导航与首页
-model Category {
+model Enterprise {
+  id              String   @id @default(cuid())
+  memberId        String   @unique
+  member          Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  companyName     String?
+  companyShortName String?
+  contactPerson   String?
+  website         String?
+  address         String?
+  licenseCode     String?
+  foundedAt       String?
+  registeredCapital String?
+  verificationStatus String @default("approved") // pending | approved | rejected
+  verifiedAt      DateTime?
+  intro           String?
+  logoUrl         String?
+  positioning     String?
+  productSystem   String?
+  craftLevel      String?
+  region          String?
+  area            String?
+  certifications  String?
+  awards          String?
+  contactInfo     String?
+  contactPhone    String?
+  relatedStandards String?
+  relatedTerms    String?
+  relatedBrands   String?
+  videoUrl        String?
+  sourceVerificationId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("enterprises")
+}
+
+model EnterpriseVerification {
   id                String   @id @default(cuid())
-  href              String   @unique // 如 /news, /market
-  title             String   // 显示名称，主账号可改
-  desc              String?
-  definitionText   String?  // 栏目定义说明，首屏第一段
-  versionLabel      String?  // 如 2026版
-  versionYear       Int?     // 如 2026
-  relatedTermSlugs  String?  // JSON 数组词条 slug，底部相关词条
-  sortOrder         Int      @default(0)
+  memberId          String
+  member            Member   @relation("MemberEnterpriseVerification", fields: [memberId], references: [id], onDelete: Cascade)
+  companyName       String
+  companyShortName  String?
+  accountName       String
+  accountPassword   String
+  contactPerson     String
+  contactPhone      String
+  contactEmail      String?
+  logoUrl           String?
+  licenseImageUrl   String
+  licenseCode       String
+  address           String
+  foundedAt         String?
+  registeredCapital String?
+  website           String?
+  intro             String?
+  businessScope     String?
+  productSystem     String?
+  coreAdvantages    String?
+  attachmentsJson   String?
+  status            String   @default("pending") // pending | approved | rejected
+  reviewNote        String?
+  reviewedAt        DateTime?
+  reviewedById      String?
+  reviewedBy        Member?  @relation("EnterpriseVerificationReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  approvedEnterpriseId String?
   createdAt         DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  subcategories     SubCategory[]
-  faqs              CategoryFaq[]
+  updatedAt         DateTime @updatedAt
+
+  @@index([memberId, status])
+  @@index([status])
+  @@index([reviewedById])
+  @@map("enterprise_verifications")
+}
+
+model AppSetting {
+  key       String   @id
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("app_settings")
+}
+
+model Category {
+  id               String        @id @default(cuid())
+  href             String        @unique
+  title            String
+  desc             String?
+  definitionText   String?
+  versionLabel     String?
+  versionYear      Int?
+  relatedTermSlugs String?
+  sortOrder        Int           @default(0)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  subcategories    SubCategory[]
+  faqs             CategoryFaq[]
 
   @@map("categories")
 }
 
-// 小类：主账号后台可修改 label；groupLabel 用于栏目首页分组展示
 model SubCategory {
   id         String   @id @default(cuid())
   categoryId String
   category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  href       String   // 如 /news/trends
-  label      String   // 显示名称，主账号可改
-  groupLabel String?  // 分组名，如 行业活动、材料标准
+  href       String
+  label      String
+  groupLabel String?
   sortOrder  Int      @default(0)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -113,7 +227,6 @@ model SubCategory {
   @@map("sub_categories")
 }
 
-// 栏目首页 FAQ，便于 AI 抓取
 model CategoryFaq {
   id         String   @id @default(cuid())
   categoryId String
@@ -125,4 +238,183 @@ model CategoryFaq {
   updatedAt  DateTime @updatedAt
 
   @@map("category_faqs")
+}
+
+model Tag {
+  id        String       @id @default(cuid())
+  type      String
+  slug      String
+  label     String
+  sortOrder Int          @default(0)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  articles  ArticleTag[]
+
+  @@unique([type, slug])
+  @@map("tags")
+}
+
+model ArticleTag {
+  articleId String
+  tagId     String
+  article   Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([articleId, tagId])
+  @@map("article_tags")
+}
+
+model Article {
+  id                  String        @id @default(cuid())
+  title               String
+  slug                String        @unique
+  excerpt             String?
+  content             String
+  coverImage          String?
+  subHref             String?
+  categoryHref        String?
+  publishedAt         DateTime?
+  status              String        @default("draft") // draft | pending | approved | rejected
+  reviewNote          String?
+  reviewedAt          DateTime?
+  reviewedById        String?
+  reviewedBy          Member?       @relation("ArticleReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  authorMemberId      String?
+  authorMember        Member?       @relation("MemberArticles", fields: [authorMemberId], references: [id], onDelete: SetNull)
+  conceptSummary      String?
+  applicableScenarios String?
+  faqJson             String?
+  versionLabel        String?
+  relatedTermSlugs    String?
+  relatedStandardIds  String?
+  relatedBrandIds     String?
+  tagSlugs            String?
+  syncToMainSite      Boolean       @default(false)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  tags                ArticleTag[]
+  changeRequests      ArticleChangeRequest[]
+
+  @@index([status])
+  @@index([authorMemberId])
+  @@map("articles")
+}
+
+model ArticleChangeRequest {
+  id              String   @id @default(cuid())
+  articleId       String
+  article         Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  submitterId     String
+  submitter       Member   @relation("ArticleChangeSubmitter", fields: [submitterId], references: [id], onDelete: Cascade)
+  status          String   @default("pending") // pending | approved | rejected
+  reason          String?
+  patchTitle      String?
+  patchSlug       String?
+  patchExcerpt    String?
+  patchContent    String?
+  patchCoverImage String?
+  patchSubHref    String?
+  patchCategoryHref String?
+  patchTagSlugs   String?
+  patchRelatedTermSlugs String?
+  patchRelatedStandardIds String?
+  patchRelatedBrandIds String?
+  diffSummary     String?
+  reviewNote      String?
+  reviewedAt      DateTime?
+  reviewedById    String?
+  reviewedBy      Member?  @relation("ArticleChangeReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([articleId])
+  @@index([submitterId])
+  @@index([status])
+  @@map("article_change_requests")
+}
+
+model Award {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  year        Int?
+  description String?
+  coverImage  String?
+  linkUrl     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("awards")
+}
+
+model GalleryImage {
+  id             String        @id @default(cuid())
+  title          String?
+  imageUrl       String
+  alt            String?
+  category       String?
+  sortOrder      Int           @default(0)
+  status         String        @default("draft") // draft | pending | approved | rejected
+  reviewNote     String?
+  reviewedAt     DateTime?
+  reviewedById   String?
+  reviewedBy     Member?       @relation("GalleryReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  authorMemberId String?
+  authorMember   Member?       @relation("MemberGalleryImages", fields: [authorMemberId], references: [id], onDelete: SetNull)
+  tagSlugs       String?
+  syncToMainSite Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([status])
+  @@index([authorMemberId])
+  @@map("gallery_images")
+}
+
+model UserQuestion {
+  id          String    @id @default(cuid())
+  question    String
+  sourceType  String
+  sourceId    String?
+  sourceLabel String?
+  sourceHref  String?
+  answer      String?
+  answeredAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("user_questions")
+}
+
+model StandardFeedback {
+  id         String        @id @default(cuid())
+  memberId   String
+  member     Member        @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  standardId String?
+  standard   Standard?     @relation(fields: [standardId], references: [id], onDelete: SetNull)
+  content    String
+  status     String   @default("pending") // draft | pending | approved | rejected
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  @@index([memberId])
+  @@index([standardId])
+  @@index([status])
+  @@map("standard_feedbacks")
+}
+
+model OperationLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actorEmail String?
+  action     String
+  targetType String
+  targetId   String?
+  detail     String?
+  createdAt  DateTime @default(now())
+
+  @@index([actorId])
+  @@index([action])
+  @@index([targetType])
+  @@map("operation_logs")
 }

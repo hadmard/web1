@@ -4,7 +4,12 @@ const SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET ?? "dev-secret-change-in-production"
 );
 
-export type TokenPayload = { sub: string; email: string; role?: string | null };
+export type TokenPayload = {
+  sub: string;
+  email: string;
+  role?: string | null;
+  memberType?: string | null;
+};
 
 export async function signToken(payload: TokenPayload): Promise<string> {
   return new SignJWT({ ...payload })
@@ -20,7 +25,12 @@ export async function verifyToken(token: string): Promise<TokenPayload | null> {
     const sub = payload.sub as string;
     const email = payload.email as string;
     if (!sub || !email) return null;
-    return { sub, email, role: (payload.role as string) ?? null };
+    return {
+      sub,
+      email,
+      role: (payload.role as string) ?? null,
+      memberType: (payload.memberType as string) ?? null,
+    };
   } catch {
     return null;
   }

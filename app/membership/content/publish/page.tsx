@@ -1,0 +1,843 @@
+﻿"use client";
+
+import Link from "next/link";
+import {
+  FormEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import {
+  CONTENT_TAB_DEFS,
+  MEMBER_PUBLISH_CATEGORY_OPTIONS,
+  resolveTabKeyFromHref,
+  type CategoryOption,
+  type ContentTabKey,
+} from "@/lib/content-taxonomy";
+import { RichEditor } from "@/components/RichEditor";
+import { suggestTagsFromText } from "@/lib/tag-suggest";
+import { BrandStructuredEditor } from "@/components/BrandStructuredEditor";
+import {
+  brandStructuredToSearchText,
+  buildBrandStructuredHtml,
+  createDefaultBrandStructuredData,
+  parseBrandStructuredHtml,
+  type BrandStructuredData,
+} from "@/lib/brand-structured";
+import { StandardStructuredEditor } from "@/components/StandardStructuredEditor";
+import {
+  buildStandardStructuredHtml,
+  createDefaultStandardStructuredData,
+  parseStandardStructuredHtml,
+  standardStructuredToSearchText,
+  type StandardStructuredData,
+} from "@/lib/standard-structured";
+import { DataStructuredEditor } from "@/components/DataStructuredEditor";
+import {
+  buildDataStructuredHtml,
+  createDefaultDataStructuredData,
+  dataStructuredToSearchText,
+  parseDataStructuredHtml,
+  type DataStructuredData,
+} from "@/lib/data-structured";
+import { AwardStructuredEditor } from "@/components/AwardStructuredEditor";
+import {
+  awardStructuredToSearchText,
+  buildAwardStructuredHtml,
+  createDefaultAwardStructuredData,
+  parseAwardStructuredHtml,
+  type AwardStructuredData,
+} from "@/lib/award-structured";
+
+type MemberType = "enterprise_basic" | "enterprise_advanced" | "personal";
+type Status = "draft" | "pending" | "approved" | "rejected";
+type TermSection = { id: string; heading: string; body: string };
+const BRAND_REGION_OPTIONS = ["全国", "华东", "华中", "华南", "西南", "西北", "华北", "东北"] as const;
+
+type Row = {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt?: string | null;
+  content: string;
+  coverImage?: string | null;
+  categoryHref: string | null;
+  subHref: string | null;
+  status: Status;
+  conceptSummary?: string | null;
+  applicableScenarios?: string | null;
+  versionLabel?: string | null;
+  relatedTermSlugs?: string | null;
+  relatedStandardIds?: string | null;
+  relatedBrandIds?: string | null;
+  tagSlugs?: string | null;
+  createdAt: string;
+};
+
+const STATUS_TEXT: Record<Status, string> = {
+  draft: "草稿",
+  pending: "待审核",
+  approved: "已通过",
+  rejected: "已驳回",
+};
+
+const DEFAULT_TERM_SECTIONS: Omit<TermSection, "id">[] = [
+  { heading: "发展背景", body: "伴随消费升级与整装需求兴起，整木概念由定制木作逐步发展为系统化解决方案。" },
+  { heading: "核心特征", body: "强调一体化、可定制、风格统一，覆盖设计、选材、制造与安装。" },
+  { heading: "技术结构", body: "由门、墙板、柜体、线条、装饰件等模块协同组合，兼顾工艺与交付效率。" },
+  { heading: "行业意义", body: "推动木作产业从单品竞争转向系统能力竞争，提升高端定制与品牌化水平。" },
+];
+
+function createDefaultTermSections(): TermSection[] {
+  return DEFAULT_TERM_SECTIONS.map((x, i) => ({ id: `default-${i + 1}`, heading: x.heading, body: x.body }));
+}
+
+function buildTermContentHtml(sections: TermSection[]) {
+  const escapeHtml = (s: string) =>
+    s
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+
+  return sections
+    .map((s) => {
+      const h = escapeHtml(s.heading.trim());
+      const p = escapeHtml(s.body.trim()).replace(/\n/g, "<br />");
+      if (!h && !p) return "";
+      return `<section><h3>${h || "未命名小标题"}</h3><p>${p || "暂无说明"}</p></section>`;
+    })
+    .filter(Boolean)
+    .join("");
+}
+
+function parseTermContentSections(html: string): TermSection[] {
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html || "", "text/html");
+    const blocks = Array.from(doc.querySelectorAll("section"));
+    const fromSections = blocks
+      .map((node, idx) => {
+        const heading = (node.querySelector("h1,h2,h3,h4,h5,h6")?.textContent || "").trim();
+        const body = (node.querySelector("p")?.textContent || node.textContent || "").trim();
+        return { id: `parsed-${idx + 1}`, heading, body };
+      })
+      .filter((x) => x.heading || x.body);
+    if (fromSections.length > 0) return fromSections;
+  } catch {}
+  return createDefaultTermSections();
+}
+
+function getAllowedCategories(memberType: MemberType): CategoryOption[] {
+  if (memberType === "personal") {
+    return MEMBER_PUBLISH_CATEGORY_OPTIONS.filter(
+      (x) => x.href === "/dictionary" || x.href === "/standards"
+    );
+  }
+  return MEMBER_PUBLISH_CATEGORY_OPTIONS;
+}
+
+function tabFromHref(href: string): ContentTabKey {
+  const hit = CONTENT_TAB_DEFS.find((x) => x.href === href);
+  return hit?.key ?? "articles";
+}
+
+function parseTab(raw: string | null): ContentTabKey {
+  if (!raw) return "articles";
+  const hit = CONTENT_TAB_DEFS.find((x) => x.key === raw);
+  return hit?.key ?? "articles";
+}
+
+export default function PublishCenterPage() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const tab = parseTab(searchParams.get("tab"));
+
+  const [authed, setAuthed] = useState<boolean | null>(null);
+  const [role, setRole] = useState<string | null>(null);
+  const [memberType, setMemberType] = useState<MemberType>("personal");
+  const [items, setItems] = useState<Row[]>([]);
+  const [message, setMessage] = useState("");
+  const messageRef = useRef<HTMLParagraphElement | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const [title, setTitle] = useState("");
+  const [excerpt, setExcerpt] = useState("");
+  const [content, setContent] = useState("");
+  const [termSections, setTermSections] = useState<TermSection[]>(createDefaultTermSections());
+  const [brandStructured, setBrandStructured] = useState<BrandStructuredData>(createDefaultBrandStructuredData());
+  const [standardStructured, setStandardStructured] = useState<StandardStructuredData>(createDefaultStandardStructuredData());
+  const [dataStructured, setDataStructured] = useState<DataStructuredData>(createDefaultDataStructuredData());
+  const [awardStructured, setAwardStructured] = useState<AwardStructuredData>(createDefaultAwardStructuredData());
+  const [subHref, setSubHref] = useState("");
+  const [coverImage, setCoverImage] = useState("");
+  const [conceptSummary, setConceptSummary] = useState("");
+  const [applicableScenarios, setApplicableScenarios] = useState("");
+  const [versionLabel, setVersionLabel] = useState("");
+  const [relatedTermSlugs, setRelatedTermSlugs] = useState("");
+  const [relatedStandardIds, setRelatedStandardIds] = useState("");
+  const [relatedBrandIds, setRelatedBrandIds] = useState("");
+  const [tagSlugs, setTagSlugs] = useState("");
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editExcerpt, setEditExcerpt] = useState("");
+  const [editContent, setEditContent] = useState("");
+  const [editTermSections, setEditTermSections] = useState<TermSection[]>(createDefaultTermSections());
+  const [editBrandStructured, setEditBrandStructured] = useState<BrandStructuredData>(createDefaultBrandStructuredData());
+  const [editStandardStructured, setEditStandardStructured] = useState<StandardStructuredData>(createDefaultStandardStructuredData());
+  const [editDataStructured, setEditDataStructured] = useState<DataStructuredData>(createDefaultDataStructuredData());
+  const [editAwardStructured, setEditAwardStructured] = useState<AwardStructuredData>(createDefaultAwardStructuredData());
+  const [editReason, setEditReason] = useState("");
+
+  const allowedCategories = useMemo(() => getAllowedCategories(memberType), [memberType]);
+  const allowedTabs = useMemo(() => allowedCategories.map((x) => tabFromHref(x.href)), [allowedCategories]);
+  const safeTab = useMemo(() => (allowedTabs.includes(tab) ? tab : allowedTabs[0] ?? "articles"), [tab, allowedTabs]);
+  const selectedTabDef = useMemo(() => CONTENT_TAB_DEFS.find((x) => x.key === safeTab) ?? CONTENT_TAB_DEFS[0], [safeTab]);
+  const selectedCategory = useMemo(
+    () => allowedCategories.find((x) => x.href === selectedTabDef.href) ?? allowedCategories[0],
+    [allowedCategories, selectedTabDef.href]
+  );
+  const subOptions = selectedCategory?.subs ?? [];
+
+  const filteredItems = useMemo(
+    () => items.filter((item) => resolveTabKeyFromHref(item.categoryHref, item.subHref) === safeTab),
+    [items, safeTab]
+  );
+
+  function replaceTab(nextTab: ContentTabKey) {
+    const sp = new URLSearchParams(searchParams.toString());
+    sp.set("tab", nextTab);
+    router.replace(`${pathname}?${sp.toString()}`);
+  }
+
+  async function load() {
+    const meRes = await fetch("/api/auth/me", { credentials: "include", cache: "no-store" });
+    if (!meRes.ok) {
+      setAuthed(false);
+      return;
+    }
+    setAuthed(true);
+
+    const me = await meRes.json();
+    setRole(me.role ?? null);
+    const t = (me.memberType ?? "personal") as MemberType;
+    setMemberType(t);
+
+    const listRes = await fetch("/api/member/articles?limit=100", { credentials: "include", cache: "no-store" });
+    if (listRes.ok) {
+      const data = await listRes.json();
+      setItems(Array.isArray(data.items) ? data.items : []);
+    }
+  }
+
+  useEffect(() => {
+    void load();
+  }, []);
+
+  useEffect(() => {
+    if (allowedTabs.length === 0) return;
+    if (!allowedTabs.includes(tab)) replaceTab(allowedTabs[0]);
+  }, [allowedTabs, tab, safeTab]);
+
+  useEffect(() => {
+    if (subOptions.length > 0 && !subOptions.some((s) => s.href === subHref)) {
+      setSubHref(subOptions[0].href);
+    }
+  }, [subOptions, subHref]);
+
+  useEffect(() => {
+    if (!message) return;
+    messageRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [message]);
+
+  function resetCategoryMeta() {
+    setCoverImage("");
+    setConceptSummary("");
+    setApplicableScenarios("");
+    setVersionLabel("");
+    setRelatedTermSlugs("");
+    setRelatedStandardIds("");
+    setRelatedBrandIds("");
+    setTagSlugs("");
+  }
+
+  function resetTermSections() {
+    setTermSections(createDefaultTermSections());
+  }
+
+  function resetBrandStructured() {
+    setBrandStructured(createDefaultBrandStructuredData());
+  }
+
+  function resetStandardStructured() {
+    setStandardStructured(createDefaultStandardStructuredData());
+  }
+  function resetDataStructured() {
+    setDataStructured(createDefaultDataStructuredData());
+  }
+  function resetAwardStructured() {
+    setAwardStructured(createDefaultAwardStructuredData());
+  }
+
+  function updateTermSection(id: string, patch: Partial<Omit<TermSection, "id">>) {
+    setTermSections((prev) => prev.map((x) => (x.id === id ? { ...x, ...patch } : x)));
+  }
+
+  function addTermSection() {
+    setTermSections((prev) => [...prev, { id: `section-${Date.now()}`, heading: "", body: "" }]);
+  }
+
+  function removeTermSection(id: string) {
+    setTermSections((prev) => prev.filter((x) => x.id !== id));
+  }
+
+  function updateEditTermSection(id: string, patch: Partial<Omit<TermSection, "id">>) {
+    setEditTermSections((prev) => prev.map((x) => (x.id === id ? { ...x, ...patch } : x)));
+  }
+
+  function addEditTermSection() {
+    setEditTermSections((prev) => [...prev, { id: `edit-section-${Date.now()}`, heading: "", body: "" }]);
+  }
+
+  function removeEditTermSection(id: string) {
+    setEditTermSections((prev) => prev.filter((x) => x.id !== id));
+  }
+
+  useEffect(() => {
+    resetCategoryMeta();
+  }, [safeTab]);
+
+  useEffect(() => {
+    if (safeTab === "terms") resetTermSections();
+    if (safeTab === "brands") resetBrandStructured();
+    if (safeTab === "standards") resetStandardStructured();
+    if (safeTab === "industry-data") resetDataStructured();
+    if (safeTab === "awards") resetAwardStructured();
+  }, [safeTab]);
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    if (loading || !selectedCategory) return;
+    setLoading(true);
+    setMessage("");
+
+    const composedContent =
+      safeTab === "terms"
+        ? buildTermContentHtml(termSections)
+        : safeTab === "brands"
+          ? buildBrandStructuredHtml(brandStructured)
+          : safeTab === "standards"
+            ? buildStandardStructuredHtml(standardStructured)
+            : safeTab === "industry-data"
+              ? buildDataStructuredHtml(dataStructured)
+              : safeTab === "awards"
+                ? buildAwardStructuredHtml(awardStructured)
+        : content.trim();
+
+    const payload = {
+      title: title.trim(),
+      excerpt: excerpt.trim() || null,
+      content: composedContent,
+      categoryHref: selectedCategory.href,
+      subHref: safeTab === "brands" ? null : subHref,
+      coverImage:
+        safeTab === "brands"
+          ? brandStructured.logoUrl.trim() || null
+          : coverImage.trim() || null,
+      conceptSummary: conceptSummary.trim() || null,
+      applicableScenarios:
+        safeTab === "standards"
+          ? standardStructured.scope.trim() || null
+          : safeTab === "industry-data"
+            ? dataStructured.methodology.trim() || null
+          : applicableScenarios.trim() || null,
+      versionLabel:
+        safeTab === "standards"
+          ? standardStructured.versionNote.trim() || null
+          : safeTab === "awards"
+            ? (awardStructured.year ? `${awardStructured.year}版` : null)
+          : versionLabel.trim() || null,
+      relatedTermSlugs: relatedTermSlugs.trim() || null,
+      relatedStandardIds: relatedStandardIds.trim() || null,
+      relatedBrandIds: relatedBrandIds.trim() || null,
+      tagSlugs: tagSlugs.trim() || null,
+      syncToMainSite: true,
+    };
+
+    const res = await fetch("/api/member/articles", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setMessage(data.error ?? "提交失败");
+      setLoading(false);
+      return;
+    }
+
+    setMessage("提交成功，已进入审核流程");
+    setTitle("");
+    setExcerpt("");
+    setContent("");
+    resetTermSections();
+    resetBrandStructured();
+    resetStandardStructured();
+    resetDataStructured();
+    resetAwardStructured();
+    resetCategoryMeta();
+    await load();
+    setLoading(false);
+  }
+
+  function openEditRequest(item: Row) {
+    setEditingId(item.id);
+    setEditTitle(item.title ?? "");
+    setEditExcerpt(item.excerpt ?? "");
+    setEditContent(item.content ?? "");
+    setEditTermSections(safeTab === "terms" ? parseTermContentSections(item.content ?? "") : createDefaultTermSections());
+    setEditBrandStructured(
+      safeTab === "brands"
+        ? parseBrandStructuredHtml(item.content ?? "") ?? createDefaultBrandStructuredData()
+        : createDefaultBrandStructuredData()
+    );
+    setEditStandardStructured(
+      safeTab === "standards"
+        ? parseStandardStructuredHtml(item.content ?? "") ?? createDefaultStandardStructuredData()
+        : createDefaultStandardStructuredData()
+    );
+    setEditDataStructured(
+      safeTab === "industry-data"
+        ? parseDataStructuredHtml(item.content ?? "") ?? createDefaultDataStructuredData()
+        : createDefaultDataStructuredData()
+    );
+    setEditAwardStructured(
+      safeTab === "awards"
+        ? parseAwardStructuredHtml(item.content ?? "") ?? createDefaultAwardStructuredData()
+        : createDefaultAwardStructuredData()
+    );
+    setEditReason("");
+  }
+
+  async function submitEditRequest(e: FormEvent) {
+    e.preventDefault();
+    if (!editingId) return;
+    const composedEditContent =
+      safeTab === "terms"
+        ? buildTermContentHtml(editTermSections)
+        : safeTab === "brands"
+          ? buildBrandStructuredHtml(editBrandStructured)
+          : safeTab === "standards"
+            ? buildStandardStructuredHtml(editStandardStructured)
+            : safeTab === "industry-data"
+              ? buildDataStructuredHtml(editDataStructured)
+              : safeTab === "awards"
+                ? buildAwardStructuredHtml(editAwardStructured)
+          : editContent;
+    const res = await fetch(`/api/member/articles/${editingId}/changes`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: editTitle,
+        excerpt: editExcerpt,
+        content: composedEditContent,
+        coverImage: safeTab === "brands" ? editBrandStructured.logoUrl.trim() || null : null,
+        reason: editReason,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setMessage(data.error ?? "修改申请提交失败");
+      return;
+    }
+    setMessage("修改申请已提交，待主管理员审核后生效");
+    setEditingId(null);
+  }
+
+  function autoFillTags() {
+    const sourceText =
+      safeTab === "terms"
+        ? termSections.map((x) => `${x.heading} ${x.body}`).join(" ")
+        : safeTab === "brands"
+          ? brandStructuredToSearchText(brandStructured)
+        : safeTab === "standards"
+          ? standardStructuredToSearchText(standardStructured)
+        : safeTab === "industry-data"
+          ? dataStructuredToSearchText(dataStructured)
+        : safeTab === "awards"
+          ? awardStructuredToSearchText(awardStructured)
+        : content;
+    const tags = suggestTagsFromText(
+      [title, excerpt, sourceText, selectedCategory?.href, subHref].filter(Boolean).join(" ")
+    );
+    if (tags.length === 0) {
+      setMessage("未识别到明显标签，请手动补充。");
+      return;
+    }
+    setTagSlugs(tags.join(","));
+    setMessage("已自动识别标签，可继续手动修改。");
+  }
+
+  function renderCategoryFeatureFields(currentTab: ContentTabKey) {
+    return (
+      <>
+        {(currentTab === "gallery" || currentTab === "awards") && (
+          <>
+            <label className="block text-sm text-muted">封面图 URL</label>
+            <input className="w-full border border-border rounded px-3 py-2 bg-surface" value={coverImage} onChange={(e) => setCoverImage(e.target.value)} />
+          </>
+        )}
+
+        {currentTab === "terms" && (
+          <>
+            <div className="rounded-lg border border-border bg-surface p-3 space-y-3">
+              <p className="text-xs text-muted">词库结构化录入：词语（标题）+ 摘要 + 多个小标题解释。</p>
+              {termSections.map((sec, idx) => (
+                <div key={sec.id} className="rounded-md border border-border bg-surface-elevated p-3 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs text-muted">小节 {idx + 1}</p>
+                    <button
+                      type="button"
+                      onClick={() => removeTermSection(sec.id)}
+                      className="text-xs px-2 py-1 rounded border border-border hover:bg-surface"
+                      disabled={termSections.length <= 1}
+                    >
+                      删除
+                    </button>
+                  </div>
+                  <input
+                    className="w-full border border-border rounded px-3 py-2 bg-surface"
+                    placeholder="小标题，如：发展背景"
+                    value={sec.heading}
+                    onChange={(e) => updateTermSection(sec.id, { heading: e.target.value })}
+                  />
+                  <textarea
+                    className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[90px]"
+                    placeholder="该小标题下的解释内容"
+                    value={sec.body}
+                    onChange={(e) => updateTermSection(sec.id, { body: e.target.value })}
+                  />
+                </div>
+              ))}
+              <div className="flex gap-2">
+                <button type="button" onClick={addTermSection} className="text-xs px-3 py-2 rounded border border-border hover:bg-surface">
+                  添加小标题
+                </button>
+                <button type="button" onClick={resetTermSections} className="text-xs px-3 py-2 rounded border border-border hover:bg-surface">
+                  恢复默认模板
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {currentTab === "standards" && (
+          <div className="space-y-2">
+            <label className="block text-sm text-muted">标准结构化内容</label>
+            <StandardStructuredEditor value={standardStructured} onChange={setStandardStructured} />
+          </div>
+        )}
+
+        {currentTab === "industry-data" && (
+          <div className="space-y-2">
+            <label className="block text-sm text-muted">数据结构化内容</label>
+            <DataStructuredEditor value={dataStructured} onChange={setDataStructured} />
+          </div>
+        )}
+
+        {currentTab === "awards" && (
+          <div className="space-y-2">
+            <label className="block text-sm text-muted">评选结构化内容</label>
+            <AwardStructuredEditor value={awardStructured} onChange={setAwardStructured} />
+          </div>
+        )}
+
+        {false && currentTab === "standards" && (
+          <>
+            <label className="block text-sm text-muted">版本标签</label>
+            <input className="w-full border border-border rounded px-3 py-2 bg-surface" value={versionLabel} onChange={(e) => setVersionLabel(e.target.value)} />
+            <label className="block text-sm text-muted">关联标准 ID（逗号分隔）</label>
+            <input className="w-full border border-border rounded px-3 py-2 bg-surface" value={relatedStandardIds} onChange={(e) => setRelatedStandardIds(e.target.value)} />
+          </>
+        )}
+
+        {(currentTab === "brands" || currentTab === "awards" || currentTab === "articles") && (
+          <>
+            <label className="block text-sm text-muted">关联品牌 ID（逗号分隔）</label>
+            <input className="w-full border border-border rounded px-3 py-2 bg-surface" value={relatedBrandIds} onChange={(e) => setRelatedBrandIds(e.target.value)} />
+          </>
+        )}
+
+        <>
+          <label className="block text-sm text-muted">标签（逗号分隔）</label>
+          <div className="flex gap-2">
+            <input
+              className="flex-1 border border-border rounded px-3 py-2 bg-surface"
+              value={tagSlugs}
+              onChange={(e) => setTagSlugs(e.target.value)}
+              placeholder="如：行业趋势,技术发展,品牌建设"
+            />
+            <button type="button" onClick={autoFillTags} className="px-3 py-2 rounded border border-border text-xs hover:bg-surface">
+              自动识别
+            </button>
+          </div>
+        </>
+      </>
+    );
+  }
+
+  if (authed === false) {
+    return (
+      <div className="max-w-5xl mx-auto px-4 py-12">
+        <p className="text-sm text-muted mb-3">请先登录后再使用内容发布中心。</p>
+        <Link href="/membership/login" className="text-sm text-accent hover:underline">前往登录</Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-6xl mx-auto px-4 py-12">
+      <nav className="mb-6 text-sm text-muted" aria-label="面包屑">
+        <Link href="/" className="hover:text-accent">首页</Link>
+        <span className="mx-2">/</span>
+        <Link href="/membership" className="hover:text-accent">会员系统</Link>
+        <span className="mx-2">/</span>
+        <span className="text-primary">内容发布中心</span>
+      </nav>
+
+      <h1 className="font-serif text-2xl font-bold text-primary mb-2">内容发布中心</h1>
+      <p className="text-sm text-muted mb-2">
+        当前身份：{role === "SUPER_ADMIN" ? "主管理员" : role === "ADMIN" ? "子管理员" : "会员"} /{" "}
+        {memberType === "enterprise_advanced" ? "企业高级会员" : memberType === "enterprise_basic" ? "企业基础会员" : "个人会员"}
+      </p>
+      <p className="text-sm text-muted mb-6">左侧按七大类分别发布，不同类别显示不同组成字段。</p>
+      <div className="mb-6">
+        <Link href="/membership/content/verification" className="text-sm text-accent hover:underline">
+          去提交企业认证资料
+        </Link>
+      </div>
+
+      <div className="grid lg:grid-cols-[220px_1fr] gap-4 mb-8">
+        <aside className="rounded-xl border border-border bg-surface-elevated p-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted mb-3">发布栏目</p>
+          <ul className="space-y-1">
+            {allowedCategories.map((cat) => {
+              const catTab = tabFromHref(cat.href);
+              const active = catTab === safeTab;
+              return (
+                <li key={cat.href}>
+                  <Link
+                    href={`/membership/content/publish?tab=${catTab}`}
+                    className={`block rounded-lg px-3 py-2 text-sm font-medium ${
+                      active ? "bg-accent/15 text-accent" : "text-primary hover:bg-surface hover:text-accent"
+                    }`}
+                  >
+                    {cat.label}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+          <div className="mt-4 pt-3 border-t border-border text-xs text-muted">当前：{selectedTabDef.label}</div>
+        </aside>
+
+        <form onSubmit={submit} className="rounded-xl border border-border bg-surface-elevated p-5 space-y-3">
+          {message && (
+            <p ref={messageRef} className="text-sm text-accent scroll-mt-24">
+              {message}
+            </p>
+          )}
+
+          {safeTab !== "brands" && subOptions.length > 0 && (
+            <>
+              <label className="block text-sm text-muted">子栏目</label>
+              <div className="flex flex-wrap gap-2 rounded-lg border border-border bg-surface p-2">
+                {subOptions.map((s) => {
+                  const active = subHref === s.href;
+                  return (
+                    <button
+                      key={s.href}
+                      type="button"
+                      onClick={() => setSubHref(s.href)}
+                      className={`px-3 py-1.5 rounded-md text-sm transition ${active ? "bg-accent text-white" : "bg-surface-elevated text-primary border border-border hover:bg-surface"}`}
+                    >
+                      {s.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+
+          {safeTab === "brands" && (
+            <>
+              <label className="block text-sm text-muted">区域选择</label>
+              <select
+                className="w-full border border-border rounded px-3 py-2 bg-surface"
+                value={brandStructured.serviceAreas || "全国"}
+                onChange={(e) => setBrandStructured((prev) => ({ ...prev, serviceAreas: e.target.value }))}
+              >
+                {BRAND_REGION_OPTIONS.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </select>
+            </>
+          )}
+
+          <label className="block text-sm text-muted">标题</label>
+          <input className="w-full border border-border rounded px-3 py-2 bg-surface" value={title} onChange={(e) => setTitle(e.target.value)} required />
+
+          <label className="block text-sm text-muted">{safeTab === "standards" ? "标准摘要" : "摘要"}</label>
+          <textarea
+            className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[80px] whitespace-pre-wrap resize-y"
+            value={excerpt}
+            onChange={(e) => setExcerpt(e.target.value)}
+          />
+
+          {safeTab !== "terms" &&
+            safeTab !== "brands" &&
+            safeTab !== "standards" &&
+            safeTab !== "industry-data" &&
+            safeTab !== "awards" && (
+            <>
+              <label className="block text-sm text-muted">正文</label>
+              <RichEditor value={content} onChange={setContent} minHeight={280} />
+            </>
+          )}
+          {safeTab === "brands" && (
+            <>
+              <label className="block text-sm text-muted">品牌结构化内容</label>
+              <BrandStructuredEditor value={brandStructured} onChange={setBrandStructured} />
+            </>
+          )}
+
+          {renderCategoryFeatureFields(safeTab)}
+
+          <button className="px-4 py-2 rounded bg-accent text-white text-sm disabled:opacity-50" disabled={loading}>
+            {loading ? "提交中..." : "提交审核"}
+          </button>
+        </form>
+      </div>
+
+      <section className="rounded-xl border border-border bg-surface-elevated p-5">
+        <h2 className="text-sm font-medium text-primary mb-3">我的投稿记录（{selectedTabDef.label}）</h2>
+        {filteredItems.length === 0 ? (
+          <p className="text-sm text-muted">当前栏目暂无投稿记录。</p>
+        ) : (
+          <ul className="space-y-3">
+            {filteredItems.map((item) => (
+              <li key={item.id} className="border-b border-border pb-2">
+                <div className="flex items-center justify-between gap-4 text-sm">
+                  <span className="truncate text-primary">{item.title}</span>
+                  <span className="text-xs text-muted shrink-0">{STATUS_TEXT[item.status]}</span>
+                </div>
+                <div className="mt-2">
+                  <button type="button" onClick={() => openEditRequest(item)} className="text-xs px-2 py-1 rounded border border-border hover:bg-surface">
+                    提交修改申请
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {editingId && (
+        <section className="mt-6 rounded-xl border border-border bg-surface-elevated p-5">
+          <h2 className="text-sm font-medium text-primary mb-3">提交修改申请</h2>
+          <form onSubmit={submitEditRequest} className="space-y-3">
+            <label className="block text-sm text-muted">新标题</label>
+            <input className="w-full border border-border rounded px-3 py-2 bg-surface" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
+            <label className="block text-sm text-muted">{safeTab === "standards" ? "标准摘要" : "新摘要"}</label>
+            <textarea
+              className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[80px] whitespace-pre-wrap resize-y"
+              value={editExcerpt}
+              onChange={(e) => setEditExcerpt(e.target.value)}
+            />
+            {safeTab === "terms" ? (
+              <div className="rounded-lg border border-border bg-surface p-3 space-y-3">
+                <p className="text-xs text-muted">词库条目修改（小标题 + 解释）。</p>
+                {editTermSections.map((sec, idx) => (
+                  <div key={sec.id} className="rounded-md border border-border bg-surface-elevated p-3 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs text-muted">小节 {idx + 1}</p>
+                      <button
+                        type="button"
+                        onClick={() => removeEditTermSection(sec.id)}
+                        className="text-xs px-2 py-1 rounded border border-border hover:bg-surface"
+                        disabled={editTermSections.length <= 1}
+                      >
+                        删除
+                      </button>
+                    </div>
+                    <input
+                      className="w-full border border-border rounded px-3 py-2 bg-surface"
+                      placeholder="小标题"
+                      value={sec.heading}
+                      onChange={(e) => updateEditTermSection(sec.id, { heading: e.target.value })}
+                    />
+                    <textarea
+                      className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[90px]"
+                      placeholder="解释内容"
+                      value={sec.body}
+                      onChange={(e) => updateEditTermSection(sec.id, { body: e.target.value })}
+                    />
+                  </div>
+                ))}
+                <div className="flex gap-2">
+                  <button type="button" onClick={addEditTermSection} className="text-xs px-3 py-2 rounded border border-border hover:bg-surface">
+                    添加小标题
+                  </button>
+                  <button type="button" onClick={() => setEditTermSections(createDefaultTermSections())} className="text-xs px-3 py-2 rounded border border-border hover:bg-surface">
+                    恢复默认模板
+                  </button>
+                </div>
+              </div>
+            ) : safeTab === "brands" ? (
+              <>
+                <label className="block text-sm text-muted">品牌结构化内容</label>
+                <BrandStructuredEditor value={editBrandStructured} onChange={setEditBrandStructured} />
+              </>
+            ) : safeTab === "standards" ? (
+              <>
+                <label className="block text-sm text-muted">标准结构化内容</label>
+                <StandardStructuredEditor value={editStandardStructured} onChange={setEditStandardStructured} />
+              </>
+            ) : safeTab === "industry-data" ? (
+              <>
+                <label className="block text-sm text-muted">数据结构化内容</label>
+                <DataStructuredEditor value={editDataStructured} onChange={setEditDataStructured} />
+              </>
+            ) : safeTab === "awards" ? (
+              <>
+                <label className="block text-sm text-muted">评选结构化内容</label>
+                <AwardStructuredEditor value={editAwardStructured} onChange={setEditAwardStructured} />
+              </>
+            ) : (
+              <>
+                <label className="block text-sm text-muted">新正文</label>
+                <RichEditor value={editContent} onChange={setEditContent} minHeight={260} />
+              </>
+            )}
+            <label className="block text-sm text-muted">修改说明</label>
+            <input className="w-full border border-border rounded px-3 py-2 bg-surface" value={editReason} onChange={(e) => setEditReason(e.target.value)} placeholder="例如：修正数据口径和段落结构" />
+            <div className="flex gap-2">
+              <button type="submit" className="px-4 py-2 rounded bg-accent text-white text-sm">提交申请</button>
+              <button type="button" onClick={() => setEditingId(null)} className="px-4 py-2 rounded border border-border text-sm">取消</button>
+            </div>
+          </form>
+        </section>
+      )}
+    </div>
+  );
+}

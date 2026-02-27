@@ -15,12 +15,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!brand) {
     const categories = await getCategories();
     const sub = categories.find((c) => c.href === "/market")?.subcategories.find((s) => s.href === `/market/${id}`);
-    if (sub) return { title: `${sub.label} | 中华整木网 · 整木市场` };
+    if (sub) return { title: `${sub.label} | 中华整木网 · 整木品牌` };
     return { title: "品牌未找到" };
   }
   const description = brand.positioning ?? brand.name;
   return {
-    title: `${brand.name} | 中华整木网 · 整木市场`,
+    title: `${brand.name} | 中华整木网 · 整木品牌`,
     description,
     openGraph: { title: brand.name, description, type: "article" },
   };
@@ -41,7 +41,7 @@ export default async function BrandPage({ params }: Props) {
           <nav className="mb-6" aria-label="面包屑">
             <Link href="/" className="text-sm text-muted hover:text-accent">首页</Link>
             <span className="text-muted mx-2">/</span>
-            <Link href="/market" className="text-sm text-muted hover:text-accent">整木市场</Link>
+            <Link href="/market" className="text-sm text-muted hover:text-accent">整木品牌</Link>
             <span className="text-muted mx-2">/</span>
             <span className="text-primary font-medium">{sub.label}</span>
           </nav>

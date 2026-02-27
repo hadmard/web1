@@ -16,3 +16,12 @@ export async function getTermsBySlugs(slugs: string[]): Promise<{ slug: string; 
   });
   return terms.map((t) => ({ slug: t.slug, title: t.title }));
 }
+
+/** 首页词库精选：按更新时间取前 N 条 */
+export async function getTermsList(limit = 8) {
+  return prisma.term.findMany({
+    orderBy: { updatedAt: "desc" },
+    take: limit,
+    select: { slug: true, title: true },
+  });
+}

@@ -11,3 +11,12 @@ export async function getStandardByCode(code: string) {
 export async function getAllStandardIds() {
   return prisma.standard.findMany({ select: { id: true } });
 }
+
+/** 首页热门标准：按年份与更新时间取前 N 条 */
+export async function getStandardsList(limit = 6) {
+  return prisma.standard.findMany({
+    orderBy: [{ year: "desc" }, { updatedAt: "desc" }],
+    take: limit,
+    select: { id: true, title: true, code: true, year: true },
+  });
+}

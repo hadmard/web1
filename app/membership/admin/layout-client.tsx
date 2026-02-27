@@ -1,0 +1,333 @@
+﻿"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
+import {
+  CONTENT_TAB_DEFS,
+  resolveTabKeyFromHref,
+  type ContentTabKey,
+} from "@/lib/content-taxonomy";
+
+type SidebarLink = { href: string; label: string; tabKey?: ContentTabKey };
+type SidebarGroup = {
+  id: string;
+  label: string;
+  children: SidebarLink[];
+  superOnly?: boolean;
+  withAuditBadge?: boolean;
+};
+
+type PendingArticle = { categoryHref?: string | null; subHref?: string | null };
+type PendingChange = {
+  article?: { categoryHref?: string | null; subHref?: string | null } | null;
+};
+
+type CollapseState = Record<string, boolean>;
+
+const COLLAPSE_STORAGE_KEY = "admin_sidebar_collapse_state_v1";
+const SCROLL_STORAGE_KEY = "admin_sidebar_scroll_top_v1";
+
+const SIDEBAR: SidebarGroup[] = [
+  {
+    id: "publish",
+    label: "内容发布",
+    children: CONTENT_TAB_DEFS.map((t) => ({
+      href: `/membership/admin/content?mode=publish&tab=${t.key}`,
+      label: t.label,
+      tabKey: t.key,
+    })),
+  },
+  {
+    id: "manage",
+    label: "内容管理",
+    children: CONTENT_TAB_DEFS.map((t) => ({
+      href: `/membership/admin/content?mode=manage&tab=${t.key}`,
+      label: t.label,
+      tabKey: t.key,
+    })),
+  },
+  {
+    id: "review",
+    label: "审核中心",
+    withAuditBadge: true,
+    superOnly: true,
+    children: [
+      ...CONTENT_TAB_DEFS.map((t) => ({
+        href: `/membership/admin/content?mode=review&tab=${t.key}`,
+        label: t.label,
+        tabKey: t.key,
+      })),
+      { href: "/membership/admin/enterprise-verifications", label: "企业认证审核" },
+    ],
+  },
+  {
+    id: "account",
+    label: "账号",
+    children: [
+      { href: "/membership/admin/accounts", label: "账号一览" },
+      { href: "/membership/admin/permissions", label: "权限管理（主管理员）" },
+    ],
+  },
+  {
+    id: "system",
+    label: "系统",
+    superOnly: true,
+    children: [{ href: "/membership/admin/settings", label: "系统设置" }],
+  },
+];
+
+function defaultCollapseState(): CollapseState {
+  return {
+    publish: false,
+    manage: false,
+    review: false,
+    account: false,
+    system: true,
+  };
+}
+
+export default function AdminLayoutClient({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const sidebarScrollRef = useRef<HTMLDivElement | null>(null);
+
+  const [role, setRole] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [collapseState, setCollapseState] = useState<CollapseState>(defaultCollapseState());
+  const [auditCounts, setAuditCounts] = useState<Record<ContentTabKey, number>>({
+    articles: 0,
+    brands: 0,
+    terms: 0,
+    standards: 0,
+    "industry-data": 0,
+    awards: 0,
+    gallery: 0,
+  });
+  const [pendingEnterpriseVerificationCount, setPendingEnterpriseVerificationCount] = useState(0);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(COLLAPSE_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as CollapseState;
+        setCollapseState({ ...defaultCollapseState(), ...parsed });
+      }
+    } catch {
+      setCollapseState(defaultCollapseState());
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(COLLAPSE_STORAGE_KEY, JSON.stringify(collapseState));
+  }, [collapseState]);
+
+  useEffect(() => {
+    const el = sidebarScrollRef.current;
+    if (!el) return;
+    const raw = sessionStorage.getItem(SCROLL_STORAGE_KEY);
+    if (raw) {
+      const top = Number(raw);
+      if (!Number.isNaN(top)) el.scrollTop = top;
+    }
+
+    const onScroll = () => {
+      sessionStorage.setItem(SCROLL_STORAGE_KEY, String(el.scrollTop));
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      const res = await fetch("/api/auth/me", { credentials: "include" });
+      if (!res.ok) {
+        setRole(null);
+        setLoading(false);
+        return;
+      }
+      const me = await res.json();
+      setRole(me.role ?? null);
+      setLoading(false);
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (role !== "SUPER_ADMIN") {
+      setPendingEnterpriseVerificationCount(0);
+      return;
+    }
+    (async () => {
+      const [aRes, cRes, vRes] = await Promise.all([
+        fetch("/api/admin/articles?status=pending&limit=500", { credentials: "include" }),
+        fetch("/api/admin/article-change-requests?status=pending&limit=500", { credentials: "include" }),
+        fetch("/api/admin/enterprise-verifications?status=pending&limit=500", { credentials: "include" }),
+      ]);
+
+      const nextCounts: Record<ContentTabKey, number> = {
+        articles: 0,
+        brands: 0,
+        terms: 0,
+        standards: 0,
+        "industry-data": 0,
+        awards: 0,
+        gallery: 0,
+      };
+
+      if (aRes.ok) {
+        const data = await aRes.json();
+        const items: PendingArticle[] = Array.isArray(data.items) ? data.items : [];
+        for (const item of items) {
+          const key = resolveTabKeyFromHref(item.categoryHref, item.subHref);
+          nextCounts[key] += 1;
+        }
+      }
+
+      if (cRes.ok) {
+        const data = await cRes.json();
+        const items: PendingChange[] = Array.isArray(data.items) ? data.items : [];
+        for (const item of items) {
+          const key = resolveTabKeyFromHref(item.article?.categoryHref, item.article?.subHref);
+          nextCounts[key] += 1;
+        }
+      }
+
+      setAuditCounts(nextCounts);
+      if (vRes.ok) {
+        const data = await vRes.json();
+        const items = Array.isArray(data.items) ? data.items : [];
+        setPendingEnterpriseVerificationCount(items.length);
+      } else {
+        setPendingEnterpriseVerificationCount(0);
+      }
+    })();
+  }, [role]);
+
+  const totalAuditCount = useMemo(
+    () => Object.values(auditCounts).reduce((sum, n) => sum + n, 0) + pendingEnterpriseVerificationCount,
+    [auditCounts, pendingEnterpriseVerificationCount]
+  );
+
+  if (loading) {
+    return <div className="min-h-[60vh] flex items-center justify-center text-muted">加载中...</div>;
+  }
+
+  if (role !== "SUPER_ADMIN" && role !== "ADMIN") {
+    return (
+      <div className="max-w-md mx-auto px-4 py-16 text-center">
+        <p className="text-muted mb-4">需要管理员权限。</p>
+        <Link
+          href="/membership/login"
+          className="inline-flex items-center rounded-lg bg-accent px-5 py-2.5 text-sm font-medium text-white hover:opacity-90"
+        >
+          去登录
+        </Link>
+      </div>
+    );
+  }
+
+  const isSuperAdmin = role === "SUPER_ADMIN";
+
+  const isLinkActive = (href: string) => {
+    if (href === "/membership/admin/accounts") return pathname === "/membership/admin/accounts";
+    if (href === "/membership/admin/permissions") return pathname === "/membership/admin/permissions";
+    if (href === "/membership/admin/settings") return pathname === "/membership/admin/settings";
+    if (href === "/membership/admin/enterprise-verifications") return pathname === "/membership/admin/enterprise-verifications";
+
+    if (!href.startsWith("/membership/admin/content")) return pathname === href;
+    if (pathname !== "/membership/admin/content") return false;
+
+    const mode = searchParams.get("mode") ?? "publish";
+    const tab = searchParams.get("tab") ?? "articles";
+    const targetMode = href.match(/mode=([^&]+)/)?.[1];
+    const targetTab = href.match(/tab=([^&]+)/)?.[1];
+    return mode === targetMode && tab === targetTab;
+  };
+
+  const toggleGroup = (groupId: string) => {
+    setCollapseState((prev) => ({ ...prev, [groupId]: !prev[groupId] }));
+  };
+
+  return (
+    <div className="min-h-[80vh] flex">
+      <aside className="w-64 shrink-0 border-r border-border bg-surface-elevated/80">
+        <div ref={sidebarScrollRef} className="sticky top-20 h-[calc(100vh-5rem)] overflow-y-auto py-6 pl-4 pr-2">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted mb-4 px-2">管理后台</p>
+          <nav className="space-y-1" aria-label="后台功能">
+            {SIDEBAR.map((group) => {
+              if (group.superOnly && !isSuperAdmin) return null;
+              const collapsed = !!collapseState[group.id];
+              return (
+                <div key={group.id} className="mb-4">
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(group.id)}
+                    className="w-full min-h-9 px-3 py-1.5 flex items-center justify-between rounded hover:bg-surface"
+                  >
+                    <span className="text-sm font-semibold text-muted">{group.label}</span>
+                    <span className="inline-flex items-center gap-2">
+                      {group.withAuditBadge && totalAuditCount > 0 && (
+                        <span className="inline-flex items-center justify-center min-w-5 h-5 px-1 rounded-full bg-red-600 text-white text-[10px]">
+                          {totalAuditCount}
+                        </span>
+                      )}
+                      <span className="inline-flex items-center justify-center w-4 h-4 text-muted">
+                        <svg
+                          viewBox="0 0 20 20"
+                          aria-hidden="true"
+                          className={`h-3.5 w-3.5 transition-transform ${collapsed ? "-rotate-90" : "rotate-0"}`}
+                          fill="currentColor"
+                        >
+                          <path d="M5.5 7.5a1 1 0 0 1 1.4 0L10 10.6l3.1-3.1a1 1 0 0 1 1.4 1.4l-3.8 3.8a1 1 0 0 1-1.4 0L5.5 8.9a1 1 0 0 1 0-1.4Z" />
+                        </svg>
+                      </span>
+                    </span>
+                  </button>
+
+                  {!collapsed && (
+                    <ul className="mt-0.5 space-y-0.5">
+                      {group.children.map((child) => {
+                        if (child.href === "/membership/admin/permissions" && !isSuperAdmin) return null;
+                        const active = isLinkActive(child.href);
+                        const childCount = child.tabKey
+                          ? auditCounts[child.tabKey]
+                          : child.href === "/membership/admin/enterprise-verifications"
+                            ? pendingEnterpriseVerificationCount
+                            : 0;
+                        return (
+                          <li key={child.href}>
+                            <Link
+                              href={child.href}
+                              scroll={false}
+                              className={`rounded-lg pl-5 pr-3 py-2 text-sm font-medium transition-colors flex items-center justify-between ${
+                                active ? "bg-accent/15 text-accent" : "text-primary hover:bg-surface hover:text-accent"
+                              }`}
+                            >
+                              <span>{child.label}</span>
+                              {group.withAuditBadge && childCount > 0 && (
+                                <span className="inline-flex items-center gap-1">
+                                  <span className="w-2 h-2 rounded-full bg-red-500" />
+                                  <span className="text-[11px] text-red-600">{childCount}</span>
+                                </span>
+                              )}
+                            </Link>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
+              );
+            })}
+          </nav>
+          <div className="mt-8 pt-4 border-t border-border">
+            <Link href="/" scroll={false} className="block px-3 py-2 text-xs text-muted hover:text-accent">
+              返回站点
+            </Link>
+          </div>
+        </div>
+      </aside>
+      <main className="flex-1 min-w-0 py-8 px-6 sm:px-8">{children}</main>
+    </div>
+  );
+}

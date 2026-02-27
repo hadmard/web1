@@ -1,12 +1,24 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getCategories } from "@/lib/categories";
 
 type Props = { params: Promise<{ subSlug: string[] }> };
 
+const LEGACY_AWARDS_REDIRECTS: Record<string, string> = {
+  "/awards/huadian": "/huadianbang",
+  "/awards/rules": "/huadianbang",
+  "/awards/top-brands": "/huadianbang/2025",
+  "/awards/regional": "/huadianbang/2025",
+};
+
 export default async function AwardsSubPage({ params }: Props) {
   const { subSlug } = await params;
   const href = "/awards/" + (subSlug?.join("/") ?? "");
+
+  if (LEGACY_AWARDS_REDIRECTS[href]) {
+    redirect(LEGACY_AWARDS_REDIRECTS[href]);
+  }
+
   const categories = await getCategories();
   const awardsCat = categories.find((c) => c.href === "/awards");
   const sub = awardsCat?.subcategories.find((s) => s.href === href);
@@ -21,10 +33,8 @@ export default async function AwardsSubPage({ params }: Props) {
         <span className="text-muted mx-2">/</span>
         <span className="text-primary font-medium">{sub.label}</span>
       </nav>
-      <h1 className="font-serif text-2xl sm:text-3xl font-bold tracking-tight text-primary">
-        {sub.label}
-      </h1>
-      <p className="mt-2 text-muted">本栏目评选与榜单后续接入。</p>
+      <h1 className="font-serif text-2xl sm:text-3xl font-bold tracking-tight text-primary">{sub.label}</h1>
+      <p className="mt-2 text-muted">该栏目已升级至华点榜 3.0 结构化系统，可从整木评选菜单进入对应页面。</p>
     </div>
   );
 }

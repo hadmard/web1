@@ -30,6 +30,9 @@ yarn-error.log*
 .DS_Store
 Thumbs.db
 
+# local temp artifacts
+.tmp-*
+
 # prisma
 prisma/migrations/**/migration_lock.toml
 prisma/*.db

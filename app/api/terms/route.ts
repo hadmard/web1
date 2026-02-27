@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -18,12 +20,7 @@ export async function GET(request: NextRequest) {
       prisma.term.count(),
     ]);
 
-    return NextResponse.json({
-      items,
-      total,
-      page,
-      limit,
-    });
+    return NextResponse.json({ items, total, page, limit });
   } catch (e) {
     console.error(e);
     return NextResponse.json({ error: "服务器错误" }, { status: 500 });

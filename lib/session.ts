@@ -1,7 +1,26 @@
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { asMemberType, ensureEffectiveMemberType, type MemberType } from "@/lib/member-access";
 
-export type Session = { sub: string; email: string; role: string | null };
+export type Session = {
+  sub: string;
+  account: string;
+  name: string | null;
+  email: string;
+  role: string | null;
+  memberType: MemberType;
+  rankingWeight: number;
+  memberTypeExpiresAt: string | null;
+  canPublishWithoutReview: boolean;
+  canManageMembers: boolean;
+  canDeleteOwnContent: boolean;
+  canDeleteMemberContent: boolean;
+  canDeleteAllContent: boolean;
+  canEditOwnContent: boolean;
+  canEditMemberContent: boolean;
+  canEditAllContent: boolean;
+};
 
 /** 服务端获取当前登录用户（含角色），未登录返回 null */
 export async function getSession(): Promise<Session | null> {
@@ -10,10 +29,90 @@ export async function getSession(): Promise<Session | null> {
   if (!token) return null;
   const payload = await verifyToken(token);
   if (!payload) return null;
+
+  let dbMember:
+    | {
+        id: string;
+        email: string;
+        name: string | null;
+        role: string | null;
+        memberType: string;
+        rankingWeight: number;
+        memberTypeExpiresAt: Date | null;
+        canPublishWithoutReview: boolean;
+        canManageMembers?: boolean;
+        canDeleteOwnContent?: boolean;
+        canDeleteMemberContent?: boolean;
+        canDeleteAllContent?: boolean;
+        canEditOwnContent?: boolean;
+        canEditMemberContent?: boolean;
+        canEditAllContent?: boolean;
+      }
+    | null = null;
+
+  try {
+    dbMember = await prisma.member.findUnique({
+      where: { id: payload.sub },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        memberType: true,
+        rankingWeight: true,
+        memberTypeExpiresAt: true,
+        canPublishWithoutReview: true,
+        canManageMembers: true,
+        canDeleteOwnContent: true,
+        canDeleteMemberContent: true,
+        canDeleteAllContent: true,
+        canEditOwnContent: true,
+        canEditMemberContent: true,
+        canEditAllContent: true,
+      },
+    });
+  } catch {
+    // Backward-compatible read when DB migration has not been applied yet.
+    dbMember = await prisma.member.findUnique({
+      where: { id: payload.sub },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        memberType: true,
+        rankingWeight: true,
+        memberTypeExpiresAt: true,
+        canPublishWithoutReview: true,
+      },
+    });
+  }
+  if (!dbMember) return null;
+
+  const effective = await ensureEffectiveMemberType({
+    id: dbMember.id,
+    memberType: dbMember.memberType,
+    memberTypeExpiresAt: dbMember.memberTypeExpiresAt,
+    rankingWeight: dbMember.rankingWeight,
+  });
+
   return {
     sub: payload.sub,
+    account: dbMember.email,
+    name: dbMember.name ?? null,
     email: payload.email,
-    role: payload.role ?? null,
+    role: dbMember.role ?? payload.role ?? null,
+    memberType: asMemberType(effective.memberType),
+    rankingWeight: effective.rankingWeight,
+    memberTypeExpiresAt: dbMember.memberTypeExpiresAt?.toISOString() ?? null,
+    canPublishWithoutReview: dbMember.canPublishWithoutReview ?? false,
+    canManageMembers: dbMember.canManageMembers ?? false,
+    canDeleteOwnContent: dbMember.canDeleteOwnContent ?? false,
+    canDeleteMemberContent: dbMember.canDeleteMemberContent ?? false,
+    canDeleteAllContent: dbMember.canDeleteAllContent ?? false,
+    canEditOwnContent: dbMember.canEditOwnContent ?? false,
+    canEditMemberContent: dbMember.canEditMemberContent ?? false,
+    canEditAllContent: dbMember.canEditAllContent ?? false,
   };
 }
 

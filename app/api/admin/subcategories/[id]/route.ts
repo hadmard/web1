@@ -7,8 +7,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getSession();
-  if (!session || session.role !== "SUPER_ADMIN") {
-    return NextResponse.json({ error: "需要主账号权限" }, { status: 403 });
+  if (!session || (session.role !== "SUPER_ADMIN" && session.role !== "ADMIN")) {
+    return NextResponse.json({ error: "需要管理员权限" }, { status: 403 });
   }
   const { id } = await params;
   const body = await request.json();

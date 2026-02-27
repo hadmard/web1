@@ -1,9 +1,6 @@
-import { CategoryHome } from "@/components/CategoryHome";
-import { getCategoryWithMetaByHref } from "@/lib/categories";
-import { getTermsBySlugs } from "@/lib/terms";
+import { redirect } from "next/navigation";
 
-export default async function MarketPage() {
-  const category = await getCategoryWithMetaByHref("/market");
-  const relatedTerms = await getTermsBySlugs(category?.relatedTermSlugs ?? []);
-  return <CategoryHome basePath="/market" category={category} relatedTerms={relatedTerms} />;
+// 兼容旧链接：将 /market 重定向到新的整木品牌栏目 /brands
+export default function MarketPage() {
+  redirect("/brands");
 }

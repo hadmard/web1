@@ -1,55 +1,41 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import Image from "next/image";
 import type { Category } from "@/lib/site-structure";
 import { getCategoryByHref } from "@/lib/site-structure";
 import { getCategoryIcon } from "@/lib/category-icons";
-import { JsonLd } from "@/components/JsonLd";
 
 interface CategoryHomeProps {
   basePath: string;
   category?: Category | null;
   title?: string;
   desc?: string;
-  /** 相关词条：slug → title，用于底部链接 */
-  relatedTerms?: { slug: string; title: string }[];
   children?: React.ReactNode;
 }
 
-function groupBy<T>(arr: T[], key: (x: T) => string | null | undefined): Map<string | null, T[]> {
-  const map = new Map<string | null, T[]>();
-  for (const x of arr) {
-    const k = key(x) ?? null;
-    if (!map.has(k)) map.set(k, []);
-    map.get(k)!.push(x);
-  }
-  return map;
-}
-
-export function CategoryHome({ basePath, category: categoryFromDb, title, desc, relatedTerms = [], children }: CategoryHomeProps) {
+export function CategoryHome({
+  basePath,
+  category: categoryFromDb,
+  title,
+  desc,
+  children,
+}: CategoryHomeProps) {
   const category = categoryFromDb ?? getCategoryByHref(basePath);
   const displayTitle = title ?? category?.title ?? "";
   const displayDesc = desc ?? category?.desc ?? "";
   const subcategories = category?.subcategories ?? [];
-  const grouped = groupBy(subcategories, (s) => (s as { groupLabel?: string | null }).groupLabel);
-  const hasGroups = grouped.size > 1 || (grouped.size === 1 && grouped.has(null) === false);
-
-  const faqs = category?.faqs ?? [];
-  const faqJsonLd = faqs.length > 0 ? {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: faqs.map((f) => ({
-      "@type": "Question",
-      name: f.question,
-      acceptedAnswer: { "@type": "Answer", text: f.answer },
-    })),
-  } : null;
 
   const iconSrc = getCategoryIcon(basePath);
+  const getSubDesc = (label: string) => `本子栏目用于发布${label}相关内容，帮助用户快速定位该方向信息。`;
+  const getSubHref = (href: string) => {
+    if (basePath === "/news") return `/news/all?sub=${encodeURIComponent(href)}`;
+    if (basePath === "/dictionary") return `/dictionary/all?sub=${encodeURIComponent(href)}`;
+    return href;
+  };
 
   return (
     <div className="min-h-screen">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12">
-        <nav className="mb-8" aria-label="面包屑">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-12">
+        <nav className="mb-6" aria-label="面包屑">
           <Link href="/" className="text-sm text-muted hover:text-accent transition-colors">
             首页
           </Link>
@@ -57,105 +43,60 @@ export function CategoryHome({ basePath, category: categoryFromDb, title, desc, 
           <span className="text-primary font-medium">{displayTitle}</span>
         </nav>
 
-        <div className="flex gap-4 items-start">
-          {iconSrc && (
-            <div className="flex-shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-surface-elevated/80 border border-border-warm dark:border-border-cool flex items-center justify-center text-accent">
-              <Image src={iconSrc} alt="" width={40} height={40} className="w-10 h-10 sm:w-11 sm:h-11" />
+        <section className="glass-panel p-6 sm:p-8">
+          <div className="flex gap-4 items-start">
+            {iconSrc && (
+              <div className="shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-surface border border-border flex items-center justify-center text-accent">
+                <Image src={iconSrc} alt="" width={42} height={42} className="w-10 h-10 sm:w-11 sm:h-11" />
+              </div>
+            )}
+            <div className="min-w-0">
+              <h1 className="font-serif text-3xl sm:text-4xl font-semibold tracking-tight text-primary">{displayTitle}</h1>
+              <p className="mt-2 text-muted text-sm sm:text-base">{displayDesc}</p>
             </div>
-          )}
-          <div className="min-w-0">
-            <h1 className="font-serif text-2xl sm:text-3xl font-bold tracking-tight text-primary">
-              {displayTitle}
-            </h1>
-            <p className="mt-2 text-muted">{displayDesc}</p>
           </div>
-        </div>
 
-        {category?.definitionText && (
-          <section className="mt-6 rounded-xl border border-border-warm dark:border-border-cool bg-surface-elevated/60 p-5">
-            <p className="text-primary leading-relaxed">{category.definitionText}</p>
-          </section>
-        )}
-
-        {subcategories.length > 0 && (
-          <section className="mt-10" aria-label="子栏目">
-            <h2 className="section-label text-accent mb-4">子栏目</h2>
-            {hasGroups ? (
-              <div className="space-y-6">
-                {Array.from(grouped.entries()).map(([groupLabel, subs]) => (
-                  <div key={groupLabel ?? "_"} className="space-y-2">
-                    {groupLabel && (
-                      <h3 className="font-serif text-sm font-semibold text-primary">{groupLabel}</h3>
-                    )}
-                    <ul className="flex flex-wrap gap-3">
-                      {subs.map((sub) => (
-                        <li key={sub.href}>
-                          <Link
-                            href={sub.href}
-                            className="inline-flex items-center rounded-xl border border-border-warm dark:border-border-cool bg-surface-elevated/80 px-5 py-2.5 text-sm font-medium text-primary hover:border-accent/50 hover:shadow-glow transition-all duration-200"
-                          >
-                            {sub.label}
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+          {subcategories.length > 0 ? (
+            <div className="mt-5 rounded-2xl border border-border bg-surface p-4 sm:p-5">
+              <h2 className="section-label text-primary mb-3">栏目分类</h2>
+              <div className="grid sm:grid-cols-2 gap-3">
+                {subcategories.map((sub) => (
+                  <Link
+                    key={sub.href}
+                    href={getSubHref(sub.href)}
+                    className="rounded-xl border border-border bg-surface-elevated p-3 hover:border-accent/45 transition-colors"
+                  >
+                    <p className="text-sm font-semibold text-primary">{sub.label}</p>
+                    <p className="mt-1 text-xs text-muted leading-5">{getSubDesc(sub.label)}</p>
+                  </Link>
                 ))}
               </div>
-            ) : (
-              <ul className="flex flex-wrap gap-3">
-                {subcategories.map((sub) => (
-                  <li key={sub.href}>
-                    <Link
-                      href={sub.href}
-                      className="inline-flex items-center rounded-xl border border-border-warm dark:border-border-cool bg-surface-elevated/80 px-5 py-2.5 text-sm font-medium text-primary hover:border-accent/50 hover:shadow-glow transition-all duration-200"
-                    >
-                      {sub.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-        )}
+            </div>
+          ) : (
+            category?.definitionText && (
+              <div className="mt-5 rounded-2xl border border-border bg-surface p-4 sm:p-5">
+                <p className="text-primary leading-relaxed">{category.definitionText}</p>
+              </div>
+            )
+          )}
 
-        {children && <div className="mt-12">{children}</div>}
+          {(category?.updatedAt || category?.versionLabel) && (
+            <p className="mt-4 text-xs text-muted">
+              {category.versionLabel && <span>{displayTitle} {category.versionLabel}</span>}
+              {category.updatedAt && (
+                <span>
+                  {category.versionLabel ? " · " : ""}
+                  最近更新：{new Date(category.updatedAt).toLocaleDateString("zh-CN")}
+                </span>
+              )}
+            </p>
+          )}
+        </section>
 
-        {faqs.length > 0 && (
-          <section className="mt-12 border-t border-border-warm dark:border-border-cool pt-10">
-            {faqJsonLd && <JsonLd data={faqJsonLd} />}
-            <h2 className="section-label text-accent mb-4">常见问题</h2>
-            <ul className="space-y-4">
-              {faqs.map((item, i) => (
-                <li key={i}>
-                  <h3 className="font-serif text-sm font-semibold text-primary">{item.question}</h3>
-                  <p className="text-sm text-muted mt-1">{item.answer}</p>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
-
-        {relatedTerms.length > 0 && (
-          <section className="mt-10 border-t border-border-warm dark:border-border-cool pt-8">
-            <h2 className="section-label text-accent mb-3">相关词条</h2>
-            <ul className="flex flex-wrap gap-2">
-              {relatedTerms.map((t) => (
-                <li key={t.slug}>
-                  <Link
-                    href={`/dictionary/${t.slug}`}
-                    className="text-sm font-medium text-accent hover:underline"
-                  >
-                    {t.title}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
+        {children && <div className="mt-10">{children}</div>}
 
         {(category?.versionLabel ?? category?.versionYear) && (
-          <footer className="mt-12 pt-6 text-xs text-muted">
+          <footer className="mt-10 pt-4 text-xs text-muted">
             {displayTitle}
             {category?.versionLabel && ` ${category.versionLabel}`}
             {category?.versionYear && !category?.versionLabel && ` ${category.versionYear}年`}
