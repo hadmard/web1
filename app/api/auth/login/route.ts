@@ -74,6 +74,10 @@ export async function POST(request: NextRequest) {
       memberType,
     });
 
+    const forwardedProto = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
+    const isHttpsRequest = forwardedProto === "https" || request.nextUrl.protocol === "https:";
+    const useSecureCookie = process.env.NODE_ENV === "production" ? isHttpsRequest : false;
+
     const res = NextResponse.json({
       ok: true,
       role: member.role ?? null,
@@ -82,7 +86,7 @@ export async function POST(request: NextRequest) {
     });
     res.cookies.set("auth", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: useSecureCookie,
       sameSite: "lax",
       maxAge: 60 * 60 * 24 * 7,
       path: "/",
