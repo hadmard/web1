@@ -26,6 +26,9 @@ export default function AdminAccountsPage() {
   const [visibleRows, setVisibleRows] = useState<AdminVisibleRow[]>([]);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [myNewPassword, setMyNewPassword] = useState("");
+  const [myNewPasswordConfirm, setMyNewPasswordConfirm] = useState("");
 
   const [newAccount, setNewAccount] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -125,6 +128,40 @@ export default function AdminAccountsPage() {
     setMessage("已删除");
   }
 
+  async function changeMyPassword(e: React.FormEvent) {
+    e.preventDefault();
+    setMessage("");
+
+    if (!currentPassword || !myNewPassword || !myNewPasswordConfirm) {
+      setMessage("请完整填写修改密码信息");
+      return;
+    }
+    if (myNewPassword !== myNewPasswordConfirm) {
+      setMessage("两次输入的新密码不一致");
+      return;
+    }
+
+    const res = await fetch("/api/auth/password", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        currentPassword,
+        newPassword: myNewPassword,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setMessage(data.error ?? "修改密码失败");
+      return;
+    }
+
+    setCurrentPassword("");
+    setMyNewPassword("");
+    setMyNewPasswordConfirm("");
+    setMessage("我的密码已更新");
+  }
+
   if (loading) return <p className="text-muted">加载中...</p>;
 
   if (!isSuperAdmin && !isAdmin) {
@@ -144,6 +181,49 @@ export default function AdminAccountsPage() {
         </p>
         {message && <p className="text-sm text-accent mt-2">{message}</p>}
       </header>
+
+      <section className="rounded-xl border border-border bg-surface-elevated p-4">
+        <h2 className="text-sm font-medium text-primary mb-3">修改我的密码</h2>
+        <form onSubmit={changeMyPassword} className="grid md:grid-cols-4 gap-3 items-end">
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-muted">旧密码</span>
+            <input
+              type="password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              required
+              className="px-3 py-2 border border-border rounded bg-surface text-sm"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-muted">新密码</span>
+            <input
+              type="password"
+              value={myNewPassword}
+              onChange={(e) => setMyNewPassword(e.target.value)}
+              required
+              minLength={6}
+              className="px-3 py-2 border border-border rounded bg-surface text-sm"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-muted">确认新密码</span>
+            <input
+              type="password"
+              value={myNewPasswordConfirm}
+              onChange={(e) => setMyNewPasswordConfirm(e.target.value)}
+              required
+              minLength={6}
+              className="px-3 py-2 border border-border rounded bg-surface text-sm"
+            />
+          </label>
+          <div>
+            <button type="submit" className="px-4 py-2 rounded bg-accent text-white text-sm">
+              修改我的密码
+            </button>
+          </div>
+        </form>
+      </section>
 
       {isAdmin && !canManageMembers && (
         <section className="rounded-xl border border-border bg-surface-elevated p-4">
