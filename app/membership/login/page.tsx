@@ -99,7 +99,6 @@ export default function LoginPage() {
           {loading ? "登录中..." : "登录"}
         </button>
 
-        <p className="text-xs text-[var(--color-muted)]">默认主账号：admin，默认密码：admin</p>
       </form>
     </div>
   );
