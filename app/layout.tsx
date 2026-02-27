@@ -51,6 +51,11 @@ export const metadata: Metadata = {
     url: baseUrl,
   },
   alternates: { canonical: baseUrl },
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
+  },
   robots: { index: true, follow: true },
 };
 

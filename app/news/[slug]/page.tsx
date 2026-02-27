@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { JsonLd } from "@/components/JsonLd";
 import { previewText } from "@/lib/text";
 import { RichContent } from "@/components/RichContent";
+import { ReadingProgressBar } from "@/components/ReadingProgressBar";
 
 type Props = { params: Promise<{ slug: string }> };
 const NEWS_SUB_SLUGS = new Set(["trends", "enterprise", "tech", "events"]);
@@ -90,40 +91,43 @@ export default async function ArticlePage({ params }: Props) {
   };
 
   return (
-    <article className="max-w-3xl mx-auto px-4 py-10">
-      <JsonLd data={articleSchema} />
-      <JsonLd data={breadcrumbSchema} />
+    <>
+      <ReadingProgressBar targetId="news-reading-article" />
+      <article id="news-reading-article" className="max-w-3xl mx-auto px-4 py-10">
+        <JsonLd data={articleSchema} />
+        <JsonLd data={breadcrumbSchema} />
 
-      <nav className="mb-6 text-sm text-muted" aria-label="面包屑">
-        <Link href="/" className="hover:text-accent">首页</Link>
-        <span className="mx-2">/</span>
-        <Link href="/news" className="hover:text-accent">整木资讯</Link>
-        <span className="mx-2">/</span>
-        <span className="text-primary">{article.title}</span>
-      </nav>
+        <nav className="mb-6 text-sm text-muted" aria-label="面包屑">
+          <Link href="/" className="hover:text-accent">首页</Link>
+          <span className="mx-2">/</span>
+          <Link href="/news" className="hover:text-accent">整木资讯</Link>
+          <span className="mx-2">/</span>
+          <span className="text-primary">{article.title}</span>
+        </nav>
 
-      <h1 className="font-serif text-2xl font-bold text-primary mb-2">{article.title}</h1>
-      {(article.conceptSummary || article.updatedAt) && (
-        <p className="text-sm text-muted mb-4">
-          {article.conceptSummary && <span>{article.conceptSummary}</span>}
-          {article.updatedAt && (
-            <span className="block mt-1">更新时间：{new Date(article.updatedAt).toLocaleDateString("zh-CN")}</span>
-          )}
-        </p>
-      )}
-      {article.excerpt && (
-        <blockquote className="mb-5 rounded-r-lg border-l-4 border-accent bg-surface px-4 py-3 text-sm text-muted">
-          {article.excerpt}
-        </blockquote>
-      )}
-      <RichContent html={article.content} className="prose prose-neutral dark:prose-invert max-w-none" />
-      {article.applicableScenarios && (
-        <section className="mt-8 pt-6 border-t border-border">
-          <h2 className="text-lg font-semibold text-primary mb-2">适用场景</h2>
-          <p className="text-muted">{article.applicableScenarios}</p>
-        </section>
-      )}
-      {article.versionLabel && <p className="mt-6 text-xs text-muted">版本：{article.versionLabel}</p>}
-    </article>
+        <h1 className="font-serif text-2xl font-bold text-primary mb-2">{article.title}</h1>
+        {(article.conceptSummary || article.updatedAt) && (
+          <p className="text-sm text-muted mb-4">
+            {article.conceptSummary && <span>{article.conceptSummary}</span>}
+            {article.updatedAt && (
+              <span className="block mt-1">更新时间：{new Date(article.updatedAt).toLocaleDateString("zh-CN")}</span>
+            )}
+          </p>
+        )}
+        {article.excerpt && (
+          <blockquote className="mb-5 rounded-r-lg border-l-4 border-accent bg-surface px-4 py-3 text-sm text-muted">
+            {article.excerpt}
+          </blockquote>
+        )}
+        <RichContent html={article.content} className="prose prose-neutral dark:prose-invert max-w-none" />
+        {article.applicableScenarios && (
+          <section className="mt-8 pt-6 border-t border-border">
+            <h2 className="text-lg font-semibold text-primary mb-2">适用场景</h2>
+            <p className="text-muted">{article.applicableScenarios}</p>
+          </section>
+        )}
+        {article.versionLabel && <p className="mt-6 text-xs text-muted">版本：{article.versionLabel}</p>}
+      </article>
+    </>
   );
 }
