@@ -1,8 +1,11 @@
 ﻿"use client";
 
+export const dynamic = "force-dynamic";
+
 import Link from "next/link";
 import {
   FormEvent,
+  Suspense,
   useEffect,
   useMemo,
   useRef,
@@ -151,7 +154,7 @@ function parseTab(raw: string | null): ContentTabKey {
   return hit?.key ?? "articles";
 }
 
-export default function PublishCenterPage() {
+function PublishCenterPageInner() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -839,5 +842,13 @@ export default function PublishCenterPage() {
         </section>
       )}
     </div>
+  );
+}
+
+export default function PublishCenterPage() {
+  return (
+    <Suspense fallback={<div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 text-sm text-muted">加载中...</div>}>
+      <PublishCenterPageInner />
+    </Suspense>
   );
 }

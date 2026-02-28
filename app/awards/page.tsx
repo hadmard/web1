@@ -3,7 +3,7 @@ import { CategoryHome } from "@/components/CategoryHome";
 import { getCategoryWithMetaByHref } from "@/lib/categories";
 import { getLatestHuadianYear, HUADIAN_DEFINITION } from "@/lib/huadianbang";
 import { prisma } from "@/lib/prisma";
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 
 export default async function AwardsPage() {

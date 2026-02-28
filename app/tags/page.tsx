@@ -1,7 +1,7 @@
 ﻿import Link from "next/link";
 import { getCategories } from "@/lib/categories";
 import { prisma } from "@/lib/prisma";
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 
 const TAG_TYPES = [

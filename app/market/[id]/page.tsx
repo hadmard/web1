@@ -1,10 +1,10 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getBrandById } from "@/lib/brands";
 import { getCategories } from "@/lib/categories";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 import { JsonLd } from "@/components/JsonLd";
 
 type Props = { params: Promise<{ id: string }> };

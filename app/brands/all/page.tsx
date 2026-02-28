@@ -1,7 +1,7 @@
 ﻿import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { parseBrandStructuredHtml } from "@/lib/brand-structured";
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 
 type Props = {

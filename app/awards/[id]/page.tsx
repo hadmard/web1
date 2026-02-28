@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { JsonLd } from "@/components/JsonLd";
 import { RichContent } from "@/components/RichContent";
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 
 type Props = { params: Promise<{ id: string }> };

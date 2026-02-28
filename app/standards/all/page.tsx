@@ -2,7 +2,7 @@
 import { prisma } from "@/lib/prisma";
 import { getCategoryWithMetaByHref } from "@/lib/categories";
 import { parseStandardStructuredHtml } from "@/lib/standard-structured";
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 
 type Props = {

@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { JsonLd } from "@/components/JsonLd";
 import { previewText } from "@/lib/text";
 import { RichContent } from "@/components/RichContent";
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 
 type Props = { params: Promise<{ slug: string }> };

@@ -1,14 +1,11 @@
 ﻿import type { Metadata, Viewport } from "next";
 import { Noto_Sans_SC, Noto_Serif_SC } from "next/font/google";
 import "./globals.css";
-export const dynamic = "force-dynamic";
-
 
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
 import { JsonLd } from "@/components/JsonLd";
-import { getCategories } from "@/lib/categories";
-import { getSession } from "@/lib/session";
+import { categories as staticCategories } from "@/lib/site-structure";
 
 const notoSerifSC = Noto_Serif_SC({
   weight: ["400", "600", "700"],
@@ -95,17 +92,9 @@ const jsonLdGraph = [
   },
 ];
 
-export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  let categories: { href: string; title: string; desc: string; subcategories: { href: string; label: string }[] }[] = [];
-  try {
-    categories = await getCategories();
-  } catch {
-    categories = [];
-  }
-  const session = await getSession();
-
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const navItems = navOrder.map(({ href, label }) => {
-    const cat = categories.find((c) => c.href === href || (href === "/membership" && c.href === "/membership"));
+    const cat = staticCategories.find((c) => c.href === href || (href === "/membership" && c.href === "/membership"));
     return {
       href,
       label,
@@ -121,15 +110,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
         <JsonLd data={{ "@context": "https://schema.org", "@graph": jsonLdGraph }} />
         <Header
           navItems={navItems}
-          initialMe={
-            session
-              ? {
-                  name: session.name?.trim() || session.account,
-                  account: session.account,
-                  role: session.role ?? null,
-                }
-              : null
-          }
+          initialMe={null}
         />
         <main className="flex-1">{children}</main>
         <Footer />
