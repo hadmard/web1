@@ -38,16 +38,17 @@ docs/
 
 # prisma
 prisma/migrations/**/migration_lock.toml
-prisma/*.db
-prisma/*.db-journal
-prisma/dev.db
 prisma/prisma/
 
-# database data files (never commit)
+# local database files (for accidental sqlite/dev dbs)
 *.db
 *.db-journal
 *.sqlite
 *.sqlite3
+
+# database dumps/backups (optional local artifacts)
+*.dump
+*.backup
 
 # user uploads / runtime storage (never commit)
 uploads/
