@@ -133,8 +133,8 @@ export default async function HomePage() {
     <main className="min-h-screen">
       <ScrollMotion />
 
-      <section className="relative overflow-hidden border-b border-border py-24 sm:py-28">
-        <div className="pointer-events-none absolute inset-0">
+      <section className="relative overflow-hidden border-b border-border py-24 sm:py-28" data-mouse-zone>
+        <div className="pointer-events-none absolute inset-0 parallax-layer" data-parallax="0.05">
           <Image
             src="/images/seedance2/picture_1.jpg"
             alt=""
@@ -144,13 +144,13 @@ export default async function HomePage() {
           />
         </div>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 relative">
-          <div data-reveal className="reveal text-center">
+          <div data-reveal="zoom-soft" data-reveal-delay="0" className="text-center">
             <p className="text-[11px] sm:text-xs uppercase tracking-[0.22em] text-muted">中国整木定制行业知识基础设施平台</p>
             <h1 className="mt-5 font-serif text-5xl sm:text-6xl lg:text-7xl font-semibold tracking-[0.08em] text-primary">中华整木网</h1>
             <p className="mt-5 text-sm sm:text-base text-muted max-w-3xl mx-auto">让行业资讯、品牌、标准与评选在一个界面里高效协同。</p>
           </div>
 
-          <nav data-reveal className="reveal mt-8 flex flex-wrap justify-center gap-2.5" aria-label="快捷入口">
+          <nav data-reveal="fade-up" data-reveal-delay="100" className="mt-8 flex flex-wrap justify-center gap-2.5" aria-label="快捷入口">
             {QUICK_ENTRIES.map((item) => (
               <Link key={item.href} href={item.href} className="interactive-lift rounded-full border border-border bg-surface-elevated/90 px-4 py-2 text-sm text-primary hover:border-accent/40 hover:text-accent">
                 {item.label}
@@ -162,7 +162,7 @@ export default async function HomePage() {
 
       <section className="section-tone-a border-b border-border py-14 sm:py-16">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div data-reveal className="reveal relative mb-6 overflow-hidden rounded-2xl border border-border">
+          <div data-reveal="zoom-soft" className="relative mb-6 overflow-hidden rounded-2xl border border-border">
             <Image
               src="/images/seedance2/picture_2.jpg"
               alt=""
@@ -172,9 +172,9 @@ export default async function HomePage() {
             />
             <div className="absolute inset-0 bg-gradient-to-r from-surface/82 via-surface/45 to-transparent" />
           </div>
-          <h2 data-reveal className="reveal section-label text-primary mb-6">今日更新</h2>
+          <h2 data-reveal="fade-up" className="section-label text-primary mb-6">今日更新</h2>
           <div className="grid lg:grid-cols-3 gap-4">
-            <article data-reveal className="reveal glass-panel p-5 lg:col-span-2">
+            <article data-reveal="fade-left" data-reveal-delay="60" className="glass-panel p-5 lg:col-span-2">
               <p className="text-xs text-muted mb-2">整木资讯</p>
               <h3 className="font-serif text-lg font-semibold text-primary mb-3">最新发布</h3>
               <ul className="space-y-2">
@@ -187,7 +187,7 @@ export default async function HomePage() {
               <Link href="/news/all" className="mt-4 inline-block text-sm font-medium text-accent hover:underline">查看更多</Link>
             </article>
 
-            <article data-reveal className="reveal glass-panel p-5">
+            <article data-reveal="fade-right" data-reveal-delay="120" className="glass-panel p-5">
               <p className="text-xs text-muted mb-2">高频阅读</p>
               <h3 className="font-serif text-lg font-semibold text-primary mb-3">热门内容</h3>
               <ul className="space-y-2">
@@ -204,10 +204,10 @@ export default async function HomePage() {
 
       <section className="section-tone-b border-b border-border py-14 sm:py-16">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <h2 data-reveal className="reveal section-label text-primary mb-6">四大结构板块</h2>
-          <div className="grid lg:grid-cols-2 gap-4">
+          <h2 data-reveal="fade-up" className="section-label text-primary mb-6">四大结构板块</h2>
+          <div className="grid lg:grid-cols-2 gap-4" data-reveal-stagger="85">
             {structureCards.map((card) => (
-              <article key={card.title} data-reveal className="reveal glass-panel p-5 sm:p-6 relative overflow-hidden">
+              <article key={card.title} data-reveal="zoom-soft" className="glass-panel p-5 sm:p-6 relative overflow-hidden">
                 <div className="relative">
                   <div className="mb-4 overflow-hidden rounded-xl border border-border">
                     <Image
@@ -240,7 +240,7 @@ export default async function HomePage() {
 
       <section className="section-tone-c border-b border-border py-14 sm:py-16">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 grid lg:grid-cols-3 gap-4">
-          <article data-reveal className="reveal glass-panel p-5 lg:col-span-2">
+          <article data-reveal="fade-left" className="glass-panel p-5 lg:col-span-2">
             <div className="mb-4 overflow-hidden rounded-xl border border-border">
               <Image
                 src="/images/seedance2/picture_7.jpg"
@@ -266,7 +266,7 @@ export default async function HomePage() {
             </div>
           </article>
 
-          <article data-reveal className="reveal glass-panel p-5">
+          <article data-reveal="fade-right" data-reveal-delay="80" className="glass-panel p-5">
             <p className="text-xs text-muted mb-2">区域热度</p>
             <h3 className="font-serif text-lg font-semibold text-primary mb-3">品牌数量</h3>
             <ul className="space-y-2 text-sm">
@@ -283,7 +283,7 @@ export default async function HomePage() {
 
       <section className="section-tone-b border-b border-border py-14 sm:py-16">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <article data-reveal className="reveal glass-panel p-6 sm:p-7">
+          <article data-reveal="zoom-soft" className="glass-panel p-6 sm:p-7">
             <div className="mb-4 overflow-hidden rounded-xl border border-border">
               <Image
                 src="/images/seedance2/picture_8.jpg"
@@ -327,7 +327,7 @@ export default async function HomePage() {
 
       <section className="section-tone-a py-14 sm:py-16">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div data-reveal className="reveal glass-panel p-7 sm:p-8 text-center">
+          <div data-reveal="fade-up" className="glass-panel p-7 sm:p-8 text-center">
             <h3 className="font-serif text-2xl sm:text-3xl font-semibold text-primary">加入中华整木网，进入行业结构</h3>
             <p className="mt-3 text-sm text-muted">会员系统不仅是发布入口，更是标准共建、内容协作与行业知识沉淀的工作空间。</p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">

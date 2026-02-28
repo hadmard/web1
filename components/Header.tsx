@@ -162,7 +162,7 @@ export function Header({
               >
                 <Link
                   href={finalHref}
-                  className={`inline-flex items-center rounded-full px-3.5 py-1.5 text-xs sm:text-sm font-medium transition-all duration-200 whitespace-nowrap ${
+                  className={`nav-pill inline-flex items-center rounded-full px-3.5 py-1.5 text-xs sm:text-sm font-medium whitespace-nowrap ${
                     isMembership
                       ? "text-white bg-[var(--color-accent)] hover:brightness-105"
                       : "text-[var(--color-muted)] hover:text-[var(--color-primary)] hover:bg-[color-mix(in_srgb,var(--color-surface-elevated)_82%,transparent)]"
@@ -180,8 +180,8 @@ export function Header({
                   )}
                 </Link>
 
-                {isMemberItem && hovered === href && (
-                  <div className="absolute top-full left-0 pt-2 z-50">
+                {isMemberItem && (
+                  <div className={`nav-dropdown absolute top-full left-0 pt-2 z-50 ${hovered === href ? "is-open" : ""}`}>
                     <div className="glass-card min-w-[220px] py-2 px-2">
                       <ul className="space-y-1">
                         {!me ? (
@@ -227,8 +227,8 @@ export function Header({
                   </div>
                 )}
 
-                {!isMemberItem && hoverItems.length > 0 && hovered === href && (
-                  <div className="absolute top-full left-0 pt-2 z-50">
+                {!isMemberItem && hoverItems.length > 0 && (
+                  <div className={`nav-dropdown absolute top-full left-0 pt-2 z-50 ${hovered === href ? "is-open" : ""}`}>
                     <div className="glass-card min-w-[230px] py-2 px-2">
                       <ul className="space-y-1">
                         {hoverItems.map((sub) => (

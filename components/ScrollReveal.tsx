@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-type Direction = "up" | "left" | "right";
+type Direction = "up" | "fade-up" | "fade-left" | "fade-right" | "zoom-soft";
 
 type ScrollRevealProps = {
   children: React.ReactNode;
@@ -39,10 +39,14 @@ export function ScrollReveal({
     return () => observer.disconnect();
   }, [rootMargin]);
 
+  const mode: Direction = direction === "up" ? "fade-up" : direction;
+
   return (
     <div
       ref={ref}
-      className={`scroll-reveal scroll-reveal--${direction} ${inView ? "scroll-reveal--in" : ""} ${className}`}
+      data-reveal={mode}
+      data-reveal-delay={String(delay)}
+      className={`reveal reveal--${mode} ${inView ? "is-visible" : ""} ${className}`}
       style={{ transitionDelay: inView ? `${delay}ms` : "0ms" }}
     >
       {children}

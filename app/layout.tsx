@@ -1,25 +1,10 @@
 ﻿import type { Metadata, Viewport } from "next";
-import { Noto_Sans_SC, Noto_Serif_SC } from "next/font/google";
 import "./globals.css";
 
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
 import { JsonLd } from "@/components/JsonLd";
 import { categories as staticCategories } from "@/lib/site-structure";
-
-const notoSerifSC = Noto_Serif_SC({
-  weight: ["400", "600", "700"],
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-serif",
-});
-
-const notoSansSC = Noto_Sans_SC({
-  weight: ["300", "400", "500", "600"],
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-sans",
-});
 
 const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://example.com";
 
@@ -105,7 +90,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   });
 
   return (
-    <html lang="zh-CN" className={`scroll-smooth ${notoSerifSC.variable} ${notoSansSC.variable}`}>
+    <html lang="zh-CN" className="scroll-smooth">
       <body className="min-h-screen flex flex-col font-sans">
         <JsonLd data={{ "@context": "https://schema.org", "@graph": jsonLdGraph }} />
         <Header
@@ -118,3 +103,5 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     </html>
   );
 }
+
+
