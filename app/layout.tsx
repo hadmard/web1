@@ -1,6 +1,8 @@
 ﻿import type { Metadata, Viewport } from "next";
 import { Noto_Sans_SC, Noto_Serif_SC } from "next/font/google";
 import "./globals.css";
+export const dynamic = "force-dynamic";
+
 
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";

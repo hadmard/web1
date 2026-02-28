@@ -3,6 +3,8 @@ import Image from "next/image";
 import { ScrollMotion } from "@/components/ScrollMotion";
 import { ENGINEER_CATEGORY_LABELS, getLatestHuadianYear, getTop10ByYear } from "@/lib/huadianbang";
 import { prisma } from "@/lib/prisma";
+export const dynamic = "force-dynamic";
+
 
 const QUICK_ENTRIES = [
   { href: "/news", label: "整木资讯" },

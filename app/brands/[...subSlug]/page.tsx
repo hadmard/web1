@@ -7,6 +7,8 @@ import { JsonLd } from "@/components/JsonLd";
 import { previewText } from "@/lib/text";
 import { RichContent } from "@/components/RichContent";
 import { parseBrandStructuredHtml } from "@/lib/brand-structured";
+export const dynamic = "force-dynamic";
+
 
 type Props = {
   params: Promise<{ subSlug: string[] }>;

@@ -1,6 +1,8 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { getCategories } from "@/lib/categories";
 import { prisma } from "@/lib/prisma";
+export const dynamic = "force-dynamic";
+
 
 const TAG_TYPES = [
   { key: "industry", label: "行业标签" },

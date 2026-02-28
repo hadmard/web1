@@ -1,6 +1,8 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getCategories } from "@/lib/categories";
+export const dynamic = "force-dynamic";
+
 
 type Props = { params: Promise<{ subSlug: string[] }> };
 

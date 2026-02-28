@@ -1,8 +1,10 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { CategoryHome } from "@/components/CategoryHome";
 import { getCategoryWithMetaByHref } from "@/lib/categories";
 import { getLatestHuadianYear, HUADIAN_DEFINITION } from "@/lib/huadianbang";
 import { prisma } from "@/lib/prisma";
+export const dynamic = "force-dynamic";
+
 
 export default async function AwardsPage() {
   const [category, awards] = await Promise.all([

@@ -6,6 +6,8 @@ import { prisma } from "@/lib/prisma";
 import { JsonLd } from "@/components/JsonLd";
 import { previewText } from "@/lib/text";
 import { RichContent } from "@/components/RichContent";
+export const dynamic = "force-dynamic";
+
 
 type Props = { params: Promise<{ slug: string }> };
 const NEWS_SUB_SLUGS = new Set(["trends", "enterprise", "tech", "events"]);
