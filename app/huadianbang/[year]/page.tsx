@@ -1,5 +1,6 @@
-import { notFound } from "next/navigation";
+﻿import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { JsonLd } from "@/components/JsonLd";
 import { getAnnualBoard, getTop10ByYear, HUADIAN_DEFINITION } from "@/lib/huadianbang";
 
@@ -26,6 +27,9 @@ export default async function HuadianAnnualPage({ params }: Props) {
 
       <section className="glass-panel p-6 sm:p-8">
         <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-primary">{annual.year} 年度榜单</h1>
+        <div className="mt-4 overflow-hidden rounded-2xl border border-border">
+          <Image src="/images/seedance2/picture_20.jpg" alt="" width={1920} height={900} className="h-44 sm:h-56 w-full object-cover" />
+        </div>
         <p className="mt-3 text-sm text-muted">{HUADIAN_DEFINITION}</p>
       </section>
 

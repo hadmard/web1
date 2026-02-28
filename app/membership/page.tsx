@@ -1,4 +1,5 @@
 ﻿import Link from "next/link";
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 
@@ -16,8 +17,16 @@ export default async function MembershipPage() {
 
   return (
     <div className="min-h-screen">
-      <section className="apple-hero border-b border-border py-16 sm:py-20">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 text-center">
+      <section className="apple-hero relative overflow-hidden border-b border-border py-16 sm:py-20">
+        <Image
+          src="/images/seedance2/picture_19.jpg"
+          alt=""
+          fill
+          priority
+          className="object-cover opacity-30"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-surface/55 via-surface/70 to-surface/88" />
+        <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 text-center">
           <h1 className="font-serif text-3xl sm:text-4xl font-semibold tracking-tight text-primary">会员系统</h1>
           <p className="mt-3 text-sm sm:text-base text-muted">企业结构参与机制 · 行业共建机制 · 权威分层机制</p>
 
@@ -86,3 +95,6 @@ export default async function MembershipPage() {
     </div>
   );
 }
+
+
+

@@ -1,4 +1,5 @@
 ﻿import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
@@ -100,6 +101,9 @@ export default async function TermPage({ params }: Props) {
         <JsonLd data={breadcrumbSchema} />
 
         <h1 className="font-serif text-3xl font-bold text-primary">{article.title}</h1>
+        <div className="mt-4 overflow-hidden rounded-2xl border border-border">
+          <Image src="/images/seedance2/picture_16.jpg" alt="" width={1400} height={900} className="h-44 sm:h-56 w-full object-cover" />
+        </div>
         {article.excerpt && (
           <blockquote className="mt-4 rounded-r-lg border-l-4 border-accent bg-surface px-4 py-3 text-sm text-muted">
             {article.excerpt}
@@ -152,6 +156,9 @@ export default async function TermPage({ params }: Props) {
       <JsonLd data={jsonLd} />
       <JsonLd data={breadcrumbSchema} />
       <h1 className="font-serif text-2xl font-semibold tracking-tight text-gray-900 dark:text-gray-100">{term.title}</h1>
+      <div className="mt-4 overflow-hidden rounded-2xl border border-border">
+        <Image src="/images/seedance2/picture_16.jpg" alt="" width={1400} height={900} className="h-44 sm:h-56 w-full object-cover" />
+      </div>
       <DefinitionBlock definition={term.definition} />
 
       {term.background && (
@@ -185,6 +192,8 @@ export default async function TermPage({ params }: Props) {
     </article>
   );
 }
+
+
 
 
 

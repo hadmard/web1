@@ -1,4 +1,5 @@
 ﻿import Link from "next/link";
+import Image from "next/image";
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
@@ -132,6 +133,9 @@ export default async function StandardPage({ params }: Props) {
             </div>
           </div>
         </header>
+        <div className="mt-4 overflow-hidden rounded-2xl border border-border">
+          <Image src="/images/seedance2/picture_17.jpg" alt="" width={1600} height={900} className="h-44 sm:h-56 w-full object-cover" />
+        </div>
 
         {structured ? (
           <section className="mt-6 space-y-4">
@@ -223,6 +227,9 @@ export default async function StandardPage({ params }: Props) {
         <span className="text-[var(--color-muted)]">{standard.year} 年</span>
       </div>
       <h1 className="font-serif text-2xl font-semibold tracking-tight text-gray-900 dark:text-gray-100 mt-2">{standard.title}</h1>
+      <div className="mt-4 overflow-hidden rounded-2xl border border-[var(--color-border)]">
+        <Image src="/images/seedance2/picture_17.jpg" alt="" width={1600} height={900} className="h-44 sm:h-56 w-full object-cover" />
+      </div>
 
       <div className="mt-6">
         <MemberDownloadButton resourceType="standard" resourceId={standard.id} allowed={allowed} reason={reason} />
@@ -242,3 +249,4 @@ export default async function StandardPage({ params }: Props) {
     </article>
   );
 }
+

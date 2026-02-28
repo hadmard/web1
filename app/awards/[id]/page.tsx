@@ -1,4 +1,5 @@
-import { notFound } from "next/navigation";
+﻿import { notFound } from "next/navigation";
+import Image from "next/image";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { JsonLd } from "@/components/JsonLd";
@@ -46,12 +47,14 @@ export default async function AwardDetailPage({ params }: Props) {
       </h1>
       {award.year != null && <p className="text-[var(--color-muted)] mt-1">{award.year} 年</p>}
 
-      {award.coverImage && (
-        <div className="mt-6 overflow-hidden rounded border border-[var(--color-border)]">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
+      <div className="mt-6 overflow-hidden rounded border border-[var(--color-border)]">
+        {award.coverImage ? (
+          // eslint-disable-next-line @next/next/no-img-element
           <img src={award.coverImage} alt={award.title} className="w-full h-auto object-cover" />
-        </div>
-      )}
+        ) : (
+          <Image src="/images/seedance2/picture_18.jpg" alt="" width={1600} height={900} className="w-full h-auto object-cover" />
+        )}
+      </div>
 
       {award.description && (
         <section className="mt-6">
@@ -83,4 +86,3 @@ export default async function AwardDetailPage({ params }: Props) {
     </article>
   );
 }
-

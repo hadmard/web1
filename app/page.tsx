@@ -1,4 +1,5 @@
 ﻿import Link from "next/link";
+import Image from "next/image";
 import { ScrollMotion } from "@/components/ScrollMotion";
 import { ENGINEER_CATEGORY_LABELS, getLatestHuadianYear, getTop10ByYear } from "@/lib/huadianbang";
 import { prisma } from "@/lib/prisma";
@@ -97,6 +98,7 @@ export default async function HomePage() {
       subtitle: "品牌选择与区域分布",
       desc: "从品牌定位、服务半径到交付能力，快速定位合适企业。",
       href: "/brands/all",
+      image: "/images/seedance2/picture_3.jpg",
       items: safeBrands.map((x) => ({ label: x.title, href: `/brands/${x.slug}` })),
     },
     {
@@ -104,6 +106,7 @@ export default async function HomePage() {
       subtitle: "术语与知识结构",
       desc: "沉淀概念定义、工艺术语与行业语义，形成统一表达。",
       href: "/dictionary/all",
+      image: "/images/seedance2/picture_4.jpg",
       items: safeTerms.map((x) => ({ label: x.title, href: `/dictionary/${x.slug}` })),
     },
     {
@@ -111,6 +114,7 @@ export default async function HomePage() {
       subtitle: "材料 / 工艺 / 服务",
       desc: "以结构化标准体系支撑落地执行与跨团队协作。",
       href: "/standards/all",
+      image: "/images/seedance2/picture_5.jpg",
       items: safeStandards.map((x) => ({ label: `${x.versionLabel ? `${x.versionLabel} · ` : ""}${x.title}`, href: `/standards/${x.slug || x.id}` })),
     },
     {
@@ -118,6 +122,7 @@ export default async function HomePage() {
       subtitle: "规则透明、流程可追溯",
       desc: "以公开规则、评审机制和公示流程建立行业公信力。",
       href: "/awards",
+      image: "/images/seedance2/picture_6.jpg",
       items: safeAwards.map((x) => ({ label: `${x.year ? `${x.year} · ` : ""}${x.title}`, href: `/awards/${x.slug || x.id}` })),
     },
   ];
@@ -128,9 +133,13 @@ export default async function HomePage() {
 
       <section className="relative overflow-hidden border-b border-border py-24 sm:py-28">
         <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-[#5E8FFF]/25 blur-3xl" />
-          <div className="absolute top-0 right-[-80px] h-80 w-80 rounded-full bg-[#18A58F]/22 blur-3xl" />
-          <div className="absolute -bottom-24 left-1/3 h-72 w-72 rounded-full bg-[#CC8A2F]/18 blur-3xl" />
+          <Image
+            src="/images/seedance2/picture_1.jpg"
+            alt=""
+            fill
+            priority
+            className="object-cover"
+          />
         </div>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 relative">
           <div data-reveal className="reveal text-center">
@@ -151,6 +160,16 @@ export default async function HomePage() {
 
       <section className="section-tone-a border-b border-border py-14 sm:py-16">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <div data-reveal className="reveal relative mb-6 overflow-hidden rounded-2xl border border-border">
+            <Image
+              src="/images/seedance2/picture_2.jpg"
+              alt=""
+              width={1600}
+              height={900}
+              className="h-40 sm:h-52 w-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-surface/82 via-surface/45 to-transparent" />
+          </div>
           <h2 data-reveal className="reveal section-label text-primary mb-6">今日更新</h2>
           <div className="grid lg:grid-cols-3 gap-4">
             <article data-reveal className="reveal glass-panel p-5 lg:col-span-2">
@@ -188,6 +207,15 @@ export default async function HomePage() {
             {structureCards.map((card) => (
               <article key={card.title} data-reveal className="reveal glass-panel p-5 sm:p-6 relative overflow-hidden">
                 <div className="relative">
+                  <div className="mb-4 overflow-hidden rounded-xl border border-border">
+                    <Image
+                      src={card.image}
+                      alt=""
+                      width={1200}
+                      height={900}
+                      className="h-32 w-full object-cover"
+                    />
+                  </div>
                   <p className="text-xs text-muted">{card.subtitle}</p>
                   <h3 className="mt-1 font-serif text-2xl font-semibold text-primary">{card.title}</h3>
                   <p className="mt-2 text-sm text-muted">{card.desc}</p>
@@ -211,6 +239,15 @@ export default async function HomePage() {
       <section className="section-tone-c border-b border-border py-14 sm:py-16">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 grid lg:grid-cols-3 gap-4">
           <article data-reveal className="reveal glass-panel p-5 lg:col-span-2">
+            <div className="mb-4 overflow-hidden rounded-xl border border-border">
+              <Image
+                src="/images/seedance2/picture_7.jpg"
+                alt=""
+                width={1600}
+                height={900}
+                className="h-36 sm:h-44 w-full object-cover"
+              />
+            </div>
             <p className="text-xs text-muted mb-2">品牌生态</p>
             <h3 className="font-serif text-lg font-semibold text-primary mb-3">企业分布与最新入驻</h3>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -245,6 +282,15 @@ export default async function HomePage() {
       <section className="section-tone-b border-b border-border py-14 sm:py-16">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <article data-reveal className="reveal glass-panel p-6 sm:p-7">
+            <div className="mb-4 overflow-hidden rounded-xl border border-border">
+              <Image
+                src="/images/seedance2/picture_8.jpg"
+                alt=""
+                width={1600}
+                height={900}
+                className="h-40 sm:h-48 w-full object-cover"
+              />
+            </div>
             <p className="text-xs text-muted">信用推荐体系</p>
             <h2 className="mt-1 font-serif text-2xl sm:text-3xl font-semibold text-primary">华点榜 · 本年度信用推荐</h2>
             <p className="mt-3 text-sm text-muted">华点榜为长期运行信用体系，按年度更新并持续归档公示。</p>
@@ -293,3 +339,5 @@ export default async function HomePage() {
     </main>
   );
 }
+
+

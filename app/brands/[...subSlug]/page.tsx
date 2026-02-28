@@ -1,4 +1,5 @@
 ﻿import Link from "next/link";
+import Image from "next/image";
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
@@ -95,6 +96,15 @@ export default async function BrandDetailPage({ params }: Props) {
       </nav>
 
       <h1 className="font-serif text-2xl font-bold text-primary mb-2">{article.title}</h1>
+      <div className="mb-4 overflow-hidden rounded-2xl border border-border">
+        <Image
+          src="/images/seedance2/picture_15.jpg"
+          alt=""
+          width={1600}
+          height={900}
+          className="h-44 sm:h-56 w-full object-cover"
+        />
+      </div>
       <p className="text-xs text-muted mb-4">更新于 {article.updatedAt.toLocaleDateString("zh-CN")}</p>
 
       {article.excerpt && (
@@ -145,3 +155,4 @@ export default async function BrandDetailPage({ params }: Props) {
     </article>
   );
 }
+

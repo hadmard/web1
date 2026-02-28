@@ -1,4 +1,5 @@
 ﻿import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import { JsonLd } from "@/components/JsonLd";
 import { getBrandAwardHistory, getTopBrand, HUADIAN_DEFINITION } from "@/lib/huadianbang";
@@ -27,6 +28,9 @@ export default async function HuadianAnnualBrandDetailPage({ params }: Props) {
 
       <section className="glass-panel p-6 sm:p-8">
         <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-primary">{item.name}</h1>
+        <div className="mt-4 overflow-hidden rounded-2xl border border-border">
+          <Image src="/images/seedance2/picture_21.jpg" alt="" width={1600} height={900} className="h-44 sm:h-56 w-full object-cover" />
+        </div>
         <p className="mt-3 text-sm text-muted">{HUADIAN_DEFINITION}</p>
         <span className="mt-3 inline-block text-xs rounded-full border border-border px-2.5 py-1 text-accent">
           华点榜推荐标签
@@ -80,3 +84,4 @@ export default async function HuadianAnnualBrandDetailPage({ params }: Props) {
     </main>
   );
 }
+

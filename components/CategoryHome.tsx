@@ -4,6 +4,14 @@ import type { Category } from "@/lib/site-structure";
 import { getCategoryByHref } from "@/lib/site-structure";
 import { getCategoryIcon } from "@/lib/category-icons";
 
+const CATEGORY_HERO_MAP: Record<string, string> = {
+  "/news": "/images/seedance2/picture_9.jpg",
+  "/brands": "/images/seedance2/picture_10.jpg",
+  "/dictionary": "/images/seedance2/picture_11.jpg",
+  "/standards": "/images/seedance2/picture_12.jpg",
+  "/awards": "/images/seedance2/picture_13.jpg",
+};
+
 interface CategoryHomeProps {
   basePath: string;
   category?: Category | null;
@@ -23,6 +31,7 @@ export function CategoryHome({
   const displayTitle = title ?? category?.title ?? "";
   const displayDesc = desc ?? category?.desc ?? "";
   const subcategories = category?.subcategories ?? [];
+  const heroSrc = CATEGORY_HERO_MAP[basePath];
 
   const iconSrc = getCategoryIcon(basePath);
   const getSubDesc = (label: string) => `本子栏目用于发布${label}相关内容，帮助用户快速定位该方向信息。`;
@@ -55,6 +64,12 @@ export function CategoryHome({
               <p className="mt-2 text-muted text-sm sm:text-base">{displayDesc}</p>
             </div>
           </div>
+
+          {heroSrc && (
+            <div className="mt-5 overflow-hidden rounded-2xl border border-border">
+              <Image src={heroSrc} alt="" width={1920} height={640} className="h-36 sm:h-44 md:h-52 w-full object-cover" />
+            </div>
+          )}
 
           {subcategories.length > 0 ? (
             <div className="mt-5 rounded-2xl border border-border bg-surface p-4 sm:p-5">
@@ -106,3 +121,4 @@ export function CategoryHome({
     </div>
   );
 }
+
