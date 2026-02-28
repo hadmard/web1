@@ -35,6 +35,7 @@ Thumbs.db
 # local temp artifacts
 .tmp-*
 docs/
+seedance2/
 
 # prisma
 prisma/migrations/**/migration_lock.toml
