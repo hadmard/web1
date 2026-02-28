@@ -11,5 +11,6 @@ function sanitizeHtml(html: string): string {
 
 export function RichContent({ html, className }: RichContentProps) {
   const safe = sanitizeHtml(html || "");
-  return <div className={className} dangerouslySetInnerHTML={{ __html: safe }} />;
+  const mergedClassName = ["rich-editor-content", className].filter(Boolean).join(" ");
+  return <div className={mergedClassName} dangerouslySetInnerHTML={{ __html: safe }} />;
 }

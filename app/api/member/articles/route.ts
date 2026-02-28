@@ -6,6 +6,7 @@ import { writeOperationLog } from "@/lib/operation-log";
 import { MEMBER_ALLOWED_CATEGORY_HREFS, PERSONAL_ALLOWED_CATEGORY_HREFS } from "@/lib/content-taxonomy";
 import { resolveTagSlugs } from "@/lib/tag-suggest";
 import { generateUniqueArticleSlug } from "@/lib/slug";
+import { isContentReviewRequired } from "@/lib/app-settings";
 
 const BASIC_MEMBER_NEWS_LIMIT = 20;
 export async function GET(request: NextRequest) {
@@ -34,8 +35,9 @@ export async function POST(request: NextRequest) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "未登录" }, { status: 401 });
 
+  const reviewRequired = await isContentReviewRequired();
   const submissionStatus = defaultContentStatusForSubmission({
-    reviewRequired: true,
+    reviewRequired,
     canPublishWithoutReview: session.role === "SUPER_ADMIN" || session.canPublishWithoutReview === true,
   });
 

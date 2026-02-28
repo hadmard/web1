@@ -34,12 +34,12 @@ export default async function HomePage() {
     prisma.article.findMany({
       where: { status: "approved", OR: [{ categoryHref: { startsWith: "/news" } }, { subHref: { startsWith: "/news" } }] },
       orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }],
-      take: 8,
+      take: 6,
       select: { id: true, title: true, slug: true },
     }),
     prisma.article.findMany({
       where: { status: "approved", OR: [{ categoryHref: { startsWith: "/news" } }, { subHref: { startsWith: "/news" } }] },
-      orderBy: { updatedAt: "desc" },
+      orderBy: [{ viewCount: "desc" }, { publishedAt: "desc" }, { updatedAt: "desc" }],
       take: 6,
       select: { id: true, title: true, slug: true },
     }),
@@ -178,7 +178,7 @@ export default async function HomePage() {
               <p className="text-xs text-muted mb-2">整木资讯</p>
               <h3 className="font-serif text-lg font-semibold text-primary mb-3">最新发布</h3>
               <ul className="space-y-2">
-                {pick(latestNews, 6).map((x) => (
+                {latestNews.map((x) => (
                   <li key={x.id}>
                     <Link href={`/news/${x.slug}`} className="text-sm text-primary hover:text-accent">{x.title}</Link>
                   </li>
@@ -191,7 +191,7 @@ export default async function HomePage() {
               <p className="text-xs text-muted mb-2">高频阅读</p>
               <h3 className="font-serif text-lg font-semibold text-primary mb-3">热门内容</h3>
               <ul className="space-y-2">
-                {pick(hotNews, 6).map((x) => (
+                {hotNews.map((x) => (
                   <li key={x.id}>
                     <Link href={`/news/${x.slug}`} className="text-sm text-primary hover:text-accent">{x.title}</Link>
                   </li>

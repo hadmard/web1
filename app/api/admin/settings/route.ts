@@ -3,6 +3,14 @@ import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { APP_SETTING_KEYS } from "@/lib/app-settings";
 
+function parseBool(raw: string | null | undefined, fallback: boolean) {
+  if (raw == null) return fallback;
+  const v = raw.trim().toLowerCase();
+  if (v === "true" || v === "1") return true;
+  if (v === "false" || v === "0") return false;
+  return fallback;
+}
+
 function isSuperAdmin(session: { role: string | null } | null) {
   return session?.role === "SUPER_ADMIN";
 }
@@ -31,11 +39,11 @@ export async function GET() {
 
     return NextResponse.json({
       hasGeminiApiKey: !!map.get(APP_SETTING_KEYS.GEMINI_API_KEY),
-      contentReviewRequired: map.get(APP_SETTING_KEYS.CONTENT_REVIEW_REQUIRED) !== "false",
+      contentReviewRequired: parseBool(map.get(APP_SETTING_KEYS.CONTENT_REVIEW_REQUIRED), false),
       memberDownloadStandardEnabled:
-        map.get(APP_SETTING_KEYS.MEMBER_DOWNLOAD_STANDARD_ENABLED) !== "false",
+        parseBool(map.get(APP_SETTING_KEYS.MEMBER_DOWNLOAD_STANDARD_ENABLED), true),
       memberDownloadReportEnabled:
-        map.get(APP_SETTING_KEYS.MEMBER_DOWNLOAD_REPORT_ENABLED) !== "false",
+        parseBool(map.get(APP_SETTING_KEYS.MEMBER_DOWNLOAD_REPORT_ENABLED), true),
     });
   } catch (e) {
     const msg =

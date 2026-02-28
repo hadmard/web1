@@ -17,6 +17,7 @@ interface CategoryHomeProps {
   category?: Category | null;
   title?: string;
   desc?: string;
+  hideSubcategories?: boolean;
   children?: React.ReactNode;
 }
 
@@ -25,6 +26,7 @@ export function CategoryHome({
   category: categoryFromDb,
   title,
   desc,
+  hideSubcategories = false,
   children,
 }: CategoryHomeProps) {
   const category = categoryFromDb ?? getCategoryByHref(basePath);
@@ -71,7 +73,7 @@ export function CategoryHome({
             </div>
           )}
 
-          {subcategories.length > 0 ? (
+          {!hideSubcategories && subcategories.length > 0 ? (
             <div className="mt-5 rounded-2xl border border-border bg-surface p-4 sm:p-5">
               <h2 className="section-label text-primary mb-3">栏目分类</h2>
               <div className="grid sm:grid-cols-2 gap-3">

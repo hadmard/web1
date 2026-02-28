@@ -290,12 +290,14 @@ model Article {
   relatedBrandIds     String?
   tagSlugs            String?
   syncToMainSite      Boolean       @default(false)
+  viewCount           Int           @default(0)
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
   tags                ArticleTag[]
   changeRequests      ArticleChangeRequest[]
 
   @@index([status])
+  @@index([status, viewCount])
   @@index([authorMemberId])
   @@map("articles")
 }

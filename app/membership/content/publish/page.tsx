@@ -386,7 +386,8 @@ function PublishCenterPageInner() {
       return;
     }
 
-    setMessage("提交成功，已进入审核流程");
+    const nextStatus = typeof data?.status === "string" ? data.status : "";
+    setMessage(nextStatus === "approved" ? "提交成功，内容已发布。" : "提交成功，已进入审核流程。");
     setTitle("");
     setExcerpt("");
     setContent("");
@@ -714,7 +715,7 @@ function PublishCenterPageInner() {
             safeTab !== "awards" && (
             <>
               <label className="block text-sm text-muted">正文</label>
-              <RichEditor value={content} onChange={setContent} minHeight={280} />
+              <RichEditor value={content} onChange={setContent} minHeight={280} placeholder="" />
             </>
           )}
           {safeTab === "brands" && (
@@ -829,7 +830,7 @@ function PublishCenterPageInner() {
             ) : (
               <>
                 <label className="block text-sm text-muted">新正文</label>
-                <RichEditor value={editContent} onChange={setEditContent} minHeight={260} />
+                <RichEditor value={editContent} onChange={setEditContent} minHeight={260} placeholder="" />
               </>
             )}
             <label className="block text-sm text-muted">修改说明</label>

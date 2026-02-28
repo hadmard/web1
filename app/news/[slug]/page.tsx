@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { JsonLd } from "@/components/JsonLd";
 import { previewText } from "@/lib/text";
 import { RichContent } from "@/components/RichContent";
+import { NewsViewTracker } from "./NewsViewTracker";
 export const revalidate = 300;
 
 
@@ -94,6 +95,7 @@ export default async function ArticlePage({ params }: Props) {
 
   return (
     <article id="news-reading-article" className="max-w-3xl mx-auto px-4 py-10">
+      <NewsViewTracker slug={article.slug} />
       <JsonLd data={articleSchema} />
       <JsonLd data={breadcrumbSchema} />
 

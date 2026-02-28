@@ -615,7 +615,7 @@ export default function AdminContentPage() {
             {tab !== "terms" && tab !== "brands" && tab !== "standards" && tab !== "industry-data" && tab !== "awards" && (
               <>
                 <label className="block text-sm text-muted">正文</label>
-                <RichEditor value={content} onChange={setContent} minHeight={300} />
+                <RichEditor value={content} onChange={setContent} minHeight={300} placeholder="" />
               </>
             )}
             {tab === "brands" && (
@@ -808,7 +808,7 @@ export default function AdminContentPage() {
             ) : (
               <>
                 <label className="block text-sm text-muted">正文</label>
-                <RichEditor value={editContent} onChange={setEditContent} minHeight={320} />
+                <RichEditor value={editContent} onChange={setEditContent} minHeight={320} placeholder="" />
               </>
             )}
             <div className="flex gap-2 flex-wrap">

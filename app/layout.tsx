@@ -60,10 +60,10 @@ export const metadata: Metadata = {
 
 const navOrder: { href: string; label: string }[] = [
   { href: "/news", label: "整木资讯" },
-  { href: "/brands", label: "整木品牌" },
   { href: "/dictionary", label: "整木词库" },
   { href: "/standards", label: "整木标准" },
   { href: "/awards", label: "整木评选" },
+  { href: "/brands", label: "整木品牌" },
   { href: "/membership", label: "会员系统" },
 ];
 

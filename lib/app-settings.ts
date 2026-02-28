@@ -38,5 +38,5 @@ export async function isContentReviewRequired() {
   const row = await prisma.appSetting.findUnique({
     where: { key: APP_SETTING_KEYS.CONTENT_REVIEW_REQUIRED },
   });
-  return parseBool(row?.value, true);
+  return parseBool(row?.value, false);
 }

@@ -407,7 +407,7 @@ export function RichEditor({ value, onChange, minHeight = 260, placeholder = "è¯
         onPaste={onPaste}
       >
         <EditorContent editor={editor} />
-        {!value && <p className="text-xs text-muted mt-2">{placeholder}</p>}
+        {!value && placeholder ? <p className="text-xs text-muted mt-2">{placeholder}</p> : null}
       </div>
       {menu.open && (
         <div
