@@ -131,7 +131,7 @@ export function Header({
 
   return (
     <header className="sticky top-3 z-50 px-3 sm:px-5">
-      <div className="glass-card relative overflow-hidden max-w-6xl mx-auto h-14 sm:h-16 px-3 sm:px-5 flex items-center justify-between">
+      <div className="glass-card relative overflow-visible max-w-6xl mx-auto h-14 sm:h-16 px-3 sm:px-5 flex items-center justify-between">
         <Link
           href="/"
           className="site-wordmark font-serif font-semibold text-[17px] sm:text-[19px] tracking-[0.08em] hover:opacity-95 transition-opacity"
@@ -142,6 +142,13 @@ export function Header({
         <nav className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto md:overflow-visible no-scrollbar" aria-label="主导航">
           {navItems.map(({ href, label, isMembership, subcategories }) => {
             const isMemberItem = href === "/membership";
+            const hasSubcategories = Boolean(subcategories && subcategories.length > 0);
+            const showBrandsFallback = href === "/brands" && !hasSubcategories;
+            const hoverItems = hasSubcategories
+              ? subcategories ?? []
+              : showBrandsFallback
+                ? [{ href, label: "更多详情" }]
+                : [];
             const finalLabel = isMemberItem && memberGreeting ? memberGreeting : label;
             const finalHref = isMemberItem ? memberHref : href;
             const avatarText = (me?.name || me?.account || "会").trim().slice(0, 1).toUpperCase();
@@ -220,11 +227,11 @@ export function Header({
                   </div>
                 )}
 
-                {!isMemberItem && subcategories && subcategories.length > 0 && hovered === href && (
+                {!isMemberItem && hoverItems.length > 0 && hovered === href && (
                   <div className="absolute top-full left-0 pt-2 z-50">
                     <div className="glass-card min-w-[230px] py-2 px-2">
                       <ul className="space-y-1">
-                        {subcategories.map((sub) => (
+                        {hoverItems.map((sub) => (
                           <li key={sub.href}>
                             <Link
                               href={sub.href}
