@@ -8,7 +8,7 @@ export const revalidate = 300;
 
 const QUICK_ENTRIES = [
   { href: "/news", label: "整木资讯" },
-  { href: "/brands", label: "整木品牌" },
+  { href: "/brands", label: "整木市场" },
   { href: "/dictionary", label: "整木词库" },
   { href: "/standards", label: "整木标准" },
   { href: "/awards", label: "整木评选" },
@@ -96,9 +96,9 @@ export default async function HomePage() {
 
   const structureCards = [
     {
-      title: "整木品牌",
-      subtitle: "品牌选择与区域分布",
-      desc: "从品牌定位、服务半径到交付能力，快速定位合适企业。",
+      title: "整木市场",
+      subtitle: "品牌选择与选购问答",
+      desc: "从品牌定位到整木选购 FAQ，快速完成品牌对比与决策。",
       href: "/brands/all",
       image: "/images/seedance2/picture_3.jpg",
       items: safeBrands.map((x) => ({ label: x.title, href: `/brands/${x.slug}` })),

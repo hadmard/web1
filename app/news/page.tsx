@@ -1,9 +1,19 @@
-﻿import { CategoryHome } from "@/components/CategoryHome";
+﻿import type { Metadata } from "next";
+import { CategoryHome } from "@/components/CategoryHome";
 import { PublishedContentPanel } from "@/components/PublishedContentPanel";
 import { getCategoryWithMetaByHref } from "@/lib/categories";
+import { buildCategoryMetadata } from "@/lib/category-metadata";
 import { prisma } from "@/lib/prisma";
+
 export const revalidate = 300;
 
+export async function generateMetadata(): Promise<Metadata> {
+  return buildCategoryMetadata(
+    "/news",
+    "整木资讯",
+    "整木资讯栏目，聚合行业趋势、企业动态、技术发展与行业活动信息。"
+  );
+}
 
 export default async function NewsPage() {
   const [category, articles] = await Promise.all([
@@ -18,6 +28,7 @@ export default async function NewsPage() {
       select: { id: true, title: true, slug: true, publishedAt: true, updatedAt: true },
     }),
   ]);
+
   return (
     <CategoryHome basePath="/news" category={category}>
       <PublishedContentPanel
@@ -34,5 +45,4 @@ export default async function NewsPage() {
     </CategoryHome>
   );
 }
-
 

@@ -1,12 +1,22 @@
-﻿import Link from "next/link";
+﻿import type { Metadata } from "next";
+import Link from "next/link";
 import { CategoryHome } from "@/components/CategoryHome";
 import { PublishedContentPanel } from "@/components/PublishedContentPanel";
 import { getCategoryWithMetaByHref } from "@/lib/categories";
+import { buildCategoryMetadata } from "@/lib/category-metadata";
 import { prisma } from "@/lib/prisma";
+
 export const revalidate = 300;
 
-
 type Props = { searchParams: Promise<{ q?: string }> };
+
+export async function generateMetadata(): Promise<Metadata> {
+  return buildCategoryMetadata(
+    "/dictionary",
+    "整木词库",
+    "整木词库栏目，沉淀整木行业术语、定义与关联知识，方便检索与引用。"
+  );
+}
 
 export default async function DictionaryPage({ searchParams }: Props) {
   const { q } = await searchParams;
@@ -22,6 +32,7 @@ export default async function DictionaryPage({ searchParams }: Props) {
       select: { id: true, slug: true, title: true, updatedAt: true },
     }),
   ]);
+
   let searchTerms: { id: string; slug: string; title: string }[] = [];
   if (q?.trim()) {
     try {
@@ -92,5 +103,4 @@ export default async function DictionaryPage({ searchParams }: Props) {
     </>
   );
 }
-
 

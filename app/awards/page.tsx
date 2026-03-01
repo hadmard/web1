@@ -1,10 +1,20 @@
-﻿import Link from "next/link";
+﻿import type { Metadata } from "next";
+import Link from "next/link";
 import { CategoryHome } from "@/components/CategoryHome";
 import { getCategoryWithMetaByHref } from "@/lib/categories";
+import { buildCategoryMetadata } from "@/lib/category-metadata";
 import { getLatestHuadianYear, HUADIAN_DEFINITION } from "@/lib/huadianbang";
 import { prisma } from "@/lib/prisma";
+
 export const revalidate = 300;
 
+export async function generateMetadata(): Promise<Metadata> {
+  return buildCategoryMetadata(
+    "/awards",
+    "整木评选",
+    "整木评选栏目，发布评选规则、年度榜单与获奖结果。"
+  );
+}
 
 export default async function AwardsPage() {
   const [category, awards] = await Promise.all([
@@ -105,3 +115,4 @@ export default async function AwardsPage() {
     </CategoryHome>
   );
 }
+

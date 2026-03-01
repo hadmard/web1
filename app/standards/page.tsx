@@ -1,9 +1,19 @@
-﻿import { CategoryHome } from "@/components/CategoryHome";
+﻿import type { Metadata } from "next";
+import { CategoryHome } from "@/components/CategoryHome";
 import { PublishedContentPanel } from "@/components/PublishedContentPanel";
 import { getCategoryWithMetaByHref } from "@/lib/categories";
+import { buildCategoryMetadata } from "@/lib/category-metadata";
 import { prisma } from "@/lib/prisma";
+
 export const revalidate = 300;
 
+export async function generateMetadata(): Promise<Metadata> {
+  return buildCategoryMetadata(
+    "/standards",
+    "整木标准",
+    "整木标准栏目，集中发布材料、工艺、服务等标准与版本信息。"
+  );
+}
 
 export default async function StandardsPage() {
   const [category, items] = await Promise.all([
@@ -49,3 +59,4 @@ export default async function StandardsPage() {
     </CategoryHome>
   );
 }
+

@@ -4,7 +4,7 @@ import "./globals.css";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
 import { JsonLd } from "@/components/JsonLd";
-import { categories as staticCategories } from "@/lib/site-structure";
+import { getCategories } from "@/lib/categories";
 
 const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://example.com";
 
@@ -24,12 +24,12 @@ export const metadata: Metadata = {
     template: "%s | 中华整木网",
   },
   description:
-    "中华整木网是整木行业的知识基础设施，覆盖整木资讯、整木品牌、整木词库、整木标准与整木评选。",
-  keywords: ["整木", "整木品牌", "整木词库", "整木标准", "整木资讯", "整木评选"],
+    "中华整木网是整木行业的知识基础设施，覆盖整木资讯、整木市场、整木词库、整木标准与整木评选。",
+  keywords: ["整木", "整木市场", "整木品牌", "整木选购", "整木词库", "整木标准", "整木资讯", "整木评选"],
   openGraph: {
     title: "中华整木网 | 整木行业知识基础设施",
     description:
-      "覆盖整木资讯、整木品牌、整木词库、整木标准与整木评选。",
+      "覆盖整木资讯、整木市场、整木词库、整木标准与整木评选。",
     type: "website",
     locale: "zh_CN",
     url: baseUrl,
@@ -43,13 +43,13 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
-const navOrder: { href: string; label: string }[] = [
-  { href: "/news", label: "整木资讯" },
-  { href: "/dictionary", label: "整木词库" },
-  { href: "/standards", label: "整木标准" },
-  { href: "/awards", label: "整木评选" },
-  { href: "/brands", label: "整木品牌" },
-  { href: "/membership", label: "会员系统" },
+const navOrder: string[] = [
+  "/news",
+  "/dictionary",
+  "/standards",
+  "/awards",
+  "/brands",
+  "/membership",
 ];
 
 const jsonLdGraph = [
@@ -77,12 +77,14 @@ const jsonLdGraph = [
   },
 ];
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  const navItems = navOrder.map(({ href, label }) => {
-    const cat = staticCategories.find((c) => c.href === href || (href === "/membership" && c.href === "/membership"));
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const categories = await getCategories();
+
+  const navItems = navOrder.map((href) => {
+    const cat = categories.find((c) => c.href === href || (href === "/membership" && c.href === "/membership"));
     return {
       href,
-      label,
+      label: cat?.title ?? (href === "/membership" ? "会员系统" : href),
       isMembership: href === "/membership",
       desc: cat?.desc,
       subcategories: cat?.subcategories?.length ? cat.subcategories : undefined,

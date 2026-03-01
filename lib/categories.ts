@@ -2,6 +2,33 @@
 import { categories as staticCategories, getCategoryByHref } from "@/lib/site-structure";
 import type { Category } from "@/lib/site-structure";
 
+const LEGACY_BRANDS_TITLE = "整木品牌";
+const LEGACY_BRANDS_DESC = "品牌库与区域筛选";
+
+function parseRelatedTermSlugs(input?: string | null): string[] {
+  if (!input) return [];
+  try {
+    return JSON.parse(input) as string[];
+  } catch {
+    return input
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+}
+
+function resolveCategoryTitle(basePath: string, staticTitle: string, dbTitle?: string | null) {
+  const next = dbTitle?.trim();
+  if (basePath === "/brands" && (!next || next === LEGACY_BRANDS_TITLE)) return staticTitle;
+  return next || staticTitle;
+}
+
+function resolveCategoryDesc(basePath: string, staticDesc: string, dbDesc?: string | null) {
+  const next = dbDesc?.trim();
+  if (basePath === "/brands" && (!next || next === LEGACY_BRANDS_DESC)) return staticDesc;
+  return next || staticDesc;
+}
+
 async function getLatestCategoryOperationAt(basePath: string): Promise<Date | null> {
   if (basePath === "/news") {
     const row = await prisma.article.findFirst({
@@ -53,7 +80,7 @@ async function getLatestCategoryOperationAt(basePath: string): Promise<Date | nu
 
 /**
  * 分类结构以静态配置为准（用于顶部导航、栏目页、悬停菜单），
- * 数据库存储栏目元信息（定义/版本等）。
+ * 数据库存储栏目元信息（标题/简介/定义/版本等）。
  */
 export async function getCategories(): Promise<Category[]> {
   try {
@@ -66,11 +93,20 @@ export async function getCategories(): Promise<Category[]> {
 
     if (rows.length === 0) return staticCategories;
 
+    const rowMap = new Map(rows.map((row) => [row.href, row]));
+
     return staticCategories.map((s) => {
+      const row = rowMap.get(s.href);
+      const relatedTermSlugs = parseRelatedTermSlugs(row?.relatedTermSlugs);
       return {
         ...s,
-        // Keep frontend taxonomy aligned with static config for nav/hover consistency.
-        desc: s.desc,
+        title: resolveCategoryTitle(s.href, s.title, row?.title),
+        desc: resolveCategoryDesc(s.href, s.desc, row?.desc),
+        definitionText: row?.definitionText ?? s.definitionText,
+        versionLabel: row?.versionLabel ?? s.versionLabel,
+        versionYear: row?.versionYear ?? s.versionYear,
+        relatedTermSlugs: relatedTermSlugs.length ? relatedTermSlugs : s.relatedTermSlugs,
+        updatedAt: row?.updatedAt?.toISOString?.() ?? undefined,
       };
     });
   } catch {
@@ -101,22 +137,12 @@ export async function getCategoryWithMetaByHref(href: string): Promise<Category 
     const latestAt =
       latestOperationAt && latestOperationAt > row.updatedAt ? latestOperationAt : row.updatedAt;
 
-    let relatedTermSlugs: string[] = [];
-    if (row.relatedTermSlugs) {
-      try {
-        relatedTermSlugs = JSON.parse(row.relatedTermSlugs) as string[];
-      } catch {
-        relatedTermSlugs = row.relatedTermSlugs
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean);
-      }
-    }
+    const relatedTermSlugs = parseRelatedTermSlugs(row.relatedTermSlugs);
 
     return {
       href: row.href,
-      title: staticCat?.title ?? row.title,
-      desc: staticCat?.desc ?? row.desc ?? "",
+      title: resolveCategoryTitle(basePath, staticCat?.title ?? row.title, row.title),
+      desc: resolveCategoryDesc(basePath, staticCat?.desc ?? row.desc ?? "", row.desc),
       definitionText: row.definitionText ?? undefined,
       versionLabel: row.versionLabel ?? undefined,
       versionYear: row.versionYear ?? undefined,
@@ -134,3 +160,4 @@ export async function getCategoryWithMetaByHref(href: string): Promise<Category 
     return getCategoryByHref(href) ?? undefined;
   }
 }
+

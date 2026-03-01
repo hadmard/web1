@@ -8,32 +8,72 @@ type SettingsState = {
   memberDownloadReportEnabled: boolean;
 };
 
+type CategoryState = {
+  id: string;
+  href: string;
+  title: string;
+  desc: string;
+};
+
 export default function AdminSettingsPage() {
   const [settings, setSettings] = useState<SettingsState | null>(null);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
 
+  const [categories, setCategories] = useState<CategoryState[]>([]);
+  const [categoryLoading, setCategoryLoading] = useState(true);
+  const [categoryMessage, setCategoryMessage] = useState("");
+  const [savingCategoryId, setSavingCategoryId] = useState<string | null>(null);
+
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("/api/admin/settings", { credentials: "include" });
-        if (!res.ok) {
+        const [settingRes, categoryRes] = await Promise.all([
+          fetch("/api/admin/settings", { credentials: "include" }),
+          fetch("/api/admin/categories", { credentials: "include" }),
+        ]);
+
+        if (settingRes.ok) {
+          const data = await settingRes.json();
+          setSettings({
+            contentReviewRequired: data.contentReviewRequired !== false,
+            memberDownloadStandardEnabled: data.memberDownloadStandardEnabled !== false,
+            memberDownloadReportEnabled: data.memberDownloadReportEnabled !== false,
+          });
+        } else {
           setSettings(null);
-          return;
         }
-        const data = await res.json();
-        setSettings({
-          contentReviewRequired: data.contentReviewRequired !== false,
-          memberDownloadStandardEnabled: data.memberDownloadStandardEnabled !== false,
-          memberDownloadReportEnabled: data.memberDownloadReportEnabled !== false,
-        });
+
+        if (categoryRes.ok) {
+          const data = (await categoryRes.json()) as Array<{
+            id: string;
+            href: string;
+            title: string;
+            desc: string | null;
+          }>;
+          setCategories(
+            data
+              .map((item) => ({
+                id: item.id,
+                href: item.href,
+                title: item.title ?? "",
+                desc: item.desc ?? "",
+              }))
+              .sort((a, b) => a.href.localeCompare(b.href, "zh-CN"))
+          );
+        } else {
+          setCategories([]);
+        }
       } catch {
         setSettings(null);
+        setCategories([]);
+      } finally {
+        setCategoryLoading(false);
       }
     })();
   }, []);
 
-  async function handleSave(e: React.FormEvent) {
+  async function handleSaveSettings(e: React.FormEvent) {
     e.preventDefault();
     if (!settings) return;
 
@@ -66,18 +106,67 @@ export default function AdminSettingsPage() {
     }
   }
 
+  function updateCategoryField(id: string, key: "title" | "desc", value: string) {
+    setCategories((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, [key]: value } : item))
+    );
+  }
+
+  async function handleSaveCategory(id: string) {
+    const target = categories.find((item) => item.id === id);
+    if (!target) return;
+
+    setSavingCategoryId(id);
+    setCategoryMessage("");
+
+    try {
+      const res = await fetch(`/api/admin/categories/${id}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: target.title.trim(),
+          desc: target.desc.trim(),
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setCategoryMessage(data.error ?? `保存失败：${target.href}`);
+        return;
+      }
+
+      setCategories((prev) =>
+        prev.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                title: (data.title ?? item.title) as string,
+                desc: ((data.desc ?? item.desc) as string | null) ?? "",
+              }
+            : item
+        )
+      );
+      setCategoryMessage(`栏目已保存：${target.href}`);
+    } catch {
+      setCategoryMessage("网络错误，请稍后重试");
+    } finally {
+      setSavingCategoryId(null);
+    }
+  }
+
   if (!settings) {
     return <div className="text-sm text-muted">加载失败或无权限。</div>;
   }
 
   return (
-    <div className="max-w-xl space-y-4">
+    <div className="max-w-4xl space-y-6">
       <header>
         <h1 className="font-serif text-xl font-bold text-primary mb-2">系统设置</h1>
-        <p className="text-sm text-muted">仅主管理员可访问。已移除过时的 AI 配置项，仅保留当前有效开关。</p>
+        <p className="text-sm text-muted">仅主管理员可访问。</p>
       </header>
 
-      <form onSubmit={handleSave} className="rounded-xl border border-border bg-surface-elevated p-6 space-y-4">
+      <form onSubmit={handleSaveSettings} className="rounded-xl border border-border bg-surface-elevated p-6 space-y-4">
         <label className="flex items-center justify-between gap-4 text-sm">
           <span className="text-primary">启用内容审核（关闭后上传默认直接发布）</span>
           <input
@@ -127,6 +216,57 @@ export default function AdminSettingsPage() {
           {saving ? "保存中..." : "保存"}
         </button>
       </form>
+
+      <section className="rounded-xl border border-border bg-surface-elevated p-6 space-y-4">
+        <header>
+          <h2 className="font-serif text-lg font-semibold text-primary">栏目名称与简介（SEO）</h2>
+          <p className="text-sm text-muted">可自主调整栏目名称和栏目简介，栏目简介会用于页面 SEO 描述。</p>
+        </header>
+
+        {categoryLoading ? (
+          <p className="text-sm text-muted">栏目加载中...</p>
+        ) : categories.length === 0 ? (
+          <p className="text-sm text-muted">暂无可编辑栏目。</p>
+        ) : (
+          <div className="space-y-4">
+            {categories.map((item) => (
+              <article key={item.id} className="rounded-lg border border-border bg-surface p-4">
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <p className="text-xs text-muted">{item.href}</p>
+                  <button
+                    type="button"
+                    onClick={() => void handleSaveCategory(item.id)}
+                    disabled={savingCategoryId === item.id || !item.title.trim()}
+                    className="px-3 py-1.5 rounded border border-border text-xs text-primary hover:bg-surface-elevated disabled:opacity-50"
+                  >
+                    {savingCategoryId === item.id ? "保存中..." : "保存栏目"}
+                  </button>
+                </div>
+
+                <label className="block text-xs text-muted mb-1">栏目名称</label>
+                <input
+                  value={item.title}
+                  onChange={(e) => updateCategoryField(item.id, "title", e.target.value)}
+                  className="w-full border border-border rounded px-3 py-2 bg-surface text-sm"
+                  placeholder="请输入栏目名称"
+                />
+
+                <label className="block text-xs text-muted mt-3 mb-1">栏目简介（用于 SEO）</label>
+                <textarea
+                  value={item.desc}
+                  onChange={(e) => updateCategoryField(item.id, "desc", e.target.value)}
+                  className="w-full border border-border rounded px-3 py-2 bg-surface text-sm"
+                  rows={3}
+                  placeholder="请输入栏目简介"
+                />
+              </article>
+            ))}
+          </div>
+        )}
+
+        {categoryMessage && <p className="text-xs text-accent">{categoryMessage}</p>}
+      </section>
     </div>
   );
 }
+

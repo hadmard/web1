@@ -1,8 +1,10 @@
-﻿import Link from "next/link";
+﻿import type { Metadata } from "next";
+import Link from "next/link";
+import { buildCategoryMetadata } from "@/lib/category-metadata";
 import { prisma } from "@/lib/prisma";
 import { parseBrandStructuredHtml } from "@/lib/brand-structured";
-export const revalidate = 300;
 
+export const revalidate = 300;
 
 type Props = {
   searchParams: Promise<{
@@ -19,6 +21,14 @@ type SortKey = "latest" | "oldest";
 
 const PAGE_SIZE = 18;
 const REGION_OPTIONS = ["全国", "华东", "华中", "华南", "西南", "西北", "华北", "东北"] as const;
+
+export async function generateMetadata(): Promise<Metadata> {
+  return buildCategoryMetadata(
+    "/brands",
+    "整木市场",
+    "整木市场品牌总览，支持关键词、区域和时间筛选，快速定位合适品牌。"
+  );
+}
 
 function parseDate(value?: string) {
   if (!value) return null;
@@ -133,7 +143,7 @@ export default async function BrandsAllPage({ searchParams }: Props) {
       <nav className="mb-6 text-sm text-muted" aria-label="面包屑">
         <Link href="/" className="hover:text-accent">首页</Link>
         <span className="mx-2">/</span>
-        <Link href="/brands" className="hover:text-accent">整木品牌</Link>
+        <Link href="/brands" className="hover:text-accent">整木市场</Link>
         <span className="mx-2">/</span>
         <span className="text-primary">品牌总览</span>
       </nav>
@@ -254,3 +264,4 @@ export default async function BrandsAllPage({ searchParams }: Props) {
     </div>
   );
 }
+
