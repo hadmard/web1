@@ -7,6 +7,7 @@ import { getLatestHuadianYear, HUADIAN_DEFINITION } from "@/lib/huadianbang";
 import { prisma } from "@/lib/prisma";
 
 export const revalidate = 300;
+type Props = { searchParams: Promise<{ q?: string }> };
 
 export async function generateMetadata(): Promise<Metadata> {
   return buildCategoryMetadata(
@@ -16,10 +17,17 @@ export async function generateMetadata(): Promise<Metadata> {
   );
 }
 
-export default async function AwardsPage() {
+export default async function AwardsPage({ searchParams }: Props) {
+  const { q = "" } = await searchParams;
+  const keyword = q.trim();
   const [category, awards] = await Promise.all([
     getCategoryWithMetaByHref("/awards"),
     prisma.award.findMany({
+      where: keyword
+        ? {
+            OR: [{ title: { contains: keyword } }, { description: { contains: keyword } }],
+          }
+        : undefined,
       orderBy: [{ year: "desc" }, { updatedAt: "desc" }],
       take: 24,
       select: { id: true, title: true, slug: true, year: true, description: true, updatedAt: true },
@@ -31,7 +39,7 @@ export default async function AwardsPage() {
   const huadianYear = getLatestHuadianYear();
 
   return (
-    <CategoryHome basePath="/awards" category={category}>
+    <CategoryHome basePath="/awards" category={category} searchHref="/awards">
       <section className="glass-panel p-5 sm:p-6">
         <div className="grid sm:grid-cols-3 gap-3">
           <div className="rounded-2xl border border-border bg-surface-elevated p-4">
@@ -47,6 +55,25 @@ export default async function AwardsPage() {
             <p className="mt-2 text-2xl font-semibold text-primary">{yearCount}</p>
           </div>
         </div>
+      </section>
+
+      <section className="mt-8">
+        <article className="glass-panel p-5 sm:p-6">
+          <form method="get" className="flex flex-col sm:flex-row gap-3">
+            <input
+              name="q"
+              defaultValue={keyword}
+              className="flex-1 border border-border rounded px-3 py-2 bg-surface"
+              placeholder="搜索评选标题或描述"
+            />
+            <button className="px-4 py-2 rounded bg-accent text-white text-sm">搜索</button>
+            {keyword && (
+              <Link href="/awards" className="px-4 py-2 rounded border border-border text-sm text-primary hover:bg-surface text-center">
+                清空
+              </Link>
+            )}
+          </form>
+        </article>
       </section>
 
       <section className="mt-8">

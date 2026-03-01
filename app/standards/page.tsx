@@ -16,8 +16,9 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function StandardsPage() {
-  const [category, items] = await Promise.all([
-    getCategoryWithMetaByHref("/standards"),
+  const category = await getCategoryWithMetaByHref("/standards");
+  const subcategories = category?.subcategories ?? [];
+  const [items, subcategoryRows] = await Promise.all([
     prisma.article.findMany({
       where: {
         status: "approved",
@@ -37,17 +38,42 @@ export default async function StandardsPage() {
         updatedAt: true,
       },
     }),
+    Promise.all(
+      subcategories.map((sub) =>
+        prisma.article.findMany({
+          where: {
+            status: "approved",
+            OR: [{ subHref: sub.href }, { categoryHref: sub.href }],
+          },
+          orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }],
+          take: 3,
+          select: { id: true, title: true, slug: true },
+        })
+      )
+    ),
   ]);
+
+  const subcategoryLatest = subcategories.reduce<Record<string, Array<{ title: string; href: string }>>>((acc, sub, idx) => {
+    acc[sub.href] = (subcategoryRows[idx] ?? []).map((item) => ({
+      title: item.title,
+      href: `/standards/${item.slug}`,
+    }));
+    return acc;
+  }, {});
 
   const subMap = new Map(
     (category?.subcategories ?? []).map((x) => [x.href, x.label] as const)
   );
 
   return (
-    <CategoryHome basePath="/standards" category={category}>
+    <CategoryHome
+      basePath="/standards"
+      category={category}
+      searchHref="/standards/all"
+      subcategoryLatest={subcategoryLatest}
+    >
       <PublishedContentPanel
         sectionTitle="标准发布内容"
-        sectionDesc="展示材料、工艺、服务与共建标准的最新版本。"
         items={items.map((x) => ({
           id: x.id,
           title: x.title,

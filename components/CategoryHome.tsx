@@ -1,16 +1,20 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import Image from "next/image";
 import type { Category } from "@/lib/site-structure";
 import { getCategoryByHref } from "@/lib/site-structure";
 import { getCategoryIcon } from "@/lib/category-icons";
+import { getSiteVisualSettings } from "@/lib/site-visual-settings";
+import type { BackgroundImageKey } from "@/lib/site-visual-config";
 
-const CATEGORY_HERO_MAP: Record<string, string> = {
-  "/news": "/images/seedance2/picture_9.jpg",
-  "/brands": "/images/seedance2/picture_10.jpg",
-  "/dictionary": "/images/seedance2/picture_11.jpg",
-  "/standards": "/images/seedance2/picture_12.jpg",
-  "/awards": "/images/seedance2/picture_13.jpg",
+const CATEGORY_HERO_KEY_MAP: Record<string, BackgroundImageKey> = {
+  "/news": "newsHero",
+  "/brands": "brandsHero",
+  "/dictionary": "dictionaryHero",
+  "/standards": "standardsHero",
+  "/awards": "awardsHero",
 };
+
+type SubcategoryEntry = { title: string; href: string };
 
 interface CategoryHomeProps {
   basePath: string;
@@ -18,28 +22,34 @@ interface CategoryHomeProps {
   title?: string;
   desc?: string;
   hideSubcategories?: boolean;
+  searchHref?: string;
+  subcategoryLatest?: Record<string, SubcategoryEntry[]>;
   children?: React.ReactNode;
 }
 
-export function CategoryHome({
+export async function CategoryHome({
   basePath,
   category: categoryFromDb,
   title,
   desc,
   hideSubcategories = false,
+  searchHref,
+  subcategoryLatest,
   children,
 }: CategoryHomeProps) {
+  const visualSettings = await getSiteVisualSettings();
   const category = categoryFromDb ?? getCategoryByHref(basePath);
   const displayTitle = title ?? category?.title ?? "";
   const displayDesc = desc ?? category?.desc ?? "";
   const subcategories = category?.subcategories ?? [];
-  const heroSrc = CATEGORY_HERO_MAP[basePath];
-
+  const heroKey = CATEGORY_HERO_KEY_MAP[basePath];
+  const heroSrc = heroKey ? visualSettings.backgrounds[heroKey] : undefined;
   const iconSrc = getCategoryIcon(basePath);
-  const getSubDesc = (label: string) => `本子栏目用于发布${label}相关内容，帮助用户快速定位该方向信息。`;
+  const defaultSearchHref = basePath === "/awards" ? "/tags" : `${basePath}/all`;
+  const finalSearchHref = searchHref ?? defaultSearchHref;
+
   const getSubHref = (href: string) => {
     if (basePath === "/news") return `/news/all?sub=${encodeURIComponent(href)}`;
-    if (basePath === "/dictionary") return `/dictionary/all?sub=${encodeURIComponent(href)}`;
     return href;
   };
 
@@ -55,21 +65,30 @@ export function CategoryHome({
         </nav>
 
         <section className="glass-panel p-6 sm:p-8">
-          <div className="flex gap-4 items-start">
-            {iconSrc && (
-              <div className="shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-surface border border-border flex items-center justify-center text-accent">
-                <Image src={iconSrc} alt="" width={42} height={42} className="w-10 h-10 sm:w-11 sm:h-11" />
+          <div className="flex flex-wrap gap-4 items-start justify-between">
+            <div className="flex gap-4 items-start">
+              {iconSrc && (
+                <div className="shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-surface border border-border flex items-center justify-center text-accent">
+                  <Image src={iconSrc} alt="" width={42} height={42} className="w-10 h-10 sm:w-11 sm:h-11" />
+                </div>
+              )}
+              <div className="min-w-0">
+                <h1 className="font-serif text-3xl sm:text-4xl font-semibold tracking-tight text-primary">{displayTitle}</h1>
+                <p className="mt-2 text-muted text-sm sm:text-base">{displayDesc}</p>
               </div>
-            )}
-            <div className="min-w-0">
-              <h1 className="font-serif text-3xl sm:text-4xl font-semibold tracking-tight text-primary">{displayTitle}</h1>
-              <p className="mt-2 text-muted text-sm sm:text-base">{displayDesc}</p>
             </div>
+
+            <Link
+              href={finalSearchHref}
+              className="interactive-lift inline-flex items-center rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-primary hover:border-accent/45 hover:text-accent"
+            >
+              搜索
+            </Link>
           </div>
 
           {heroSrc && (
             <div className="mt-5 overflow-hidden rounded-2xl border border-border">
-              <Image src={heroSrc} alt="" width={1920} height={640} className="h-36 sm:h-44 md:h-52 w-full object-cover" />
+              <img src={heroSrc} alt="" className="h-36 sm:h-44 md:h-52 w-full object-cover" />
             </div>
           )}
 
@@ -77,50 +96,37 @@ export function CategoryHome({
             <div className="mt-5 rounded-2xl border border-border bg-surface p-4 sm:p-5">
               <h2 className="section-label text-primary mb-3">栏目分类</h2>
               <div className="grid sm:grid-cols-2 gap-3">
-                {subcategories.map((sub) => (
-                  <Link
-                    key={sub.href}
-                    href={getSubHref(sub.href)}
-                    className="rounded-xl border border-border bg-surface-elevated p-3 hover:border-accent/45 transition-colors"
-                  >
-                    <p className="text-sm font-semibold text-primary">{sub.label}</p>
-                    <p className="mt-1 text-xs text-muted leading-5">{getSubDesc(sub.label)}</p>
-                  </Link>
-                ))}
+                {subcategories.map((sub) => {
+                  const latest = (subcategoryLatest?.[sub.href] ?? []).slice(0, 3);
+                  return (
+                    <article key={sub.href} className="rounded-xl border border-border bg-surface-elevated p-3">
+                      <p className="text-sm font-semibold text-primary">{sub.label}</p>
+                      {latest.length > 0 ? (
+                        <ul className="mt-2 space-y-1.5">
+                          {latest.map((item) => (
+                            <li key={`${sub.href}-${item.href}`}>
+                              <Link href={item.href} className="text-xs text-primary hover:text-accent line-clamp-1">
+                                {item.title}
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="mt-2 text-xs text-muted">暂无发布内容</p>
+                      )}
+                      <Link href={getSubHref(sub.href)} className="mt-3 inline-block text-xs text-accent hover:underline">
+                        查看更多
+                      </Link>
+                    </article>
+                  );
+                })}
               </div>
             </div>
-          ) : (
-            category?.definitionText && (
-              <div className="mt-5 rounded-2xl border border-border bg-surface p-4 sm:p-5">
-                <p className="text-primary leading-relaxed">{category.definitionText}</p>
-              </div>
-            )
-          )}
-
-          {(category?.updatedAt || category?.versionLabel) && (
-            <p className="mt-4 text-xs text-muted">
-              {category.versionLabel && <span>{displayTitle} {category.versionLabel}</span>}
-              {category.updatedAt && (
-                <span>
-                  {category.versionLabel ? " · " : ""}
-                  最近更新：{new Date(category.updatedAt).toLocaleDateString("zh-CN")}
-                </span>
-              )}
-            </p>
-          )}
+          ) : null}
         </section>
 
         {children && <div className="mt-10">{children}</div>}
-
-        {(category?.versionLabel ?? category?.versionYear) && (
-          <footer className="mt-10 pt-4 text-xs text-muted">
-            {displayTitle}
-            {category?.versionLabel && ` ${category.versionLabel}`}
-            {category?.versionYear && !category?.versionLabel && ` ${category.versionYear}年`}
-          </footer>
-        )}
       </div>
     </div>
   );
 }
-

@@ -166,7 +166,6 @@ export default async function NewsAllPage({ searchParams }: Props) {
       </nav>
 
       <h1 className="font-serif text-2xl sm:text-3xl font-bold text-primary">资讯中心</h1>
-      <p className="mt-2 text-sm text-muted">支持关键词检索、时间筛选、栏目筛选。共 {total} 条。</p>
 
       <div className="mt-4 flex flex-wrap gap-2 text-xs">
         {SUB_OPTIONS.map((s) => (

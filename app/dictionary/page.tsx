@@ -1,13 +1,11 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { CategoryHome } from "@/components/CategoryHome";
-import { PublishedContentPanel } from "@/components/PublishedContentPanel";
 import { getCategoryWithMetaByHref } from "@/lib/categories";
 import { buildCategoryMetadata } from "@/lib/category-metadata";
 import { prisma } from "@/lib/prisma";
 
 export const revalidate = 300;
-
 type Props = { searchParams: Promise<{ q?: string }> };
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -19,49 +17,75 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function DictionaryPage({ searchParams }: Props) {
-  const { q } = await searchParams;
-  const [category, latestTerms] = await Promise.all([
-    getCategoryWithMetaByHref("/dictionary"),
+  const { q = "" } = await searchParams;
+  const keyword = q.trim();
+  const category = await getCategoryWithMetaByHref("/dictionary");
+  const subcategories = category?.subcategories ?? [];
+
+  const [latestTerms, hotTerms, subcategoryRows, searchTerms] = await Promise.all([
     prisma.article.findMany({
       where: {
         status: "approved",
         OR: [{ categoryHref: { startsWith: "/dictionary" } }, { subHref: { startsWith: "/dictionary" } }],
       },
-      orderBy: { updatedAt: "desc" },
-      take: 8,
+      orderBy: [{ updatedAt: "desc" }],
+      take: 12,
       select: { id: true, slug: true, title: true, updatedAt: true },
     }),
+    prisma.article.findMany({
+      where: {
+        status: "approved",
+        OR: [{ categoryHref: { startsWith: "/dictionary" } }, { subHref: { startsWith: "/dictionary" } }],
+      },
+      orderBy: [{ viewCount: "desc" }, { updatedAt: "desc" }],
+      take: 10,
+      select: { id: true, slug: true, title: true },
+    }),
+    Promise.all(
+      subcategories.map((sub) =>
+        prisma.article.findMany({
+          where: {
+            status: "approved",
+            OR: [{ subHref: sub.href }, { categoryHref: sub.href }],
+          },
+          orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }],
+          take: 3,
+          select: { id: true, slug: true, title: true },
+        })
+      )
+    ),
+    keyword
+      ? prisma.article.findMany({
+          where: {
+            status: "approved",
+            AND: [
+              {
+                OR: [{ categoryHref: { startsWith: "/dictionary" } }, { subHref: { startsWith: "/dictionary" } }],
+              },
+              {
+                OR: [{ title: { contains: keyword } }, { slug: { contains: keyword } }, { excerpt: { contains: keyword } }, { content: { contains: keyword } }],
+              },
+            ],
+          },
+          take: 20,
+          select: { id: true, slug: true, title: true },
+        })
+      : Promise.resolve([]),
   ]);
 
-  let searchTerms: { id: string; slug: string; title: string }[] = [];
-  if (q?.trim()) {
-    try {
-      const list = await prisma.article.findMany({
-        where: {
-          status: "approved",
-          AND: [
-            {
-              OR: [{ categoryHref: { startsWith: "/dictionary" } }, { subHref: { startsWith: "/dictionary" } }],
-            },
-            {
-              OR: [{ title: { contains: q.trim() } }, { slug: { contains: q.trim() } }, { excerpt: { contains: q.trim() } }, { content: { contains: q.trim() } }],
-            },
-          ],
-        },
-        take: 20,
-        select: { id: true, slug: true, title: true },
-      });
-      searchTerms = list;
-    } catch {
-      searchTerms = [];
-    }
-  }
+  const subcategoryLatest = subcategories.reduce<Record<string, Array<{ title: string; href: string }>>>((acc, sub, idx) => {
+    acc[sub.href] = (subcategoryRows[idx] ?? []).map((item) => ({
+      title: item.title,
+      href: `/dictionary/${item.slug}`,
+    }));
+    return acc;
+  }, {});
 
   return (
     <>
-      {q?.trim() && (
+      {keyword && (
         <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-6">
-          <p className="text-sm text-muted mb-2">搜索“{q.trim()}”</p>
+          <p className="text-sm text-muted mb-2">搜索“{keyword}”</p>
           {searchTerms.length > 0 ? (
             <ul className="flex flex-wrap gap-2 mb-6">
               {searchTerms.map((t) => (
@@ -86,21 +110,64 @@ export default async function DictionaryPage({ searchParams }: Props) {
           )}
         </div>
       )}
-      <CategoryHome basePath="/dictionary" category={category}>
-        <PublishedContentPanel
-          sectionTitle="词库更新内容"
-          sectionDesc="展示最新更新词条，支持词条独立页面与知识关联。"
-          items={latestTerms.map((x) => ({
-            id: x.slug,
-            title: x.title,
-            href: `/dictionary/${x.slug}`,
-            editHref: `/dictionary/edit/${x.id}`,
-            meta: `更新于 ${x.updatedAt.toLocaleDateString("zh-CN")}`,
-          }))}
-          categoryHref="/dictionary/all"
-        />
+      <CategoryHome
+        basePath="/dictionary"
+        category={category}
+        searchHref="/dictionary/all"
+        subcategoryLatest={subcategoryLatest}
+      >
+        <section className="glass-panel p-5 sm:p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="section-label text-primary">热搜词库</h2>
+            <Link
+              href="/membership/content/publish?tab=terms"
+              className="interactive-lift rounded-lg bg-[var(--color-accent)] text-white px-4 py-2 text-sm font-medium hover:brightness-105"
+            >
+              创建词库
+            </Link>
+          </div>
+          {hotTerms.length === 0 ? (
+            <p className="mt-4 text-sm text-muted">暂无热搜词条。</p>
+          ) : (
+            <ul className="mt-4 grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
+              {hotTerms.map((item, idx) => (
+                <li key={item.id}>
+                  <Link
+                    href={`/dictionary/${item.slug}`}
+                    className="block rounded-lg border border-border bg-surface px-3 py-2 text-sm text-primary hover:border-accent/45 hover:text-accent"
+                  >
+                    <span className="mr-2 text-accent font-semibold">{idx + 1}.</span>
+                    {item.title}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section className="mt-8 glass-panel p-5 sm:p-6">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="section-label text-primary">最新词条</h2>
+            <Link href="/dictionary/all" className="text-sm text-accent hover:underline">
+              查看更多
+            </Link>
+          </div>
+          {latestTerms.length === 0 ? (
+            <p className="mt-4 text-sm text-muted">暂无词条内容。</p>
+          ) : (
+            <ul className="mt-4 space-y-3">
+              {latestTerms.slice(0, 6).map((item) => (
+                <li key={item.id} className="border-b border-border pb-3">
+                  <Link href={`/dictionary/${item.slug}`} className="text-sm text-primary hover:text-accent">
+                    {item.title}
+                  </Link>
+                  <p className="mt-1 text-xs text-muted">更新于 {item.updatedAt.toLocaleDateString("zh-CN")}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
       </CategoryHome>
     </>
   );
 }
-

@@ -1,11 +1,21 @@
 ﻿"use client";
 
 import { useEffect, useState } from "react";
+import {
+  BACKGROUND_IMAGE_FIELDS,
+  DEFAULT_SITE_VISUAL_SETTINGS,
+  HOME_AD_FIELDS,
+  normalizeSiteVisualSettings,
+  type BackgroundImageKey,
+  type HomeAdKey,
+  type SiteVisualSettings,
+} from "@/lib/site-visual-config";
 
 type SettingsState = {
   contentReviewRequired: boolean;
   memberDownloadStandardEnabled: boolean;
   memberDownloadReportEnabled: boolean;
+  siteVisualSettings: SiteVisualSettings;
 };
 
 type CategoryState = {
@@ -33,16 +43,17 @@ export default function AdminSettingsPage() {
           fetch("/api/admin/categories", { credentials: "include" }),
         ]);
 
-        if (settingRes.ok) {
-          const data = await settingRes.json();
-          setSettings({
-            contentReviewRequired: data.contentReviewRequired !== false,
-            memberDownloadStandardEnabled: data.memberDownloadStandardEnabled !== false,
-            memberDownloadReportEnabled: data.memberDownloadReportEnabled !== false,
-          });
-        } else {
-          setSettings(null);
-        }
+          if (settingRes.ok) {
+            const data = await settingRes.json();
+            setSettings({
+              contentReviewRequired: data.contentReviewRequired !== false,
+              memberDownloadStandardEnabled: data.memberDownloadStandardEnabled !== false,
+              memberDownloadReportEnabled: data.memberDownloadReportEnabled !== false,
+              siteVisualSettings: normalizeSiteVisualSettings(data.siteVisualSettings),
+            });
+          } else {
+            setSettings(null);
+          }
 
         if (categoryRes.ok) {
           const data = (await categoryRes.json()) as Array<{
@@ -84,6 +95,7 @@ export default function AdminSettingsPage() {
       contentReviewRequired: settings.contentReviewRequired,
       memberDownloadStandardEnabled: settings.memberDownloadStandardEnabled,
       memberDownloadReportEnabled: settings.memberDownloadReportEnabled,
+      siteVisualSettings: settings.siteVisualSettings,
     };
 
     try {
@@ -110,6 +122,42 @@ export default function AdminSettingsPage() {
     setCategories((prev) =>
       prev.map((item) => (item.id === id ? { ...item, [key]: value } : item))
     );
+  }
+
+  function updateBackgroundField(key: BackgroundImageKey, value: string) {
+    setSettings((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        siteVisualSettings: {
+          ...prev.siteVisualSettings,
+          backgrounds: {
+            ...prev.siteVisualSettings.backgrounds,
+            [key]: value,
+          },
+        },
+      };
+    });
+  }
+
+  function updateAdField(key: HomeAdKey, field: keyof SiteVisualSettings["ads"][HomeAdKey], value: string | boolean) {
+    setSettings((prev) => {
+      if (!prev) return prev;
+      const current = prev.siteVisualSettings.ads[key] ?? DEFAULT_SITE_VISUAL_SETTINGS.ads[key];
+      return {
+        ...prev,
+        siteVisualSettings: {
+          ...prev.siteVisualSettings,
+          ads: {
+            ...prev.siteVisualSettings.ads,
+            [key]: {
+              ...current,
+              [field]: value,
+            },
+          },
+        },
+      };
+    });
   }
 
   async function handleSaveCategory(id: string) {
@@ -205,6 +253,72 @@ export default function AdminSettingsPage() {
             }
           />
         </label>
+
+        <section className="rounded-lg border border-border bg-surface p-4 space-y-4">
+          <header>
+            <h2 className="font-serif text-base font-semibold text-primary">背景图与广告位（仅主管理员）</h2>
+            <p className="text-xs text-muted mt-1">所有背景图均可在此修改。每项已标注建议尺寸（像素）。</p>
+          </header>
+
+          <div className="space-y-3">
+            {BACKGROUND_IMAGE_FIELDS.map((field) => (
+              <div key={field.key} className="rounded-lg border border-border bg-surface-elevated p-3">
+                <div className="flex items-center justify-between gap-3 mb-1">
+                  <label className="text-sm text-primary">{field.label}</label>
+                  <span className="text-[11px] text-muted">建议尺寸：{field.requiredSize}</span>
+                </div>
+                <input
+                  value={settings.siteVisualSettings.backgrounds[field.key]}
+                  onChange={(e) => updateBackgroundField(field.key, e.target.value)}
+                  className="w-full border border-border rounded px-3 py-2 bg-surface text-sm"
+                  placeholder="请输入图片 URL（如 /images/xxx.jpg）"
+                />
+              </div>
+            ))}
+          </div>
+
+          <div className="space-y-3">
+            {HOME_AD_FIELDS.map((field) => {
+              const ad = settings.siteVisualSettings.ads[field.key] ?? DEFAULT_SITE_VISUAL_SETTINGS.ads[field.key];
+              return (
+                <article key={field.key} className="rounded-lg border border-border bg-surface-elevated p-3 space-y-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm text-primary">{field.label}</p>
+                    <span className="text-[11px] text-muted">建议尺寸：{field.requiredSize}</span>
+                  </div>
+
+                  <label className="flex items-center justify-between gap-3 text-xs text-muted">
+                    <span>启用广告位</span>
+                    <input
+                      type="checkbox"
+                      checked={ad.enabled}
+                      onChange={(e) => updateAdField(field.key, "enabled", e.target.checked)}
+                    />
+                  </label>
+
+                  <input
+                    value={ad.title}
+                    onChange={(e) => updateAdField(field.key, "title", e.target.value)}
+                    className="w-full border border-border rounded px-3 py-2 bg-surface text-sm"
+                    placeholder="广告位标题"
+                  />
+                  <input
+                    value={ad.imageUrl}
+                    onChange={(e) => updateAdField(field.key, "imageUrl", e.target.value)}
+                    className="w-full border border-border rounded px-3 py-2 bg-surface text-sm"
+                    placeholder="广告图片 URL（如 /images/xxx.jpg）"
+                  />
+                  <input
+                    value={ad.href}
+                    onChange={(e) => updateAdField(field.key, "href", e.target.value)}
+                    className="w-full border border-border rounded px-3 py-2 bg-surface text-sm"
+                    placeholder="点击跳转链接（如 /membership）"
+                  />
+                </article>
+              );
+            })}
+          </div>
+        </section>
 
         {message && <p className="text-xs text-accent">{message}</p>}
 

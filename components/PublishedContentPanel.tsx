@@ -10,7 +10,7 @@ type Item = {
 
 type PublishedContentPanelProps = {
   sectionTitle: string;
-  sectionDesc: string;
+  sectionDesc?: string;
   items: Item[];
   categoryHref: string;
 };
@@ -25,7 +25,7 @@ export function PublishedContentPanel({
     <section className="mt-8">
       <article className="glass-panel p-5 sm:p-6">
         <h2 className="section-label text-primary mb-2">{sectionTitle}</h2>
-        <p className="text-sm text-muted mb-4">{sectionDesc}</p>
+        {sectionDesc && <p className="text-sm text-muted mb-4">{sectionDesc}</p>}
         {items.length === 0 ? (
           <p className="text-sm text-muted">暂无已发布内容。</p>
         ) : (

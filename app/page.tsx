@@ -1,8 +1,9 @@
 ﻿import Link from "next/link";
-import Image from "next/image";
 import { ScrollMotion } from "@/components/ScrollMotion";
+import { StructuredSearch } from "@/components/StructuredSearch";
 import { ENGINEER_CATEGORY_LABELS, getLatestHuadianYear, getTop10ByYear } from "@/lib/huadianbang";
 import { prisma } from "@/lib/prisma";
+import { getSiteVisualSettings } from "@/lib/site-visual-settings";
 export const revalidate = 300;
 
 
@@ -30,7 +31,8 @@ function isReadableLabel(text: string | null | undefined): boolean {
 }
 
 export default async function HomePage() {
-  const [latestNews, hotNews, latestBrands, latestTerms, latestStandards, latestAwards, enterprises] = await Promise.all([
+  const [visualSettings, latestNews, hotNews, latestBrands, latestTerms, latestStandards, latestAwards, enterprises] = await Promise.all([
+    getSiteVisualSettings(),
     prisma.article.findMany({
       where: { status: "approved", OR: [{ categoryHref: { startsWith: "/news" } }, { subHref: { startsWith: "/news" } }] },
       orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }],
@@ -100,7 +102,7 @@ export default async function HomePage() {
       subtitle: "品牌选择与选购问答",
       desc: "从品牌定位到整木选购 FAQ，快速完成品牌对比与决策。",
       href: "/brands/all",
-      image: "/images/seedance2/picture_3.jpg",
+      image: visualSettings.backgrounds.homeStructureMarket,
       items: safeBrands.map((x) => ({ label: x.title, href: `/brands/${x.slug}` })),
     },
     {
@@ -108,7 +110,7 @@ export default async function HomePage() {
       subtitle: "术语与知识结构",
       desc: "沉淀概念定义、工艺术语与行业语义，形成统一表达。",
       href: "/dictionary/all",
-      image: "/images/seedance2/picture_4.jpg",
+      image: visualSettings.backgrounds.homeStructureDictionary,
       items: safeTerms.map((x) => ({ label: x.title, href: `/dictionary/${x.slug}` })),
     },
     {
@@ -116,7 +118,7 @@ export default async function HomePage() {
       subtitle: "材料 / 工艺 / 服务",
       desc: "以结构化标准体系支撑落地执行与跨团队协作。",
       href: "/standards/all",
-      image: "/images/seedance2/picture_5.jpg",
+      image: visualSettings.backgrounds.homeStructureStandards,
       items: safeStandards.map((x) => ({ label: `${x.versionLabel ? `${x.versionLabel} · ` : ""}${x.title}`, href: `/standards/${x.slug || x.id}` })),
     },
     {
@@ -124,10 +126,12 @@ export default async function HomePage() {
       subtitle: "规则透明、流程可追溯",
       desc: "以公开规则、评审机制和公示流程建立行业公信力。",
       href: "/awards",
-      image: "/images/seedance2/picture_6.jpg",
+      image: visualSettings.backgrounds.homeStructureAwards,
       items: safeAwards.map((x) => ({ label: `${x.year ? `${x.year} · ` : ""}${x.title}`, href: `/awards/${x.slug || x.id}` })),
     },
   ];
+  const topAd = visualSettings.ads.homeTop;
+  const middleAd = visualSettings.ads.homeMiddle;
 
   return (
     <main className="min-h-screen">
@@ -135,18 +139,17 @@ export default async function HomePage() {
 
       <section className="relative overflow-hidden border-b border-border py-24 sm:py-28" data-mouse-zone>
         <div className="pointer-events-none absolute inset-0 parallax-layer" data-parallax="0.05">
-          <Image
-            src="/images/seedance2/picture_1.jpg"
+          <img
+            src={visualSettings.backgrounds.homeHero}
             alt=""
-            fill
-            priority
-            className="object-cover"
+            className="h-full w-full object-cover brightness-110 saturate-90"
           />
         </div>
+        <div className="pointer-events-none absolute inset-0 bg-surface/36" />
         <div className="max-w-6xl mx-auto px-4 sm:px-6 relative">
           <div data-reveal="zoom-soft" data-reveal-delay="0" className="text-center">
             <p className="text-[11px] sm:text-xs uppercase tracking-[0.22em] text-muted">中国整木定制行业知识基础设施平台</p>
-            <h1 className="mt-5 font-serif text-5xl sm:text-6xl lg:text-7xl font-semibold tracking-[0.08em] text-primary">中华整木网</h1>
+            <h1 className="mt-5 font-serif text-5xl sm:text-6xl lg:text-7xl font-semibold tracking-[0.08em] text-primary">整木网</h1>
             <p className="mt-5 text-sm sm:text-base text-muted max-w-3xl mx-auto">让行业资讯、品牌、标准与评选在一个界面里高效协同。</p>
           </div>
 
@@ -156,23 +159,43 @@ export default async function HomePage() {
                 {item.label}
               </Link>
             ))}
+            <Link href="/dictionary/all" className="interactive-lift rounded-full border border-border bg-surface-elevated/90 px-4 py-2 text-sm text-primary hover:border-accent/40 hover:text-accent">
+              搜索
+            </Link>
           </nav>
+
+          <div data-reveal="fade-up" data-reveal-delay="140" className="mt-5 flex justify-center">
+            <StructuredSearch />
+          </div>
+
+          {topAd.enabled && (
+            <Link
+              data-reveal="fade-up"
+              data-reveal-delay="180"
+              href={topAd.href || "/membership"}
+              className="mt-6 block overflow-hidden rounded-2xl border border-border bg-surface-elevated/95 hover:border-accent/45 transition-colors"
+            >
+              <div className="relative h-24 sm:h-28">
+                <img src={topAd.imageUrl} alt={topAd.title} className="h-full w-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-r from-black/35 to-transparent" />
+                <p className="absolute left-4 bottom-3 text-sm font-medium text-white">{topAd.title}</p>
+              </div>
+            </Link>
+          )}
         </div>
       </section>
 
       <section className="section-tone-a border-b border-border py-14 sm:py-16">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div data-reveal="zoom-soft" className="relative mb-6 overflow-hidden rounded-2xl border border-border">
-            <Image
-              src="/images/seedance2/picture_2.jpg"
+            <img
+              src={visualSettings.backgrounds.homeUpdates}
               alt=""
-              width={1600}
-              height={900}
               className="h-40 sm:h-52 w-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-r from-surface/82 via-surface/45 to-transparent" />
           </div>
-          <h2 data-reveal="fade-up" className="section-label text-primary mb-6">今日更新</h2>
+          <h2 data-reveal="fade-up" className="section-label text-primary mb-6">资讯速览</h2>
           <div className="grid lg:grid-cols-3 gap-4">
             <article data-reveal="fade-left" data-reveal-delay="60" className="glass-panel p-5 lg:col-span-2">
               <p className="text-xs text-muted mb-2">整木资讯</p>
@@ -189,7 +212,7 @@ export default async function HomePage() {
 
             <article data-reveal="fade-right" data-reveal-delay="120" className="glass-panel p-5">
               <p className="text-xs text-muted mb-2">高频阅读</p>
-              <h3 className="font-serif text-lg font-semibold text-primary mb-3">热门内容</h3>
+              <h3 className="font-serif text-lg font-semibold text-red-600 mb-3">热门内容</h3>
               <ul className="space-y-2">
                 {hotNews.map((x) => (
                   <li key={x.id}>
@@ -197,6 +220,7 @@ export default async function HomePage() {
                   </li>
                 ))}
               </ul>
+              <Link href="/news/all?sort=latest" className="mt-4 inline-block text-sm font-medium text-accent hover:underline">查看更多</Link>
             </article>
           </div>
         </div>
@@ -204,17 +228,14 @@ export default async function HomePage() {
 
       <section className="section-tone-b border-b border-border py-14 sm:py-16">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <h2 data-reveal="fade-up" className="section-label text-primary mb-6">四大结构板块</h2>
           <div className="grid lg:grid-cols-2 gap-4" data-reveal-stagger="85">
             {structureCards.map((card) => (
               <article key={card.title} data-reveal="zoom-soft" className="glass-panel p-5 sm:p-6 relative overflow-hidden">
                 <div className="relative">
                   <div className="mb-4 overflow-hidden rounded-xl border border-border">
-                    <Image
+                    <img
                       src={card.image}
                       alt=""
-                      width={1200}
-                      height={900}
                       className="h-32 w-full object-cover"
                     />
                   </div>
@@ -241,29 +262,41 @@ export default async function HomePage() {
       <section className="section-tone-c border-b border-border py-14 sm:py-16">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 grid lg:grid-cols-3 gap-4">
           <article data-reveal="fade-left" className="glass-panel p-5 lg:col-span-2">
-            <div className="mb-4 overflow-hidden rounded-xl border border-border">
-              <Image
-                src="/images/seedance2/picture_7.jpg"
-                alt=""
-                width={1600}
-                height={900}
-                className="h-36 sm:h-44 w-full object-cover"
-              />
-            </div>
-            <p className="text-xs text-muted mb-2">品牌生态</p>
-            <h3 className="font-serif text-lg font-semibold text-primary mb-3">企业分布与最新入驻</h3>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {pick(enterprises, 6).map((e) => (
-                <Link key={e.id} href={`/enterprise/${e.id}`} className="interactive-lift rounded-xl border border-border bg-surface p-3 block">
-                  <p className="text-sm font-medium text-primary">{e.member.name ?? "企业会员"}</p>
-                  <p className="text-xs text-muted mt-1">{e.area || e.region || "区域待补充"}</p>
-                  <p className="text-xs text-muted mt-1">{e.positioning || "主营方向待补充"}</p>
-                  <span className="mt-2 inline-block text-[11px] rounded-full px-2 py-0.5 border border-border text-muted">
-                    {e.member.memberType === "enterprise_advanced" ? "高级会员" : e.member.memberType === "enterprise_basic" ? "基础会员" : "个人会员"}
-                  </span>
-                </Link>
-              ))}
-            </div>
+            {middleAd.enabled ? (
+              <Link href={middleAd.href || "/membership"} className="block">
+                <div className="mb-3 overflow-hidden rounded-xl border border-border">
+                  <img
+                    src={middleAd.imageUrl}
+                    alt={middleAd.title}
+                    className="h-40 sm:h-48 w-full object-cover"
+                  />
+                </div>
+                <p className="text-sm font-medium text-primary">{middleAd.title}</p>
+              </Link>
+            ) : (
+              <div>
+                <div className="mb-4 overflow-hidden rounded-xl border border-border">
+                  <img
+                    src={visualSettings.backgrounds.homeEnterprise}
+                    alt=""
+                    className="h-40 sm:h-48 w-full object-cover"
+                  />
+                </div>
+                <p className="text-xs text-muted mb-2">品牌生态</p>
+                <h3 className="font-serif text-lg font-semibold text-primary mb-3">企业入口</h3>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {pick(enterprises, 6).map((e) => (
+                    <Link key={e.id} href={`/enterprise/${e.id}`} className="interactive-lift rounded-xl border border-border bg-surface p-3 block">
+                      <p className="text-sm font-medium text-primary">{e.member.name ?? "企业会员"}</p>
+                      <p className="text-xs text-muted mt-1">{e.area || e.region || "区域待补充"}</p>
+                      <span className="mt-2 inline-block text-[11px] rounded-full px-2 py-0.5 border border-border text-muted">
+                        {e.member.memberType === "enterprise_advanced" ? "高级会员" : e.member.memberType === "enterprise_basic" ? "基础会员" : "个人会员"}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
           </article>
 
           <article data-reveal="fade-right" data-reveal-delay="80" className="glass-panel p-5">
@@ -285,11 +318,9 @@ export default async function HomePage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <article data-reveal="zoom-soft" className="glass-panel p-6 sm:p-7">
             <div className="mb-4 overflow-hidden rounded-xl border border-border">
-              <Image
-                src="/images/seedance2/picture_8.jpg"
+              <img
+                src={visualSettings.backgrounds.homeHuadian}
                 alt=""
-                width={1600}
-                height={900}
                 className="h-40 sm:h-48 w-full object-cover"
               />
             </div>
@@ -328,7 +359,7 @@ export default async function HomePage() {
       <section className="section-tone-a py-14 sm:py-16">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div data-reveal="fade-up" className="glass-panel p-7 sm:p-8 text-center">
-            <h3 className="font-serif text-2xl sm:text-3xl font-semibold text-primary">加入中华整木网，进入行业结构</h3>
+            <h3 className="font-serif text-2xl sm:text-3xl font-semibold text-primary">加入整木网，进入行业结构</h3>
             <p className="mt-3 text-sm text-muted">会员系统不仅是发布入口，更是标准共建、内容协作与行业知识沉淀的工作空间。</p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">
               <Link href="/membership" className="interactive-lift rounded-xl bg-[var(--color-accent)] text-white px-5 py-2.5 text-sm font-medium">企业入驻</Link>

@@ -14,7 +14,7 @@ export async function buildCategoryMetadata(
     title,
     description,
     openGraph: {
-      title: `${title} | 中华整木网`,
+      title: `${title} | 整木网`,
       description,
       type: "website",
     },

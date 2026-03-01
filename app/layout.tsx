@@ -20,14 +20,14 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
   title: {
-    default: "中华整木网 | 整木行业知识基础设施",
-    template: "%s | 中华整木网",
+    default: "整木网 | 整木行业知识基础设施",
+    template: "%s | 整木网",
   },
   description:
-    "中华整木网是整木行业的知识基础设施，覆盖整木资讯、整木市场、整木词库、整木标准与整木评选。",
+    "整木网是整木行业的知识基础设施，覆盖整木资讯、整木市场、整木词库、整木标准与整木评选。",
   keywords: ["整木", "整木市场", "整木品牌", "整木选购", "整木词库", "整木标准", "整木资讯", "整木评选"],
   openGraph: {
-    title: "中华整木网 | 整木行业知识基础设施",
+    title: "整木网 | 整木行业知识基础设施",
     description:
       "覆盖整木资讯、整木市场、整木词库、整木标准与整木评选。",
     type: "website",
@@ -57,7 +57,7 @@ const jsonLdGraph = [
     "@context": "https://schema.org",
     "@type": "Organization",
     "@id": `${baseUrl}/#organization`,
-    name: "中华整木网",
+    name: "整木网",
     url: baseUrl,
     inLanguage: "zh-CN",
     description: "整木行业知识基础设施平台。",
@@ -65,7 +65,7 @@ const jsonLdGraph = [
   {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    name: "中华整木网",
+    name: "整木网",
     url: baseUrl,
     inLanguage: "zh-CN",
     publisher: { "@id": `${baseUrl}/#organization` },

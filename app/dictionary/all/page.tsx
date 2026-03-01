@@ -89,8 +89,15 @@ export default async function DictionaryAllPage({ searchParams }: Props) {
         <span className="text-primary">词库总览</span>
       </nav>
 
-      <h1 className="font-serif text-2xl sm:text-3xl font-bold text-primary">整木词库 · 词条总览</h1>
-      <p className="mt-2 text-sm text-muted">卡片式浏览与检索，共 {total} 条词条。</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="font-serif text-2xl sm:text-3xl font-bold text-primary">整木词库 · 词条总览</h1>
+        <Link
+          href="/membership/content/publish?tab=terms"
+          className="interactive-lift rounded-lg bg-[var(--color-accent)] text-white px-4 py-2 text-sm font-medium hover:brightness-105"
+        >
+          创建词库
+        </Link>
+      </div>
 
       <div className="mt-4 flex flex-wrap gap-2 text-xs">
         {subOptions.map((s) => (
@@ -128,7 +135,6 @@ export default async function DictionaryAllPage({ searchParams }: Props) {
         <section className="mt-6 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {items.map((x) => (
             <article key={x.id} className="rounded-2xl border border-border bg-surface-elevated p-4 hover:border-accent/45 transition-colors">
-              <p className="text-[11px] uppercase tracking-wider text-muted">TERM CARD</p>
               <Link href={`/dictionary/${x.slug}`} className="mt-2 block font-serif text-lg font-semibold text-primary hover:text-accent">
                 {x.title}
               </Link>

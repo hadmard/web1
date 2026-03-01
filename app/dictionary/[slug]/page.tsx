@@ -13,6 +13,12 @@ export const revalidate = 300;
 
 type Props = { params: Promise<{ slug: string }> };
 
+const DICTIONARY_SUBCATEGORY_MAP: Record<string, { href: string; label: string }> = {
+  concepts: { href: "/dictionary/concepts", label: "基础概念" },
+  terms: { href: "/dictionary/terms", label: "技术术语" },
+  segments: { href: "/dictionary/segments", label: "行业细分" },
+};
+
 function normalizeSegment(raw: string) {
   let v = (raw || "").trim();
   for (let i = 0; i < 2; i += 1) {
@@ -30,6 +36,13 @@ function normalizeSegment(raw: string) {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const s = normalizeSegment(slug);
+  if (DICTIONARY_SUBCATEGORY_MAP[s]) {
+    const sub = DICTIONARY_SUBCATEGORY_MAP[s];
+    return {
+      title: `${sub.label} | 整木词库`,
+      description: `整木词库子栏目：${sub.label}。`,
+    };
+  }
   const article = await prisma.article.findFirst({
     where: {
       status: "approved",
@@ -50,7 +63,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
-  const term = await getTermBySlug(slug);
+  const term = await getTermBySlug(s);
   if (!term) return { title: "词条未找到" };
   const description = previewText(term.definition, 160);
   return {
@@ -63,6 +76,96 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function TermPage({ params }: Props) {
   const { slug } = await params;
   const s = normalizeSegment(slug);
+  const subcategory = DICTIONARY_SUBCATEGORY_MAP[s];
+
+  if (subcategory) {
+    const [hotTerms, latestTerms] = await Promise.all([
+      prisma.article.findMany({
+        where: {
+          status: "approved",
+          OR: [{ subHref: subcategory.href }, { categoryHref: subcategory.href }],
+        },
+        orderBy: [{ viewCount: "desc" }, { updatedAt: "desc" }],
+        take: 10,
+        select: { id: true, title: true, slug: true },
+      }),
+      prisma.article.findMany({
+        where: {
+          status: "approved",
+          OR: [{ subHref: subcategory.href }, { categoryHref: subcategory.href }],
+        },
+        orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }],
+        take: 3,
+        select: { id: true, title: true, slug: true, updatedAt: true },
+      }),
+    ]);
+
+    return (
+      <article className="max-w-5xl mx-auto px-4 py-10">
+        <nav className="mb-6 text-sm text-muted" aria-label="面包屑">
+          <Link href="/" className="hover:text-accent">首页</Link>
+          <span className="mx-2">/</span>
+          <Link href="/dictionary" className="hover:text-accent">整木词库</Link>
+          <span className="mx-2">/</span>
+          <span className="text-primary">{subcategory.label}</span>
+        </nav>
+
+        <section className="glass-panel p-5 sm:p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h1 className="font-serif text-2xl sm:text-3xl font-semibold text-primary">{subcategory.label}</h1>
+            <Link
+              href="/membership/content/publish?tab=terms"
+              className="interactive-lift rounded-lg bg-[var(--color-accent)] text-white px-4 py-2 text-sm font-medium hover:brightness-105"
+            >
+              创建词库
+            </Link>
+          </div>
+
+          <form action="/dictionary/all" method="get" className="mt-4 rounded-xl border border-border bg-surface-elevated p-4 flex flex-col sm:flex-row gap-3">
+            <input type="hidden" name="sub" value={subcategory.href} />
+            <input
+              name="q"
+              className="flex-1 border border-border rounded px-3 py-2 bg-surface"
+              placeholder={`搜索${subcategory.label}词条`}
+            />
+            <button className="px-4 py-2 rounded bg-accent text-white text-sm">搜索</button>
+          </form>
+
+          <h2 className="section-label text-primary mt-6">热搜词库</h2>
+          {hotTerms.length === 0 ? (
+            <p className="mt-3 text-sm text-muted">暂无热搜词条。</p>
+          ) : (
+            <ul className="mt-3 grid sm:grid-cols-2 gap-2">
+              {hotTerms.map((item, idx) => (
+                <li key={item.id}>
+                  <Link href={`/dictionary/${item.slug}`} className="block rounded-lg border border-border bg-surface px-3 py-2 text-sm text-primary hover:border-accent/45 hover:text-accent">
+                    <span className="mr-2 text-accent font-semibold">{idx + 1}.</span>
+                    {item.title}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <h2 className="section-label text-primary mt-6">最新发布</h2>
+          {latestTerms.length === 0 ? (
+            <p className="mt-3 text-sm text-muted">暂无词库内容。</p>
+          ) : (
+            <ul className="mt-3 space-y-3">
+              {latestTerms.map((item) => (
+                <li key={item.id} className="border-b border-border pb-3">
+                  <Link href={`/dictionary/${item.slug}`} className="text-sm text-primary hover:text-accent">
+                    {item.title}
+                  </Link>
+                  <p className="mt-1 text-xs text-muted">更新于 {item.updatedAt.toLocaleDateString("zh-CN")}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </article>
+    );
+  }
 
   const article = await prisma.article.findFirst({
     where: {
@@ -111,7 +214,6 @@ export default async function TermPage({ params }: Props) {
         )}
 
         <section className="mt-6 rounded-2xl border border-border bg-surface-elevated p-5">
-          <p className="text-[11px] uppercase tracking-wider text-muted mb-2">TERM CARD</p>
           <RichContent html={article.content} className="prose prose-neutral dark:prose-invert max-w-none" />
         </section>
 

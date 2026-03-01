@@ -19,7 +19,6 @@ export function Footer() {
       <div className="glass-card max-w-6xl mx-auto px-5 sm:px-8 py-10 sm:py-12">
         <div className="grid grid-cols-2 gap-8 sm:grid-cols-4">
           <div>
-            <h3 className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted mb-4">探索</h3>
             <ul className="space-y-2.5">
               {exploreLinks.map(({ href, label }) => (
                 <li key={href}>
@@ -32,7 +31,6 @@ export function Footer() {
           </div>
 
           <div>
-            <h3 className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted mb-4">知识</h3>
             <ul className="space-y-2.5">
               {knowledgeLinks.map(({ href, label }) => (
                 <li key={href}>
@@ -45,7 +43,6 @@ export function Footer() {
           </div>
 
           <div>
-            <h3 className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted mb-4">资源</h3>
             <ul className="space-y-2.5">
               {resourcesLinks.map(({ href, label }) => (
                 <li key={href}>
@@ -58,13 +55,12 @@ export function Footer() {
           </div>
 
           <div>
-            <h3 className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted mb-4">平台</h3>
             <p className="text-sm text-muted leading-relaxed">整木行业知识基础设施，连接资讯、品牌、标准与会员共建。</p>
           </div>
         </div>
 
         <div className="mt-10 pt-6 border-t border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <p className="text-sm text-primary/85">中华整木网</p>
+          <p className="text-sm text-primary/85">整木网</p>
           <p className="text-xs text-muted">© {new Date().getFullYear()} All rights reserved.</p>
         </div>
       </div>

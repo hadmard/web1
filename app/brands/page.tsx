@@ -30,10 +30,9 @@ export default async function BrandsPage() {
   ]);
 
   return (
-    <CategoryHome basePath="/brands" category={category}>
+    <CategoryHome basePath="/brands" category={category} searchHref="/brands/all">
       <PublishedContentPanel
         sectionTitle="品牌发布内容"
-        sectionDesc="展示已发布的整木品牌内容，支持从栏目页继续进入品牌总览与详情。"
         items={brands.map((item) => ({
           id: item.id,
           title: item.title,

@@ -2,6 +2,7 @@
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { APP_SETTING_KEYS } from "@/lib/app-settings";
+import { DEFAULT_SITE_VISUAL_SETTINGS, normalizeSiteVisualSettings } from "@/lib/site-visual-config";
 
 function parseBool(raw: string | null | undefined, fallback: boolean) {
   if (raw == null) return fallback;
@@ -30,6 +31,7 @@ export async function GET() {
             APP_SETTING_KEYS.CONTENT_REVIEW_REQUIRED,
             APP_SETTING_KEYS.MEMBER_DOWNLOAD_STANDARD_ENABLED,
             APP_SETTING_KEYS.MEMBER_DOWNLOAD_REPORT_ENABLED,
+            APP_SETTING_KEYS.SITE_VISUAL_SETTINGS,
           ],
         },
       },
@@ -44,6 +46,15 @@ export async function GET() {
         parseBool(map.get(APP_SETTING_KEYS.MEMBER_DOWNLOAD_STANDARD_ENABLED), true),
       memberDownloadReportEnabled:
         parseBool(map.get(APP_SETTING_KEYS.MEMBER_DOWNLOAD_REPORT_ENABLED), true),
+      siteVisualSettings: (() => {
+        const raw = map.get(APP_SETTING_KEYS.SITE_VISUAL_SETTINGS);
+        if (!raw) return DEFAULT_SITE_VISUAL_SETTINGS;
+        try {
+          return normalizeSiteVisualSettings(JSON.parse(raw));
+        } catch {
+          return DEFAULT_SITE_VISUAL_SETTINGS;
+        }
+      })(),
     });
   } catch (e) {
     const msg =
@@ -89,6 +100,12 @@ export async function POST(request: NextRequest) {
       updates.push({
         key: APP_SETTING_KEYS.MEMBER_DOWNLOAD_REPORT_ENABLED,
         value: body.memberDownloadReportEnabled ? "true" : "false",
+      });
+    }
+    if (body.siteVisualSettings && typeof body.siteVisualSettings === "object") {
+      updates.push({
+        key: APP_SETTING_KEYS.SITE_VISUAL_SETTINGS,
+        value: JSON.stringify(normalizeSiteVisualSettings(body.siteVisualSettings)),
       });
     }
 

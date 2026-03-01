@@ -136,7 +136,7 @@ export function Header({
           href="/"
           className="site-wordmark font-serif font-semibold text-[17px] sm:text-[19px] tracking-[0.08em] hover:opacity-95 transition-opacity"
         >
-          中华整木网
+          整木网
         </Link>
 
         <nav className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto md:overflow-visible no-scrollbar" aria-label="主导航">

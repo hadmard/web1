@@ -16,8 +16,10 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function NewsPage() {
-  const [category, articles] = await Promise.all([
-    getCategoryWithMetaByHref("/news"),
+  const category = await getCategoryWithMetaByHref("/news");
+  const subcategories = category?.subcategories ?? [];
+
+  const [articles, subcategoryRows] = await Promise.all([
     prisma.article.findMany({
       where: {
         status: "approved",
@@ -27,13 +29,38 @@ export default async function NewsPage() {
       take: 8,
       select: { id: true, title: true, slug: true, publishedAt: true, updatedAt: true },
     }),
+    Promise.all(
+      subcategories.map((sub) =>
+        prisma.article.findMany({
+          where: {
+            status: "approved",
+            OR: [{ subHref: sub.href }, { categoryHref: sub.href }],
+          },
+          orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }],
+          take: 3,
+          select: { id: true, title: true, slug: true },
+        })
+      )
+    ),
   ]);
 
+  const subcategoryLatest = subcategories.reduce<Record<string, Array<{ title: string; href: string }>>>((acc, sub, idx) => {
+    acc[sub.href] = (subcategoryRows[idx] ?? []).map((item) => ({
+      title: item.title,
+      href: `/news/${item.slug}`,
+    }));
+    return acc;
+  }, {});
+
   return (
-    <CategoryHome basePath="/news" category={category}>
+    <CategoryHome
+      basePath="/news"
+      category={category}
+      searchHref="/news/all"
+      subcategoryLatest={subcategoryLatest}
+    >
       <PublishedContentPanel
         sectionTitle="资讯发布内容"
-        sectionDesc="展示已发布的行业趋势、企业动态、技术发展与行业活动内容。"
         items={articles.map((x) => ({
           id: x.id,
           title: x.title,
