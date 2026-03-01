@@ -17,7 +17,7 @@ export function Footer() {
   return (
     <footer className="mt-16 sm:mt-20 px-3 sm:px-5 pb-6 sm:pb-8">
       <div className="glass-card max-w-6xl mx-auto px-5 sm:px-8 py-10 sm:py-12">
-        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-6 sm:grid-cols-4 sm:gap-8">
           <div>
             <ul className="space-y-2.5">
               {exploreLinks.map(({ href, label }) => (
@@ -54,7 +54,7 @@ export function Footer() {
             </ul>
           </div>
 
-          <div>
+          <div className="col-span-2 sm:col-span-1">
             <p className="text-sm text-muted leading-relaxed">整木行业知识基础设施，连接资讯、品牌、标准与会员共建。</p>
           </div>
         </div>

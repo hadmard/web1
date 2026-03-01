@@ -605,6 +605,11 @@ html[data-motion-tier="low"] .mouse-parallax {
   transform: translate3d(0, -1px, 0);
 }
 
+.nav-pill:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 28%, transparent);
+}
+
 @media (max-width: 767px) {
   .glass-card {
     border-radius: 16px;

@@ -31,6 +31,7 @@ export function Header({
   const [me, setMe] = useState<MeState | null>(initialMe);
   const [readingProgress, setReadingProgress] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileExpanded, setMobileExpanded] = useState<string | null>(null);
   const [memberGreeting, setMemberGreeting] = useState<string | null>(
     initialMe ? `${initialMe.name}，你好` : null
   );
@@ -42,6 +43,7 @@ export function Header({
 
   const closeMobileMenu = useCallback(() => {
     setMobileMenuOpen(false);
+    setMobileExpanded(null);
   }, []);
 
   const loadMe = useCallback(async () => {
@@ -84,13 +86,14 @@ export function Header({
 
   useEffect(() => {
     setMobileMenuOpen(false);
+    setMobileExpanded(null);
   }, [pathname]);
 
   useEffect(() => {
     if (!mobileMenuOpen) return;
     const previousOverflow = document.body.style.overflow;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setMobileMenuOpen(false);
+      if (event.key === "Escape") closeMobileMenu();
     };
     document.body.style.overflow = "hidden";
     window.addEventListener("keydown", onKeyDown);
@@ -98,7 +101,7 @@ export function Header({
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [mobileMenuOpen]);
+  }, [closeMobileMenu, mobileMenuOpen]);
 
   useEffect(() => {
     const isNewsReadingPage = pathname.startsWith("/news/") && pathname !== "/news/all";
@@ -148,6 +151,7 @@ export function Header({
     setMe(null);
     setMemberGreeting(null);
     setMemberHref("/membership");
+    closeMobileMenu();
     router.push("/membership");
     router.refresh();
   }
@@ -279,7 +283,7 @@ export function Header({
             aria-label={mobileMenuOpen ? "关闭导航菜单" : "打开导航菜单"}
             aria-expanded={mobileMenuOpen}
             onClick={() => setMobileMenuOpen((prev) => !prev)}
-            className="md:hidden inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-surface-elevated/85 text-primary"
+            className="md:hidden nav-pill inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-surface-elevated/90 text-primary"
           >
             <span className="sr-only">菜单</span>
             <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor" aria-hidden="true">
@@ -307,11 +311,11 @@ export function Header({
           <button
             type="button"
             aria-label="关闭导航菜单"
-            className="absolute inset-0 bg-black/35 backdrop-blur-[2px]"
+            className="absolute inset-0 bg-black/30 backdrop-blur-[1px]"
             onClick={closeMobileMenu}
           />
-          <div className="absolute left-2.5 right-2.5 top-16 max-h-[calc(100vh-5rem)] overflow-y-auto glass-card p-3">
-            <div className="flex items-center justify-between border-b border-border pb-2">
+          <div className="absolute left-2.5 right-2.5 top-[4.15rem] max-h-[calc(100vh-4.9rem)] overflow-y-auto glass-card p-3.5">
+            <div className="flex items-center justify-between border-b border-border pb-2.5">
               <p className="text-xs uppercase tracking-[0.14em] text-muted">导航</p>
               <button
                 type="button"
@@ -334,93 +338,116 @@ export function Header({
                   : showBrandsFallback
                     ? [{ href, label: "更多详情" }]
                     : [];
+                const hasMoreOptions = isMemberItem || mobileSubItems.length > 0;
+                const expanded = mobileExpanded === href;
                 const avatarText = (me?.name || me?.account || "会").trim().slice(0, 1).toUpperCase();
 
                 return (
-                  <div key={href} className="rounded-xl border border-border bg-surface-elevated/75 p-2">
-                    <Link
-                      href={finalHref}
-                      onClick={closeMobileMenu}
-                      className={`flex items-center justify-between rounded-lg px-2.5 py-2 text-sm font-medium ${
-                        isMembership
-                          ? "bg-[var(--color-accent)] text-white"
-                          : "text-primary hover:bg-surface"
-                      }`}
-                    >
-                      <span className="inline-flex items-center gap-2">
-                        {isMemberItem && me && (
-                          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/20 text-[10px] font-semibold">
-                            {avatarText}
-                          </span>
-                        )}
-                        {finalLabel}
-                      </span>
-                      <span className="text-xs opacity-75">进入</span>
-                    </Link>
+                  <div key={href} className="rounded-xl border border-border bg-surface-elevated/65 p-2">
+                    <div className="flex items-center gap-1.5">
+                      <Link
+                        href={finalHref}
+                        onClick={closeMobileMenu}
+                        className={`nav-pill flex-1 inline-flex items-center justify-between rounded-full px-3.5 py-2 text-sm font-medium ${
+                          isMembership
+                            ? "text-white bg-[var(--color-accent)]"
+                            : "text-primary bg-surface/65 hover:bg-surface"
+                        }`}
+                      >
+                        <span className="inline-flex items-center gap-2 min-w-0">
+                          {isMemberItem && me && (
+                            <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/20 text-[10px] font-semibold">
+                              {avatarText}
+                            </span>
+                          )}
+                          <span className="truncate">{finalLabel}</span>
+                        </span>
+                        <span className="text-[11px] opacity-70">进入</span>
+                      </Link>
 
-                    {mobileSubItems.length > 0 && (
-                      <ul className="mt-2 ml-2 border-l border-border pl-3 space-y-1">
-                        {mobileSubItems.map((sub) => (
-                          <li key={sub.href}>
-                            <Link
-                              href={sub.href}
-                              onClick={closeMobileMenu}
-                              className="block rounded px-2 py-1.5 text-xs text-primary/90 hover:bg-surface"
-                            >
-                              {sub.label}
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
+                      {hasMoreOptions && (
+                        <button
+                          type="button"
+                          aria-label={expanded ? "收起子菜单" : "展开子菜单"}
+                          onClick={() => setMobileExpanded((prev) => (prev === href ? null : href))}
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-surface text-primary"
+                        >
+                          <svg
+                            viewBox="0 0 20 20"
+                            className={`h-4 w-4 transition-transform ${expanded ? "rotate-180" : "rotate-0"}`}
+                            fill="currentColor"
+                            aria-hidden="true"
+                          >
+                            <path d="M5.5 7.5a1 1 0 0 1 1.4 0L10 10.6l3.1-3.1a1 1 0 1 1 1.4 1.4l-3.8 3.8a1 1 0 0 1-1.4 0L5.5 8.9a1 1 0 0 1 0-1.4Z" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
 
-                    {isMemberItem && (
-                      <ul className="mt-2 ml-2 border-l border-border pl-3 space-y-1">
-                        {!me ? (
-                          <li>
-                            <Link
-                              href="/membership/login"
-                              onClick={closeMobileMenu}
-                              className="block rounded px-2 py-1.5 text-xs text-primary/90 hover:bg-surface"
-                            >
-                              登录
-                            </Link>
-                          </li>
-                        ) : (
-                          <>
-                            <li>
-                              <Link
-                                href={me.role === "SUPER_ADMIN" || me.role === "ADMIN" ? "/membership/admin" : "/membership/content/publish?tab=articles"}
-                                onClick={closeMobileMenu}
-                                className="block rounded px-2 py-1.5 text-xs text-primary/90 hover:bg-surface"
-                              >
-                                进入会员中心
-                              </Link>
-                            </li>
-                            <li>
-                              <Link
-                                href="/membership/login"
-                                onClick={closeMobileMenu}
-                                className="block rounded px-2 py-1.5 text-xs text-primary/90 hover:bg-surface"
-                              >
-                                切换账号
-                              </Link>
-                            </li>
-                            <li>
-                              <button
-                                type="button"
-                                onClick={async () => {
-                                  await handleLogout();
-                                  closeMobileMenu();
-                                }}
-                                className="w-full text-left rounded px-2 py-1.5 text-xs text-primary/90 hover:bg-surface"
-                              >
-                                退出登录
-                              </button>
-                            </li>
-                          </>
+                    {expanded && (
+                      <div className="mt-2.5 border-l border-border pl-3">
+                        {mobileSubItems.length > 0 && (
+                          <ul className="space-y-1.5">
+                            {mobileSubItems.map((sub) => (
+                              <li key={sub.href}>
+                                <Link
+                                  href={sub.href}
+                                  onClick={closeMobileMenu}
+                                  className="block rounded px-2 py-1.5 text-xs text-primary/90 hover:bg-surface"
+                                >
+                                  {sub.label}
+                                </Link>
+                              </li>
+                            ))}
+                          </ul>
                         )}
-                      </ul>
+
+                        {isMemberItem && (
+                          <ul className={`space-y-1.5 ${mobileSubItems.length > 0 ? "mt-2.5 pt-2 border-t border-border/70" : ""}`}>
+                            {!me ? (
+                              <li>
+                                <Link
+                                  href="/membership/login"
+                                  onClick={closeMobileMenu}
+                                  className="block rounded px-2 py-1.5 text-xs text-primary/90 hover:bg-surface"
+                                >
+                                  登录
+                                </Link>
+                              </li>
+                            ) : (
+                              <>
+                                <li>
+                                  <Link
+                                    href={me.role === "SUPER_ADMIN" || me.role === "ADMIN" ? "/membership/admin" : "/membership/content/publish?tab=articles"}
+                                    onClick={closeMobileMenu}
+                                    className="block rounded px-2 py-1.5 text-xs text-primary/90 hover:bg-surface"
+                                  >
+                                    进入会员中心
+                                  </Link>
+                                </li>
+                                <li>
+                                  <Link
+                                    href="/membership/login"
+                                    onClick={closeMobileMenu}
+                                    className="block rounded px-2 py-1.5 text-xs text-primary/90 hover:bg-surface"
+                                  >
+                                    切换账号
+                                  </Link>
+                                </li>
+                                <li>
+                                  <button
+                                    type="button"
+                                    onClick={handleLogout}
+                                    className="w-full text-left rounded px-2 py-1.5 text-xs text-primary/90 hover:bg-surface"
+                                  >
+                                    退出登录
+                                  </button>
+                                </li>
+                              </>
+                            )}
+                          </ul>
+                        )}
+                      </div>
                     )}
                   </div>
                 );

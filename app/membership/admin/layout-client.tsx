@@ -365,10 +365,10 @@ export default function AdminLayoutClient({ children }: { children: React.ReactN
           <button
             type="button"
             aria-label="关闭后台导航"
-            className="absolute inset-0 bg-black/35"
+            className="absolute inset-0 bg-black/30 backdrop-blur-[1px]"
             onClick={() => setMobileSidebarOpen(false)}
           />
-          <aside className="absolute left-0 top-0 h-full w-[86vw] max-w-xs border-r border-border bg-surface-elevated p-4 overflow-y-auto">
+          <aside className="absolute left-2.5 right-auto top-16 h-[calc(100vh-5rem)] w-[86vw] max-w-xs glass-card p-4 overflow-y-auto">
             <div className="mb-4 flex items-center justify-between">
               <p className="text-xs font-semibold uppercase tracking-wider text-muted">管理后台</p>
               <button
@@ -388,7 +388,7 @@ export default function AdminLayoutClient({ children }: { children: React.ReactN
         <button
           type="button"
           onClick={() => setMobileSidebarOpen(true)}
-          className="lg:hidden mb-4 inline-flex items-center rounded-lg border border-border bg-surface-elevated px-3 py-2 text-sm text-primary"
+          className="lg:hidden mb-4 nav-pill inline-flex items-center rounded-full border border-border bg-surface-elevated/90 px-3.5 py-2 text-sm text-primary"
         >
           打开后台菜单
         </button>
