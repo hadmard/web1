@@ -190,7 +190,7 @@ export function Header({
                 >
                   <Link
                     href={finalHref}
-                    className={`nav-pill inline-flex items-center rounded-full px-3.5 py-1.5 text-xs sm:text-sm font-medium whitespace-nowrap ${
+                    className={`nav-pill inline-flex items-center rounded-full px-3.5 py-1.5 text-[13px] sm:text-sm font-medium whitespace-nowrap ${
                       isMembership
                         ? "text-white bg-[var(--color-accent)] hover:brightness-105"
                         : "text-[var(--color-muted)] hover:text-[var(--color-primary)] hover:bg-[color-mix(in_srgb,var(--color-surface-elevated)_82%,transparent)]"
@@ -216,7 +216,7 @@ export function Header({
                             <li>
                               <Link
                                 href="/membership/login"
-                                className="block rounded-lg px-2.5 py-1.5 text-xs text-primary/90 hover:bg-surface hover:text-accent transition-colors"
+                                className="block rounded-lg px-2.5 py-1.5 text-[13px] text-primary/90 hover:bg-surface hover:text-accent transition-colors"
                               >
                                 登录
                               </Link>
@@ -226,7 +226,7 @@ export function Header({
                               <li>
                                 <Link
                                   href={me.role === "SUPER_ADMIN" || me.role === "ADMIN" ? "/membership/admin" : "/membership/content/publish?tab=articles"}
-                                  className="block rounded-lg px-2.5 py-1.5 text-xs text-primary/90 hover:bg-surface hover:text-accent transition-colors"
+                                  className="block rounded-lg px-2.5 py-1.5 text-[13px] text-primary/90 hover:bg-surface hover:text-accent transition-colors"
                                 >
                                   进入会员中心
                                 </Link>
@@ -234,7 +234,7 @@ export function Header({
                               <li>
                                 <Link
                                   href="/membership/login"
-                                  className="block rounded-lg px-2.5 py-1.5 text-xs text-primary/90 hover:bg-surface hover:text-accent transition-colors"
+                                  className="block rounded-lg px-2.5 py-1.5 text-[13px] text-primary/90 hover:bg-surface hover:text-accent transition-colors"
                                 >
                                   切换账号
                                 </Link>
@@ -243,7 +243,7 @@ export function Header({
                                 <button
                                   type="button"
                                   onClick={handleLogout}
-                                  className="w-full text-left rounded-lg px-2.5 py-1.5 text-xs text-primary/90 hover:bg-surface hover:text-accent transition-colors"
+                                  className="w-full text-left rounded-lg px-2.5 py-1.5 text-[13px] text-primary/90 hover:bg-surface hover:text-accent transition-colors"
                                 >
                                   退出登录
                                 </button>
@@ -263,7 +263,7 @@ export function Header({
                             <li key={sub.href}>
                               <Link
                                 href={sub.href}
-                                className="block rounded-lg px-2.5 py-1.5 text-xs text-primary/90 hover:bg-surface hover:text-accent transition-colors"
+                                className="block rounded-lg px-2.5 py-1.5 text-[13px] text-primary/90 hover:bg-surface hover:text-accent transition-colors"
                               >
                                 {sub.label}
                               </Link>
@@ -316,11 +316,11 @@ export function Header({
           />
           <div className="absolute left-2.5 right-2.5 top-[4.15rem] max-h-[calc(100vh-4.9rem)] overflow-y-auto glass-card p-3.5">
             <div className="flex items-center justify-between border-b border-border pb-2.5">
-              <p className="text-xs uppercase tracking-[0.14em] text-muted">导航</p>
+              <p className="text-[11px] uppercase tracking-[0.14em] text-muted">导航</p>
               <button
                 type="button"
                 onClick={closeMobileMenu}
-                className="rounded-full border border-border px-2.5 py-1 text-xs text-primary"
+                className="rounded-full border border-border px-2.5 py-1 text-[13px] text-primary"
               >
                 关闭
               </button>
@@ -362,7 +362,7 @@ export function Header({
                           )}
                           <span className="truncate">{finalLabel}</span>
                         </span>
-                        <span className="text-[11px] opacity-70">进入</span>
+                        <span className="text-[12px] opacity-70">进入</span>
                       </Link>
 
                       {hasMoreOptions && (
@@ -393,7 +393,7 @@ export function Header({
                                 <Link
                                   href={sub.href}
                                   onClick={closeMobileMenu}
-                                  className="block rounded px-2 py-1.5 text-xs text-primary/90 hover:bg-surface"
+                                  className="block rounded px-2 py-1.5 text-[13px] text-primary/90 hover:bg-surface"
                                 >
                                   {sub.label}
                                 </Link>
@@ -409,7 +409,7 @@ export function Header({
                                 <Link
                                   href="/membership/login"
                                   onClick={closeMobileMenu}
-                                  className="block rounded px-2 py-1.5 text-xs text-primary/90 hover:bg-surface"
+                                  className="block rounded px-2 py-1.5 text-[13px] text-primary/90 hover:bg-surface"
                                 >
                                   登录
                                 </Link>
@@ -420,7 +420,7 @@ export function Header({
                                   <Link
                                     href={me.role === "SUPER_ADMIN" || me.role === "ADMIN" ? "/membership/admin" : "/membership/content/publish?tab=articles"}
                                     onClick={closeMobileMenu}
-                                    className="block rounded px-2 py-1.5 text-xs text-primary/90 hover:bg-surface"
+                                    className="block rounded px-2 py-1.5 text-[13px] text-primary/90 hover:bg-surface"
                                   >
                                     进入会员中心
                                   </Link>
@@ -429,7 +429,7 @@ export function Header({
                                   <Link
                                     href="/membership/login"
                                     onClick={closeMobileMenu}
-                                    className="block rounded px-2 py-1.5 text-xs text-primary/90 hover:bg-surface"
+                                    className="block rounded px-2 py-1.5 text-[13px] text-primary/90 hover:bg-surface"
                                   >
                                     切换账号
                                   </Link>
@@ -438,7 +438,7 @@ export function Header({
                                   <button
                                     type="button"
                                     onClick={handleLogout}
-                                    className="w-full text-left rounded px-2 py-1.5 text-xs text-primary/90 hover:bg-surface"
+                                    className="w-full text-left rounded px-2 py-1.5 text-[13px] text-primary/90 hover:bg-surface"
                                   >
                                     退出登录
                                   </button>

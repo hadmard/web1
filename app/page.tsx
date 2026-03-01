@@ -148,9 +148,9 @@ export default async function HomePage() {
         <div className="pointer-events-none absolute inset-0 bg-surface/36" />
         <div className="max-w-6xl mx-auto px-4 sm:px-6 relative">
           <div data-reveal="zoom-soft" data-reveal-delay="0" className="text-center">
-            <p className="text-[11px] sm:text-xs uppercase tracking-[0.22em] text-muted">中国整木定制行业知识基础设施平台</p>
-            <h1 className="mt-5 font-serif text-4xl sm:text-6xl lg:text-7xl font-semibold tracking-[0.08em] text-primary">整木网</h1>
-            <p className="mt-5 text-sm sm:text-base text-muted max-w-3xl mx-auto">让行业资讯、品牌、标准与评选在一个界面里高效协同。</p>
+            <p className="text-xs sm:text-sm uppercase tracking-[0.16em] text-muted">中国整木定制行业知识基础设施平台</p>
+            <h1 className="mt-5 font-serif text-[2.15rem] sm:text-6xl lg:text-7xl font-semibold tracking-[0.06em] text-primary">整木网</h1>
+            <p className="mt-5 text-[15px] sm:text-base text-muted max-w-3xl mx-auto">让行业资讯、品牌、标准与评选在一个界面里高效协同。</p>
           </div>
 
           <nav
@@ -183,7 +183,7 @@ export default async function HomePage() {
               <div className="relative h-24 sm:h-28">
                 <img src={topAd.imageUrl} alt={topAd.title} className="h-full w-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-r from-black/35 to-transparent" />
-                <p className="absolute left-4 bottom-3 text-xs sm:text-sm font-medium text-white">{topAd.title}</p>
+                <p className="absolute left-4 bottom-3 text-sm font-medium text-white">{topAd.title}</p>
               </div>
             </Link>
           )}
@@ -203,7 +203,7 @@ export default async function HomePage() {
           <h2 data-reveal="fade-up" className="section-label text-primary mb-6">资讯速览</h2>
           <div className="grid lg:grid-cols-3 gap-4">
             <article data-reveal="fade-left" data-reveal-delay="60" className="glass-panel p-5 lg:col-span-2">
-              <p className="text-xs text-muted mb-2">整木资讯</p>
+              <p className="text-[13px] sm:text-sm text-muted mb-2">整木资讯</p>
               <h3 className="font-serif text-lg font-semibold text-primary mb-3">最新发布</h3>
               <ul className="space-y-2">
                 {latestNews.map((x) => (
@@ -216,7 +216,7 @@ export default async function HomePage() {
             </article>
 
             <article data-reveal="fade-right" data-reveal-delay="120" className="glass-panel p-5">
-              <p className="text-xs text-muted mb-2">高频阅读</p>
+              <p className="text-[13px] sm:text-sm text-muted mb-2">高频阅读</p>
               <h3 className="font-serif text-lg font-semibold text-red-600 mb-3">热门内容</h3>
               <ul className="space-y-2">
                 {hotNews.map((x) => (
@@ -244,7 +244,7 @@ export default async function HomePage() {
                       className="h-32 w-full object-cover"
                     />
                   </div>
-                  <p className="text-xs text-muted">{card.subtitle}</p>
+                  <p className="text-[13px] sm:text-sm text-muted">{card.subtitle}</p>
                   <h3 className="mt-1 font-serif text-xl sm:text-2xl font-semibold text-primary">{card.title}</h3>
                   <p className="mt-2 text-sm text-muted">{card.desc}</p>
 
@@ -287,14 +287,14 @@ export default async function HomePage() {
                     className="h-40 sm:h-48 w-full object-cover"
                   />
                 </div>
-                <p className="text-xs text-muted mb-2">品牌生态</p>
+                <p className="text-[13px] sm:text-sm text-muted mb-2">品牌生态</p>
                 <h3 className="font-serif text-lg font-semibold text-primary mb-3">企业入口</h3>
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {pick(enterprises, 6).map((e) => (
                     <Link key={e.id} href={`/enterprise/${e.id}`} className="interactive-lift rounded-xl border border-border bg-surface p-3 block">
                       <p className="text-sm font-medium text-primary">{e.member.name ?? "企业会员"}</p>
-                      <p className="text-xs text-muted mt-1">{e.area || e.region || "区域待补充"}</p>
-                      <span className="mt-2 inline-block text-[11px] rounded-full px-2 py-0.5 border border-border text-muted">
+                      <p className="text-[13px] text-muted mt-1">{e.area || e.region || "区域待补充"}</p>
+                      <span className="mt-2 inline-block text-xs rounded-full px-2 py-0.5 border border-border text-muted">
                         {e.member.memberType === "enterprise_advanced" ? "高级会员" : e.member.memberType === "enterprise_basic" ? "基础会员" : "个人会员"}
                       </span>
                     </Link>
@@ -305,7 +305,7 @@ export default async function HomePage() {
           </article>
 
           <article data-reveal="fade-right" data-reveal-delay="80" className="glass-panel p-5">
-            <p className="text-xs text-muted mb-2">区域热度</p>
+            <p className="text-[13px] sm:text-sm text-muted mb-2">区域热度</p>
             <h3 className="font-serif text-lg font-semibold text-primary mb-3">品牌数量</h3>
             <ul className="space-y-2 text-sm">
               {REGION_ORDER.map((r) => (
@@ -329,7 +329,7 @@ export default async function HomePage() {
                 className="h-40 sm:h-48 w-full object-cover"
               />
             </div>
-            <p className="text-xs text-muted">信用推荐体系</p>
+            <p className="text-[13px] sm:text-sm text-muted">信用推荐体系</p>
             <h2 className="mt-1 font-serif text-2xl sm:text-3xl font-semibold text-primary">华点榜 · 本年度信用推荐</h2>
             <p className="mt-3 text-sm text-muted">华点榜为长期运行信用体系，按年度更新并持续归档公示。</p>
             <div className="mt-6 grid lg:grid-cols-3 gap-4">

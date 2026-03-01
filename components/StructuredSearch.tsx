@@ -85,7 +85,7 @@ export function StructuredSearch() {
           </button>
         </div>
       </div>
-      <p className="mt-2 text-xs text-muted">可检索：品牌、标准、术语、榜单</p>
+      <p className="mt-2 text-[13px] text-muted">可检索：品牌、标准、术语、榜单</p>
     </form>
   );
 }

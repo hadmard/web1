@@ -87,7 +87,8 @@
       var(--color-surface);
     color: var(--color-primary);
     font-family: var(--font-sans);
-    font-weight: 420;
+    font-weight: 430;
+    line-height: 1.62;
     letter-spacing: 0.004em;
   }
   h1, h2, h3 {
@@ -188,9 +189,9 @@
 /* 区块标签：统一小标题样式 */
 .section-label {
   font-family: var(--font-serif), "Noto Serif SC", serif;
-  font-size: 0.75rem;
+  font-size: 0.82rem;
   font-weight: 600;
-  letter-spacing: 0.15em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
@@ -620,7 +621,8 @@ html[data-motion-tier="low"] .mouse-parallax {
     border-radius: 16px;
   }
   .section-label {
-    letter-spacing: 0.12em;
+    font-size: 0.8rem;
+    letter-spacing: 0.06em;
   }
 }
 
