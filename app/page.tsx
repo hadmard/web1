@@ -137,7 +137,7 @@ export default async function HomePage() {
     <main className="min-h-screen">
       <ScrollMotion />
 
-      <section className="relative overflow-hidden border-b border-border py-24 sm:py-28" data-mouse-zone>
+      <section className="relative overflow-hidden border-b border-border py-20 sm:py-28" data-mouse-zone>
         <div className="pointer-events-none absolute inset-0 parallax-layer" data-parallax="0.05">
           <img
             src={visualSettings.backgrounds.homeHero}
@@ -149,17 +149,22 @@ export default async function HomePage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 relative">
           <div data-reveal="zoom-soft" data-reveal-delay="0" className="text-center">
             <p className="text-[11px] sm:text-xs uppercase tracking-[0.22em] text-muted">中国整木定制行业知识基础设施平台</p>
-            <h1 className="mt-5 font-serif text-5xl sm:text-6xl lg:text-7xl font-semibold tracking-[0.08em] text-primary">整木网</h1>
+            <h1 className="mt-5 font-serif text-4xl sm:text-6xl lg:text-7xl font-semibold tracking-[0.08em] text-primary">整木网</h1>
             <p className="mt-5 text-sm sm:text-base text-muted max-w-3xl mx-auto">让行业资讯、品牌、标准与评选在一个界面里高效协同。</p>
           </div>
 
-          <nav data-reveal="fade-up" data-reveal-delay="100" className="mt-8 flex flex-wrap justify-center gap-2.5" aria-label="快捷入口">
+          <nav
+            data-reveal="fade-up"
+            data-reveal-delay="100"
+            className="mt-8 -mx-1 flex gap-2.5 overflow-x-auto px-1 pb-1 no-scrollbar sm:mx-0 sm:flex-wrap sm:justify-center sm:overflow-visible sm:px-0"
+            aria-label="快捷入口"
+          >
             {QUICK_ENTRIES.map((item) => (
-              <Link key={item.href} href={item.href} className="interactive-lift rounded-full border border-border bg-surface-elevated/90 px-4 py-2 text-sm text-primary hover:border-accent/40 hover:text-accent">
+              <Link key={item.href} href={item.href} className="interactive-lift shrink-0 rounded-full border border-border bg-surface-elevated/90 px-4 py-2 text-sm text-primary hover:border-accent/40 hover:text-accent">
                 {item.label}
               </Link>
             ))}
-            <Link href="/dictionary/all" className="interactive-lift rounded-full border border-border bg-surface-elevated/90 px-4 py-2 text-sm text-primary hover:border-accent/40 hover:text-accent">
+            <Link href="/dictionary/all" className="interactive-lift shrink-0 rounded-full border border-border bg-surface-elevated/90 px-4 py-2 text-sm text-primary hover:border-accent/40 hover:text-accent">
               搜索
             </Link>
           </nav>
@@ -178,7 +183,7 @@ export default async function HomePage() {
               <div className="relative h-24 sm:h-28">
                 <img src={topAd.imageUrl} alt={topAd.title} className="h-full w-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-r from-black/35 to-transparent" />
-                <p className="absolute left-4 bottom-3 text-sm font-medium text-white">{topAd.title}</p>
+                <p className="absolute left-4 bottom-3 text-xs sm:text-sm font-medium text-white">{topAd.title}</p>
               </div>
             </Link>
           )}
@@ -240,7 +245,7 @@ export default async function HomePage() {
                     />
                   </div>
                   <p className="text-xs text-muted">{card.subtitle}</p>
-                  <h3 className="mt-1 font-serif text-2xl font-semibold text-primary">{card.title}</h3>
+                  <h3 className="mt-1 font-serif text-xl sm:text-2xl font-semibold text-primary">{card.title}</h3>
                   <p className="mt-2 text-sm text-muted">{card.desc}</p>
 
                   <ul className="mt-4 space-y-2">
@@ -362,9 +367,9 @@ export default async function HomePage() {
             <h3 className="font-serif text-2xl sm:text-3xl font-semibold text-primary">加入整木网，进入行业结构</h3>
             <p className="mt-3 text-sm text-muted">会员系统不仅是发布入口，更是标准共建、内容协作与行业知识沉淀的工作空间。</p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">
-              <Link href="/membership" className="interactive-lift rounded-xl bg-[var(--color-accent)] text-white px-5 py-2.5 text-sm font-medium">企业入驻</Link>
-              <Link href="/membership" className="interactive-lift rounded-xl border border-border bg-surface px-5 py-2.5 text-sm font-medium text-primary">个人入驻</Link>
-              <Link href="/standards/co-create" className="interactive-lift rounded-xl border border-border bg-surface px-5 py-2.5 text-sm font-medium text-primary">参与标准共建</Link>
+              <Link href="/membership" className="interactive-lift w-full sm:w-auto rounded-xl bg-[var(--color-accent)] text-white px-5 py-2.5 text-sm font-medium">企业入驻</Link>
+              <Link href="/membership" className="interactive-lift w-full sm:w-auto rounded-xl border border-border bg-surface px-5 py-2.5 text-sm font-medium text-primary">个人入驻</Link>
+              <Link href="/standards/co-create" className="interactive-lift w-full sm:w-auto rounded-xl border border-border bg-surface px-5 py-2.5 text-sm font-medium text-primary">参与标准共建</Link>
             </div>
           </div>
         </div>

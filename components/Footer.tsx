@@ -17,7 +17,7 @@ export function Footer() {
   return (
     <footer className="mt-16 sm:mt-20 px-3 sm:px-5 pb-6 sm:pb-8">
       <div className="glass-card max-w-6xl mx-auto px-5 sm:px-8 py-10 sm:py-12">
-        <div className="grid grid-cols-2 gap-8 sm:grid-cols-4">
+        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <ul className="space-y-2.5">
               {exploreLinks.map(({ href, label }) => (

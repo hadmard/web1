@@ -605,6 +605,38 @@ html[data-motion-tier="low"] .mouse-parallax {
   transform: translate3d(0, -1px, 0);
 }
 
+@media (max-width: 767px) {
+  .glass-card {
+    border-radius: 16px;
+    backdrop-filter: blur(16px) saturate(135%);
+    -webkit-backdrop-filter: blur(16px) saturate(135%);
+  }
+  .glass-panel {
+    border-radius: 16px;
+  }
+  .section-label {
+    letter-spacing: 0.12em;
+  }
+}
+
+@media (hover: none) {
+  .interactive-lift:hover {
+    transform: none;
+    box-shadow: none;
+  }
+  .glass-panel:hover {
+    transform: none;
+    box-shadow: var(--shadow-soft);
+    border-color: color-mix(in srgb, var(--color-border) 74%, white 26%);
+  }
+  .glass-panel:hover::after {
+    opacity: 0;
+  }
+  .nav-pill:hover {
+    transform: none;
+  }
+}
+
 .nav-dropdown {
   opacity: 0;
   transform: translate3d(0, 8px, 0) scale(0.985);
