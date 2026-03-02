@@ -3,6 +3,7 @@ import { CategoryHome } from "@/components/CategoryHome";
 import { PublishedContentPanel } from "@/components/PublishedContentPanel";
 import { getCategoryWithMetaByHref } from "@/lib/categories";
 import { buildCategoryMetadata } from "@/lib/category-metadata";
+import { articleOrderByPinnedLatest } from "@/lib/articles";
 import { prisma } from "@/lib/prisma";
 
 export const revalidate = 300;
@@ -23,7 +24,7 @@ export default async function BrandsPage() {
         status: "approved",
         OR: [{ categoryHref: { startsWith: "/brands" } }, { subHref: { startsWith: "/brands" } }],
       },
-      orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }],
+      orderBy: articleOrderByPinnedLatest,
       take: 8,
       select: { id: true, title: true, slug: true, publishedAt: true, updatedAt: true },
     }),

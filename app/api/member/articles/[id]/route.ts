@@ -29,6 +29,9 @@ export async function PATCH(
   if (typeof body.coverImage === "string") data.coverImage = body.coverImage.trim() || null;
   if (typeof body.subHref === "string") data.subHref = body.subHref.trim() || null;
   if (typeof body.categoryHref === "string") data.categoryHref = body.categoryHref.trim() || null;
+  if (typeof body.isPinned === "boolean" && (session.role === "SUPER_ADMIN" || session.role === "ADMIN")) {
+    data.isPinned = body.isPinned;
+  }
 
   if (Object.keys(data).length === 0) {
     return NextResponse.json({ error: "请提供要更新的字段" }, { status: 400 });

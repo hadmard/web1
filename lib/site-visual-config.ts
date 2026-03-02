@@ -58,7 +58,7 @@ export const HOME_AD_FIELDS: Array<{
 
 export const DEFAULT_SITE_VISUAL_SETTINGS: SiteVisualSettings = {
   backgrounds: {
-    homeHero: "/images/seedance2/picture_1.jpg",
+    homeHero: "",
     homeUpdates: "/images/seedance2/picture_2.jpg",
     homeStructureMarket: "/images/seedance2/picture_3.jpg",
     homeStructureDictionary: "/images/seedance2/picture_4.jpg",
@@ -74,7 +74,7 @@ export const DEFAULT_SITE_VISUAL_SETTINGS: SiteVisualSettings = {
   },
   ads: {
     homeTop: {
-      enabled: true,
+      enabled: false,
       title: "首页推荐位",
       imageUrl: "/images/seedance2/picture_18.jpg",
       href: "/membership",

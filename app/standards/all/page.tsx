@@ -1,6 +1,7 @@
 ﻿import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getCategoryWithMetaByHref } from "@/lib/categories";
+import { articleOrderByPinnedLatest, articleOrderByPinnedOldest } from "@/lib/articles";
 import { parseStandardStructuredHtml } from "@/lib/standard-structured";
 export const revalidate = 300;
 
@@ -80,8 +81,8 @@ export default async function StandardsAllPage({ searchParams }: Props) {
       where,
       orderBy:
         sort === "oldest"
-          ? [{ publishedAt: "asc" }, { updatedAt: "asc" }]
-          : [{ publishedAt: "desc" }, { updatedAt: "desc" }],
+          ? articleOrderByPinnedOldest
+          : articleOrderByPinnedLatest,
       skip,
       take: PAGE_SIZE,
       select: {

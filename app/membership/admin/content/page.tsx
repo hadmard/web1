@@ -37,6 +37,7 @@ import {
   parseAwardStructuredHtml,
   type AwardStructuredData,
 } from "@/lib/award-structured";
+import { readImageWithLimit } from "@/lib/client-image";
 
 type Status = "draft" | "pending" | "approved" | "rejected";
 type Mode = "publish" | "manage" | "review";
@@ -58,9 +59,11 @@ type ArticleItem = {
   slug: string;
   excerpt?: string | null;
   content: string;
+  coverImage?: string | null;
   subHref?: string | null;
   categoryHref?: string | null;
   tagSlugs?: string | null;
+  isPinned?: boolean;
   status: Status;
   authorMember?: {
     id: string;
@@ -77,11 +80,23 @@ type ChangeRequestItem = {
   patchTitle?: string | null;
   patchExcerpt?: string | null;
   patchContent?: string | null;
+  patchCoverImage?: string | null;
   patchTagSlugs?: string | null;
   patchSubHref?: string | null;
-  article: { id: string; title: string; excerpt?: string | null; content?: string | null; tagSlugs?: string | null; subHref?: string | null };
+  article: {
+    id: string;
+    title: string;
+    excerpt?: string | null;
+    content?: string | null;
+    coverImage?: string | null;
+    tagSlugs?: string | null;
+    subHref?: string | null;
+    isPinned?: boolean;
+  };
   submitter: { name: string | null; email: string; role: string | null };
 };
+
+const COVER_IMAGE_MAX_BYTES = 2 * 1024 * 1024;
 
 const BRAND_REGION_OPTIONS = ["全国", "华东", "华中", "华南", "西南", "西北", "华北", "东北"] as const;
 
@@ -178,7 +193,9 @@ export default function AdminContentPage() {
   const [dataStructured, setDataStructured] = useState<DataStructuredData>(createDefaultDataStructuredData());
   const [awardStructured, setAwardStructured] = useState<AwardStructuredData>(createDefaultAwardStructuredData());
   const [subHref, setSubHref] = useState("");
+  const [coverImage, setCoverImage] = useState("");
   const [tagSlugs, setTagSlugs] = useState("");
+  const [isPinned, setIsPinned] = useState(false);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingChangeId, setEditingChangeId] = useState<string | null>(null);
@@ -190,8 +207,10 @@ export default function AdminContentPage() {
   const [editStandardStructured, setEditStandardStructured] = useState<StandardStructuredData>(createDefaultStandardStructuredData());
   const [editDataStructured, setEditDataStructured] = useState<DataStructuredData>(createDefaultDataStructuredData());
   const [editAwardStructured, setEditAwardStructured] = useState<AwardStructuredData>(createDefaultAwardStructuredData());
+  const [editCoverImage, setEditCoverImage] = useState("");
   const [editTagSlugs, setEditTagSlugs] = useState("");
   const [editSubHref, setEditSubHref] = useState("");
+  const [editIsPinned, setEditIsPinned] = useState(false);
   const [reviewAction, setReviewAction] = useState<Status | null>(null);
 
 
@@ -214,6 +233,8 @@ export default function AdminContentPage() {
     if (tab === "standards") setStandardStructured(createDefaultStandardStructuredData());
     if (tab === "industry-data") setDataStructured(createDefaultDataStructuredData());
     if (tab === "awards") setAwardStructured(createDefaultAwardStructuredData());
+    setCoverImage("");
+    setIsPinned(false);
   }, [tab]);
 
   function updateTermSection(id: string, patch: Partial<Omit<TermSection, "id">>) {
@@ -238,6 +259,28 @@ export default function AdminContentPage() {
 
   function removeEditTermSection(id: string) {
     setEditTermSections((prev) => prev.filter((x) => x.id !== id));
+  }
+
+  async function uploadPublishCover(file: File | null) {
+    if (!file) return;
+    try {
+      const dataUrl = await readImageWithLimit(file, COVER_IMAGE_MAX_BYTES);
+      setCoverImage(dataUrl);
+      setMessage("封面图已加载，提交后生效。");
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "图片上传失败");
+    }
+  }
+
+  async function uploadEditCover(file: File | null) {
+    if (!file) return;
+    try {
+      const dataUrl = await readImageWithLimit(file, COVER_IMAGE_MAX_BYTES);
+      setEditCoverImage(dataUrl);
+      setMessage("编辑封面图已加载，保存后生效。");
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "图片上传失败");
+    }
   }
 
   async function loadSession() {
@@ -310,7 +353,7 @@ export default function AdminContentPage() {
         coverImage:
           tab === "brands"
             ? brandStructured.logoUrl.trim() || null
-            : null,
+            : coverImage.trim() || null,
         applicableScenarios:
           tab === "standards"
             ? standardStructured.scope.trim() || null
@@ -327,6 +370,7 @@ export default function AdminContentPage() {
         subHref: tab === "brands" ? null : subHref,
         tagSlugs: tagSlugs || null,
         syncToMainSite: true,
+        isPinned,
       }),
     });
     const data = await res.json().catch(() => ({}));
@@ -335,7 +379,9 @@ export default function AdminContentPage() {
     setTitle("");
     setExcerpt("");
     setContent("");
+    setCoverImage("");
     setTagSlugs("");
+    setIsPinned(false);
     setTermSections(createDefaultTermSections());
     setBrandStructured(createDefaultBrandStructuredData());
     setStandardStructured(createDefaultStandardStructuredData());
@@ -370,8 +416,10 @@ export default function AdminContentPage() {
         ? parseAwardStructuredHtml(item.content) ?? createDefaultAwardStructuredData()
         : createDefaultAwardStructuredData()
     );
+    setEditCoverImage(item.coverImage ?? "");
     setEditTagSlugs(item.tagSlugs ?? "");
     setEditSubHref(item.subHref ?? subHref);
+    setEditIsPinned(item.isPinned === true);
   }
 
   function openEditFromChange(item: ChangeRequestItem) {
@@ -402,8 +450,10 @@ export default function AdminContentPage() {
         ? parseAwardStructuredHtml(nextContent) ?? createDefaultAwardStructuredData()
         : createDefaultAwardStructuredData()
     );
+    setEditCoverImage(item.patchCoverImage ?? item.article.coverImage ?? "");
     setEditTagSlugs(item.patchTagSlugs ?? item.article.tagSlugs ?? "");
     setEditSubHref(item.patchSubHref ?? item.article.subHref ?? subHref);
+    setEditIsPinned(item.article.isPinned === true);
   }
 
   async function saveEdit(nextStatus?: Status) {
@@ -427,7 +477,10 @@ export default function AdminContentPage() {
         title: editTitle,
         excerpt: editExcerpt || null,
         content: composedEditContent,
-        coverImage: tab === "brands" ? editBrandStructured.logoUrl.trim() || null : undefined,
+        coverImage:
+          tab === "brands"
+            ? editBrandStructured.logoUrl.trim() || null
+            : editCoverImage.trim() || null,
         applicableScenarios:
           tab === "standards"
             ? editStandardStructured.scope.trim() || null
@@ -442,6 +495,7 @@ export default function AdminContentPage() {
               : undefined,
         subHref: tab === "brands" ? null : editSubHref || subHref,
         tagSlugs: editTagSlugs || null,
+        isPinned: editIsPinned,
         status: nextStatus,
       }),
     });
@@ -567,6 +621,42 @@ export default function AdminContentPage() {
             )}
             <label className="block text-sm text-muted">标题</label><input className="w-full border border-border rounded px-3 py-2 bg-surface" value={title} onChange={(e) => setTitle(e.target.value)} required />
             <label className="block text-sm text-muted">{tab === "standards" ? "标准摘要" : "摘要"}</label><textarea className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[80px] whitespace-pre-wrap resize-y" value={excerpt} onChange={(e) => setExcerpt(e.target.value)} />
+            {tab !== "brands" && (
+              <>
+                <label className="block text-sm text-muted">封面图片（可选）</label>
+                <input
+                  className="w-full border border-border rounded px-3 py-2 bg-surface"
+                  value={coverImage}
+                  onChange={(e) => setCoverImage(e.target.value)}
+                  placeholder="可填写图片 URL，或使用下方上传按钮"
+                />
+                <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      void uploadPublishCover(e.target.files?.[0] ?? null);
+                      e.currentTarget.value = "";
+                    }}
+                    className="block"
+                  />
+                  <span>支持本地上传，最大 2MB</span>
+                  {coverImage && (
+                    <button
+                      type="button"
+                      onClick={() => setCoverImage("")}
+                      className="px-2 py-1 rounded border border-border hover:bg-surface"
+                    >
+                      清除
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+            <label className="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface px-3 py-2 text-sm">
+              <span className="text-primary">置顶内容（全站优先显示）</span>
+              <input type="checkbox" checked={isPinned} onChange={(e) => setIsPinned(e.target.checked)} />
+            </label>
             {tab === "terms" && (
               <div className="rounded-lg border border-border bg-surface p-3 space-y-3">
                 <p className="text-xs text-muted">词库结构化录入：词语（标题）+ 摘要 + 多个小标题解释。</p>
@@ -649,7 +739,42 @@ export default function AdminContentPage() {
 
       {mode === "manage" && (
         <section className="rounded-xl border border-border bg-surface-elevated p-5">
-          {items.length === 0 ? <p className="text-sm text-muted">暂无内容</p> : <ul className="space-y-2">{items.map((x) => <li key={x.id} className="border-b border-border pb-2 flex items-center justify-between"><div><p className="text-sm">{x.title}</p><p className="text-xs text-muted">{x.slug} · {STATUS_TEXT[x.status]}</p><p className="text-xs text-muted mt-1">提交账号：{submitterLabel(x.authorMember ?? null)}</p></div><div className="flex gap-2"><button type="button" onClick={() => openEdit(x)} disabled={!canEdit} className="text-xs px-2 py-1 rounded border border-border disabled:opacity-40">修改</button><button type="button" onClick={() => void removeItem(x.id)} disabled={!canDelete} className="text-xs px-2 py-1 rounded border border-red-500 text-red-600 disabled:opacity-40">删除</button></div></li>)}</ul>}
+          {items.length === 0 ? (
+            <p className="text-sm text-muted">暂无内容</p>
+          ) : (
+            <ul className="space-y-2">
+              {items.map((x) => (
+                <li key={x.id} className="flex items-center justify-between border-b border-border pb-2">
+                  <div>
+                    <p className="text-sm flex items-center gap-2">
+                      <span>{x.title}</span>
+                      {x.isPinned && <span className="text-[11px] rounded-full border border-accent/40 px-2 py-0.5 text-accent">置顶</span>}
+                    </p>
+                    <p className="text-xs text-muted">{x.slug} · {STATUS_TEXT[x.status]}</p>
+                    <p className="mt-1 text-xs text-muted">提交账号：{submitterLabel(x.authorMember ?? null)}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => openEdit(x)}
+                      disabled={!canEdit}
+                      className="text-xs px-2 py-1 rounded border border-border disabled:opacity-40"
+                    >
+                      修改
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void removeItem(x.id)}
+                      disabled={!canDelete}
+                      className="text-xs px-2 py-1 rounded border border-red-500 text-red-600 disabled:opacity-40"
+                    >
+                      删除
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       )}
 
@@ -663,7 +788,10 @@ export default function AdminContentPage() {
               <ul className="space-y-2">
                 {pendingItems.map((x) => (
                   <li key={x.id} className="border-b border-border pb-2">
-                    <p className="text-sm">{x.title}</p>
+                    <p className="text-sm flex items-center gap-2">
+                      <span>{x.title}</span>
+                      {x.isPinned && <span className="text-[11px] rounded-full border border-accent/40 px-2 py-0.5 text-accent">置顶</span>}
+                    </p>
                     {x.excerpt && <p className="text-xs text-muted mt-1 whitespace-pre-line">摘要：{x.excerpt}</p>}
                     {tab === "standards" && (() => {
                       const parsed = parseStandardStructuredHtml(x.content ?? "");
@@ -734,6 +862,42 @@ export default function AdminContentPage() {
               <input className="flex-1 border border-border rounded px-3 py-2 bg-surface" value={editTagSlugs} onChange={(e) => setEditTagSlugs(e.target.value)} placeholder="如：行业趋势,技术发展,品牌建设" />
               <button type="button" onClick={autoFillEditTags} className="px-3 py-2 rounded border border-border text-xs hover:bg-surface">自动识别</button>
             </div>
+            {tab !== "brands" && (
+              <>
+                <label className="block text-sm text-muted">封面图片（可选）</label>
+                <input
+                  className="w-full border border-border rounded px-3 py-2 bg-surface"
+                  value={editCoverImage}
+                  onChange={(e) => setEditCoverImage(e.target.value)}
+                  placeholder="可填写图片 URL，或使用下方上传按钮"
+                />
+                <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      void uploadEditCover(e.target.files?.[0] ?? null);
+                      e.currentTarget.value = "";
+                    }}
+                    className="block"
+                  />
+                  <span>支持本地上传，最大 2MB</span>
+                  {editCoverImage && (
+                    <button
+                      type="button"
+                      onClick={() => setEditCoverImage("")}
+                      className="px-2 py-1 rounded border border-border hover:bg-surface"
+                    >
+                      清除
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+            <label className="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface px-3 py-2 text-sm">
+              <span className="text-primary">置顶内容（全站优先显示）</span>
+              <input type="checkbox" checked={editIsPinned} onChange={(e) => setEditIsPinned(e.target.checked)} />
+            </label>
             {tab === "terms" ? (
               <div className="rounded-lg border border-border bg-surface p-3 space-y-3">
                 <p className="text-xs text-muted">词库条目编辑（小标题 + 解释）。</p>

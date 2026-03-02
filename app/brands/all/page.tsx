@@ -1,6 +1,7 @@
 ﻿import type { Metadata } from "next";
 import Link from "next/link";
 import { buildCategoryMetadata } from "@/lib/category-metadata";
+import { articleOrderByPinnedLatest, articleOrderByPinnedOldest } from "@/lib/articles";
 import { prisma } from "@/lib/prisma";
 import { parseBrandStructuredHtml } from "@/lib/brand-structured";
 
@@ -83,8 +84,8 @@ export default async function BrandsAllPage({ searchParams }: Props) {
     where: finalWhere,
     orderBy:
       sort === "oldest"
-        ? [{ publishedAt: "asc" }, { updatedAt: "asc" }]
-        : [{ publishedAt: "desc" }, { updatedAt: "desc" }],
+        ? articleOrderByPinnedOldest
+        : articleOrderByPinnedLatest,
     select: {
       id: true,
       title: true,

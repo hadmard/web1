@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
   const [items, total] = await Promise.all([
     prisma.article.findMany({
       where,
-      orderBy: { updatedAt: "desc" },
+      orderBy: [{ isPinned: "desc" }, { updatedAt: "desc" }],
       skip,
       take: limit,
       include: {
@@ -94,6 +94,7 @@ export async function POST(request: NextRequest) {
       relatedBrandIds,
       tagSlugs,
       syncToMainSite,
+      isPinned,
       status,
       reviewNote,
     } = body;
@@ -151,6 +152,7 @@ export async function POST(request: NextRequest) {
         relatedBrandIds: typeof relatedBrandIds === "string" ? relatedBrandIds.trim() || null : null,
         tagSlugs: resolvedTagSlugs.length > 0 ? resolvedTagSlugs.join(",") : null,
         syncToMainSite: syncToMainSite === true,
+        isPinned: typeof isPinned === "boolean" ? isPinned : false,
         status: safeStatus,
         authorMemberId: session.sub,
         reviewNote: typeof reviewNote === "string" ? reviewNote.trim() || null : null,

@@ -41,7 +41,10 @@ export default async function TagSlugPage({ params }: Props) {
   const articles = tag.articles
     .map((a) => a.article)
     .filter((a) => a.publishedAt != null)
-    .sort((a, b) => (b.publishedAt!.getTime() - a.publishedAt!.getTime()));
+    .sort((a, b) => {
+      if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
+      return b.publishedAt!.getTime() - a.publishedAt!.getTime();
+    });
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12">

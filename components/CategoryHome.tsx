@@ -99,12 +99,20 @@ export async function CategoryHome({
                 {subcategories.map((sub) => {
                   const latest = (subcategoryLatest?.[sub.href] ?? []).slice(0, 3);
                   return (
-                    <article key={sub.href} className="rounded-xl border border-border bg-surface-elevated p-3">
-                      <p className="text-sm font-semibold text-primary">{sub.label}</p>
+                    <article key={sub.href} className="rounded-xl border border-border bg-surface-elevated p-3 transition-colors hover:border-accent/45">
+                      <div className="flex items-center justify-between gap-2">
+                        <Link href={getSubHref(sub.href)} className="text-sm font-semibold text-primary hover:text-accent">
+                          {sub.label}
+                        </Link>
+                        <Link href={getSubHref(sub.href)} className="text-xs text-accent hover:underline">
+                          进入栏目
+                        </Link>
+                      </div>
                       {latest.length > 0 && (
                         <ul className="mt-2 space-y-1.5">
                           {latest.map((item) => (
-                            <li key={`${sub.href}-${item.href}`}>
+                            <li key={`${sub.href}-${item.href}`} className="flex items-center gap-2 min-w-0">
+                              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-black" aria-hidden />
                               <Link href={item.href} className="text-xs text-primary hover:text-accent line-clamp-1">
                                 {item.title}
                               </Link>

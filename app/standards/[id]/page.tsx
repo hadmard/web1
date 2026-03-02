@@ -3,6 +3,7 @@ import Image from "next/image";
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
+import { articleOrderByPinnedLatest } from "@/lib/articles";
 import { getStandardById } from "@/lib/standards";
 import { JsonLd } from "@/components/JsonLd";
 import { MemberDownloadButton } from "@/components/MemberDownloadButton";
@@ -52,7 +53,7 @@ async function findStandardArticleBySegment(segment: string) {
         },
       ],
     },
-    orderBy: [{ updatedAt: "desc" }],
+    orderBy: articleOrderByPinnedLatest,
   });
 }
 

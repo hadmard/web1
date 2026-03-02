@@ -3,6 +3,7 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
+import { articleOrderByPinnedLatest, articleOrderByPinnedPopular } from "@/lib/articles";
 import { getTermBySlug } from "@/lib/terms";
 import { previewText } from "@/lib/text";
 import { DefinitionBlock } from "@/components/DefinitionBlock";
@@ -85,7 +86,7 @@ export default async function TermPage({ params }: Props) {
           status: "approved",
           OR: [{ subHref: subcategory.href }, { categoryHref: subcategory.href }],
         },
-        orderBy: [{ viewCount: "desc" }, { updatedAt: "desc" }],
+        orderBy: articleOrderByPinnedPopular,
         take: 10,
         select: { id: true, title: true, slug: true },
       }),
@@ -94,7 +95,7 @@ export default async function TermPage({ params }: Props) {
           status: "approved",
           OR: [{ subHref: subcategory.href }, { categoryHref: subcategory.href }],
         },
-        orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }],
+        orderBy: articleOrderByPinnedLatest,
         take: 3,
         select: { id: true, title: true, slug: true, updatedAt: true },
       }),

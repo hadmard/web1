@@ -1,4 +1,24 @@
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
+
+export const articleOrderByPinnedLatest: Prisma.ArticleOrderByWithRelationInput[] = [
+  { isPinned: "desc" },
+  { publishedAt: "desc" },
+  { updatedAt: "desc" },
+];
+
+export const articleOrderByPinnedOldest: Prisma.ArticleOrderByWithRelationInput[] = [
+  { isPinned: "desc" },
+  { publishedAt: "asc" },
+  { updatedAt: "asc" },
+];
+
+export const articleOrderByPinnedPopular: Prisma.ArticleOrderByWithRelationInput[] = [
+  { isPinned: "desc" },
+  { viewCount: "desc" },
+  { publishedAt: "desc" },
+  { updatedAt: "desc" },
+];
 
 export async function getLatestPublishedArticles(limit = 6) {
   return prisma.article.findMany({
@@ -6,7 +26,7 @@ export async function getLatestPublishedArticles(limit = 6) {
       status: "approved",
       publishedAt: { not: null },
     },
-    orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }],
+    orderBy: articleOrderByPinnedLatest,
     take: Math.max(1, Math.min(limit, 20)),
     select: {
       id: true,

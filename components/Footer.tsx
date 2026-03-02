@@ -1,4 +1,11 @@
-﻿import Link from "next/link";
+import Link from "next/link";
+
+const quickActionLinks = [
+  { href: "/news", label: "资讯速览", desc: "查看最新行业动态" },
+  { href: "/brands/all", label: "品牌总览", desc: "按区域和关键词筛选" },
+  { href: "/dictionary/all", label: "词库检索", desc: "快速查术语与定义" },
+  { href: "/standards/all", label: "标准库", desc: "查看标准与版本信息" },
+];
 
 const exploreLinks = [
   { href: "/news", label: "整木资讯" },
@@ -17,12 +24,33 @@ export function Footer() {
   return (
     <footer className="mt-16 sm:mt-20 px-3 sm:px-5 pb-6 sm:pb-8">
       <div className="glass-card max-w-6xl mx-auto px-5 sm:px-8 py-10 sm:py-12">
-        <div className="grid grid-cols-2 gap-6 sm:grid-cols-4 sm:gap-8">
+        <section className="rounded-2xl border border-border bg-surface-elevated/80 p-4 sm:p-5">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <p className="text-sm font-semibold text-primary">常用入口</p>
+            <Link href="/membership" className="text-xs text-accent hover:underline">
+              进入会员系统
+            </Link>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            {quickActionLinks.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="interactive-lift block rounded-xl border border-border bg-surface px-3 py-3 hover:border-accent/45"
+              >
+                <p className="text-sm font-medium text-primary">{item.label}</p>
+                <p className="mt-1 text-xs text-muted">{item.desc}</p>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <div className="mt-6 grid grid-cols-2 gap-6 sm:grid-cols-4 sm:gap-8">
           <div>
             <ul className="space-y-2.5">
               {exploreLinks.map(({ href, label }) => (
                 <li key={href}>
-                  <Link href={href} className="text-sm text-primary/85 hover:text-accent transition-colors">
+                  <Link href={href} className="text-sm text-primary/85 transition-colors hover:text-accent">
                     {label}
                   </Link>
                 </li>
@@ -34,7 +62,7 @@ export function Footer() {
             <ul className="space-y-2.5">
               {knowledgeLinks.map(({ href, label }) => (
                 <li key={href}>
-                  <Link href={href} className="text-sm text-primary/85 hover:text-accent transition-colors">
+                  <Link href={href} className="text-sm text-primary/85 transition-colors hover:text-accent">
                     {label}
                   </Link>
                 </li>
@@ -46,7 +74,7 @@ export function Footer() {
             <ul className="space-y-2.5">
               {resourcesLinks.map(({ href, label }) => (
                 <li key={href}>
-                  <Link href={href} className="text-sm text-primary/85 hover:text-accent transition-colors">
+                  <Link href={href} className="text-sm text-primary/85 transition-colors hover:text-accent">
                     {label}
                   </Link>
                 </li>
@@ -55,11 +83,11 @@ export function Footer() {
           </div>
 
           <div className="col-span-2 sm:col-span-1">
-            <p className="text-sm text-muted leading-relaxed">整木行业知识基础设施，连接资讯、品牌、标准与会员共建。</p>
+            <p className="text-sm leading-relaxed text-muted">整木行业知识基础设施，连接资讯、品牌、标准与会员共建。</p>
           </div>
         </div>
 
-        <div className="mt-10 pt-6 border-t border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="mt-10 flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-primary/85">整木网</p>
           <p className="text-xs text-muted">© {new Date().getFullYear()} All rights reserved.</p>
         </div>

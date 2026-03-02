@@ -53,6 +53,7 @@ import {
   parseAwardStructuredHtml,
   type AwardStructuredData,
 } from "@/lib/award-structured";
+import { readImageWithLimit } from "@/lib/client-image";
 
 type MemberType = "enterprise_basic" | "enterprise_advanced" | "personal";
 type Status = "draft" | "pending" | "approved" | "rejected";
@@ -76,6 +77,7 @@ type Row = {
   relatedStandardIds?: string | null;
   relatedBrandIds?: string | null;
   tagSlugs?: string | null;
+  isPinned?: boolean;
   createdAt: string;
 };
 
@@ -92,6 +94,8 @@ const DEFAULT_TERM_SECTIONS: Omit<TermSection, "id">[] = [
   { heading: "技术结构", body: "由门、墙板、柜体、线条、装饰件等模块协同组合，兼顾工艺与交付效率。" },
   { heading: "行业意义", body: "推动木作产业从单品竞争转向系统能力竞争，提升高端定制与品牌化水平。" },
 ];
+
+const COVER_IMAGE_MAX_BYTES = 2 * 1024 * 1024;
 
 function createDefaultTermSections(): TermSection[] {
   return DEFAULT_TERM_SECTIONS.map((x, i) => ({ id: `default-${i + 1}`, heading: x.heading, body: x.body }));
@@ -185,6 +189,7 @@ function PublishCenterPageInner() {
   const [relatedStandardIds, setRelatedStandardIds] = useState("");
   const [relatedBrandIds, setRelatedBrandIds] = useState("");
   const [tagSlugs, setTagSlugs] = useState("");
+  const [isPinned, setIsPinned] = useState(false);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
@@ -370,6 +375,7 @@ function PublishCenterPageInner() {
       relatedBrandIds: relatedBrandIds.trim() || null,
       tagSlugs: tagSlugs.trim() || null,
       syncToMainSite: true,
+      isPinned,
     };
 
     const res = await fetch("/api/member/articles", {
@@ -397,6 +403,7 @@ function PublishCenterPageInner() {
     resetDataStructured();
     resetAwardStructured();
     resetCategoryMeta();
+    setIsPinned(false);
     await load();
     setLoading(false);
   }
@@ -490,16 +497,20 @@ function PublishCenterPageInner() {
     setMessage("已自动识别标签，可继续手动修改。");
   }
 
+  async function handleCoverImageUpload(file: File | null) {
+    if (!file) return;
+    try {
+      const dataUrl = await readImageWithLimit(file, COVER_IMAGE_MAX_BYTES);
+      setCoverImage(dataUrl);
+      setMessage("封面图已加载，请提交后生效。");
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "图片上传失败");
+    }
+  }
+
   function renderCategoryFeatureFields(currentTab: ContentTabKey) {
     return (
       <>
-        {(currentTab === "gallery" || currentTab === "awards") && (
-          <>
-            <label className="block text-sm text-muted">封面图 URL</label>
-            <input className="w-full border border-border rounded px-3 py-2 bg-surface" value={coverImage} onChange={(e) => setCoverImage(e.target.value)} />
-          </>
-        )}
-
         {currentTab === "terms" && (
           <>
             <div className="rounded-lg border border-border bg-surface p-3 space-y-3">
@@ -708,6 +719,46 @@ function PublishCenterPageInner() {
             onChange={(e) => setExcerpt(e.target.value)}
           />
 
+          {safeTab !== "brands" && (
+            <>
+              <label className="block text-sm text-muted">封面图片（可选）</label>
+              <input
+                className="w-full border border-border rounded px-3 py-2 bg-surface"
+                value={coverImage}
+                onChange={(e) => setCoverImage(e.target.value)}
+                placeholder="可填写图片 URL，或使用下方上传按钮"
+              />
+              <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    void handleCoverImageUpload(e.target.files?.[0] ?? null);
+                    e.currentTarget.value = "";
+                  }}
+                  className="block"
+                />
+                <span>支持本地上传，最大 2MB</span>
+                {coverImage && (
+                  <button
+                    type="button"
+                    onClick={() => setCoverImage("")}
+                    className="px-2 py-1 rounded border border-border hover:bg-surface"
+                  >
+                    清除
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+
+          {(role === "SUPER_ADMIN" || role === "ADMIN") && (
+            <label className="flex items-center justify-between gap-4 rounded-lg border border-border bg-surface px-3 py-2 text-sm">
+              <span className="text-primary">置顶内容（全站优先显示）</span>
+              <input type="checkbox" checked={isPinned} onChange={(e) => setIsPinned(e.target.checked)} />
+            </label>
+          )}
+
           {safeTab !== "terms" &&
             safeTab !== "brands" &&
             safeTab !== "standards" &&
@@ -743,7 +794,12 @@ function PublishCenterPageInner() {
               <li key={item.id} className="border-b border-border pb-2">
                 <div className="flex items-center justify-between gap-4 text-sm">
                   <span className="truncate text-primary">{item.title}</span>
-                  <span className="text-xs text-muted shrink-0">{STATUS_TEXT[item.status]}</span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {item.isPinned && (
+                      <span className="text-[11px] rounded-full border border-accent/40 px-2 py-0.5 text-accent">置顶</span>
+                    )}
+                    <span className="text-xs text-muted">{STATUS_TEXT[item.status]}</span>
+                  </div>
                 </div>
                 <div className="mt-2">
                   <button type="button" onClick={() => openEditRequest(item)} className="text-xs px-2 py-1 rounded border border-border hover:bg-surface">

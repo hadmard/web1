@@ -3,6 +3,7 @@ import { ScrollMotion } from "@/components/ScrollMotion";
 import { StructuredSearch } from "@/components/StructuredSearch";
 import { ENGINEER_CATEGORY_LABELS, getLatestHuadianYear, getTop10ByYear } from "@/lib/huadianbang";
 import { prisma } from "@/lib/prisma";
+import { articleOrderByPinnedLatest, articleOrderByPinnedPopular } from "@/lib/articles";
 import { getSiteVisualSettings } from "@/lib/site-visual-settings";
 export const revalidate = 300;
 
@@ -35,31 +36,31 @@ export default async function HomePage() {
     getSiteVisualSettings(),
     prisma.article.findMany({
       where: { status: "approved", OR: [{ categoryHref: { startsWith: "/news" } }, { subHref: { startsWith: "/news" } }] },
-      orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }],
+      orderBy: articleOrderByPinnedLatest,
       take: 6,
       select: { id: true, title: true, slug: true },
     }),
     prisma.article.findMany({
       where: { status: "approved", OR: [{ categoryHref: { startsWith: "/news" } }, { subHref: { startsWith: "/news" } }] },
-      orderBy: [{ viewCount: "desc" }, { publishedAt: "desc" }, { updatedAt: "desc" }],
+      orderBy: articleOrderByPinnedPopular,
       take: 6,
       select: { id: true, title: true, slug: true },
     }),
     prisma.article.findMany({
       where: { status: "approved", OR: [{ categoryHref: { startsWith: "/brands" } }, { subHref: { startsWith: "/brands" } }] },
-      orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }],
+      orderBy: articleOrderByPinnedLatest,
       take: 8,
       select: { id: true, title: true, slug: true },
     }),
     prisma.article.findMany({
       where: { status: "approved", OR: [{ categoryHref: { startsWith: "/dictionary" } }, { subHref: { startsWith: "/dictionary" } }] },
-      orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }],
+      orderBy: articleOrderByPinnedLatest,
       take: 8,
       select: { id: true, title: true, slug: true },
     }),
     prisma.article.findMany({
       where: { status: "approved", OR: [{ categoryHref: { startsWith: "/standards" } }, { subHref: { startsWith: "/standards" } }] },
-      orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }],
+      orderBy: articleOrderByPinnedLatest,
       take: 8,
       select: { id: true, title: true, slug: true, versionLabel: true },
     }),
@@ -130,27 +131,30 @@ export default async function HomePage() {
       items: safeAwards.map((x) => ({ label: `${x.year ? `${x.year} · ` : ""}${x.title}`, href: `/awards/${x.slug || x.id}` })),
     },
   ];
-  const topAd = visualSettings.ads.homeTop;
   const middleAd = visualSettings.ads.homeMiddle;
+  const heroBackground = visualSettings.backgrounds.homeHero.trim();
+  const showHeroImage = heroBackground.length > 0;
 
   return (
     <main className="min-h-screen">
       <ScrollMotion />
 
-      <section className="relative overflow-hidden border-b border-border py-20 sm:py-28" data-mouse-zone>
-        <div className="pointer-events-none absolute inset-0 parallax-layer" data-parallax="0.05">
-          <img
-            src={visualSettings.backgrounds.homeHero}
-            alt=""
-            className="h-full w-full object-cover brightness-125 saturate-95"
-          />
-        </div>
-        <div className="pointer-events-none absolute inset-0 bg-surface/22" />
+      <section className="relative overflow-hidden border-b border-border bg-[#17263A] py-20 sm:py-28" data-mouse-zone>
+        {showHeroImage && (
+          <div className="pointer-events-none absolute inset-0 parallax-layer" data-parallax="0.05">
+            <img
+              src={heroBackground}
+              alt=""
+              className="h-full w-full object-cover opacity-30"
+            />
+          </div>
+        )}
+        <div className="pointer-events-none absolute inset-0 bg-[#17263A]/82" />
         <div className="max-w-6xl mx-auto px-4 sm:px-6 relative">
           <div data-reveal="zoom-soft" data-reveal-delay="0" className="text-center">
-            <p className="text-xs sm:text-sm uppercase tracking-[0.16em] text-muted">整木行业知识基础设施平台</p>
-            <h1 className="mt-5 font-serif text-[2.15rem] sm:text-6xl lg:text-7xl font-semibold tracking-[0.06em] text-primary">整木网</h1>
-            <p className="mt-5 text-[15px] sm:text-base text-muted max-w-3xl mx-auto">让行业资讯、品牌、标准与评选在一个界面里高效协同。</p>
+            <p className="text-xs sm:text-sm uppercase tracking-[0.2em] text-white/80">整木行业知识基础设施平台</p>
+            <h1 className="mt-5 font-serif text-[2.2rem] sm:text-6xl lg:text-7xl font-semibold tracking-[0.08em] text-white">整木网</h1>
+            <p className="mt-5 text-[15px] sm:text-base text-white/88 max-w-3xl mx-auto">让行业资讯、品牌、标准与评选在一个界面里高效协同。</p>
           </div>
 
           <nav
@@ -160,11 +164,11 @@ export default async function HomePage() {
             aria-label="快捷入口"
           >
             {QUICK_ENTRIES.map((item) => (
-              <Link key={item.href} href={item.href} className="interactive-lift shrink-0 rounded-full border border-border bg-surface-elevated/90 px-4 py-2 text-sm text-primary hover:border-accent/40 hover:text-accent">
+              <Link key={item.href} href={item.href} className="interactive-lift shrink-0 rounded-full border border-white/30 bg-white/10 px-4 py-2 text-sm text-white hover:border-white/65 hover:bg-white/20">
                 {item.label}
               </Link>
             ))}
-            <Link href="/dictionary/all" className="interactive-lift shrink-0 rounded-full border border-border bg-surface-elevated/90 px-4 py-2 text-sm text-primary hover:border-accent/40 hover:text-accent">
+            <Link href="/dictionary/all" className="interactive-lift shrink-0 rounded-full border border-white/30 bg-white/10 px-4 py-2 text-sm text-white hover:border-white/65 hover:bg-white/20">
               搜索
             </Link>
           </nav>
@@ -172,21 +176,6 @@ export default async function HomePage() {
           <div data-reveal="fade-up" data-reveal-delay="140" className="mt-5 flex justify-center">
             <StructuredSearch />
           </div>
-
-          {topAd.enabled && (
-            <Link
-              data-reveal="fade-up"
-              data-reveal-delay="180"
-              href={topAd.href || "/membership"}
-              className="mt-6 block overflow-hidden rounded-2xl border border-border bg-surface-elevated/95 hover:border-accent/45 transition-colors"
-            >
-              <div className="relative h-24 sm:h-28">
-                <img src={topAd.imageUrl} alt={topAd.title} className="h-full w-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-r from-black/35 to-transparent" />
-                <p className="absolute left-4 bottom-3 text-sm font-medium text-white">{topAd.title}</p>
-              </div>
-            </Link>
-          )}
         </div>
       </section>
 
@@ -201,27 +190,27 @@ export default async function HomePage() {
             <div className="absolute inset-0 bg-gradient-to-r from-surface/82 via-surface/45 to-transparent" />
           </div>
           <h2 data-reveal="fade-up" className="section-label text-primary mb-6">资讯速览</h2>
-          <div className="grid lg:grid-cols-3 gap-4">
-            <article data-reveal="fade-left" data-reveal-delay="60" className="glass-panel p-5 lg:col-span-2">
-              <p className="text-[13px] sm:text-sm text-muted mb-2">整木资讯</p>
+          <div className="grid lg:grid-cols-3 gap-4 items-stretch">
+            <article data-reveal="fade-left" data-reveal-delay="60" className="glass-panel p-5 lg:col-span-2 h-full flex flex-col">
               <h3 className="font-serif text-lg font-semibold text-primary mb-3">最新发布</h3>
-              <ul className="space-y-2">
+              <ul className="space-y-2.5 flex-1">
                 {latestNews.map((x) => (
-                  <li key={x.id}>
-                    <Link href={`/news/${x.slug}`} className="text-sm text-primary hover:text-accent">{x.title}</Link>
+                  <li key={x.id} className="flex items-center gap-2 min-w-0">
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-black" aria-hidden />
+                    <Link href={`/news/${x.slug}`} className="text-sm text-primary hover:text-accent line-clamp-1">{x.title}</Link>
                   </li>
                 ))}
               </ul>
               <Link href="/news/all" className="mt-4 inline-block text-sm font-medium text-accent hover:underline">查看更多</Link>
             </article>
 
-            <article data-reveal="fade-right" data-reveal-delay="120" className="glass-panel p-5">
-              <p className="text-[13px] sm:text-sm text-muted mb-2">高频阅读</p>
-              <h3 className="font-serif text-lg font-semibold text-red-600 mb-3">热门内容</h3>
-              <ul className="space-y-2">
+            <article data-reveal="fade-right" data-reveal-delay="120" className="glass-panel p-5 h-full flex flex-col">
+              <h3 className="font-serif text-lg font-semibold text-primary mb-3">热门内容</h3>
+              <ul className="space-y-2.5 flex-1">
                 {hotNews.map((x) => (
-                  <li key={x.id}>
-                    <Link href={`/news/${x.slug}`} className="text-sm text-primary hover:text-accent">{x.title}</Link>
+                  <li key={x.id} className="flex items-center gap-2 min-w-0">
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-black" aria-hidden />
+                    <Link href={`/news/${x.slug}`} className="text-sm text-primary hover:text-accent line-clamp-1">{x.title}</Link>
                   </li>
                 ))}
               </ul>
@@ -235,8 +224,8 @@ export default async function HomePage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="grid lg:grid-cols-2 gap-4" data-reveal-stagger="85">
             {structureCards.map((card) => (
-              <article key={card.title} data-reveal="zoom-soft" className="glass-panel p-5 sm:p-6 relative overflow-hidden">
-                <div className="relative">
+              <article key={card.title} data-reveal="zoom-soft" className="glass-panel p-5 sm:p-6 relative overflow-hidden h-full">
+                <div className="relative flex h-full flex-col">
                   <div className="mb-4 overflow-hidden rounded-xl border border-border">
                     <img
                       src={card.image}
@@ -248,10 +237,11 @@ export default async function HomePage() {
                   <h3 className="mt-1 font-serif text-xl sm:text-2xl font-semibold text-primary">{card.title}</h3>
                   <p className="mt-2 text-sm text-muted">{card.desc}</p>
 
-                  <ul className="mt-4 space-y-2">
+                  <ul className="mt-4 space-y-2 flex-1">
                     {pick(card.items, 5).map((item, idx) => (
-                      <li key={item.href + idx}>
-                        <Link href={item.href} className="text-sm text-primary hover:text-accent">{item.label}</Link>
+                      <li key={item.href + idx} className="flex items-center gap-2 min-w-0">
+                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-black" aria-hidden />
+                        <Link href={item.href} className="text-sm text-primary hover:text-accent line-clamp-1">{item.label}</Link>
                       </li>
                     ))}
                   </ul>

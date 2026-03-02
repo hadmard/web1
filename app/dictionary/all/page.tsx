@@ -1,6 +1,7 @@
 ﻿import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { MEMBER_PUBLISH_CATEGORY_OPTIONS } from "@/lib/content-taxonomy";
+import { articleOrderByPinnedLatest, articleOrderByPinnedOldest } from "@/lib/articles";
 export const revalidate = 300;
 
 
@@ -47,7 +48,7 @@ export default async function DictionaryAllPage({ searchParams }: Props) {
   const [items, total] = await Promise.all([
     prisma.article.findMany({
       where,
-      orderBy: sort === "oldest" ? [{ updatedAt: "asc" }] : [{ updatedAt: "desc" }],
+      orderBy: sort === "oldest" ? articleOrderByPinnedOldest : articleOrderByPinnedLatest,
       skip,
       take: PAGE_SIZE,
       select: {

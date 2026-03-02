@@ -290,6 +290,7 @@ model Article {
   relatedBrandIds     String?
   tagSlugs            String?
   syncToMainSite      Boolean       @default(false)
+  isPinned            Boolean       @default(false)
   viewCount           Int           @default(0)
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
@@ -298,6 +299,7 @@ model Article {
 
   @@index([status])
   @@index([status, viewCount])
+  @@index([status, isPinned])
   @@index([authorMemberId])
   @@map("articles")
 }

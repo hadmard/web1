@@ -3,6 +3,7 @@ import { CategoryHome } from "@/components/CategoryHome";
 import { PublishedContentPanel } from "@/components/PublishedContentPanel";
 import { getCategoryWithMetaByHref } from "@/lib/categories";
 import { buildCategoryMetadata } from "@/lib/category-metadata";
+import { articleOrderByPinnedLatest } from "@/lib/articles";
 import { prisma } from "@/lib/prisma";
 
 export const revalidate = 300;
@@ -25,7 +26,7 @@ export default async function NewsPage() {
         status: "approved",
         OR: [{ categoryHref: { startsWith: "/news" } }, { subHref: { startsWith: "/news" } }],
       },
-      orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }],
+      orderBy: articleOrderByPinnedLatest,
       take: 8,
       select: { id: true, title: true, slug: true, publishedAt: true, updatedAt: true },
     }),
@@ -36,7 +37,7 @@ export default async function NewsPage() {
             status: "approved",
             OR: [{ subHref: sub.href }, { categoryHref: sub.href }],
           },
-          orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }],
+          orderBy: articleOrderByPinnedLatest,
           take: 3,
           select: { id: true, title: true, slug: true },
         })
@@ -60,7 +61,7 @@ export default async function NewsPage() {
       subcategoryLatest={subcategoryLatest}
     >
       <PublishedContentPanel
-        sectionTitle="资讯发布内容"
+        sectionTitle="资讯速览"
         items={articles.map((x) => ({
           id: x.id,
           title: x.title,

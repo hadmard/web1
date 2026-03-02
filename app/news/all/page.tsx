@@ -1,5 +1,6 @@
 ﻿import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { articleOrderByPinnedLatest, articleOrderByPinnedOldest } from "@/lib/articles";
 export const revalidate = 300;
 
 
@@ -112,8 +113,8 @@ export default async function NewsAllPage({ searchParams }: Props) {
       where,
       orderBy:
         sort === "oldest"
-          ? [{ publishedAt: "asc" }, { updatedAt: "asc" }]
-          : [{ publishedAt: "desc" }, { updatedAt: "desc" }],
+          ? articleOrderByPinnedOldest
+          : articleOrderByPinnedLatest,
       skip,
       take: PAGE_SIZE,
       select: {

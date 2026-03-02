@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
   const [items, total] = await Promise.all([
     prisma.article.findMany({
       where: { authorMemberId: session.sub },
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ isPinned: "desc" }, { createdAt: "desc" }],
       skip,
       take: limit,
     }),
@@ -54,6 +54,7 @@ export async function POST(request: NextRequest) {
     relatedBrandIds,
     tagSlugs,
     syncToMainSite,
+    isPinned,
   } = body;
 
   const categoryHrefTrim =
@@ -107,6 +108,7 @@ export async function POST(request: NextRequest) {
       relatedBrandIds: typeof relatedBrandIds === "string" ? relatedBrandIds.trim() || null : null,
       tagSlugs: resolvedTagSlugs.length > 0 ? resolvedTagSlugs.join(",") : null,
       syncToMainSite: syncToMainSite === true,
+      isPinned: (session.role === "SUPER_ADMIN" || session.role === "ADMIN") && isPinned === true,
       status: submissionStatus,
       authorMemberId: session.sub,
     },

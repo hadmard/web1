@@ -3,6 +3,7 @@ import Image from "next/image";
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
+import { articleOrderByPinnedLatest } from "@/lib/articles";
 import { JsonLd } from "@/components/JsonLd";
 import { previewText } from "@/lib/text";
 import { RichContent } from "@/components/RichContent";
@@ -45,7 +46,7 @@ async function findNewsArticleBySegment(segment: string) {
         },
       ],
     },
-    orderBy: [{ updatedAt: "desc" }],
+    orderBy: articleOrderByPinnedLatest,
   });
 }
 

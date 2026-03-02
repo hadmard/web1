@@ -10,6 +10,7 @@ import {
   type HomeAdKey,
   type SiteVisualSettings,
 } from "@/lib/site-visual-config";
+import { readImageWithLimit } from "@/lib/client-image";
 
 type SettingsState = {
   contentReviewRequired: boolean;
@@ -24,6 +25,8 @@ type CategoryState = {
   title: string;
   desc: string;
 };
+
+const VISUAL_IMAGE_MAX_BYTES = 2 * 1024 * 1024;
 
 export default function AdminSettingsPage() {
   const [settings, setSettings] = useState<SettingsState | null>(null);
@@ -160,6 +163,28 @@ export default function AdminSettingsPage() {
     });
   }
 
+  async function uploadBackgroundImage(key: BackgroundImageKey, file: File | null) {
+    if (!file) return;
+    try {
+      const dataUrl = await readImageWithLimit(file, VISUAL_IMAGE_MAX_BYTES);
+      updateBackgroundField(key, dataUrl);
+      setMessage("图片已加载，请点击“保存”生效。");
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "图片上传失败");
+    }
+  }
+
+  async function uploadAdImage(key: HomeAdKey, file: File | null) {
+    if (!file) return;
+    try {
+      const dataUrl = await readImageWithLimit(file, VISUAL_IMAGE_MAX_BYTES);
+      updateAdField(key, "imageUrl", dataUrl);
+      setMessage("广告图已加载，请点击“保存”生效。");
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "图片上传失败");
+    }
+  }
+
   async function handleSaveCategory(id: string) {
     const target = categories.find((item) => item.id === id);
     if (!target) return;
@@ -257,7 +282,7 @@ export default function AdminSettingsPage() {
         <section className="rounded-lg border border-border bg-surface p-4 space-y-4">
           <header>
             <h2 className="font-serif text-base font-semibold text-primary">背景图与广告位（仅主管理员）</h2>
-            <p className="text-xs text-muted mt-1">所有背景图均可在此修改。每项已标注建议尺寸（像素）。</p>
+            <p className="text-xs text-muted mt-1">所有背景图均可在此修改。每项已标注建议尺寸（像素），上传图片大小不超过 2MB。</p>
           </header>
 
           <div className="space-y-3">
@@ -267,12 +292,36 @@ export default function AdminSettingsPage() {
                   <label className="text-sm text-primary">{field.label}</label>
                   <span className="text-[11px] text-muted">建议尺寸：{field.requiredSize}</span>
                 </div>
+                {field.key === "homeHero" && (
+                  <p className="mb-2 text-[11px] text-muted">留空将使用首页纯色背景；上传图片后会覆盖纯色背景。</p>
+                )}
                 <input
                   value={settings.siteVisualSettings.backgrounds[field.key]}
                   onChange={(e) => updateBackgroundField(field.key, e.target.value)}
                   className="w-full border border-border rounded px-3 py-2 bg-surface text-sm"
                   placeholder="请输入图片 URL（如 /images/xxx.jpg）"
                 />
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      void uploadBackgroundImage(field.key, e.target.files?.[0] ?? null);
+                      e.currentTarget.value = "";
+                    }}
+                    className="block text-xs text-muted"
+                  />
+                  <span className="text-[11px] text-muted">支持本地上传，最大 2MB</span>
+                  {settings.siteVisualSettings.backgrounds[field.key] && (
+                    <button
+                      type="button"
+                      onClick={() => updateBackgroundField(field.key, "")}
+                      className="text-xs px-2 py-1 rounded border border-border hover:bg-surface"
+                    >
+                      清除
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -308,6 +357,27 @@ export default function AdminSettingsPage() {
                     className="w-full border border-border rounded px-3 py-2 bg-surface text-sm"
                     placeholder="广告图片 URL（如 /images/xxx.jpg）"
                   />
+                  <div className="flex flex-wrap items-center gap-2">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        void uploadAdImage(field.key, e.target.files?.[0] ?? null);
+                        e.currentTarget.value = "";
+                      }}
+                      className="block text-xs text-muted"
+                    />
+                    <span className="text-[11px] text-muted">支持本地上传，最大 2MB</span>
+                    {ad.imageUrl && (
+                      <button
+                        type="button"
+                        onClick={() => updateAdField(field.key, "imageUrl", "")}
+                        className="text-xs px-2 py-1 rounded border border-border hover:bg-surface"
+                      >
+                        清除
+                      </button>
+                    )}
+                  </div>
                   <input
                     value={ad.href}
                     onChange={(e) => updateAdField(field.key, "href", e.target.value)}

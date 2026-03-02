@@ -33,9 +33,12 @@ export function PublishedContentPanel({
             {items.map((item) => (
               <li key={item.id} className="border-b border-border pb-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <Link href={item.href} className="text-sm text-primary hover:text-accent">
-                    {item.title}
-                  </Link>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-black" aria-hidden />
+                    <Link href={item.href} className="text-sm text-primary hover:text-accent line-clamp-1">
+                      {item.title}
+                    </Link>
+                  </div>
                   {item.editHref && (
                     <Link
                       href={item.editHref}

@@ -3,6 +3,7 @@ import { CategoryHome } from "@/components/CategoryHome";
 import { PublishedContentPanel } from "@/components/PublishedContentPanel";
 import { getCategoryWithMetaByHref } from "@/lib/categories";
 import { buildCategoryMetadata } from "@/lib/category-metadata";
+import { articleOrderByPinnedLatest } from "@/lib/articles";
 import { prisma } from "@/lib/prisma";
 
 export const revalidate = 300;
@@ -27,7 +28,7 @@ export default async function StandardsPage() {
           { subHref: { startsWith: "/standards" } },
         ],
       },
-      orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }],
+      orderBy: articleOrderByPinnedLatest,
       take: 8,
       select: {
         id: true,
@@ -45,7 +46,7 @@ export default async function StandardsPage() {
             status: "approved",
             OR: [{ subHref: sub.href }, { categoryHref: sub.href }],
           },
-          orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }],
+          orderBy: articleOrderByPinnedLatest,
           take: 3,
           select: { id: true, title: true, slug: true },
         })

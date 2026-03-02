@@ -3,6 +3,7 @@ import Link from "next/link";
 import { CategoryHome } from "@/components/CategoryHome";
 import { getCategoryWithMetaByHref } from "@/lib/categories";
 import { buildCategoryMetadata } from "@/lib/category-metadata";
+import { articleOrderByPinnedLatest, articleOrderByPinnedPopular } from "@/lib/articles";
 import { prisma } from "@/lib/prisma";
 
 export const revalidate = 300;
@@ -28,7 +29,7 @@ export default async function DictionaryPage({ searchParams }: Props) {
         status: "approved",
         OR: [{ categoryHref: { startsWith: "/dictionary" } }, { subHref: { startsWith: "/dictionary" } }],
       },
-      orderBy: [{ viewCount: "desc" }, { updatedAt: "desc" }],
+      orderBy: articleOrderByPinnedPopular,
       take: 10,
       select: { id: true, slug: true, title: true },
     }),
@@ -39,7 +40,7 @@ export default async function DictionaryPage({ searchParams }: Props) {
             status: "approved",
             OR: [{ subHref: sub.href }, { categoryHref: sub.href }],
           },
-          orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }],
+          orderBy: articleOrderByPinnedLatest,
           take: 3,
           select: { id: true, slug: true, title: true },
         })

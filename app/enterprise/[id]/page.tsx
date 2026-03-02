@@ -1,6 +1,7 @@
 ﻿import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { articleOrderByPinnedLatest } from "@/lib/articles";
 export const revalidate = 300;
 
 
@@ -55,7 +56,7 @@ export default async function EnterprisePage({ params }: Props) {
   const [articles, gallery, standards] = await Promise.all([
     prisma.article.findMany({
       where: { authorMemberId: memberId, status: "approved" },
-      orderBy: { createdAt: "desc" },
+      orderBy: articleOrderByPinnedLatest,
       take: 20,
       select: { id: true, title: true, slug: true, createdAt: true },
     }),
