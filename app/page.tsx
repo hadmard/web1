@@ -9,7 +9,7 @@ export const revalidate = 300;
 
 const QUICK_ENTRIES = [
   { href: "/news", label: "整木资讯" },
-  { href: "/brands", label: "整木市场" },
+  { href: "/brands", label: "整木品牌" },
   { href: "/dictionary", label: "整木词库" },
   { href: "/standards", label: "整木标准" },
   { href: "/awards", label: "整木评选" },
@@ -98,7 +98,7 @@ export default async function HomePage() {
 
   const structureCards = [
     {
-      title: "整木市场",
+      title: "整木品牌",
       subtitle: "品牌选择与选购问答",
       desc: "从品牌定位到整木选购 FAQ，快速完成品牌对比与决策。",
       href: "/brands/all",
@@ -142,13 +142,13 @@ export default async function HomePage() {
           <img
             src={visualSettings.backgrounds.homeHero}
             alt=""
-            className="h-full w-full object-cover brightness-110 saturate-90"
+            className="h-full w-full object-cover brightness-125 saturate-95"
           />
         </div>
-        <div className="pointer-events-none absolute inset-0 bg-surface/36" />
+        <div className="pointer-events-none absolute inset-0 bg-surface/22" />
         <div className="max-w-6xl mx-auto px-4 sm:px-6 relative">
           <div data-reveal="zoom-soft" data-reveal-delay="0" className="text-center">
-            <p className="text-xs sm:text-sm uppercase tracking-[0.16em] text-muted">中国整木定制行业知识基础设施平台</p>
+            <p className="text-xs sm:text-sm uppercase tracking-[0.16em] text-muted">整木行业知识基础设施平台</p>
             <h1 className="mt-5 font-serif text-[2.15rem] sm:text-6xl lg:text-7xl font-semibold tracking-[0.06em] text-primary">整木网</h1>
             <p className="mt-5 text-[15px] sm:text-base text-muted max-w-3xl mx-auto">让行业资讯、品牌、标准与评选在一个界面里高效协同。</p>
           </div>

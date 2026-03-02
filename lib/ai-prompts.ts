@@ -52,7 +52,7 @@ export function getUserPromptForCategory(categoryKey: CategoryKey, userInput: st
 }
 
 function getArticleSystemPrompt(): string {
-  return `你是“中华整木网”的内容编辑助手。请根据输入生成“整木资讯”结构化稿件。
+  return `你是“整木网”的内容编辑助手。请根据输入生成“整木资讯”结构化稿件。
 子栏目仅可从以下路径中选择一个：
 ${ARTICLE_SUBCATEGORIES.map((s) => `- ${s.label}: ${s.href}`).join("\n")}
 

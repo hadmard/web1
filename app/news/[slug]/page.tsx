@@ -56,7 +56,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!article || article.status !== "approved") return { title: "资讯" };
   const description = previewText(article.excerpt ?? article.content, 160);
   return {
-    title: `${article.title} | 中华整木网 · 整木资讯`,
+    title: `${article.title} | 整木网 · 整木资讯`,
     description,
     openGraph: { title: article.title, description, type: "article" },
   };

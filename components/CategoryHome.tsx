@@ -101,7 +101,7 @@ export async function CategoryHome({
                   return (
                     <article key={sub.href} className="rounded-xl border border-border bg-surface-elevated p-3">
                       <p className="text-sm font-semibold text-primary">{sub.label}</p>
-                      {latest.length > 0 ? (
+                      {latest.length > 0 && (
                         <ul className="mt-2 space-y-1.5">
                           {latest.map((item) => (
                             <li key={`${sub.href}-${item.href}`}>
@@ -111,8 +111,6 @@ export async function CategoryHome({
                             </li>
                           ))}
                         </ul>
-                      ) : (
-                        <p className="mt-2 text-xs text-muted">暂无发布内容</p>
                       )}
                       <Link href={getSubHref(sub.href)} className="mt-3 inline-block text-xs text-accent hover:underline">
                         查看更多

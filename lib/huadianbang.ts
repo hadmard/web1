@@ -1,5 +1,5 @@
 export const HUADIAN_DEFINITION =
-  "华点榜是由中华整木网发起的整木行业信用推荐榜单体系。";
+  "华点榜是由整木网发起的整木行业信用推荐榜单体系。";
 
 export type RegionKey = "east" | "south" | "north" | "central" | "southwest" | "northwest" | "northeast";
 

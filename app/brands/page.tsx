@@ -10,8 +10,8 @@ export const revalidate = 300;
 export async function generateMetadata(): Promise<Metadata> {
   return buildCategoryMetadata(
     "/brands",
-    "整木市场",
-    "整木市场栏目，涵盖整木品牌对比与整木选购 FAQ，帮助用户完成品牌选择与采购决策。"
+    "整木品牌",
+    "整木品牌栏目，涵盖品牌对比与整木选购 FAQ，帮助用户完成品牌选择与采购决策。"
   );
 }
 

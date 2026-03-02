@@ -2,8 +2,8 @@
 import { categories as staticCategories, getCategoryByHref } from "@/lib/site-structure";
 import type { Category } from "@/lib/site-structure";
 
-const LEGACY_BRANDS_TITLE = "整木品牌";
-const LEGACY_BRANDS_DESC = "品牌库与区域筛选";
+const LEGACY_BRANDS_TITLES = new Set(["整木市场", "整木品牌"]);
+const LEGACY_BRANDS_DESCS = new Set(["品牌库与区域筛选", "整木品牌与选购问答入口"]);
 
 function parseRelatedTermSlugs(input?: string | null): string[] {
   if (!input) return [];
@@ -19,13 +19,13 @@ function parseRelatedTermSlugs(input?: string | null): string[] {
 
 function resolveCategoryTitle(basePath: string, staticTitle: string, dbTitle?: string | null) {
   const next = dbTitle?.trim();
-  if (basePath === "/brands" && (!next || next === LEGACY_BRANDS_TITLE)) return staticTitle;
+  if (basePath === "/brands" && (!next || LEGACY_BRANDS_TITLES.has(next))) return staticTitle;
   return next || staticTitle;
 }
 
 function resolveCategoryDesc(basePath: string, staticDesc: string, dbDesc?: string | null) {
   const next = dbDesc?.trim();
-  if (basePath === "/brands" && (!next || next === LEGACY_BRANDS_DESC)) return staticDesc;
+  if (basePath === "/brands" && (!next || LEGACY_BRANDS_DESCS.has(next))) return staticDesc;
   return next || staticDesc;
 }
 

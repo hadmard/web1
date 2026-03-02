@@ -63,7 +63,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (article) {
     const description = previewText(article.excerpt ?? article.content, 180);
     return {
-      title: `${article.title} | 中华整木网 · 整木标准`,
+      title: `${article.title} | 整木网 · 整木标准`,
       description,
       openGraph: { title: article.title, description, type: "article" },
     };
@@ -73,7 +73,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!standard) return { title: "标准未找到" };
   const description = `${standard.code} ${standard.title}（${standard.year}）`;
   return {
-    title: `${standard.code} ${standard.title} | 中华整木网 · 整木标准`,
+    title: `${standard.code} ${standard.title} | 整木网 · 整木标准`,
     description,
     openGraph: { title: standard.title, description, type: "article" },
   };

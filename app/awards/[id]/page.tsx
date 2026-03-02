@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!award) return { title: "评选未找到" };
   const description = award.description ?? award.title;
   return {
-    title: `${award.title} | 中华整木网 · 整木评选`,
+    title: `${award.title} | 整木网 · 整木评选`,
     description,
     openGraph: { title: award.title, description, type: "article" },
   };

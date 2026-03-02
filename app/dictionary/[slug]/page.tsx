@@ -57,7 +57,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (article) {
     const description = previewText(article.excerpt ?? article.content, 160);
     return {
-      title: `${article.title} | 中华整木网 · 整木词库`,
+      title: `${article.title} | 整木网 · 整木词库`,
       description,
       openGraph: { title: article.title, description, type: "article" },
     };
@@ -67,7 +67,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!term) return { title: "词条未找到" };
   const description = previewText(term.definition, 160);
   return {
-    title: `${term.title} | 中华整木网 · 整木词库`,
+    title: `${term.title} | 整木网 · 整木词库`,
     description,
     openGraph: { title: term.title, description, type: "article" },
   };

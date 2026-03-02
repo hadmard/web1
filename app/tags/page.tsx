@@ -29,7 +29,7 @@ async function getTagsByType() {
 
 export const metadata = {
   title: "标签",
-  description: "中华整木网内容标签：行业、技术、风格、区域、等级。",
+  description: "整木网内容标签：行业、技术、风格、区域、等级。",
 };
 
 export default async function TagsPage() {

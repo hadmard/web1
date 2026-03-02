@@ -22,16 +22,7 @@ export default async function DictionaryPage({ searchParams }: Props) {
   const category = await getCategoryWithMetaByHref("/dictionary");
   const subcategories = category?.subcategories ?? [];
 
-  const [latestTerms, hotTerms, subcategoryRows, searchTerms] = await Promise.all([
-    prisma.article.findMany({
-      where: {
-        status: "approved",
-        OR: [{ categoryHref: { startsWith: "/dictionary" } }, { subHref: { startsWith: "/dictionary" } }],
-      },
-      orderBy: [{ updatedAt: "desc" }],
-      take: 12,
-      select: { id: true, slug: true, title: true, updatedAt: true },
-    }),
+  const [hotTerms, subcategoryRows, searchTerms] = await Promise.all([
     prisma.article.findMany({
       where: {
         status: "approved",
@@ -145,28 +136,6 @@ export default async function DictionaryPage({ searchParams }: Props) {
           )}
         </section>
 
-        <section className="mt-8 glass-panel p-5 sm:p-6">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="section-label text-primary">最新词条</h2>
-            <Link href="/dictionary/all" className="text-sm text-accent hover:underline">
-              查看更多
-            </Link>
-          </div>
-          {latestTerms.length === 0 ? (
-            <p className="mt-4 text-sm text-muted">暂无词条内容。</p>
-          ) : (
-            <ul className="mt-4 space-y-3">
-              {latestTerms.slice(0, 6).map((item) => (
-                <li key={item.id} className="border-b border-border pb-3">
-                  <Link href={`/dictionary/${item.slug}`} className="text-sm text-primary hover:text-accent">
-                    {item.title}
-                  </Link>
-                  <p className="mt-1 text-xs text-muted">更新于 {item.updatedAt.toLocaleDateString("zh-CN")}</p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
       </CategoryHome>
     </>
   );

@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: Props) {
 
   const name = ent.companyShortName || ent.companyName || ent.member?.name || "企业";
   return {
-    title: `${name} | 企业展示 | 中华整木网`,
+    title: `${name} | 企业展示 | 整木网`,
     description: ent.positioning ?? ent.intro ?? "企业结构化展示页",
   };
 }

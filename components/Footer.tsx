@@ -2,7 +2,7 @@
 
 const exploreLinks = [
   { href: "/news", label: "整木资讯" },
-  { href: "/brands", label: "整木市场" },
+  { href: "/brands", label: "整木品牌" },
   { href: "/awards", label: "整木评选" },
 ];
 

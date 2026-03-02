@@ -33,7 +33,7 @@ export const categories: Category[] = [
   },
   {
     href: "/brands",
-    title: "整木市场",
+    title: "整木品牌",
     desc: "整木品牌与选购问答入口",
     subcategories: [
       { href: "/brands/brand", label: "整木品牌" },

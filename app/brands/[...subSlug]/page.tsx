@@ -20,9 +20,9 @@ type MarketFaq = {
   answer: string;
 };
 
-const MARKET_TITLE = "整木市场";
-const LEGACY_MARKET_TITLE = "整木品牌";
-const MARKET_FALLBACK_DESC = "整木市场栏目，覆盖整木品牌内容与整木选购 FAQ。";
+const MARKET_TITLE = "整木品牌";
+const LEGACY_MARKET_TITLE = "整木市场";
+const MARKET_FALLBACK_DESC = "整木品牌栏目，覆盖品牌内容与整木选购 FAQ。";
 const MARKET_FAQ_FALLBACK: MarketFaq[] = [
   {
     id: "faq-1",
@@ -108,11 +108,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (segment === "brand") {
     return {
-      title: `整木品牌 | 中华整木网 · ${MARKET_TITLE}`,
-      description: "整木市场的整木品牌子栏目，支持品牌浏览与对比。",
+      title: `整木品牌 | 整木网 · ${MARKET_TITLE}`,
+      description: "整木品牌子栏目，支持品牌浏览与对比。",
       openGraph: {
-        title: `整木品牌 | 中华整木网 · ${MARKET_TITLE}`,
-        description: "整木市场的整木品牌子栏目，支持品牌浏览与对比。",
+        title: `整木品牌 | 整木网 · ${MARKET_TITLE}`,
+        description: "整木品牌子栏目，支持品牌浏览与对比。",
         type: "website",
       },
     };
@@ -121,10 +121,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (segment === "buying" || segment === "faq") {
     const faqState = await getMarketFaqState();
     return {
-      title: `整木选购 FAQ | 中华整木网 · ${faqState.title}`,
+      title: `整木选购 FAQ | 整木网 · ${faqState.title}`,
       description: faqState.desc,
       openGraph: {
-        title: `整木选购 FAQ | 中华整木网 · ${faqState.title}`,
+        title: `整木选购 FAQ | 整木网 · ${faqState.title}`,
         description: faqState.desc,
         type: "website",
       },
@@ -135,7 +135,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!article) return { title: "品牌内容" };
   const description = previewText(article.excerpt ?? article.content, 160);
   return {
-    title: `${article.title} | 中华整木网 · ${MARKET_TITLE}`,
+    title: `${article.title} | 整木网 · ${MARKET_TITLE}`,
     description,
     openGraph: { title: article.title, description, type: "article" },
   };
