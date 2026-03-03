@@ -83,7 +83,7 @@ export function Footer() {
           </div>
 
           <div className="col-span-2 sm:col-span-1">
-            <p className="text-sm leading-relaxed text-muted">整木行业知识基础设施，连接资讯、品牌、标准与会员共建。</p>
+            <p className="text-sm leading-relaxed text-muted">整体木作行业知识共享平台，连接资讯、品牌、标准与会员共建。</p>
           </div>
         </div>
 
