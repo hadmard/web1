@@ -21,9 +21,9 @@ type MarketFaq = {
   answer: string;
 };
 
-const MARKET_TITLE = "整木品牌";
-const LEGACY_MARKET_TITLE = "整木市场";
-const MARKET_FALLBACK_DESC = "整木品牌栏目，覆盖品牌内容与整木选购 FAQ。";
+const MARKET_TITLE = "整木市场";
+const LEGACY_MARKET_TITLE = "整木品牌";
+const MARKET_FALLBACK_DESC = "整木市场栏目，覆盖品牌内容与整木选购 FAQ。";
 const MARKET_FAQ_FALLBACK: MarketFaq[] = [
   {
     id: "faq-1",
@@ -181,7 +181,7 @@ export default async function BrandDetailPage({ params }: Props) {
           </div>
 
           <div className="mt-6">
-            <Link href="/brands/all" className="text-sm text-accent hover:underline">查看整木品牌总览</Link>
+            <Link href="/brands/all" className="text-sm text-accent hover:underline">查看整木市场总览</Link>
           </div>
         </section>
       </div>

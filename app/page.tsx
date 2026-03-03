@@ -7,15 +7,6 @@ import { articleOrderByPinnedLatest, articleOrderByPinnedPopular } from "@/lib/a
 import { getSiteVisualSettings } from "@/lib/site-visual-settings";
 export const revalidate = 300;
 
-
-const QUICK_ENTRIES = [
-  { href: "/news", label: "整木资讯" },
-  { href: "/brands", label: "整木品牌" },
-  { href: "/dictionary", label: "整木词库" },
-  { href: "/standards", label: "整木标准" },
-  { href: "/awards", label: "整木评选" },
-];
-
 const REGION_ORDER = ["华东", "华中", "华南", "西南", "西北", "华北", "东北"];
 
 function pick<T>(arr: T[], n: number) {
@@ -99,9 +90,9 @@ export default async function HomePage() {
 
   const structureCards = [
     {
-      title: "整木品牌",
+      title: "整木市场",
       subtitle: "品牌选择与选购问答",
-      desc: "从品牌定位到整木选购 FAQ，快速完成品牌对比与决策。",
+      desc: "覆盖整木品牌与整木选购 FAQ，快速完成品牌对比与决策。",
       href: "/brands/all",
       image: visualSettings.backgrounds.homeStructureMarket,
       items: safeBrands.map((x) => ({ label: x.title, href: `/brands/${x.slug}` })),
@@ -112,7 +103,11 @@ export default async function HomePage() {
       desc: "沉淀概念定义、工艺术语与行业语义，形成统一表达。",
       href: "/dictionary/all",
       image: visualSettings.backgrounds.homeStructureDictionary,
-      items: safeTerms.map((x) => ({ label: x.title, href: `/dictionary/${x.slug}` })),
+      items: [
+        { label: "品牌百科", href: "/dictionary/brand-baike" },
+        { label: "高定生活", href: "/dictionary/high-end-life" },
+        ...safeTerms.map((x) => ({ label: x.title, href: `/dictionary/${x.slug}` })),
+      ],
     },
     {
       title: "整木标准",
@@ -152,28 +147,11 @@ export default async function HomePage() {
         <div className="pointer-events-none absolute inset-0 bg-[#17263A]/82" />
         <div className="max-w-6xl mx-auto px-4 sm:px-6 relative">
           <div data-reveal="zoom-soft" data-reveal-delay="0" className="text-center">
-            <p className="text-xs sm:text-sm uppercase tracking-[0.2em] text-white/80">整木行业知识基础设施平台</p>
-            <h1 className="mt-5 font-serif text-[2.2rem] sm:text-6xl lg:text-7xl font-semibold tracking-[0.08em] text-white">整木网</h1>
-            <p className="mt-5 text-[15px] sm:text-base text-white/88 max-w-3xl mx-auto">让行业资讯、品牌、标准与评选在一个界面里高效协同。</p>
+            <h1 className="font-serif text-[2.2rem] sm:text-6xl lg:text-7xl font-semibold tracking-[0.08em] text-white">整木网</h1>
+            <p className="mt-4 text-xs sm:text-sm uppercase tracking-[0.2em] text-white/80">整体木作行业知识共享平台</p>
           </div>
 
-          <nav
-            data-reveal="fade-up"
-            data-reveal-delay="100"
-            className="mt-8 -mx-1 flex gap-2.5 overflow-x-auto px-1 pb-1 no-scrollbar sm:mx-0 sm:flex-wrap sm:justify-center sm:overflow-visible sm:px-0"
-            aria-label="快捷入口"
-          >
-            {QUICK_ENTRIES.map((item) => (
-              <Link key={item.href} href={item.href} className="interactive-lift shrink-0 rounded-full border border-white/30 bg-white/10 px-4 py-2 text-sm text-white hover:border-white/65 hover:bg-white/20">
-                {item.label}
-              </Link>
-            ))}
-            <Link href="/dictionary/all" className="interactive-lift shrink-0 rounded-full border border-white/30 bg-white/10 px-4 py-2 text-sm text-white hover:border-white/65 hover:bg-white/20">
-              搜索
-            </Link>
-          </nav>
-
-          <div data-reveal="fade-up" data-reveal-delay="140" className="mt-5 flex justify-center">
+          <div data-reveal="fade-up" data-reveal-delay="140" className="mt-8 flex justify-center">
             <StructuredSearch />
           </div>
         </div>

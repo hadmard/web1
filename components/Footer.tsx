@@ -2,14 +2,14 @@ import Link from "next/link";
 
 const quickActionLinks = [
   { href: "/news", label: "资讯速览", desc: "查看最新行业动态" },
-  { href: "/brands/all", label: "品牌总览", desc: "按区域和关键词筛选" },
+  { href: "/brands/all", label: "市场总览", desc: "按区域和关键词筛选" },
   { href: "/dictionary/all", label: "词库检索", desc: "快速查术语与定义" },
   { href: "/standards/all", label: "标准库", desc: "查看标准与版本信息" },
 ];
 
 const exploreLinks = [
   { href: "/news", label: "整木资讯" },
-  { href: "/brands", label: "整木品牌" },
+  { href: "/brands", label: "整木市场" },
   { href: "/awards", label: "整木评选" },
 ];
 

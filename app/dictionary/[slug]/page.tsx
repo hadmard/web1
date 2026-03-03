@@ -18,6 +18,8 @@ const DICTIONARY_SUBCATEGORY_MAP: Record<string, { href: string; label: string }
   concepts: { href: "/dictionary/concepts", label: "基础概念" },
   terms: { href: "/dictionary/terms", label: "技术术语" },
   segments: { href: "/dictionary/segments", label: "行业细分" },
+  "brand-baike": { href: "/dictionary/brand-baike", label: "品牌百科" },
+  "high-end-life": { href: "/dictionary/high-end-life", label: "高定生活" },
 };
 
 function normalizeSegment(raw: string) {

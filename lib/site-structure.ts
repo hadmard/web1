@@ -33,8 +33,8 @@ export const categories: Category[] = [
   },
   {
     href: "/brands",
-    title: "整木品牌",
-    desc: "整木品牌与选购问答入口",
+    title: "整木市场",
+    desc: "整木品牌与整木选购入口",
     subcategories: [
       { href: "/brands/brand", label: "整木品牌" },
       { href: "/brands/buying", label: "整木选购" },
@@ -48,6 +48,8 @@ export const categories: Category[] = [
       { href: "/dictionary/concepts", label: "基础概念" },
       { href: "/dictionary/terms", label: "技术术语" },
       { href: "/dictionary/segments", label: "行业细分" },
+      { href: "/dictionary/brand-baike", label: "品牌百科" },
+      { href: "/dictionary/high-end-life", label: "高定生活" },
     ],
   },
   {

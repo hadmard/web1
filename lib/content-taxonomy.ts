@@ -28,7 +28,7 @@ export const MEMBER_PUBLISH_CATEGORY_OPTIONS: CategoryOption[] = [
   },
   {
     href: "/brands",
-    label: "整木品牌",
+    label: "整木市场",
     subs: [
       { href: "/brands/brand", label: "整木品牌" },
       { href: "/brands/buying", label: "整木选购" },
@@ -41,6 +41,8 @@ export const MEMBER_PUBLISH_CATEGORY_OPTIONS: CategoryOption[] = [
       { href: "/dictionary/concepts", label: "基础概念" },
       { href: "/dictionary/terms", label: "技术术语" },
       { href: "/dictionary/segments", label: "行业细分" },
+      { href: "/dictionary/brand-baike", label: "品牌百科" },
+      { href: "/dictionary/high-end-life", label: "高定生活" },
     ],
   },
   {
@@ -67,7 +69,7 @@ export const MEMBER_PUBLISH_CATEGORY_OPTIONS: CategoryOption[] = [
 
 export const CONTENT_TAB_DEFS: Array<{ key: ContentTabKey; href: string; label: string }> = [
   { key: "articles", href: "/news", label: "整木资讯" },
-  { key: "brands", href: "/brands", label: "整木品牌" },
+  { key: "brands", href: "/brands", label: "整木市场" },
   { key: "terms", href: "/dictionary", label: "整木词库" },
   { key: "standards", href: "/standards", label: "整木标准" },
   { key: "awards", href: "/awards", label: "整木评选" },

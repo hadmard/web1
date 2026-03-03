@@ -34,7 +34,7 @@ export const BACKGROUND_IMAGE_FIELDS: Array<{
 }> = [
   { key: "homeHero", label: "首页主视觉背景", requiredSize: "1920x900 px" },
   { key: "homeUpdates", label: "首页资讯横幅", requiredSize: "1600x900 px" },
-  { key: "homeStructureMarket", label: "首页结构卡片-整木品牌", requiredSize: "1200x700 px" },
+  { key: "homeStructureMarket", label: "首页结构卡片-整木市场", requiredSize: "1200x700 px" },
   { key: "homeStructureDictionary", label: "首页结构卡片-整木词库", requiredSize: "1200x700 px" },
   { key: "homeStructureStandards", label: "首页结构卡片-整木标准", requiredSize: "1200x700 px" },
   { key: "homeStructureAwards", label: "首页结构卡片-整木评选", requiredSize: "1200x700 px" },
