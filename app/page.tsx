@@ -134,25 +134,27 @@ export default async function HomePage() {
     <main className="min-h-screen">
       <ScrollMotion />
 
-      <section className="relative overflow-hidden border-b border-border bg-[#17263A] py-20 sm:py-28" data-mouse-zone>
+      <section className="home-hero-surface relative overflow-hidden border-b border-border py-20 sm:py-28" data-mouse-zone>
+        <div className="pointer-events-none absolute inset-0 home-hero-fallback" />
         {showHeroImage && (
           <div className="pointer-events-none absolute inset-0 parallax-layer" data-parallax="0.05">
             <img
               src={heroBackground}
               alt=""
-              className="h-full w-full object-cover opacity-30"
+              className="h-full w-full object-cover opacity-45 saturate-[1.08] contrast-[1.04]"
             />
           </div>
         )}
-        <div className="pointer-events-none absolute inset-0 bg-[#17263A]/82" />
+        <div className="pointer-events-none absolute inset-0 home-hero-grain" />
+        <div className="pointer-events-none absolute inset-0 home-hero-mask" />
         <div className="max-w-6xl mx-auto px-4 sm:px-6 relative">
           <div data-reveal="zoom-soft" data-reveal-delay="0" className="text-center">
-            <h1 className="font-serif text-[2.2rem] sm:text-6xl lg:text-7xl font-semibold tracking-[0.08em] text-white">整木网</h1>
-            <p className="mt-4 text-xs sm:text-sm uppercase tracking-[0.2em] text-white/80">整体木作行业知识共享平台</p>
+            <h1 className="font-serif text-[2.2rem] sm:text-6xl lg:text-7xl font-semibold tracking-[0.08em] text-white drop-shadow-[0_12px_34px_rgba(7,15,25,0.58)]">整木网</h1>
+            <p className="mt-4 text-xs sm:text-sm uppercase tracking-[0.2em] text-white/92 drop-shadow-[0_3px_14px_rgba(8,16,26,0.58)]">整体木作行业知识共享平台</p>
           </div>
 
           <div data-reveal="fade-up" data-reveal-delay="140" className="mt-8 flex justify-center">
-            <StructuredSearch />
+            <StructuredSearch hero />
           </div>
         </div>
       </section>

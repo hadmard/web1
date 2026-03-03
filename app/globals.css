@@ -280,6 +280,44 @@
   display: none;
 }
 
+.home-hero-surface {
+  isolation: isolate;
+  background: #2b394a;
+}
+
+.home-hero-fallback {
+  background:
+    radial-gradient(1300px 540px at 6% -18%, rgba(210, 152, 86, 0.34), transparent 58%),
+    radial-gradient(980px 420px at 90% -24%, rgba(78, 141, 214, 0.3), transparent 62%),
+    radial-gradient(900px 420px at 52% 118%, rgba(165, 109, 67, 0.26), transparent 70%),
+    linear-gradient(130deg, #27384b 0%, #31475e 33%, #6a4f3c 66%, #263546 100%);
+}
+
+.home-hero-grain {
+  opacity: 0.24;
+  background:
+    repeating-linear-gradient(
+      112deg,
+      rgba(245, 222, 186, 0.12) 0px,
+      rgba(245, 222, 186, 0.12) 1px,
+      transparent 1px,
+      transparent 7px
+    ),
+    repeating-linear-gradient(
+      20deg,
+      rgba(9, 18, 30, 0.2) 0px,
+      rgba(9, 18, 30, 0.2) 1px,
+      transparent 1px,
+      transparent 10px
+    );
+  mix-blend-mode: soft-light;
+}
+
+.home-hero-mask {
+  background:
+    linear-gradient(180deg, rgba(14, 26, 38, 0.2) 0%, rgba(11, 22, 34, 0.62) 100%);
+}
+
 .apple-hero {
   position: relative;
   overflow: clip;
