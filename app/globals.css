@@ -282,40 +282,72 @@
 
 .home-hero-surface {
   isolation: isolate;
-  background: #2b394a;
+  background: #f3f6f2;
 }
 
 .home-hero-fallback {
   background:
-    radial-gradient(1300px 540px at 6% -18%, rgba(210, 152, 86, 0.34), transparent 58%),
-    radial-gradient(980px 420px at 90% -24%, rgba(78, 141, 214, 0.3), transparent 62%),
-    radial-gradient(900px 420px at 52% 118%, rgba(165, 109, 67, 0.26), transparent 70%),
-    linear-gradient(130deg, #27384b 0%, #31475e 33%, #6a4f3c 66%, #263546 100%);
+    radial-gradient(1300px 560px at 6% -18%, rgba(233, 188, 133, 0.42), transparent 58%),
+    radial-gradient(980px 460px at 92% -20%, rgba(130, 190, 236, 0.4), transparent 64%),
+    radial-gradient(860px 430px at 76% 116%, rgba(143, 208, 186, 0.3), transparent 70%),
+    linear-gradient(132deg, #f6f3ed 0%, #edf4fb 44%, #f7f1e8 72%, #eff8f2 100%);
 }
 
 .home-hero-grain {
-  opacity: 0.24;
+  opacity: 0.14;
   background:
     repeating-linear-gradient(
       112deg,
-      rgba(245, 222, 186, 0.12) 0px,
-      rgba(245, 222, 186, 0.12) 1px,
+      rgba(255, 255, 255, 0.52) 0px,
+      rgba(255, 255, 255, 0.52) 1px,
       transparent 1px,
-      transparent 7px
+      transparent 8px
     ),
     repeating-linear-gradient(
-      20deg,
-      rgba(9, 18, 30, 0.2) 0px,
-      rgba(9, 18, 30, 0.2) 1px,
+      28deg,
+      rgba(186, 144, 96, 0.2) 0px,
+      rgba(186, 144, 96, 0.2) 1px,
       transparent 1px,
-      transparent 10px
+      transparent 14px
     );
-  mix-blend-mode: soft-light;
+  mix-blend-mode: overlay;
 }
 
 .home-hero-mask {
   background:
-    linear-gradient(180deg, rgba(14, 26, 38, 0.2) 0%, rgba(11, 22, 34, 0.62) 100%);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.42) 100%);
+}
+
+.home-hero-bloom-a,
+.home-hero-bloom-b,
+.home-hero-bloom-c {
+  border-radius: 9999px;
+  filter: blur(34px);
+  opacity: 0.7;
+}
+
+.home-hero-bloom-a {
+  width: 300px;
+  height: 300px;
+  top: -90px;
+  left: -70px;
+  background: rgba(250, 182, 117, 0.45);
+}
+
+.home-hero-bloom-b {
+  width: 280px;
+  height: 280px;
+  right: 7%;
+  top: -70px;
+  background: rgba(120, 188, 235, 0.42);
+}
+
+.home-hero-bloom-c {
+  width: 260px;
+  height: 260px;
+  right: -40px;
+  bottom: -90px;
+  background: rgba(126, 201, 174, 0.36);
 }
 
 .apple-hero {

@@ -136,12 +136,15 @@ export default async function HomePage() {
 
       <section className="home-hero-surface relative overflow-hidden border-b border-border py-20 sm:py-28" data-mouse-zone>
         <div className="pointer-events-none absolute inset-0 home-hero-fallback" />
+        <div className="pointer-events-none absolute home-hero-bloom-a" />
+        <div className="pointer-events-none absolute home-hero-bloom-b" />
+        <div className="pointer-events-none absolute home-hero-bloom-c" />
         {showHeroImage && (
           <div className="pointer-events-none absolute inset-0 parallax-layer" data-parallax="0.05">
             <img
               src={heroBackground}
               alt=""
-              className="h-full w-full object-cover opacity-45 saturate-[1.08] contrast-[1.04]"
+              className="h-full w-full object-cover opacity-22 saturate-[1.05] contrast-[1.01]"
             />
           </div>
         )}
@@ -149,8 +152,10 @@ export default async function HomePage() {
         <div className="pointer-events-none absolute inset-0 home-hero-mask" />
         <div className="max-w-6xl mx-auto px-4 sm:px-6 relative">
           <div data-reveal="zoom-soft" data-reveal-delay="0" className="text-center">
-            <h1 className="font-serif text-[2.2rem] sm:text-6xl lg:text-7xl font-semibold tracking-[0.08em] text-white drop-shadow-[0_12px_34px_rgba(7,15,25,0.58)]">整木网</h1>
-            <p className="mt-4 text-xs sm:text-sm uppercase tracking-[0.2em] text-white/92 drop-shadow-[0_3px_14px_rgba(8,16,26,0.58)]">整体木作行业知识共享平台</p>
+            <h1 className="font-serif text-[2.2rem] sm:text-6xl lg:text-7xl font-semibold tracking-[0.08em] text-[#223548] drop-shadow-[0_10px_24px_rgba(255,255,255,0.45)]">整木网</h1>
+            <p className="mt-4 inline-flex items-center rounded-full border border-white/85 bg-white/78 px-4 py-1.5 text-xs sm:text-sm tracking-[0.14em] text-[#30465a] shadow-[0_10px_28px_-20px_rgba(30,68,102,0.48)]">
+              整体木作行业知识共享平台
+            </p>
           </div>
 
           <div data-reveal="fade-up" data-reveal-delay="140" className="mt-8 flex justify-center">
