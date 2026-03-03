@@ -83,12 +83,12 @@ export function Footer() {
           </div>
 
           <div className="col-span-2 sm:col-span-1">
-            <p className="text-sm leading-relaxed text-muted">整木行业知识基础设施，连接资讯、品牌、标准与会员共建。</p>
+            <p className="text-sm leading-relaxed text-muted">整体木作行业知识共享平台</p>
           </div>
         </div>
 
         <div className="mt-10 flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-primary/85">整木网</p>
+          <p className="text-sm text-primary/85">整木网 · 整体木作行业知识共享平台</p>
           <p className="text-xs text-muted">© {new Date().getFullYear()} All rights reserved.</p>
         </div>
       </div>
