@@ -162,9 +162,14 @@ export function Header({
         <div className="glass-card relative overflow-visible max-w-6xl mx-auto h-14 sm:h-16 px-3 sm:px-5 flex items-center justify-between gap-2">
           <Link
             href="/"
-            className="site-wordmark font-serif font-semibold text-[17px] sm:text-[19px] tracking-[0.08em] hover:opacity-95 transition-opacity whitespace-nowrap"
+            className="inline-flex min-w-0 items-center gap-2 whitespace-nowrap hover:opacity-95 transition-opacity"
           >
-            整木网
+            <span className="site-wordmark font-serif font-semibold text-[17px] sm:text-[19px] tracking-[0.08em]">
+              {"\u6574\u6728\u7f51"}
+            </span>
+            <span className="max-w-[9.5rem] truncate text-[10px] leading-none text-muted sm:max-w-[16rem] sm:text-[11px] md:max-w-none md:text-xs">
+              {"\u6574\u4f53\u6728\u4f5c\u884c\u4e1a\u77e5\u8bc6\u5171\u4eab\u5e73\u53f0"}
+            </span>
           </Link>
 
           <nav className="hidden md:flex items-center gap-1.5 sm:gap-2 overflow-x-auto md:overflow-visible no-scrollbar" aria-label="主导航">
