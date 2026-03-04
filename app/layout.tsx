@@ -71,7 +71,7 @@ const jsonLdGraph = [
     publisher: { "@id": `${baseUrl}/#organization` },
     potentialAction: {
       "@type": "SearchAction",
-      target: { "@type": "EntryPoint", urlTemplate: `${baseUrl}/search?q={search_term}` },
+      target: { "@type": "EntryPoint", urlTemplate: `${baseUrl}/?q={search_term}` },
       "query-input": "required name=search_term",
     },
   },

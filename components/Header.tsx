@@ -160,18 +160,12 @@ export function Header({
     <>
       <header className="sticky top-2.5 sm:top-3 z-50 px-2.5 sm:px-5">
         <div className="glass-card relative overflow-visible max-w-6xl mx-auto h-14 sm:h-16 px-3 sm:px-5 flex items-center justify-between gap-2">
-          <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
-            <Link
-              href="/"
-              className="site-wordmark shrink-0 whitespace-nowrap font-serif text-[17px] font-semibold tracking-[0.08em] transition-opacity hover:opacity-95 sm:text-[19px]"
-            >
-              整木网
-            </Link>
-            <span aria-hidden="true" className="text-muted/70">|</span>
-            <p className="truncate text-[11px] text-muted sm:text-xs md:text-[13px]">
-              整体木作行业知识共享平台
-            </p>
-          </div>
+          <Link
+            href="/"
+            className="site-wordmark font-serif font-semibold text-[17px] sm:text-[19px] tracking-[0.08em] hover:opacity-95 transition-opacity whitespace-nowrap"
+          >
+            整木网
+          </Link>
 
           <nav className="hidden md:flex items-center gap-1.5 sm:gap-2 overflow-x-auto md:overflow-visible no-scrollbar" aria-label="主导航">
             {navItems.map(({ href, label, isMembership, subcategories }) => {
