@@ -9,7 +9,7 @@ import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";
 import { Mark } from "@tiptap/core";
 import { NodeSelection } from "@tiptap/pm/state";
-import { MAX_UPLOAD_IMAGE_MB, readImageWithLimit } from "@/lib/client-image";
+import { MAX_UPLOAD_IMAGE_MB, uploadImageToServer } from "@/lib/client-image";
 
 type Props = {
   value: string;
@@ -72,12 +72,12 @@ const RichImage = Image.extend({
   },
 });
 
-async function getImageSize(dataUrl: string): Promise<{ width: number; height: number }> {
+async function getImageSize(src: string): Promise<{ width: number; height: number }> {
   return new Promise((resolve) => {
     const img = new window.Image();
     img.onload = () => resolve({ width: img.naturalWidth || 640, height: img.naturalHeight || 360 });
     img.onerror = () => resolve({ width: 640, height: 360 });
-    img.src = dataUrl;
+    img.src = src;
   });
 }
 
@@ -235,15 +235,15 @@ export function RichEditor({ value, onChange, minHeight = 260, placeholder = "è¯
     () => async (file: File) => {
       if (!editor) return;
       try {
-        const dataUrl = await readImageWithLimit(file);
-        const size = await getImageSize(dataUrl);
+        const imageUrl = await uploadImageToServer(file, { folder: "content/editor-inline" });
+        const size = await getImageSize(imageUrl);
         const maxWidth = 960;
         const width = Math.min(size.width, maxWidth, DEFAULT_IMAGE_WIDTH);
         const height = Math.round(width / (size.width / size.height || 1));
         editor
           .chain()
           .focus()
-          .setImage({ src: dataUrl })
+          .setImage({ src: imageUrl })
           .updateAttributes("image", { width, height, align: "center" })
           .run();
         setImgWidth(String(width));

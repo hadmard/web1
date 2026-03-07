@@ -53,7 +53,7 @@ import {
   parseAwardStructuredHtml,
   type AwardStructuredData,
 } from "@/lib/award-structured";
-import { readImageWithLimit } from "@/lib/client-image";
+import { uploadImageToServer } from "@/lib/client-image";
 
 type MemberType = "enterprise_basic" | "enterprise_advanced" | "personal";
 type Status = "draft" | "pending" | "approved" | "rejected";
@@ -200,6 +200,7 @@ function PublishCenterPageInner() {
   const [editStandardStructured, setEditStandardStructured] = useState<StandardStructuredData>(createDefaultStandardStructuredData());
   const [editDataStructured, setEditDataStructured] = useState<DataStructuredData>(createDefaultDataStructuredData());
   const [editAwardStructured, setEditAwardStructured] = useState<AwardStructuredData>(createDefaultAwardStructuredData());
+  const [editCoverImage, setEditCoverImage] = useState("");
   const [editReason, setEditReason] = useState("");
 
   const allowedCategories = useMemo(() => getAllowedCategories(memberType), [memberType]);
@@ -434,6 +435,7 @@ function PublishCenterPageInner() {
         ? parseAwardStructuredHtml(item.content ?? "") ?? createDefaultAwardStructuredData()
         : createDefaultAwardStructuredData()
     );
+    setEditCoverImage(item.coverImage ?? "");
     setEditReason("");
   }
 
@@ -460,7 +462,7 @@ function PublishCenterPageInner() {
         title: editTitle,
         excerpt: editExcerpt,
         content: composedEditContent,
-        coverImage: safeTab === "brands" ? editBrandStructured.logoUrl.trim() || null : null,
+        coverImage: safeTab === "brands" ? editBrandStructured.logoUrl.trim() || null : editCoverImage.trim() || null,
         reason: editReason,
       }),
     });
@@ -500,9 +502,26 @@ function PublishCenterPageInner() {
   async function handleCoverImageUpload(file: File | null) {
     if (!file) return;
     try {
-      const dataUrl = await readImageWithLimit(file, COVER_IMAGE_MAX_BYTES);
-      setCoverImage(dataUrl);
+      const imageUrl = await uploadImageToServer(file, {
+        folder: "content/covers",
+        maxBytes: COVER_IMAGE_MAX_BYTES,
+      });
+      setCoverImage(imageUrl);
       setMessage("封面图已加载，请提交后生效。");
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "图片上传失败");
+    }
+  }
+
+  async function handleEditCoverImageUpload(file: File | null) {
+    if (!file) return;
+    try {
+      const imageUrl = await uploadImageToServer(file, {
+        folder: "content/covers",
+        maxBytes: COVER_IMAGE_MAX_BYTES,
+      });
+      setEditCoverImage(imageUrl);
+      setMessage("修改封面图已加载，请提交后生效。");
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "图片上传失败");
     }
@@ -824,6 +843,38 @@ function PublishCenterPageInner() {
               value={editExcerpt}
               onChange={(e) => setEditExcerpt(e.target.value)}
             />
+            {safeTab !== "brands" && (
+              <>
+                <label className="block text-sm text-muted">新封面图片（可选）</label>
+                <input
+                  className="w-full border border-border rounded px-3 py-2 bg-surface"
+                  value={editCoverImage}
+                  onChange={(e) => setEditCoverImage(e.target.value)}
+                  placeholder="可填写图片 URL，或使用下方上传按钮"
+                />
+                <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      void handleEditCoverImageUpload(e.target.files?.[0] ?? null);
+                      e.currentTarget.value = "";
+                    }}
+                    className="block"
+                  />
+                  <span>支持本地上传，最大 2MB</span>
+                  {editCoverImage && (
+                    <button
+                      type="button"
+                      onClick={() => setEditCoverImage("")}
+                      className="px-2 py-1 rounded border border-border hover:bg-surface"
+                    >
+                      清除
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
             {safeTab === "terms" ? (
               <div className="rounded-lg border border-border bg-surface p-3 space-y-3">
                 <p className="text-xs text-muted">词库条目修改（小标题 + 解释）。</p>

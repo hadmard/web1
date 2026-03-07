@@ -1,4 +1,5 @@
 ﻿import { prisma } from "@/lib/prisma";
+import { unstable_noStore as noStore } from "next/cache";
 import { categories as staticCategories, getCategoryByHref } from "@/lib/site-structure";
 import type { Category } from "@/lib/site-structure";
 
@@ -83,6 +84,7 @@ async function getLatestCategoryOperationAt(basePath: string): Promise<Date | nu
  * 数据库存储栏目元信息（标题/简介/定义/版本等）。
  */
 export async function getCategories(): Promise<Category[]> {
+  noStore();
   try {
     const rows = await prisma.category.findMany({
       orderBy: { sortOrder: "asc" },
@@ -120,6 +122,7 @@ export async function getCategoryByHrefFromDb(href: string): Promise<Category | 
 }
 
 export async function getCategoryWithMetaByHref(href: string): Promise<Category | undefined> {
+  noStore();
   try {
     const basePath = "/" + (href.split("/").filter(Boolean)[0] ?? "");
     const staticCat = getCategoryByHref(basePath);

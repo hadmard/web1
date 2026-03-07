@@ -1,29 +1,145 @@
-﻿type TagRule = {
+type TagRule = {
   label: string;
   words: string[];
   base?: number;
 };
 
+export const AUTO_TAG_LIMIT = 3;
+
 const TAG_RULES: TagRule[] = [
-  { label: "行业趋势", words: ["行业趋势", "趋势", "景气", "市场规模", "增长率", "赛道"] },
-  { label: "企业动态", words: ["企业动态", "企业", "品牌", "发布会", "融资", "并购", "开工"] },
-  { label: "技术发展", words: ["技术发展", "技术", "工艺", "自动化", "智能制造", "数控", "设备"] },
-  { label: "行业活动", words: ["行业活动", "峰会", "论坛", "展会", "大会", "活动", "沙龙"] },
-  { label: "材料标准", words: ["材料标准", "板材", "木皮", "五金", "材料", "环保等级", "甲醛"] },
-  { label: "工艺标准", words: ["工艺标准", "工艺", "加工", "封边", "涂装", "拼接", "精度"] },
-  { label: "服务标准", words: ["服务标准", "服务", "交付", "安装", "售后", "验收"] },
-  { label: "标准共建", words: ["标准共建", "共建", "征求意见", "标准化", "团体标准"] },
-  { label: "品牌建设", words: ["品牌建设", "品牌定位", "品牌升级", "品牌形象", "品牌战略"] },
-  { label: "设计风格", words: ["设计", "风格", "空间", "审美", "现代", "新中式", "轻奢"] },
-  { label: "奖项评选", words: ["评选", "榜单", "奖项", "评审", "入围", "公示"] },
+  {
+    label: "\u884c\u4e1a\u8d8b\u52bf",
+    words: [
+      "\u884c\u4e1a\u8d8b\u52bf",
+      "\u8d8b\u52bf",
+      "\u666f\u6c14",
+      "\u5e02\u573a\u89c4\u6a21",
+      "\u589e\u957f\u7387",
+      "\u8d5b\u9053",
+    ],
+  },
+  {
+    label: "\u4f01\u4e1a\u52a8\u6001",
+    words: [
+      "\u4f01\u4e1a\u52a8\u6001",
+      "\u4f01\u4e1a",
+      "\u54c1\u724c",
+      "\u53d1\u5e03\u4f1a",
+      "\u878d\u8d44",
+      "\u5e76\u8d2d",
+      "\u5f00\u5de5",
+    ],
+  },
+  {
+    label: "\u6280\u672f\u53d1\u5c55",
+    words: [
+      "\u6280\u672f\u53d1\u5c55",
+      "\u6280\u672f",
+      "\u5de5\u827a",
+      "\u81ea\u52a8\u5316",
+      "\u667a\u80fd\u5236\u9020",
+      "\u6570\u63a7",
+      "\u8bbe\u5907",
+    ],
+  },
+  {
+    label: "\u884c\u4e1a\u6d3b\u52a8",
+    words: [
+      "\u884c\u4e1a\u6d3b\u52a8",
+      "\u5cf0\u4f1a",
+      "\u8bba\u575b",
+      "\u5c55\u4f1a",
+      "\u5927\u4f1a",
+      "\u6d3b\u52a8",
+      "\u6c99\u9f99",
+    ],
+  },
+  {
+    label: "\u6750\u6599\u6807\u51c6",
+    words: [
+      "\u6750\u6599\u6807\u51c6",
+      "\u677f\u6750",
+      "\u6728\u76ae",
+      "\u4e94\u91d1",
+      "\u6750\u6599",
+      "\u73af\u4fdd\u7b49\u7ea7",
+      "\u7532\u919b",
+    ],
+  },
+  {
+    label: "\u5de5\u827a\u6807\u51c6",
+    words: [
+      "\u5de5\u827a\u6807\u51c6",
+      "\u5de5\u827a",
+      "\u52a0\u5de5",
+      "\u5c01\u8fb9",
+      "\u6d82\u88c5",
+      "\u62fc\u63a5",
+      "\u7cbe\u5ea6",
+    ],
+  },
+  {
+    label: "\u670d\u52a1\u6807\u51c6",
+    words: [
+      "\u670d\u52a1\u6807\u51c6",
+      "\u670d\u52a1",
+      "\u4ea4\u4ed8",
+      "\u5b89\u88c5",
+      "\u552e\u540e",
+      "\u9a8c\u6536",
+    ],
+  },
+  {
+    label: "\u6807\u51c6\u5171\u5efa",
+    words: [
+      "\u6807\u51c6\u5171\u5efa",
+      "\u5171\u5efa",
+      "\u5f81\u6c42\u610f\u89c1",
+      "\u6807\u51c6\u5316",
+      "\u56e2\u4f53\u6807\u51c6",
+    ],
+  },
+  {
+    label: "\u54c1\u724c\u5efa\u8bbe",
+    words: [
+      "\u54c1\u724c\u5efa\u8bbe",
+      "\u54c1\u724c\u5b9a\u4f4d",
+      "\u54c1\u724c\u5347\u7ea7",
+      "\u54c1\u724c\u5f62\u8c61",
+      "\u54c1\u724c\u6218\u7565",
+    ],
+  },
+  {
+    label: "\u8bbe\u8ba1\u98ce\u683c",
+    words: [
+      "\u8bbe\u8ba1",
+      "\u98ce\u683c",
+      "\u7a7a\u95f4",
+      "\u5ba1\u7f8e",
+      "\u73b0\u4ee3",
+      "\u65b0\u4e2d\u5f0f",
+      "\u8f7b\u5962",
+    ],
+  },
+  {
+    label: "\u5956\u9879\u8bc4\u9009",
+    words: [
+      "\u8bc4\u9009",
+      "\u699c\u5355",
+      "\u5956\u9879",
+      "\u8bc4\u5ba1",
+      "\u5165\u56f4",
+      "\u516c\u793a",
+    ],
+  },
 ];
 
 const CATEGORY_HINTS: Array<{ hit: string; tags: string[] }> = [
-  { hit: "/news", tags: ["行业趋势", "企业动态"] },
-  { hit: "/brands", tags: ["品牌建设"] },
-  { hit: "/dictionary", tags: ["行业术语"] },
-  { hit: "/standards", tags: ["材料标准", "工艺标准", "服务标准"] },
-  { hit: "/awards", tags: ["奖项评选"] },
+  { hit: "/news", tags: ["\u884c\u4e1a\u8d8b\u52bf", "\u4f01\u4e1a\u52a8\u6001"] },
+  { hit: "/brands", tags: ["\u54c1\u724c\u5efa\u8bbe"] },
+  { hit: "/dictionary", tags: ["\u884c\u4e1a\u672f\u8bed"] },
+  { hit: "/standards", tags: ["\u6750\u6599\u6807\u51c6", "\u5de5\u827a\u6807\u51c6", "\u670d\u52a1\u6807\u51c6"] },
+  { hit: "/awards", tags: ["\u5956\u9879\u8bc4\u9009"] },
 ];
 
 function normalize(text: string) {
@@ -47,7 +163,7 @@ function uniq(arr: string[]) {
   return Array.from(new Set(arr.map((x) => x.trim()).filter(Boolean)));
 }
 
-export function suggestTagsFromText(text: string, max = 8): string[] {
+export function suggestTagsFromText(text: string, max = AUTO_TAG_LIMIT): string[] {
   const source = normalize(text);
   if (!source) return [];
 
@@ -57,7 +173,7 @@ export function suggestTagsFromText(text: string, max = 8): string[] {
     let score = rule.base ?? 0;
     for (const w of rule.words) {
       const hit = countOccurrences(source, normalize(w));
-      if (hit > 0) score += hit * (w.length >= 4 ? 3 : 2);
+      if (hit > 0) score += hit * (w.length >= 4 ? 4 : 2);
     }
     if (score > 0) scoreMap.set(rule.label, score);
   }
@@ -70,7 +186,7 @@ export function suggestTagsFromText(text: string, max = 8): string[] {
   }
 
   const ranked = Array.from(scoreMap.entries())
-    .sort((a, b) => b[1] - a[1])
+    .sort((a, b) => b[1] - a[1] || b[0].length - a[0].length)
     .map((x) => x[0]);
 
   return uniq(ranked).slice(0, max);
@@ -78,7 +194,7 @@ export function suggestTagsFromText(text: string, max = 8): string[] {
 
 export function parseTagInput(input?: string | null): string[] {
   if (!input) return [];
-  return uniq(input.split(/[，,\n\r\t ]+/g));
+  return uniq(input.split(/[\uff0c,\n\r\t ]+/g));
 }
 
 export function resolveTagSlugs(params: {

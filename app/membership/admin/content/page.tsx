@@ -37,7 +37,7 @@ import {
   parseAwardStructuredHtml,
   type AwardStructuredData,
 } from "@/lib/award-structured";
-import { readImageWithLimit } from "@/lib/client-image";
+import { uploadImageToServer } from "@/lib/client-image";
 
 type Status = "draft" | "pending" | "approved" | "rejected";
 type Mode = "publish" | "manage" | "review";
@@ -264,8 +264,11 @@ export default function AdminContentPage() {
   async function uploadPublishCover(file: File | null) {
     if (!file) return;
     try {
-      const dataUrl = await readImageWithLimit(file, COVER_IMAGE_MAX_BYTES);
-      setCoverImage(dataUrl);
+      const imageUrl = await uploadImageToServer(file, {
+        folder: "content/covers",
+        maxBytes: COVER_IMAGE_MAX_BYTES,
+      });
+      setCoverImage(imageUrl);
       setMessage("封面图已加载，提交后生效。");
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "图片上传失败");
@@ -275,8 +278,11 @@ export default function AdminContentPage() {
   async function uploadEditCover(file: File | null) {
     if (!file) return;
     try {
-      const dataUrl = await readImageWithLimit(file, COVER_IMAGE_MAX_BYTES);
-      setEditCoverImage(dataUrl);
+      const imageUrl = await uploadImageToServer(file, {
+        folder: "content/covers",
+        maxBytes: COVER_IMAGE_MAX_BYTES,
+      });
+      setEditCoverImage(imageUrl);
       setMessage("编辑封面图已加载，保存后生效。");
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "图片上传失败");

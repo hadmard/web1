@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { MAX_UPLOAD_IMAGE_MB, readImageWithLimit } from "@/lib/client-image";
+import { MAX_UPLOAD_IMAGE_MB, uploadImageToServer } from "@/lib/client-image";
 
 type VerifyStatus = "pending" | "approved" | "rejected";
 
@@ -169,8 +169,10 @@ export default function MemberVerificationPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const dataUrl = await readImageWithLimit(file);
-      setForm((prev) => ({ ...prev, [key]: dataUrl }));
+      const imageUrl = await uploadImageToServer(file, {
+        folder: key === "logoUrl" ? "verification/logos" : "verification/licenses",
+      });
+      setForm((prev) => ({ ...prev, [key]: imageUrl }));
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "图片读取失败，请重试");
     } finally {
@@ -182,7 +184,9 @@ export default function MemberVerificationPage() {
     const files = Array.from(e.target.files ?? []);
     if (files.length === 0) return;
     try {
-      const urls = await Promise.all(files.map((f) => readImageWithLimit(f)));
+      const urls = await Promise.all(
+        files.map((f) => uploadImageToServer(f, { folder: "verification/attachments" }))
+      );
       setForm((prev) => ({
         ...prev,
         attachments: [...prev.attachments, ...urls].slice(0, 20),

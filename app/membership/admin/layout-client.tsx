@@ -270,12 +270,12 @@ export default function AdminLayoutClient({ children }: { children: React.ReactN
 
   const sidebarNavigation = (
     <>
-      <nav className="space-y-1" aria-label="后台功能">
+      <nav className="space-y-0.5" aria-label="后台功能">
         {SIDEBAR.map((group) => {
           if (group.superOnly && !isSuperAdmin) return null;
           const collapsed = !!collapseState[group.id];
           return (
-            <div key={group.id} className="mb-4">
+            <div key={group.id} className="mb-2.5 last:mb-0">
               <button
                 type="button"
                 onClick={() => toggleGroup(group.id)}
@@ -302,7 +302,7 @@ export default function AdminLayoutClient({ children }: { children: React.ReactN
               </button>
 
               {!collapsed && (
-                <ul className="mt-0.5 space-y-0.5">
+                <ul className="mt-1 space-y-0.5">
                   {group.children.map((child) => {
                     if (child.href === "/membership/admin/permissions" && !isSuperAdmin) return null;
                     const active = isLinkActive(child.href);

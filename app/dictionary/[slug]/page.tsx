@@ -1,7 +1,7 @@
 ﻿import Link from "next/link";
-import Image from "next/image";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { ContentHeroImage } from "@/components/ContentHeroImage";
 import { prisma } from "@/lib/prisma";
 import { articleOrderByPinnedLatest, articleOrderByPinnedPopular } from "@/lib/articles";
 import { getTermBySlug } from "@/lib/terms";
@@ -207,9 +207,11 @@ export default async function TermPage({ params }: Props) {
         <JsonLd data={breadcrumbSchema} />
 
         <h1 className="font-serif text-3xl font-bold text-primary">{article.title}</h1>
-        <div className="mt-4 overflow-hidden rounded-2xl border border-border">
-          <Image src="/images/seedance2/picture_16.jpg" alt="" width={1400} height={900} className="h-44 sm:h-56 w-full object-cover" />
-        </div>
+        <ContentHeroImage
+          src={article.coverImage}
+          fallbackSrc="/images/seedance2/picture_16.jpg"
+          alt={article.title}
+        />
         {article.excerpt && (
           <blockquote className="mt-4 rounded-r-lg border-l-4 border-accent bg-surface px-4 py-3 text-sm text-muted">
             {article.excerpt}
@@ -261,9 +263,7 @@ export default async function TermPage({ params }: Props) {
       <JsonLd data={jsonLd} />
       <JsonLd data={breadcrumbSchema} />
       <h1 className="font-serif text-2xl font-semibold tracking-tight text-gray-900 dark:text-gray-100">{term.title}</h1>
-      <div className="mt-4 overflow-hidden rounded-2xl border border-border">
-        <Image src="/images/seedance2/picture_16.jpg" alt="" width={1400} height={900} className="h-44 sm:h-56 w-full object-cover" />
-      </div>
+      <ContentHeroImage fallbackSrc="/images/seedance2/picture_16.jpg" alt={term.title} />
       <DefinitionBlock definition={term.definition} />
 
       {term.background && (

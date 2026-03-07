@@ -1,9 +1,11 @@
 ﻿import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
+import { PageBackButton } from "@/components/PageBackButton";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
 import { JsonLd } from "@/components/JsonLd";
+import { RouteHistoryManager } from "@/components/RouteHistoryManager";
 import { getCategories } from "@/lib/categories";
 
 const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://example.com";
@@ -99,7 +101,11 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
           navItems={navItems}
           initialMe={null}
         />
-        <main className="flex-1">{children}</main>
+        <RouteHistoryManager />
+        <main className="flex-1">
+          <PageBackButton />
+          {children}
+        </main>
         <Footer />
       </body>
     </html>

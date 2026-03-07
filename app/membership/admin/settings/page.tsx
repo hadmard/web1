@@ -10,7 +10,7 @@ import {
   type HomeAdKey,
   type SiteVisualSettings,
 } from "@/lib/site-visual-config";
-import { readImageWithLimit } from "@/lib/client-image";
+import { uploadImageToServer } from "@/lib/client-image";
 
 type SettingsState = {
   contentReviewRequired: boolean;
@@ -166,8 +166,11 @@ export default function AdminSettingsPage() {
   async function uploadBackgroundImage(key: BackgroundImageKey, file: File | null) {
     if (!file) return;
     try {
-      const dataUrl = await readImageWithLimit(file, VISUAL_IMAGE_MAX_BYTES);
-      updateBackgroundField(key, dataUrl);
+      const imageUrl = await uploadImageToServer(file, {
+        folder: "site-visual/backgrounds",
+        maxBytes: VISUAL_IMAGE_MAX_BYTES,
+      });
+      updateBackgroundField(key, imageUrl);
       setMessage("图片已加载，请点击“保存”生效。");
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "图片上传失败");
@@ -177,8 +180,11 @@ export default function AdminSettingsPage() {
   async function uploadAdImage(key: HomeAdKey, file: File | null) {
     if (!file) return;
     try {
-      const dataUrl = await readImageWithLimit(file, VISUAL_IMAGE_MAX_BYTES);
-      updateAdField(key, "imageUrl", dataUrl);
+      const imageUrl = await uploadImageToServer(file, {
+        folder: "site-visual/ads",
+        maxBytes: VISUAL_IMAGE_MAX_BYTES,
+      });
+      updateAdField(key, "imageUrl", imageUrl);
       setMessage("广告图已加载，请点击“保存”生效。");
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "图片上传失败");

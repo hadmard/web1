@@ -6,7 +6,7 @@ import {
   DEFAULT_BRAND_MODULE_TEMPLATES,
   normalizeBrandStructuredData,
 } from "@/lib/brand-structured";
-import { MAX_UPLOAD_IMAGE_MB, readImageWithLimit } from "@/lib/client-image";
+import { MAX_UPLOAD_IMAGE_MB, uploadImageToServer } from "@/lib/client-image";
 
 type BrandStructuredEditorProps = {
   value: BrandStructuredData;
@@ -54,8 +54,8 @@ export function BrandStructuredEditor({ value, onChange, className }: BrandStruc
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const dataUrl = await readImageWithLimit(file);
-      updateField("logoUrl", dataUrl);
+      const imageUrl = await uploadImageToServer(file, { folder: "content/brand-logos" });
+      updateField("logoUrl", imageUrl);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "图片上传失败";
       window.alert(msg);

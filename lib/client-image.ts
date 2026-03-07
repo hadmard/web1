@@ -5,7 +5,7 @@ export const MAX_UPLOAD_IMAGE_BYTES = MAX_UPLOAD_IMAGE_MB * 1024 * 1024;
 
 function dataUrlSizeBytes(dataUrl: string) {
   const base64 = dataUrl.split(",")[1] || "";
-  const padding = (base64.match(/=*$/)?.[0].length ?? 0);
+  const padding = base64.match(/=*$/)?.[0].length ?? 0;
   return Math.floor((base64.length * 3) / 4) - padding;
 }
 
@@ -18,12 +18,23 @@ function readFileAsDataUrl(file: File): Promise<string> {
   });
 }
 
-function loadImage(dataUrl: string): Promise<HTMLImageElement> {
+function dataUrlToFile(dataUrl: string, fileName: string) {
+  const [header, base64] = dataUrl.split(",");
+  const mime = header.match(/data:(.*?);base64/)?.[1] || "image/webp";
+  const binary = window.atob(base64 || "");
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return new File([bytes], fileName, { type: mime });
+}
+
+function loadImage(source: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new window.Image();
     img.onload = () => resolve(img);
     img.onerror = () => reject(new Error("图片解码失败"));
-    img.src = dataUrl;
+    img.src = source;
   });
 }
 
@@ -67,8 +78,8 @@ async function compressImageToLimit(file: File, maxBytes: number): Promise<strin
   return best;
 }
 
-export async function readImageWithLimit(file: File, maxBytes = MAX_UPLOAD_IMAGE_BYTES): Promise<string> {
-  if (file.size <= maxBytes) return readFileAsDataUrl(file);
+async function prepareImageFile(file: File, maxBytes: number) {
+  if (file.size <= maxBytes) return file;
 
   const limitMb = (maxBytes / 1024 / 1024).toFixed(0);
   const fileMb = (file.size / 1024 / 1024).toFixed(2);
@@ -82,7 +93,40 @@ export async function readImageWithLimit(file: File, maxBytes = MAX_UPLOAD_IMAGE
   const compressed = await compressImageToLimit(file, maxBytes);
   const compressedBytes = dataUrlSizeBytes(compressed);
   if (compressedBytes > maxBytes) {
-    throw new Error(`压缩后仍超过 ${(maxBytes / 1024 / 1024).toFixed(0)}MB，请换更小的图片。`);
+    throw new Error(`压缩后仍超过 ${limitMb}MB，请更换更小的图片。`);
   }
-  return compressed;
+
+  const nextName = file.name.replace(/\.[^.]+$/, "") || `image-${Date.now()}`;
+  return dataUrlToFile(compressed, `${nextName}.webp`);
+}
+
+export async function readImageWithLimit(file: File, maxBytes = MAX_UPLOAD_IMAGE_BYTES): Promise<string> {
+  const prepared = await prepareImageFile(file, maxBytes);
+  return readFileAsDataUrl(prepared);
+}
+
+export async function uploadImageToServer(
+  file: File,
+  options?: {
+    folder?: string;
+    maxBytes?: number;
+  }
+): Promise<string> {
+  const prepared = await prepareImageFile(file, options?.maxBytes ?? MAX_UPLOAD_IMAGE_BYTES);
+  const formData = new FormData();
+  formData.set("file", prepared);
+  if (options?.folder) formData.set("folder", options.folder);
+
+  const res = await fetch("/api/upload/image", {
+    method: "POST",
+    credentials: "include",
+    body: formData,
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || typeof data.url !== "string") {
+    throw new Error(data.error ?? "图片上传到服务器失败");
+  }
+
+  return data.url;
 }
