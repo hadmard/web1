@@ -2,12 +2,16 @@
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
+import { getSiteVisualSettings } from "@/lib/site-visual-settings";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function MembershipPage() {
-  const session = await getSession();
+  const [session, visualSettings] = await Promise.all([
+    getSession(),
+    getSiteVisualSettings(),
+  ]);
   if (session) {
     if (session.role === "SUPER_ADMIN" || session.role === "ADMIN") {
       redirect("/membership/admin");
@@ -19,7 +23,7 @@ export default async function MembershipPage() {
     <div className="min-h-screen">
       <section className="apple-hero relative overflow-hidden border-b border-border py-16 sm:py-20">
         <Image
-          src="/images/seedance2/picture_19.jpg"
+          src={visualSettings.backgrounds.membershipHero}
           alt=""
           fill
           priority

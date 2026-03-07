@@ -143,6 +143,13 @@ export default function AdminSettingsPage() {
     });
   }
 
+  function restoreBackgroundDefault(key: BackgroundImageKey) {
+    const confirmed = window.confirm("恢复默认图后，此位置将重新使用系统默认图片。是否继续？");
+    if (!confirmed) return;
+    updateBackgroundField(key, DEFAULT_SITE_VISUAL_SETTINGS.backgrounds[key]);
+    setMessage("已恢复默认图，请点击“保存”生效。");
+  }
+
   function updateAdField(key: HomeAdKey, field: keyof SiteVisualSettings["ads"][HomeAdKey], value: string | boolean) {
     setSettings((prev) => {
       if (!prev) return prev;
@@ -161,6 +168,13 @@ export default function AdminSettingsPage() {
         },
       };
     });
+  }
+
+  function restoreAdDefaultImage(key: HomeAdKey) {
+    const confirmed = window.confirm("恢复默认图后，此广告位将重新使用系统默认图片。是否继续？");
+    if (!confirmed) return;
+    updateAdField(key, "imageUrl", DEFAULT_SITE_VISUAL_SETTINGS.ads[key].imageUrl);
+    setMessage("已恢复默认图，请点击“保存”生效。");
   }
 
   async function uploadBackgroundImage(key: BackgroundImageKey, file: File | null) {
@@ -318,13 +332,13 @@ export default function AdminSettingsPage() {
                     className="block text-xs text-muted"
                   />
                   <span className="text-[11px] text-muted">支持本地上传，最大 2MB</span>
-                  {settings.siteVisualSettings.backgrounds[field.key] && (
+                  {settings.siteVisualSettings.backgrounds[field.key] !== DEFAULT_SITE_VISUAL_SETTINGS.backgrounds[field.key] && (
                     <button
                       type="button"
-                      onClick={() => updateBackgroundField(field.key, "")}
+                      onClick={() => restoreBackgroundDefault(field.key)}
                       className="text-xs px-2 py-1 rounded border border-border hover:bg-surface"
                     >
-                      清除
+                      恢复默认图
                     </button>
                   )}
                 </div>
@@ -374,13 +388,13 @@ export default function AdminSettingsPage() {
                       className="block text-xs text-muted"
                     />
                     <span className="text-[11px] text-muted">支持本地上传，最大 2MB</span>
-                    {ad.imageUrl && (
+                    {ad.imageUrl !== DEFAULT_SITE_VISUAL_SETTINGS.ads[field.key].imageUrl && (
                       <button
                         type="button"
-                        onClick={() => updateAdField(field.key, "imageUrl", "")}
+                        onClick={() => restoreAdDefaultImage(field.key)}
                         className="text-xs px-2 py-1 rounded border border-border hover:bg-surface"
                       >
-                        清除
+                        恢复默认图
                       </button>
                     )}
                   </div>

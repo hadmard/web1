@@ -11,7 +11,16 @@ export type BackgroundImageKey =
   | "brandsHero"
   | "dictionaryHero"
   | "standardsHero"
-  | "awardsHero";
+  | "awardsHero"
+  | "newsArticleHero"
+  | "brandDetailHero"
+  | "dictionaryArticleHero"
+  | "standardArticleHero"
+  | "awardDetailHero"
+  | "membershipHero"
+  | "huadianAnnualHero"
+  | "huadianAnnualBrandHero"
+  | "huadianPartnerHero";
 
 export type HomeAdKey = "homeTop" | "homeMiddle";
 
@@ -45,6 +54,15 @@ export const BACKGROUND_IMAGE_FIELDS: Array<{
   { key: "dictionaryHero", label: "词库栏目页背景", requiredSize: "1920x640 px" },
   { key: "standardsHero", label: "标准栏目页背景", requiredSize: "1920x640 px" },
   { key: "awardsHero", label: "评选栏目页背景", requiredSize: "1920x640 px" },
+  { key: "newsArticleHero", label: "资讯详情默认图", requiredSize: "1600x900 px" },
+  { key: "brandDetailHero", label: "品牌详情默认图", requiredSize: "1600x900 px" },
+  { key: "dictionaryArticleHero", label: "词库详情默认图", requiredSize: "1600x900 px" },
+  { key: "standardArticleHero", label: "标准详情默认图", requiredSize: "1600x900 px" },
+  { key: "awardDetailHero", label: "评选详情默认图", requiredSize: "1600x900 px" },
+  { key: "membershipHero", label: "会员页顶部背景", requiredSize: "1920x900 px" },
+  { key: "huadianAnnualHero", label: "华点榜年度页默认图", requiredSize: "1600x900 px" },
+  { key: "huadianAnnualBrandHero", label: "华点榜品牌详情默认图", requiredSize: "1600x900 px" },
+  { key: "huadianPartnerHero", label: "华点榜配套商页默认图", requiredSize: "1600x900 px" },
 ];
 
 export const HOME_AD_FIELDS: Array<{
@@ -71,6 +89,15 @@ export const DEFAULT_SITE_VISUAL_SETTINGS: SiteVisualSettings = {
     dictionaryHero: "/images/seedance2/picture_11.jpg",
     standardsHero: "/images/seedance2/picture_12.jpg",
     awardsHero: "/images/seedance2/picture_13.jpg",
+    newsArticleHero: "/images/seedance2/picture_14.jpg",
+    brandDetailHero: "/images/seedance2/picture_15.jpg",
+    dictionaryArticleHero: "/images/seedance2/picture_16.jpg",
+    standardArticleHero: "/images/seedance2/picture_17.jpg",
+    awardDetailHero: "/images/seedance2/picture_18.jpg",
+    membershipHero: "/images/seedance2/picture_19.jpg",
+    huadianAnnualHero: "/images/seedance2/picture_20.jpg",
+    huadianAnnualBrandHero: "/images/seedance2/picture_21.jpg",
+    huadianPartnerHero: "/images/seedance2/picture_22.jpg",
   },
   ads: {
     homeTop: {
@@ -92,7 +119,7 @@ function toText(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function toBool(value: unknown, fallback: boolean): boolean {
+function toBool(value: unknown, fallback: boolean) {
   return typeof value === "boolean" ? value : fallback;
 }
 

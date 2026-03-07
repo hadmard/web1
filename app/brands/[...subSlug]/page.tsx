@@ -8,6 +8,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { previewText } from "@/lib/text";
 import { RichContent } from "@/components/RichContent";
 import { parseBrandStructuredHtml } from "@/lib/brand-structured";
+import { getSiteVisualSettings } from "@/lib/site-visual-settings";
 
 export const revalidate = 300;
 
@@ -190,6 +191,7 @@ export default async function BrandDetailPage({ params }: Props) {
 
   const article = await findBrandArticleBySegment(segment);
   if (!article || article.status !== "approved") notFound();
+  const visualSettings = await getSiteVisualSettings();
 
   const profile = parseBrandStructuredHtml(article.content ?? "");
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://example.com";
@@ -219,7 +221,7 @@ export default async function BrandDetailPage({ params }: Props) {
       <h1 className="font-serif text-2xl font-bold text-primary mb-2">{article.title}</h1>
       <div className="mb-4 overflow-hidden rounded-2xl border border-border">
         <Image
-          src="/images/seedance2/picture_15.jpg"
+          src={visualSettings.backgrounds.brandDetailHero}
           alt=""
           width={1600}
           height={900}

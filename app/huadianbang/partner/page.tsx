@@ -2,8 +2,11 @@ import Link from "next/link";
 import Image from "next/image";
 import { JsonLd } from "@/components/JsonLd";
 import { ENGINEER_CATEGORY_LABELS, HUADIAN_DEFINITION } from "@/lib/huadianbang";
+import { getSiteVisualSettings } from "@/lib/site-visual-settings";
 
-export default function HuadianPartnerPage() {
+export default async function HuadianPartnerPage() {
+  const visualSettings = await getSiteVisualSettings();
+
   return (
     <main className="max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-12">
       <JsonLd
@@ -19,7 +22,7 @@ export default function HuadianPartnerPage() {
       <section className="glass-panel p-6 sm:p-8">
         <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-primary">配套商推荐</h1>
         <div className="mt-4 overflow-hidden rounded-2xl border border-border">
-          <Image src="/images/seedance2/picture_22.jpg" alt="" width={1920} height={900} className="h-44 sm:h-56 w-full object-cover" />
+          <Image src={visualSettings.backgrounds.huadianPartnerHero} alt="" width={1920} height={900} className="h-44 sm:h-56 w-full object-cover" />
         </div>
         <p className="mt-3 text-sm text-muted">{HUADIAN_DEFINITION}</p>
       </section>

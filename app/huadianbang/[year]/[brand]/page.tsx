@@ -3,6 +3,7 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { JsonLd } from "@/components/JsonLd";
 import { getBrandAwardHistory, getTopBrand, HUADIAN_DEFINITION } from "@/lib/huadianbang";
+import { getSiteVisualSettings } from "@/lib/site-visual-settings";
 
 type Props = { params: Promise<{ year: string; brand: string }> };
 
@@ -13,6 +14,7 @@ export default async function HuadianAnnualBrandDetailPage({ params }: Props) {
   const item = getTopBrand(y, brand);
   if (!item) notFound();
   const history = getBrandAwardHistory(item.name);
+  const visualSettings = await getSiteVisualSettings();
 
   return (
     <main className="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-12">
@@ -29,7 +31,7 @@ export default async function HuadianAnnualBrandDetailPage({ params }: Props) {
       <section className="glass-panel p-6 sm:p-8">
         <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-primary">{item.name}</h1>
         <div className="mt-4 overflow-hidden rounded-2xl border border-border">
-          <Image src="/images/seedance2/picture_21.jpg" alt="" width={1600} height={900} className="h-44 sm:h-56 w-full object-cover" />
+          <Image src={visualSettings.backgrounds.huadianAnnualBrandHero} alt="" width={1600} height={900} className="h-44 sm:h-56 w-full object-cover" />
         </div>
         <p className="mt-3 text-sm text-muted">{HUADIAN_DEFINITION}</p>
         <span className="mt-3 inline-block text-xs rounded-full border border-border px-2.5 py-1 text-accent">

@@ -14,6 +14,7 @@ import { previewText } from "@/lib/text";
 import { RichContent } from "@/components/RichContent";
 import { parseStandardStructuredHtml } from "@/lib/standard-structured";
 import { getCategories } from "@/lib/categories";
+import { getSiteVisualSettings } from "@/lib/site-visual-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -84,7 +85,10 @@ export default async function StandardPage({ params }: Props) {
   const { id } = await params;
   const segment = normalizeSegment(id);
 
-  const categories = await getCategories();
+  const [categories, visualSettings] = await Promise.all([
+    getCategories(),
+    getSiteVisualSettings(),
+  ]);
   const stdCat = categories.find((c) => c.href === "/standards");
   const sub = stdCat?.subcategories.find((x) => x.href === `/standards/${segment}`);
   if (sub) {
@@ -136,7 +140,7 @@ export default async function StandardPage({ params }: Props) {
         </header>
         <ContentHeroImage
           src={article.coverImage}
-          fallbackSrc="/images/seedance2/picture_17.jpg"
+          fallbackSrc={visualSettings.backgrounds.standardArticleHero}
           alt={article.title}
         />
 
@@ -230,7 +234,7 @@ export default async function StandardPage({ params }: Props) {
         <span className="text-[var(--color-muted)]">{standard.year} 年</span>
       </div>
       <h1 className="font-serif text-2xl font-semibold tracking-tight text-gray-900 dark:text-gray-100 mt-2">{standard.title}</h1>
-      <ContentHeroImage fallbackSrc="/images/seedance2/picture_17.jpg" alt={standard.title} />
+      <ContentHeroImage fallbackSrc={visualSettings.backgrounds.standardArticleHero} alt={standard.title} />
 
       <div className="mt-6">
         <MemberDownloadButton resourceType="standard" resourceId={standard.id} allowed={allowed} reason={reason} />

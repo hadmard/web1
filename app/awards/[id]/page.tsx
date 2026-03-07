@@ -4,6 +4,7 @@ import { ContentHeroImage } from "@/components/ContentHeroImage";
 import { prisma } from "@/lib/prisma";
 import { JsonLd } from "@/components/JsonLd";
 import { RichContent } from "@/components/RichContent";
+import { getSiteVisualSettings } from "@/lib/site-visual-settings";
 export const revalidate = 300;
 
 
@@ -29,7 +30,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function AwardDetailPage({ params }: Props) {
   const { id } = await params;
-  const award = await getAwardByIdOrSlug(id);
+  const [award, visualSettings] = await Promise.all([
+    getAwardByIdOrSlug(id),
+    getSiteVisualSettings(),
+  ]);
   if (!award) notFound();
 
   const jsonLd = {
@@ -51,7 +55,7 @@ export default async function AwardDetailPage({ params }: Props) {
 
       <ContentHeroImage
         src={award.coverImage}
-        fallbackSrc="/images/seedance2/picture_18.jpg"
+        fallbackSrc={visualSettings.backgrounds.awardDetailHero}
         alt={award.title}
         containerClassName="mt-6 aspect-[16/9]"
       />

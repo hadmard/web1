@@ -9,6 +9,7 @@ import { previewText } from "@/lib/text";
 import { DefinitionBlock } from "@/components/DefinitionBlock";
 import { JsonLd } from "@/components/JsonLd";
 import { RichContent } from "@/components/RichContent";
+import { getSiteVisualSettings } from "@/lib/site-visual-settings";
 
 export const revalidate = 300;
 
@@ -80,6 +81,7 @@ export default async function TermPage({ params }: Props) {
   const { slug } = await params;
   const s = normalizeSegment(slug);
   const subcategory = DICTIONARY_SUBCATEGORY_MAP[s];
+  const visualSettings = await getSiteVisualSettings();
 
   if (subcategory) {
     const [hotTerms, latestTerms] = await Promise.all([
@@ -209,7 +211,7 @@ export default async function TermPage({ params }: Props) {
         <h1 className="font-serif text-3xl font-bold text-primary">{article.title}</h1>
         <ContentHeroImage
           src={article.coverImage}
-          fallbackSrc="/images/seedance2/picture_16.jpg"
+          fallbackSrc={visualSettings.backgrounds.dictionaryArticleHero}
           alt={article.title}
         />
         {article.excerpt && (
@@ -263,7 +265,7 @@ export default async function TermPage({ params }: Props) {
       <JsonLd data={jsonLd} />
       <JsonLd data={breadcrumbSchema} />
       <h1 className="font-serif text-2xl font-semibold tracking-tight text-gray-900 dark:text-gray-100">{term.title}</h1>
-      <ContentHeroImage fallbackSrc="/images/seedance2/picture_16.jpg" alt={term.title} />
+      <ContentHeroImage fallbackSrc={visualSettings.backgrounds.dictionaryArticleHero} alt={term.title} />
       <DefinitionBlock definition={term.definition} />
 
       {term.background && (

@@ -8,6 +8,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { previewText } from "@/lib/text";
 import { RichContent } from "@/components/RichContent";
 import { NewsViewTracker } from "./NewsViewTracker";
+import { getSiteVisualSettings } from "@/lib/site-visual-settings";
 export const revalidate = 300;
 
 
@@ -68,7 +69,10 @@ export default async function ArticlePage({ params }: Props) {
   if (NEWS_SUB_SLUGS.has(slug)) {
     redirect(`/news/all?sub=${encodeURIComponent(`/news/${slug}`)}`);
   }
-  const article = await findNewsArticleBySegment(slug);
+  const [article, visualSettings] = await Promise.all([
+    findNewsArticleBySegment(slug),
+    getSiteVisualSettings(),
+  ]);
   if (!article || article.status !== "approved") notFound();
 
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://example.com";
@@ -111,7 +115,7 @@ export default async function ArticlePage({ params }: Props) {
         <h1 className="font-serif text-2xl font-bold text-primary mb-2">{article.title}</h1>
         <ContentHeroImage
           src={article.coverImage}
-          fallbackSrc="/images/seedance2/picture_14.jpg"
+          fallbackSrc={visualSettings.backgrounds.newsArticleHero}
           alt={article.title}
           containerClassName="mb-4 aspect-[16/9]"
         />
