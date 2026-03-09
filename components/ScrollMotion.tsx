@@ -10,6 +10,8 @@ function getDeviceTier(reduceMotion: boolean): MotionTier {
   const memory = typeof (navigator as Navigator & { deviceMemory?: number }).deviceMemory === "number"
     ? (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 4
     : 4;
+  const isCoarsePointer = typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
+  if (isCoarsePointer && (cores <= 8 || memory <= 8)) return "medium";
   if (cores >= 8 && memory >= 8) return "high";
   if (cores <= 4 || memory <= 4) return "low";
   return "medium";
@@ -95,13 +97,19 @@ export function ScrollMotion() {
     });
 
     let ticking = false;
+    let lastParallaxY = -1;
     const onScroll = () => {
       if (ticking || reduceMotion || motionTier !== "high") return;
       ticking = true;
       requestAnimationFrame(() => {
         const y = window.scrollY;
+        if (Math.abs(y - lastParallaxY) < 6) {
+          ticking = false;
+          return;
+        }
+        lastParallaxY = y;
         for (const el of parallaxEls) {
-          const speed = Number(el.dataset.parallax ?? "0.08");
+          const speed = Number(el.dataset.parallax ?? "0.05");
           el.style.setProperty("--parallax-y", `${Math.round(y * speed)}px`);
         }
         ticking = false;

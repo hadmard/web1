@@ -12,9 +12,14 @@ export function HomeStructureSection({ cards }: { cards: HomepageStructureCard[]
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="grid lg:grid-cols-2 gap-4" data-reveal-stagger="85">
           {cards.map((card) => (
-            <article key={card.title} data-reveal="zoom-soft" className="glass-panel p-5 sm:p-6 relative overflow-hidden h-full">
+            <article
+              key={card.title}
+              data-reveal="zoom-soft"
+              className="glass-panel spotlight-card p-5 sm:p-6 relative overflow-hidden h-full"
+              data-mouse-zone
+            >
               <div className="relative flex h-full flex-col">
-                <div className="mb-4 overflow-hidden rounded-xl border border-border">
+                <div className="media-zoom-smooth mb-4 overflow-hidden rounded-xl border border-border">
                   <Image
                     src={card.image}
                     alt=""
@@ -28,7 +33,7 @@ export function HomeStructureSection({ cards }: { cards: HomepageStructureCard[]
                 <h3 className="mt-1 font-serif text-xl sm:text-2xl font-semibold text-primary">{card.title}</h3>
                 <p className="mt-2 text-sm text-muted">{card.desc}</p>
 
-                <ul className="mt-4 space-y-2 flex-1">
+                <ul className="list-cascade mt-4 space-y-2 flex-1">
                   {pick(card.items, 5).map((item, idx) => (
                     <li key={item.href + idx} className="flex items-center gap-2 min-w-0">
                       <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-black" aria-hidden />

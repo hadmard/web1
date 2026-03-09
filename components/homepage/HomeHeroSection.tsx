@@ -5,7 +5,7 @@ export function HomeHeroSection({ heroBackground }: { heroBackground: string }) 
   const showHeroImage = heroBackground.trim().length > 0;
 
   return (
-    <section className="home-hero-surface relative overflow-hidden border-b border-border py-2 sm:py-28" data-mouse-zone>
+    <section className="home-hero-surface relative overflow-hidden border-b border-border py-10 sm:py-28" data-mouse-zone>
       <div className="pointer-events-none absolute inset-0 home-hero-fallback" />
       <div className="pointer-events-none absolute home-hero-bloom-a" />
       <div className="pointer-events-none absolute home-hero-bloom-b" />
@@ -24,15 +24,21 @@ export function HomeHeroSection({ heroBackground }: { heroBackground: string }) 
       )}
       <div className="pointer-events-none absolute inset-0 home-hero-grain" />
       <div className="pointer-events-none absolute inset-0 home-hero-mask" />
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 relative">
-        <div data-reveal="zoom-soft" data-reveal-delay="0" className="hidden text-center sm:block">
-          <h1 className="font-serif text-[2.2rem] sm:text-6xl lg:text-7xl font-semibold tracking-[0.08em] text-[#223548] drop-shadow-[0_10px_24px_rgba(255,255,255,0.45)]">
-            整木网
+
+      <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
+        <div data-reveal="zoom-soft" className="hidden text-center sm:block">
+          <h1 className="hero-title-stack font-serif text-[2.6rem] sm:text-6xl lg:text-7xl font-semibold tracking-[0.08em] text-[#223548] drop-shadow-[0_10px_24px_rgba(255,255,255,0.45)]">
+            <span className="hero-title-line hero-title-line--primary">整木网</span>
+            <span className="hero-title-line hero-title-line--secondary text-[0.22em] font-sans tracking-[0.34em] uppercase">
+              Industry Intelligence Platform
+            </span>
           </h1>
         </div>
 
-        <div data-reveal="fade-up" data-reveal-delay="80" className="mt-0 flex justify-center sm:mt-6">
-          <StructuredSearch hero />
+        <div data-reveal="fade-up" data-reveal-delay="70" className="mt-3 flex justify-center sm:mt-8">
+          <div className="hero-search-shell magnetic-shell w-full max-w-3xl">
+            <StructuredSearch hero />
+          </div>
         </div>
       </div>
     </section>
