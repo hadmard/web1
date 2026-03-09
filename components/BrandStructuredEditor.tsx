@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import Image from "next/image";
 import { ChangeEvent } from "react";
 import {
   BrandStructuredData,
@@ -168,7 +169,13 @@ export function BrandStructuredEditor({ value, onChange, className }: BrandStruc
       {data.logoUrl && (
         <div className="rounded-md border border-border bg-surface-elevated p-3">
           <p className="text-xs text-muted mb-2">Logo 预览</p>
-          <img src={data.logoUrl} alt="品牌 Logo 预览" className="max-h-24 w-auto object-contain rounded" />
+          <Image
+            src={data.logoUrl}
+            alt="品牌 Logo 预览"
+            width={160}
+            height={96}
+            className="max-h-24 w-auto object-contain rounded"
+          />
         </div>
       )}
 

@@ -43,7 +43,13 @@ export default async function HuadianAnnualBrandDetailPage({ params }: Props) {
         <h2 className="text-lg font-semibold text-primary">品牌详情</h2>
         <article className="rounded-xl border border-border bg-surface-elevated p-4">
           <h3 className="font-semibold text-primary">企业 LOGO</h3>
-          <img src={item.logo} alt={item.name} className="mt-3 h-14 w-14 rounded object-contain border border-border bg-white" />
+          <Image
+            src={item.logo}
+            alt={item.name}
+            width={56}
+            height={56}
+            className="mt-3 h-14 w-14 rounded object-contain border border-border bg-white"
+          />
         </article>
         <article className="rounded-xl border border-border bg-surface-elevated p-4">
           <h3 className="font-semibold text-primary">企业简介</h3>

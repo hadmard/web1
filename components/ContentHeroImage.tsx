@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 type ContentHeroImageProps = {
   src?: string | null;
   fallbackSrc: string;
@@ -15,9 +17,11 @@ export function ContentHeroImage({
 
   return (
     <div className={`relative overflow-hidden rounded-2xl border border-border ${containerClassName}`}>
-      <img
+      <Image
         src={finalSrc}
         alt={src?.trim() ? alt : ""}
+        fill
+        sizes="(max-width: 768px) 100vw, 1200px"
         className="absolute inset-0 h-full w-full object-cover"
       />
     </div>

@@ -1,8 +1,10 @@
 ﻿"use client";
 
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { CONTENT_TAB_DEFS, MEMBER_PUBLISH_CATEGORY_OPTIONS, type ContentTabKey } from "@/lib/content-taxonomy";
+import { ManageContentList } from "@/app/membership/admin/content/components/ManageContentList";
+import { ReviewPanels } from "@/app/membership/admin/content/components/ReviewPanels";
 import { RichEditor } from "@/components/RichEditor";
 import { suggestTagsFromText } from "@/lib/tag-suggest";
 import { BrandStructuredEditor } from "@/components/BrandStructuredEditor";
@@ -289,7 +291,7 @@ export default function AdminContentPage() {
     }
   }
 
-  async function loadSession() {
+  const loadSession = useCallback(async () => {
     const res = await fetch("/api/auth/me", { credentials: "include", cache: "no-store" });
     if (!res.ok) { setLoading(false); return; }
     const me = await res.json();
@@ -303,16 +305,16 @@ export default function AdminContentPage() {
       canEditAllContent: me.canEditAllContent === true,
     });
     setLoading(false);
-  }
+  }, []);
 
-  async function loadList() {
+  const loadList = useCallback(async () => {
     const sp = new URLSearchParams({ limit: "100", categoryHref: selectedCategory.href });
     const res = await fetch(`/api/admin/articles?${sp.toString()}`, { credentials: "include", cache: "no-store" });
     const data = await res.json().catch(() => ({}));
     setItems(Array.isArray(data.items) ? data.items : []);
-  }
+  }, [selectedCategory.href]);
 
-  async function loadReview() {
+  const loadReview = useCallback(async () => {
     const sp = new URLSearchParams({ status: "pending", limit: "200", categoryHref: selectedCategory.href });
     const [a, c] = await Promise.all([
       fetch(`/api/admin/articles?${sp.toString()}`, { credentials: "include", cache: "no-store" }),
@@ -322,14 +324,14 @@ export default function AdminContentPage() {
     const cd = await c.json().catch(() => ({}));
     setPendingItems(Array.isArray(ad.items) ? ad.items : []);
     setPendingChanges(Array.isArray(cd.items) ? cd.items : []);
-  }
+  }, [selectedCategory.href]);
 
-  useEffect(() => { void loadSession(); }, []);
+  useEffect(() => { void loadSession(); }, [loadSession]);
   useEffect(() => {
     if (!session) return;
     if (mode === "manage") void loadList();
     if (mode === "review" && isSuperAdmin) void loadReview();
-  }, [session, mode, tab]);
+  }, [session, mode, isSuperAdmin, loadList, loadReview]);
 
   useEffect(() => {
     if (!message) return;
@@ -744,117 +746,26 @@ export default function AdminContentPage() {
       )}
 
       {mode === "manage" && (
-        <section className="rounded-xl border border-border bg-surface-elevated p-5">
-          {items.length === 0 ? (
-            <p className="text-sm text-muted">暂无内容</p>
-          ) : (
-            <ul className="space-y-2">
-              {items.map((x) => (
-                <li key={x.id} className="flex items-center justify-between border-b border-border pb-2">
-                  <div>
-                    <p className="text-sm flex items-center gap-2">
-                      <span>{x.title}</span>
-                      {x.isPinned && <span className="text-[11px] rounded-full border border-accent/40 px-2 py-0.5 text-accent">置顶</span>}
-                    </p>
-                    <p className="text-xs text-muted">{x.slug} · {STATUS_TEXT[x.status]}</p>
-                    <p className="mt-1 text-xs text-muted">提交账号：{submitterLabel(x.authorMember ?? null)}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => openEdit(x)}
-                      disabled={!canEdit}
-                      className="text-xs px-2 py-1 rounded border border-border disabled:opacity-40"
-                    >
-                      修改
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void removeItem(x.id)}
-                      disabled={!canDelete}
-                      className="text-xs px-2 py-1 rounded border border-red-500 text-red-600 disabled:opacity-40"
-                    >
-                      删除
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+        <ManageContentList
+          items={items}
+          canEdit={canEdit}
+          canDelete={canDelete}
+          onEdit={openEdit}
+          onDelete={(id) => void removeItem(id)}
+        />
       )}
 
       {mode === "review" && (
-        <section className="grid lg:grid-cols-2 gap-4">
-          <div className="rounded-xl border border-border bg-surface-elevated p-4">
-            <h2 className="text-sm font-semibold mb-3">待审核资讯（{pendingItems.length}）</h2>
-            {pendingItems.length === 0 ? (
-              <p className="text-sm text-muted">暂无</p>
-            ) : (
-              <ul className="space-y-2">
-                {pendingItems.map((x) => (
-                  <li key={x.id} className="border-b border-border pb-2">
-                    <p className="text-sm flex items-center gap-2">
-                      <span>{x.title}</span>
-                      {x.isPinned && <span className="text-[11px] rounded-full border border-accent/40 px-2 py-0.5 text-accent">置顶</span>}
-                    </p>
-                    {x.excerpt && <p className="text-xs text-muted mt-1 whitespace-pre-line">摘要：{x.excerpt}</p>}
-                    {tab === "standards" && (() => {
-                      const parsed = parseStandardStructuredHtml(x.content ?? "");
-                      if (!parsed) return null;
-                      return (
-                        <p className="text-xs text-muted mt-1">
-                          标准编号：{parsed.standardCode || "未填写"} · 版本：{parsed.versionNote || "未填写"}
-                        </p>
-                      );
-                    })()}
-                    <p className="text-xs text-muted mt-1">提交账号：{submitterLabel(x.authorMember ?? null)}</p>
-                    <div className="mt-1 flex gap-2">
-                      <button type="button" onClick={() => openEdit(x)} className="text-xs px-2 py-1 rounded border border-border">修改后审核</button>
-                      <button type="button" onClick={() => void reviewArticle(x.id, "approved")} className="text-xs px-2 py-1 rounded bg-green-600 text-white">通过</button>
-                      <button type="button" onClick={() => void reviewArticle(x.id, "rejected")} className="text-xs px-2 py-1 rounded bg-red-600 text-white">驳回</button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-          <div className="rounded-xl border border-border bg-surface-elevated p-4">
-            <h2 className="text-sm font-semibold mb-3">待审核修改申请（{pendingChanges.length}）</h2>
-            {pendingChanges.length === 0 ? (
-              <p className="text-sm text-muted">暂无</p>
-            ) : (
-              <ul className="space-y-3">
-                {pendingChanges.map((x) => (
-                  <li key={x.id} className="border rounded p-3">
-                    <p className="text-sm font-medium">{x.article.title}</p>
-                    <p className="text-xs text-muted mt-1">提交账号：{submitterLabel(x.submitter)}</p>
-                    {x.reason && <p className="text-xs text-muted mt-1">说明：{x.reason}</p>}
-                    {x.diffSummary ? (
-                      <div
-                        className="mt-2 rounded border border-border bg-surface p-2 text-xs leading-5 overflow-x-auto article-diff"
-                        dangerouslySetInnerHTML={{ __html: x.diffSummary }}
-                      />
-                    ) : (
-                      <div className="mt-2 rounded border border-border bg-surface p-2 text-xs text-muted space-y-1">
-                        {x.patchTitle && <p>拟修改标题：{x.patchTitle}</p>}
-                        {x.patchExcerpt && <p>拟修改摘要：{x.patchExcerpt}</p>}
-                        {x.patchContent && <p>拟修改正文：已提交</p>}
-                      </div>
-                    )}
-                    <div className="mt-2 flex gap-2 flex-wrap">
-                      <button type="button" onClick={() => openEditFromChange(x)} className="text-xs px-2 py-1 rounded border border-border">
-                        查看并调整后通过
-                      </button>
-                      <button type="button" onClick={() => void reviewChange(x.id, "approved")} className="text-xs px-2 py-1 rounded bg-green-600 text-white">直接通过</button>
-                      <button type="button" onClick={() => void reviewChange(x.id, "rejected")} className="text-xs px-2 py-1 rounded bg-red-600 text-white">驳回</button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </section>
+        <ReviewPanels
+          tab={tab}
+          pendingItems={pendingItems}
+          pendingChanges={pendingChanges}
+          parseStandardStructuredHtml={parseStandardStructuredHtml}
+          onEditArticle={openEdit}
+          onReviewArticle={(id, status) => void reviewArticle(id, status)}
+          onEditChange={openEditFromChange}
+          onReviewChange={(id, status) => void reviewChange(id, status)}
+        />
       )}
 
       {editingId && (

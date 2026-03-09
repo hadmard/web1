@@ -1,9 +1,10 @@
-﻿import Link from "next/link";
+import Image from "next/image";
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { prisma } from "@/lib/prisma";
 import { articleOrderByPinnedLatest } from "@/lib/articles";
-export const revalidate = 300;
+import { prisma } from "@/lib/prisma";
 
+export const revalidate = 300;
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -127,10 +128,10 @@ export default async function EnterprisePage({ params }: Props) {
           <p className="text-sm text-muted">暂无已审核资讯</p>
         ) : (
           <ul className="space-y-2">
-            {articles.map((a) => (
-              <li key={a.id} className="text-sm border-b border-border pb-2">
-                <span className="text-primary">{a.title}</span>
-                {a.slug && <span className="text-muted ml-2">/{a.slug}</span>}
+            {articles.map((article) => (
+              <li key={article.id} className="text-sm border-b border-border pb-2">
+                <span className="text-primary">{article.title}</span>
+                {article.slug && <span className="text-muted ml-2">/{article.slug}</span>}
               </li>
             ))}
           </ul>
@@ -143,9 +144,9 @@ export default async function EnterprisePage({ params }: Props) {
           <p className="text-sm text-muted">暂无关联标准</p>
         ) : (
           <ul className="space-y-2">
-            {standards.map((s) => (
-              <li key={s.id} className="text-sm text-primary border-b border-border pb-2">
-                {s.title}（{s.code} / {s.year}）
+            {standards.map((standard) => (
+              <li key={standard.id} className="text-sm text-primary border-b border-border pb-2">
+                {standard.title}（{standard.code} / {standard.year}）
               </li>
             ))}
           </ul>
@@ -158,9 +159,15 @@ export default async function EnterprisePage({ params }: Props) {
           <p className="text-sm text-muted">暂无已审核图片</p>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {gallery.map((g) => (
-              <a key={g.id} href={g.imageUrl} target="_blank" rel="noreferrer" className="block rounded border border-border overflow-hidden">
-                <img src={g.imageUrl} alt={g.title ?? "企业图片"} className="w-full h-28 object-cover" />
+            {gallery.map((image) => (
+              <a key={image.id} href={image.imageUrl} target="_blank" rel="noreferrer" className="block rounded border border-border overflow-hidden">
+                <Image
+                  src={image.imageUrl}
+                  alt={image.title ?? "企业图片"}
+                  width={400}
+                  height={280}
+                  className="w-full h-28 object-cover"
+                />
               </a>
             ))}
           </div>

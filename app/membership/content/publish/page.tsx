@@ -6,6 +6,7 @@ import Link from "next/link";
 import {
   FormEvent,
   Suspense,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -211,20 +212,20 @@ function PublishCenterPageInner() {
     () => allowedCategories.find((x) => x.href === selectedTabDef.href) ?? allowedCategories[0],
     [allowedCategories, selectedTabDef.href]
   );
-  const subOptions = selectedCategory?.subs ?? [];
+  const subOptions = useMemo(() => selectedCategory?.subs ?? [], [selectedCategory]);
 
   const filteredItems = useMemo(
     () => items.filter((item) => resolveTabKeyFromHref(item.categoryHref, item.subHref) === safeTab),
     [items, safeTab]
   );
 
-  function replaceTab(nextTab: ContentTabKey) {
+  const replaceTab = useCallback((nextTab: ContentTabKey) => {
     const sp = new URLSearchParams(searchParams.toString());
     sp.set("tab", nextTab);
     router.replace(`${pathname}?${sp.toString()}`);
-  }
+  }, [pathname, router, searchParams]);
 
-  async function load() {
+  const load = useCallback(async () => {
     const meRes = await fetch("/api/auth/me", { credentials: "include", cache: "no-store" });
     if (!meRes.ok) {
       setAuthed(false);
@@ -242,16 +243,16 @@ function PublishCenterPageInner() {
       const data = await listRes.json();
       setItems(Array.isArray(data.items) ? data.items : []);
     }
-  }
+  }, []);
 
   useEffect(() => {
     void load();
-  }, []);
+  }, [load]);
 
   useEffect(() => {
     if (allowedTabs.length === 0) return;
     if (!allowedTabs.includes(tab)) replaceTab(allowedTabs[0]);
-  }, [allowedTabs, tab, safeTab]);
+  }, [allowedTabs, tab, replaceTab]);
 
   useEffect(() => {
     if (subOptions.length > 0 && !subOptions.some((s) => s.href === subHref)) {

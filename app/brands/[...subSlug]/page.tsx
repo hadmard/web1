@@ -241,7 +241,13 @@ export default async function BrandDetailPage({ params }: Props) {
           <div className="rounded-2xl border border-border bg-surface-elevated p-5">
             <div className="flex flex-col md:flex-row md:items-start gap-4">
               {profile.logoUrl ? (
-                <img src={profile.logoUrl} alt={`${article.title} logo`} className="w-28 h-28 rounded-xl border border-border object-contain bg-white p-2" />
+                <Image
+                  src={profile.logoUrl}
+                  alt={`${article.title} logo`}
+                  width={112}
+                  height={112}
+                  className="w-28 h-28 rounded-xl border border-border object-contain bg-white p-2"
+                />
               ) : (
                 <div className="w-28 h-28 rounded-xl border border-dashed border-border bg-surface flex items-center justify-center text-xs text-muted">
                   暂无 Logo

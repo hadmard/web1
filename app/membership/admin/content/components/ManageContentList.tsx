@@ -1,0 +1,85 @@
+type Status = "draft" | "pending" | "approved" | "rejected";
+
+type ArticleItem = {
+  id: string;
+  title: string;
+  slug: string;
+  content: string;
+  status: Status;
+  isPinned?: boolean;
+  authorMember?: {
+    id: string;
+    name: string | null;
+    email: string;
+    role: string | null;
+  } | null;
+};
+
+const STATUS_TEXT: Record<Status, string> = {
+  draft: "草稿",
+  pending: "待审核",
+  approved: "已发布",
+  rejected: "已驳回",
+};
+
+function submitterLabel(user?: { name: string | null; email: string; role: string | null } | null) {
+  if (!user) return "未知账号";
+  const roleLabel =
+    user.role === "SUPER_ADMIN" ? "主管理员" : user.role === "ADMIN" ? "子管理员" : "会员";
+  return `${user.name?.trim() || user.email}（${roleLabel}）`;
+}
+
+export function ManageContentList({
+  items,
+  canEdit,
+  canDelete,
+  onEdit,
+  onDelete,
+}: {
+  items: ArticleItem[];
+  canEdit: boolean;
+  canDelete: boolean;
+  onEdit: (item: ArticleItem) => void;
+  onDelete: (id: string) => void;
+}) {
+  return (
+    <section className="rounded-xl border border-border bg-surface-elevated p-5">
+      {items.length === 0 ? (
+        <p className="text-sm text-muted">暂无内容</p>
+      ) : (
+        <ul className="space-y-2">
+          {items.map((item) => (
+            <li key={item.id} className="flex items-center justify-between border-b border-border pb-2">
+              <div>
+                <p className="text-sm flex items-center gap-2">
+                  <span>{item.title}</span>
+                  {item.isPinned && <span className="text-[11px] rounded-full border border-accent/40 px-2 py-0.5 text-accent">置顶</span>}
+                </p>
+                <p className="text-xs text-muted">{item.slug} · {STATUS_TEXT[item.status]}</p>
+                <p className="mt-1 text-xs text-muted">提交账号：{submitterLabel(item.authorMember ?? null)}</p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => onEdit(item)}
+                  disabled={!canEdit}
+                  className="text-xs px-2 py-1 rounded border border-border disabled:opacity-40"
+                >
+                  修改
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onDelete(item.id)}
+                  disabled={!canDelete}
+                  className="text-xs px-2 py-1 rounded border border-red-500 text-red-600 disabled:opacity-40"
+                >
+                  删除
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}

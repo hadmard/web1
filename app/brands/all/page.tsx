@@ -1,4 +1,5 @@
 ﻿import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { buildCategoryMetadata } from "@/lib/category-metadata";
 import { articleOrderByPinnedLatest, articleOrderByPinnedOldest } from "@/lib/articles";
@@ -225,7 +226,13 @@ export default async function BrandsAllPage({ searchParams }: Props) {
                     <h2 className="mt-1 font-serif text-lg text-primary line-clamp-1">{item.title}</h2>
                   </div>
                   {logoUrl ? (
-                    <img src={logoUrl} alt={`${item.title} logo`} className="w-14 h-14 rounded-lg border border-border object-contain bg-white p-1.5 shrink-0" />
+                    <Image
+                      src={logoUrl}
+                      alt={`${item.title} logo`}
+                      width={56}
+                      height={56}
+                      className="w-14 h-14 rounded-lg border border-border object-contain bg-white p-1.5 shrink-0"
+                    />
                   ) : (
                     <div className="w-14 h-14 rounded-lg border border-dashed border-border flex items-center justify-center text-[10px] text-muted shrink-0">
                       LOGO

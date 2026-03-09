@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 
 type Item = {
   id: string;
@@ -79,7 +79,7 @@ export default function DictionaryEditPage() {
   const [message, setMessage] = useState("");
   const messageRef = useRef<HTMLParagraphElement | null>(null);
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
     const res = await fetch(`/api/member/dictionary-entries/${id}`, { credentials: "include", cache: "no-store" });
     const data = await res.json().catch(() => ({}));
@@ -102,12 +102,12 @@ export default function DictionaryEditPage() {
     setCanDirectEdit(data.canDirectEdit === true);
     setAuthed(true);
     setLoading(false);
-  }
+  }, [id]);
 
   useEffect(() => {
     if (!id) return;
     void load();
-  }, [id]);
+  }, [id, load]);
 
   useEffect(() => {
     if (!message) return;

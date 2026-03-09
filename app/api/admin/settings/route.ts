@@ -1,7 +1,8 @@
-﻿import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/session";
-import { prisma } from "@/lib/prisma";
+import { revalidateTag } from "next/cache";
+import { NextRequest, NextResponse } from "next/server";
 import { APP_SETTING_KEYS } from "@/lib/app-settings";
+import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/session";
 import { DEFAULT_SITE_VISUAL_SETTINGS, normalizeSiteVisualSettings } from "@/lib/site-visual-config";
 
 function parseBool(raw: string | null | undefined, fallback: boolean) {
@@ -122,6 +123,10 @@ export async function POST(request: NextRequest) {
         })
       )
     );
+
+    if (updates.some((u) => u.key === APP_SETTING_KEYS.SITE_VISUAL_SETTINGS)) {
+      revalidateTag("site-visual-settings");
+    }
 
     return NextResponse.json({ ok: true });
   } catch (e) {

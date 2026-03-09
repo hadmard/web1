@@ -88,7 +88,13 @@ export async function CategoryHome({
 
           {heroSrc && (
             <div className="mt-5 overflow-hidden rounded-2xl border border-border">
-              <img src={heroSrc} alt="" className="h-36 sm:h-44 md:h-52 w-full object-cover" />
+              <Image
+                src={heroSrc}
+                alt=""
+                width={1600}
+                height={640}
+                className="h-36 sm:h-44 md:h-52 w-full object-cover"
+              />
             </div>
           )}
 

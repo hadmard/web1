@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { MAX_UPLOAD_IMAGE_MB, uploadImageToServer } from "@/lib/client-image";
@@ -305,14 +306,28 @@ export default function MemberVerificationPage() {
               <p className="text-xs text-muted">企业 Logo</p>
               <input type="file" accept="image/*" onChange={(e) => void uploadSingle(e, "logoUrl")} className="block w-full text-sm" />
               <p className="text-[11px] text-muted">单张最大 {MAX_UPLOAD_IMAGE_MB}MB，超限可自动压缩。</p>
-              {form.logoUrl && <img src={form.logoUrl} alt="logo" className="h-16 w-16 rounded border border-border object-cover" />}
+              {form.logoUrl && (
+                <Image
+                  src={form.logoUrl}
+                  alt="logo"
+                  width={64}
+                  height={64}
+                  className="h-16 w-16 rounded border border-border object-cover"
+                />
+              )}
             </div>
             <div className="space-y-2">
               <p className="text-xs text-muted">营业执照（必填）</p>
               <input type="file" accept="image/*" onChange={(e) => void uploadSingle(e, "licenseImageUrl")} className="block w-full text-sm" />
               <p className="text-[11px] text-muted">单张最大 {MAX_UPLOAD_IMAGE_MB}MB，超限可自动压缩。</p>
               {form.licenseImageUrl && (
-                <img src={form.licenseImageUrl} alt="license" className="h-24 w-auto rounded border border-border object-contain bg-white" />
+                <Image
+                  src={form.licenseImageUrl}
+                  alt="license"
+                  width={240}
+                  height={96}
+                  className="h-24 w-auto rounded border border-border object-contain bg-white"
+                />
               )}
             </div>
           </div>
@@ -332,7 +347,13 @@ export default function MemberVerificationPage() {
                   className="relative rounded border border-border overflow-hidden"
                   title="点击删除该附件"
                 >
-                  <img src={img} alt={`attachment-${idx + 1}`} className="h-20 w-full object-cover" />
+                  <Image
+                    src={img}
+                    alt={`attachment-${idx + 1}`}
+                    width={160}
+                    height={80}
+                    className="h-20 w-full object-cover"
+                  />
                 </button>
               ))}
             </div>
