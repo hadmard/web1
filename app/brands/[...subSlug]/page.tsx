@@ -9,6 +9,7 @@ import { previewText } from "@/lib/text";
 import { RichContent } from "@/components/RichContent";
 import { parseBrandStructuredHtml } from "@/lib/brand-structured";
 import { getSiteVisualSettings } from "@/lib/site-visual-settings";
+import { buildPageMetadata } from "@/lib/seo";
 
 export const revalidate = 300;
 
@@ -109,38 +110,31 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (segment === "all") return { title: `${MARKET_TITLE}总览` };
 
   if (segment === "brand") {
-    return {
+    return buildPageMetadata({
       title: `整木品牌 | 整木网 · ${MARKET_TITLE}`,
       description: "整木品牌子栏目，支持品牌浏览与对比。",
-      openGraph: {
-        title: `整木品牌 | 整木网 · ${MARKET_TITLE}`,
-        description: "整木品牌子栏目，支持品牌浏览与对比。",
-        type: "website",
-      },
-    };
+      path: "/brands/all",
+    });
   }
 
   if (segment === "buying" || segment === "faq") {
     const faqState = await getMarketFaqState();
-    return {
+    return buildPageMetadata({
       title: `整木选购 FAQ | 整木网 · ${faqState.title}`,
       description: faqState.desc,
-      openGraph: {
-        title: `整木选购 FAQ | 整木网 · ${faqState.title}`,
-        description: faqState.desc,
-        type: "website",
-      },
-    };
+      path: "/brands/faq",
+    });
   }
 
   const article = await findBrandArticleBySegment(segment);
   if (!article) return { title: "品牌内容" };
   const description = previewText(article.excerpt ?? article.content, 160);
-  return {
+  return buildPageMetadata({
     title: `${article.title} | 整木网 · ${MARKET_TITLE}`,
     description,
-    openGraph: { title: article.title, description, type: "article" },
-  };
+    path: `/brands/${article.slug}`,
+    type: "article",
+  });
 }
 
 export default async function BrandDetailPage({ params }: Props) {

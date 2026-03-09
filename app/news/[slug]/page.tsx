@@ -9,6 +9,7 @@ import { previewText } from "@/lib/text";
 import { RichContent } from "@/components/RichContent";
 import { NewsViewTracker } from "./NewsViewTracker";
 import { getSiteVisualSettings } from "@/lib/site-visual-settings";
+import { buildPageMetadata } from "@/lib/seo";
 export const revalidate = 300;
 
 
@@ -57,11 +58,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const article = await findNewsArticleBySegment(slug);
   if (!article || article.status !== "approved") return { title: "资讯" };
   const description = previewText(article.excerpt ?? article.content, 160);
-  return {
+  return buildPageMetadata({
     title: `${article.title} | 整木网 · 整木资讯`,
     description,
-    openGraph: { title: article.title, description, type: "article" },
-  };
+    path: `/news/${article.slug}`,
+    type: "article",
+  });
 }
 
 export default async function ArticlePage({ params }: Props) {

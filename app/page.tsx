@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { HomeEnterpriseSection } from "@/components/homepage/HomeEnterpriseSection";
 import { HomeHeroSection } from "@/components/homepage/HomeHeroSection";
 import { HomeHuadianSection } from "@/components/homepage/HomeHuadianSection";
@@ -6,8 +7,15 @@ import { HomeStructureSection } from "@/components/homepage/HomeStructureSection
 import { HomeUpdatesSection } from "@/components/homepage/HomeUpdatesSection";
 import { ScrollMotion } from "@/components/ScrollMotion";
 import { getHomepageData } from "@/lib/homepage-data";
+import { SITE_DESCRIPTION, SITE_TITLE, buildPageMetadata } from "@/lib/seo";
 
 export const revalidate = 300;
+export const metadata: Metadata = buildPageMetadata({
+  title: SITE_TITLE,
+  description: SITE_DESCRIPTION,
+  path: "/",
+  keywords: ["整木网", "整木资讯", "整木标准", "整木市场", "整木词库", "整木评选"],
+});
 
 export default async function HomePage() {
   const data = await getHomepageData();

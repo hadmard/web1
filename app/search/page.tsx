@@ -1,10 +1,16 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { Prisma } from "@prisma/client";
 import { StructuredSearch } from "@/components/StructuredSearch";
 import { articleOrderByPinnedLatest } from "@/lib/articles";
 import { prisma } from "@/lib/prisma";
+import { buildNoIndexMetadata } from "@/lib/seo";
 
 export const revalidate = 300;
+export const metadata: Metadata = buildNoIndexMetadata(
+  "站内搜索",
+  "站内搜索结果页不参与搜索引擎收录。"
+);
 
 type Props = {
   searchParams: Promise<{

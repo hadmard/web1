@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getCategoryWithMetaByHref } from "@/lib/categories";
+import { buildPageMetadata } from "@/lib/seo";
 
 export async function buildCategoryMetadata(
   basePath: string,
@@ -10,13 +11,10 @@ export async function buildCategoryMetadata(
   const title = (category?.title || fallbackTitle).trim();
   const description = (category?.desc || fallbackDescription).trim();
 
-  return {
+  return buildPageMetadata({
     title,
     description,
-    openGraph: {
-      title: `${title} | 整木网`,
-      description,
-      type: "website",
-    },
-  };
+    path: basePath,
+    type: "website",
+  });
 }

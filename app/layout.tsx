@@ -7,8 +7,9 @@ import { Header } from "@/components/Header";
 import { JsonLd } from "@/components/JsonLd";
 import { RouteHistoryManager } from "@/components/RouteHistoryManager";
 import { getCategories } from "@/lib/categories";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, absoluteUrl, getSiteUrl } from "@/lib/seo";
 
-const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://example.com";
+const baseUrl = getSiteUrl();
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -22,21 +23,25 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
   title: {
-    default: "整木网 | 整体木作行业知识共享平台",
-    template: "%s | 整木网",
+    default: SITE_TITLE,
+    template: `%s | ${SITE_NAME}`,
   },
-  description:
-    "整木网是整体木作行业知识共享平台，覆盖整木资讯、整木市场、整木词库、整木标准与整木评选。",
+  description: SITE_DESCRIPTION,
   keywords: ["整木", "整木市场", "整木品牌", "整木选购", "整木词库", "整木标准", "整木资讯", "整木评选"],
   openGraph: {
-    title: "整木网 | 整体木作行业知识共享平台",
-    description:
-      "覆盖整木资讯、整木市场、整木词库、整木标准与整木评选。",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
     type: "website",
     locale: "zh_CN",
     url: baseUrl,
+    siteName: SITE_NAME,
   },
-  alternates: { canonical: baseUrl },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+  },
+  alternates: { canonical: absoluteUrl("/") },
   icons: {
     icon: "/icon.svg",
     shortcut: "/icon.svg",
@@ -59,7 +64,7 @@ const jsonLdGraph = [
     "@context": "https://schema.org",
     "@type": "Organization",
     "@id": `${baseUrl}/#organization`,
-    name: "整木网",
+    name: SITE_NAME,
     url: baseUrl,
     inLanguage: "zh-CN",
     description: "整体木作行业知识共享平台。",
@@ -67,13 +72,13 @@ const jsonLdGraph = [
   {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    name: "整木网",
+    name: SITE_NAME,
     url: baseUrl,
     inLanguage: "zh-CN",
     publisher: { "@id": `${baseUrl}/#organization` },
     potentialAction: {
       "@type": "SearchAction",
-      target: { "@type": "EntryPoint", urlTemplate: `${baseUrl}/search?q={search_term}` },
+      target: { "@type": "EntryPoint", urlTemplate: `${absoluteUrl("/search")}?q={search_term}` },
       "query-input": "required name=search_term",
     },
   },

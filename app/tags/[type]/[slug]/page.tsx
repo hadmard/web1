@@ -1,8 +1,10 @@
-﻿import Link from "next/link";
+import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-export const revalidate = 300;
+import { buildPageMetadata } from "@/lib/seo";
 
+export const revalidate = 300;
 
 const TAG_TYPES: Record<string, string> = {
   industry: "行业标签",
@@ -14,14 +16,16 @@ const TAG_TYPES: Record<string, string> = {
 
 type Props = { params: Promise<{ type: string; slug: string }> };
 
-export async function generateMetadata({ params }: Props) {
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { type, slug } = await params;
   const tag = await prisma.tag.findFirst({ where: { type, slug } });
   if (!tag) return { title: "标签" };
-  return {
+
+  return buildPageMetadata({
     title: `${tag.label} | ${TAG_TYPES[type] ?? type}`,
     description: `带「${tag.label}」标签的整木资讯与内容。`,
-  };
+    path: `/tags/${type}/${slug}`,
+  });
 }
 
 export default async function TagSlugPage({ params }: Props) {

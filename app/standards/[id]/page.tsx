@@ -15,6 +15,7 @@ import { RichContent } from "@/components/RichContent";
 import { parseStandardStructuredHtml } from "@/lib/standard-structured";
 import { getCategories } from "@/lib/categories";
 import { getSiteVisualSettings } from "@/lib/site-visual-settings";
+import { buildPageMetadata } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -64,21 +65,23 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const article = await findStandardArticleBySegment(id);
   if (article) {
     const description = previewText(article.excerpt ?? article.content, 180);
-    return {
+    return buildPageMetadata({
       title: `${article.title} | 整木网 · 整木标准`,
       description,
-      openGraph: { title: article.title, description, type: "article" },
-    };
+      path: `/standards/${article.slug}`,
+      type: "article",
+    });
   }
 
   const standard = await getStandardById(id);
   if (!standard) return { title: "标准未找到" };
   const description = `${standard.code} ${standard.title}（${standard.year}）`;
-  return {
+  return buildPageMetadata({
     title: `${standard.code} ${standard.title} | 整木网 · 整木标准`,
     description,
-    openGraph: { title: standard.title, description, type: "article" },
-  };
+    path: `/standards/${standard.id}`,
+    type: "article",
+  });
 }
 
 export default async function StandardPage({ params }: Props) {
