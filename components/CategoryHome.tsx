@@ -120,9 +120,6 @@ export async function CategoryHome({
                           ))}
                         </ul>
                       )}
-                      <Link href={getSubHref(sub.href)} className="mt-3 inline-block text-xs text-accent hover:underline">
-                        查看更多
-                      </Link>
                     </article>
                   );
                 })}
