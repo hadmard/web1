@@ -60,6 +60,7 @@ type MemberType = "enterprise_basic" | "enterprise_advanced" | "personal";
 type Status = "draft" | "pending" | "approved" | "rejected";
 type TermSection = { id: string; heading: string; body: string };
 const BRAND_REGION_OPTIONS = ["全国", "华东", "华中", "华南", "西南", "西北", "华北", "东北"] as const;
+type SubmitPreview = { title: string; href: string | null; status: Status };
 
 type Row = {
   id: string;
@@ -159,6 +160,23 @@ function parseTab(raw: string | null): ContentTabKey {
   return hit?.key ?? "articles";
 }
 
+function buildPreviewHref(
+  categoryHref: string | null,
+  subHref: string | null,
+  slug: string | null,
+  fallbackTitle: string | null
+) {
+  const segment = (slug || fallbackTitle || "").trim();
+  if (!segment) return null;
+  const encoded = encodeURIComponent(segment);
+  const tab = resolveTabKeyFromHref(categoryHref, subHref);
+  if (tab === "brands") return `/brands/${encoded}`;
+  if (tab === "terms") return `/dictionary/${encoded}`;
+  if (tab === "standards") return `/standards/${encoded}`;
+  if (tab === "awards") return `/awards/${encoded}`;
+  return `/news/${encoded}`;
+}
+
 function PublishCenterPageInner() {
   const router = useRouter();
   const pathname = usePathname();
@@ -170,8 +188,9 @@ function PublishCenterPageInner() {
   const [memberType, setMemberType] = useState<MemberType>("personal");
   const [items, setItems] = useState<Row[]>([]);
   const [message, setMessage] = useState("");
-  const messageRef = useRef<HTMLParagraphElement | null>(null);
+  const messageRef = useRef<HTMLDivElement | null>(null);
   const [loading, setLoading] = useState(false);
+  const [lastSubmitted, setLastSubmitted] = useState<SubmitPreview | null>(null);
 
   const [title, setTitle] = useState("");
   const [excerpt, setExcerpt] = useState("");
@@ -335,6 +354,7 @@ function PublishCenterPageInner() {
     if (loading || !selectedCategory) return;
     setLoading(true);
     setMessage("");
+    setLastSubmitted(null);
 
     const composedContent =
       safeTab === "terms"
@@ -395,6 +415,15 @@ function PublishCenterPageInner() {
     }
 
     const nextStatus = typeof data?.status === "string" ? data.status : "";
+    const submittedTitle = typeof data?.title === "string" ? data.title : payload.title;
+    const submittedStatus = (nextStatus || "pending") as Status;
+    const previewHref = buildPreviewHref(
+      typeof data?.categoryHref === "string" ? data.categoryHref : payload.categoryHref,
+      typeof data?.subHref === "string" ? data.subHref : payload.subHref,
+      typeof data?.slug === "string" ? data.slug : null,
+      submittedTitle
+    );
+    setLastSubmitted({ title: submittedTitle, href: previewHref, status: submittedStatus });
     setMessage(nextStatus === "approved" ? "提交成功，内容已发布。" : "提交成功，已进入审核流程。");
     setTitle("");
     setExcerpt("");
@@ -686,9 +715,26 @@ function PublishCenterPageInner() {
 
         <form onSubmit={submit} className="rounded-xl border border-border bg-surface-elevated p-5 space-y-3">
           {message && (
-            <p ref={messageRef} className="text-sm text-accent scroll-mt-24">
-              {message}
-            </p>
+            <div ref={messageRef} className="scroll-mt-24 space-y-1">
+              <p className="text-sm text-accent">{message}</p>
+              {lastSubmitted && (
+                <div className="text-xs text-muted">
+                  {lastSubmitted.status === "approved" && lastSubmitted.href ? (
+                    <>
+                      点击标题预览：
+                      <Link href={lastSubmitted.href} className="ml-1 text-accent hover:underline">
+                        {lastSubmitted.title}
+                      </Link>
+                    </>
+                  ) : (
+                    <>
+                      提交内容：<span className="text-primary">{lastSubmitted.title}</span>
+                      {lastSubmitted.href && <span className="ml-2">审核通过后可预览</span>}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
           )}
 
           {safeTab !== "brands" && subOptions.length > 0 && (

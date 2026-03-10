@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { CONTENT_TAB_DEFS, MEMBER_PUBLISH_CATEGORY_OPTIONS, type ContentTabKey } from "@/lib/content-taxonomy";
+import { CONTENT_TAB_DEFS, MEMBER_PUBLISH_CATEGORY_OPTIONS, resolveTabKeyFromHref, type ContentTabKey } from "@/lib/content-taxonomy";
 import { ManageContentList } from "@/app/membership/admin/content/components/ManageContentList";
 import { ReviewPanels } from "@/app/membership/admin/content/components/ReviewPanels";
 import { RichEditor } from "@/components/RichEditor";
@@ -44,6 +44,7 @@ import { uploadImageToServer } from "@/lib/client-image";
 type Status = "draft" | "pending" | "approved" | "rejected";
 type Mode = "publish" | "manage" | "review";
 type TermSection = { id: string; heading: string; body: string };
+type SubmitPreview = { title: string; href: string | null; status: Status };
 
 type SessionInfo = {
   role: string | null;
@@ -172,6 +173,23 @@ function submitterLabel(user?: { name: string | null; email: string; role: strin
   return `${user.name?.trim() || user.email}（${roleLabel}）`;
 }
 
+function buildPreviewHref(
+  categoryHref: string | null,
+  subHref: string | null,
+  slug: string | null,
+  fallbackTitle: string | null
+) {
+  const segment = (slug || fallbackTitle || "").trim();
+  if (!segment) return null;
+  const encoded = encodeURIComponent(segment);
+  const tab = resolveTabKeyFromHref(categoryHref, subHref);
+  if (tab === "brands") return `/brands/${encoded}`;
+  if (tab === "terms") return `/dictionary/${encoded}`;
+  if (tab === "standards") return `/standards/${encoded}`;
+  if (tab === "awards") return `/awards/${encoded}`;
+  return `/news/${encoded}`;
+}
+
 export default function AdminContentPage() {
   const searchParams = useSearchParams();
   const mode = parseMode(searchParams.get("mode"));
@@ -180,7 +198,8 @@ export default function AdminContentPage() {
   const [session, setSession] = useState<SessionInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
-  const messageRef = useRef<HTMLParagraphElement | null>(null);
+  const messageRef = useRef<HTMLDivElement | null>(null);
+  const [lastSubmitted, setLastSubmitted] = useState<SubmitPreview | null>(null);
 
   const [items, setItems] = useState<ArticleItem[]>([]);
   const [pendingItems, setPendingItems] = useState<ArticleItem[]>([]);
@@ -340,6 +359,7 @@ export default function AdminContentPage() {
 
   async function submitPublish(e: FormEvent) {
     e.preventDefault();
+    setLastSubmitted(null);
     const composedContent =
       tab === "terms"
         ? buildTermContentHtml(termSections)
@@ -383,6 +403,15 @@ export default function AdminContentPage() {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) { setMessage(data.error ?? "发布失败"); return; }
+    const submittedTitle = typeof data?.title === "string" ? data.title : title.trim();
+    const submittedStatus = (typeof data?.status === "string" ? data.status : "approved") as Status;
+    const previewHref = buildPreviewHref(
+      typeof data?.categoryHref === "string" ? data.categoryHref : selectedCategory.href,
+      typeof data?.subHref === "string" ? data.subHref : subHref,
+      typeof data?.slug === "string" ? data.slug : null,
+      submittedTitle
+    );
+    setLastSubmitted({ title: submittedTitle, href: previewHref, status: submittedStatus });
     setMessage("提交成功。");
     setTitle("");
     setExcerpt("");
@@ -596,9 +625,26 @@ export default function AdminContentPage() {
       <header className="rounded-xl border border-border bg-surface-elevated p-5">
         <h1 className="font-serif text-2xl font-bold text-primary">{mode === "publish" ? "内容发布" : mode === "manage" ? "内容管理" : "审核中心"} · {selectedTabDef.label}</h1>
         {message && (
-          <p ref={messageRef} className="text-sm text-accent mt-2 scroll-mt-24">
-            {message}
-          </p>
+          <div ref={messageRef} className="mt-2 scroll-mt-24 space-y-1">
+            <p className="text-sm text-accent">{message}</p>
+            {lastSubmitted && (
+              <div className="text-xs text-muted">
+                {lastSubmitted.status === "approved" && lastSubmitted.href ? (
+                  <>
+                    点击标题预览：
+                    <a href={lastSubmitted.href} className="ml-1 text-accent hover:underline">
+                      {lastSubmitted.title}
+                    </a>
+                  </>
+                ) : (
+                  <>
+                    提交内容：<span className="text-primary">{lastSubmitted.title}</span>
+                    {lastSubmitted.href && <span className="ml-2">审核通过后可预览</span>}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
         )}
       </header>
 
