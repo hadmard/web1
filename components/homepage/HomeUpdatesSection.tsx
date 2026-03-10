@@ -21,10 +21,11 @@ export function HomeUpdatesSection({
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div
           data-reveal="zoom-soft"
-          className="media-zoom-smooth spotlight-card relative mb-6 overflow-hidden rounded-2xl border border-border"
+          className="showcase-frame media-zoom-smooth spotlight-card relative mb-6 overflow-hidden rounded-2xl border border-border"
           data-mouse-zone
         >
-          <Image src={bannerSrc} alt="" fill sizes="(max-width: 1024px) 100vw, 1152px" className="object-cover" />
+          <Image src={bannerSrc} alt="" fill sizes="(max-width: 1024px) 100vw, 1152px" className="showcase-backdrop absolute inset-0" />
+          <Image src={bannerSrc} alt="" fill sizes="(max-width: 1024px) 100vw, 1152px" className="showcase-image absolute inset-0" />
           <div className="absolute inset-0 bg-gradient-to-r from-surface/82 via-surface/45 to-transparent" />
           <div className="h-44 sm:h-56" />
         </div>

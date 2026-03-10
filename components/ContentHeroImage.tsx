@@ -16,13 +16,13 @@ export function ContentHeroImage({
   const finalSrc = src?.trim() || fallbackSrc;
 
   return (
-    <div className={`relative overflow-hidden rounded-2xl border border-border ${containerClassName}`}>
+    <div className={`showcase-frame relative overflow-hidden rounded-2xl border border-border ${containerClassName}`}>
       <Image
         src={finalSrc}
         alt={src?.trim() ? alt : ""}
         fill
         sizes="(max-width: 768px) 100vw, 1200px"
-        className="absolute inset-0 h-full w-full object-cover"
+        className="showcase-image absolute inset-0 h-full w-full"
       />
     </div>
   );

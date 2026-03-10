@@ -33,28 +33,28 @@ export function HomeEnterpriseSection({
         <article data-reveal="fade-left" className="glass-panel spotlight-card p-5 lg:col-span-2" data-mouse-zone>
           {middleAd.enabled ? (
             <Link href={middleAd.href || "/membership"} className="block">
-              <div className="media-zoom-smooth mb-3 overflow-hidden rounded-xl border border-border">
+              <div className="showcase-frame media-zoom-smooth mb-3 overflow-hidden rounded-xl border border-border">
                 <Image
                   src={middleAd.imageUrl}
                   alt={middleAd.title}
                   width={1440}
                   height={320}
                   sizes="(max-width: 1024px) 100vw, 760px"
-                  className="h-40 sm:h-48 w-full object-cover"
+                  className="showcase-image h-40 sm:h-48"
                 />
               </div>
               <p className="text-sm font-medium text-primary">{middleAd.title}</p>
             </Link>
           ) : (
             <div>
-              <div className="media-zoom-smooth mb-4 overflow-hidden rounded-xl border border-border">
+              <div className="showcase-frame media-zoom-smooth mb-4 overflow-hidden rounded-xl border border-border">
                 <Image
                   src={enterpriseImage}
                   alt=""
                   width={1600}
                   height={900}
                   sizes="(max-width: 1024px) 100vw, 760px"
-                  className="h-40 sm:h-48 w-full object-cover"
+                  className="showcase-image h-40 sm:h-48"
                 />
               </div>
               <p className="text-[13px] sm:text-sm text-muted mb-2">品牌生态</p>
