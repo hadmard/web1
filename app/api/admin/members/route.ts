@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { writeOperationLog } from "@/lib/operation-log";
+import { mergeEffectivePermissionFlags, resolvePermissionFlags } from "@/lib/member-permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,34 @@ function isAdmin(session: { role: string | null } | null) {
 
 function isSuperAdmin(session: { role: string | null } | null) {
   return session?.role === "SUPER_ADMIN";
+}
+
+function serializeMember(
+  member: {
+    id: string;
+    email: string;
+    name: string | null;
+    passwordPlaintext?: string | null;
+    role: string | null;
+    memberType: string;
+    memberTypeExpiresAt?: Date | null;
+    rankingWeight?: number;
+    canPublishWithoutReview: boolean;
+    canManageMembers: boolean;
+    canDeleteOwnContent: boolean;
+    canDeleteMemberContent: boolean;
+    canDeleteAllContent: boolean;
+    canEditOwnContent: boolean;
+    canEditMemberContent: boolean;
+    canEditAllContent: boolean;
+    createdAt: Date;
+  }
+) {
+  const merged = mergeEffectivePermissionFlags(member);
+  return {
+    ...merged,
+    account: member.email,
+  };
 }
 
 export async function GET() {
@@ -44,7 +73,7 @@ export async function GET() {
   });
 
   if (isSuperAdmin(session)) {
-    return NextResponse.json(members.map((m) => ({ ...m, account: m.email })));
+    return NextResponse.json(members.map((m) => serializeMember(m)));
   }
 
   return NextResponse.json(
@@ -106,6 +135,8 @@ export async function POST(request: NextRequest) {
 
     const passwordHash = await bcrypt.hash(String(password), 10);
 
+    const permissionData = resolvePermissionFlags({ role: safeRole });
+
     const member = await prisma.member.create({
       data: {
         email: normalizedEmail,
@@ -117,7 +148,7 @@ export async function POST(request: NextRequest) {
         memberType: safeMemberType,
         memberTypeExpiresAt: expiresAt,
         rankingWeight: safeRankingWeight,
-        canPublishWithoutReview: false,
+        ...permissionData,
       },
       select: {
         id: true,
@@ -149,7 +180,7 @@ export async function POST(request: NextRequest) {
       detail: JSON.stringify({ role: member.role }),
     });
 
-    return NextResponse.json({ ...member, account: member.email });
+    return NextResponse.json(serializeMember(member));
   } catch (e) {
     console.error("POST /api/admin/members", e);
     const msg =

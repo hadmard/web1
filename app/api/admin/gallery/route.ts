@@ -57,6 +57,7 @@ export async function POST(request: NextRequest) {
       ? status
       : defaultContentStatusForSubmission({
           reviewRequired,
+          role: session.role,
           canPublishWithoutReview: session.canPublishWithoutReview,
         });
 

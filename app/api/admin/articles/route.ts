@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { defaultContentStatusForSubmission } from "@/lib/member-access";
 import { resolveTagSlugs } from "@/lib/tag-suggest";
 import { generateUniqueArticleSlug } from "@/lib/slug";
+import { isContentReviewRequired } from "@/lib/app-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -109,10 +110,12 @@ export async function POST(request: NextRequest) {
     }
     const slugTrim = await generateUniqueArticleSlug(title);
 
+    const reviewRequired = await isContentReviewRequired();
     const safeStatus = isSuperAdmin(session)
       ? (typeof status === "string" && ["draft", "pending", "approved", "rejected"].includes(status) ? status : "approved")
       : defaultContentStatusForSubmission({
-          reviewRequired: true,
+          reviewRequired,
+          role: session.role,
           canPublishWithoutReview: session.canPublishWithoutReview === true,
         });
 

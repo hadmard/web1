@@ -3,9 +3,37 @@ import bcrypt from "bcryptjs";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { writeOperationLog } from "@/lib/operation-log";
+import { mergeEffectivePermissionFlags, resolvePermissionFlags } from "@/lib/member-permissions";
 
 function isSuperAdmin(session: { role: string | null } | null) {
   return session?.role === "SUPER_ADMIN";
+}
+
+function serializeMember(
+  member: {
+    id: string;
+    email: string;
+    name: string | null;
+    passwordPlaintext: string | null;
+    role: string | null;
+    memberType: string;
+    memberTypeExpiresAt: Date | null;
+    rankingWeight: number;
+    canPublishWithoutReview: boolean;
+    canManageMembers: boolean;
+    canDeleteOwnContent: boolean;
+    canDeleteMemberContent: boolean;
+    canDeleteAllContent: boolean;
+    canEditOwnContent: boolean;
+    canEditMemberContent: boolean;
+    canEditAllContent: boolean;
+    createdAt: Date;
+  }
+) {
+  return {
+    ...mergeEffectivePermissionFlags(member),
+    account: member.email,
+  };
 }
 
 export async function PATCH(
@@ -14,7 +42,7 @@ export async function PATCH(
 ) {
   const session = await getSession();
   if (!session || !isSuperAdmin(session)) {
-    return NextResponse.json({ error: "需要主账号权限" }, { status: 403 });
+    return NextResponse.json({ error: "需要主管理员权限" }, { status: 403 });
   }
 
   const { id } = await params;
@@ -63,27 +91,21 @@ export async function PATCH(
     data.passwordHash = await bcrypt.hash(password, 10);
     data.passwordPlaintext = password;
   }
-  if (typeof memberType === "string" && ["enterprise_basic", "personal", "enterprise_advanced"].includes(memberType)) {
+  if (
+    typeof memberType === "string" &&
+    ["enterprise_basic", "personal", "enterprise_advanced"].includes(memberType)
+  ) {
     data.memberType = memberType;
   }
   if (memberTypeExpiresAt !== undefined) {
-    if (typeof memberTypeExpiresAt === "string" && memberTypeExpiresAt.trim()) {
-      data.memberTypeExpiresAt = new Date(memberTypeExpiresAt);
-    } else {
-      data.memberTypeExpiresAt = null;
-    }
+    data.memberTypeExpiresAt =
+      typeof memberTypeExpiresAt === "string" && memberTypeExpiresAt.trim()
+        ? new Date(memberTypeExpiresAt)
+        : null;
   }
   if (typeof rankingWeight === "number" && Number.isFinite(rankingWeight)) {
     data.rankingWeight = Math.max(0, rankingWeight);
   }
-  if (typeof canPublishWithoutReview === "boolean") data.canPublishWithoutReview = canPublishWithoutReview;
-  if (typeof canManageMembers === "boolean") data.canManageMembers = canManageMembers;
-  if (typeof canDeleteOwnContent === "boolean") data.canDeleteOwnContent = canDeleteOwnContent;
-  if (typeof canDeleteMemberContent === "boolean") data.canDeleteMemberContent = canDeleteMemberContent;
-  if (typeof canDeleteAllContent === "boolean") data.canDeleteAllContent = canDeleteAllContent;
-  if (typeof canEditOwnContent === "boolean") data.canEditOwnContent = canEditOwnContent;
-  if (typeof canEditMemberContent === "boolean") data.canEditMemberContent = canEditMemberContent;
-  if (typeof canEditAllContent === "boolean") data.canEditAllContent = canEditAllContent;
 
   if (typeof role === "string" && ["ADMIN", "MEMBER"].includes(role) && member.role !== "SUPER_ADMIN") {
     data.role = role;
@@ -92,6 +114,52 @@ export async function PATCH(
 
   if (member.role === "SUPER_ADMIN" && data.role) {
     return NextResponse.json({ error: "不能修改主管理员角色" }, { status: 400 });
+  }
+
+  const touchedPermissionFields =
+    typeof canPublishWithoutReview === "boolean" ||
+    typeof canManageMembers === "boolean" ||
+    typeof canDeleteOwnContent === "boolean" ||
+    typeof canDeleteMemberContent === "boolean" ||
+    typeof canDeleteAllContent === "boolean" ||
+    typeof canEditOwnContent === "boolean" ||
+    typeof canEditMemberContent === "boolean" ||
+    typeof canEditAllContent === "boolean" ||
+    typeof data.role === "string";
+
+  if (touchedPermissionFields) {
+    Object.assign(
+      data,
+      resolvePermissionFlags({
+        role: data.role ?? member.role,
+        canPublishWithoutReview:
+          typeof canPublishWithoutReview === "boolean"
+            ? canPublishWithoutReview
+            : member.canPublishWithoutReview,
+        canManageMembers:
+          typeof canManageMembers === "boolean" ? canManageMembers : member.canManageMembers,
+        canDeleteOwnContent:
+          typeof canDeleteOwnContent === "boolean"
+            ? canDeleteOwnContent
+            : member.canDeleteOwnContent,
+        canDeleteMemberContent:
+          typeof canDeleteMemberContent === "boolean"
+            ? canDeleteMemberContent
+            : member.canDeleteMemberContent,
+        canDeleteAllContent:
+          typeof canDeleteAllContent === "boolean"
+            ? canDeleteAllContent
+            : member.canDeleteAllContent,
+        canEditOwnContent:
+          typeof canEditOwnContent === "boolean" ? canEditOwnContent : member.canEditOwnContent,
+        canEditMemberContent:
+          typeof canEditMemberContent === "boolean"
+            ? canEditMemberContent
+            : member.canEditMemberContent,
+        canEditAllContent:
+          typeof canEditAllContent === "boolean" ? canEditAllContent : member.canEditAllContent,
+      })
+    );
   }
 
   if (Object.keys(data).length === 0) {
@@ -131,7 +199,7 @@ export async function PATCH(
     detail: JSON.stringify(data),
   });
 
-  return NextResponse.json({ ...updated, account: updated.email });
+  return NextResponse.json(serializeMember(updated));
 }
 
 export async function DELETE(
@@ -140,7 +208,7 @@ export async function DELETE(
 ) {
   const session = await getSession();
   if (!session || !isSuperAdmin(session)) {
-    return NextResponse.json({ error: "需要主账号权限" }, { status: 403 });
+    return NextResponse.json({ error: "需要主管理员权限" }, { status: 403 });
   }
 
   const { id } = await params;
@@ -151,7 +219,7 @@ export async function DELETE(
   const member = await prisma.member.findUnique({ where: { id } });
   if (!member) return NextResponse.json({ error: "账号不存在" }, { status: 404 });
   if (member.role === "SUPER_ADMIN") {
-    return NextResponse.json({ error: "不能删除主账号" }, { status: 400 });
+    return NextResponse.json({ error: "不能删除主管理员账号" }, { status: 400 });
   }
 
   await prisma.member.delete({ where: { id } });

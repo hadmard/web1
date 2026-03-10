@@ -19,11 +19,151 @@ type MemberRow = {
   createdAt: string;
 };
 
+type EditablePermissionKey =
+  | "canManageMembers"
+  | "canEditOwnContent"
+  | "canEditMemberContent"
+  | "canDeleteOwnContent"
+  | "canDeleteMemberContent";
+
+type PermissionDefinition = {
+  key: EditablePermissionKey;
+  label: string;
+  description: string;
+};
+
+const EDITABLE_PERMISSIONS: PermissionDefinition[] = [
+  {
+    key: "canManageMembers",
+    label: "新增会员",
+    description: "允许子管理员新增会员账号，但不能创建子管理员或主管理员。",
+  },
+  {
+    key: "canEditOwnContent",
+    label: "修改本人内容",
+    description: "允许直接修改自己提交的内容，不必走修改申请。",
+  },
+  {
+    key: "canEditMemberContent",
+    label: "修改会员内容",
+    description: "允许直接修改其他会员提交的内容，适合企业内容协作。",
+  },
+  {
+    key: "canDeleteOwnContent",
+    label: "删除本人内容",
+    description: "允许直接删除自己提交的内容。",
+  },
+  {
+    key: "canDeleteMemberContent",
+    label: "删除会员内容",
+    description: "允许删除其他会员提交的内容，建议谨慎授予。",
+  },
+];
+
+const ROLE_CARDS = [
+  {
+    role: "MEMBER",
+    title: "会员",
+    tone: "border-slate-200 bg-slate-50 text-slate-700",
+    bullets: [
+      "只能提交内容、查看审核进度、提交修改申请。",
+      "不能免审发布，不能管理账号，也不能做最终审核。",
+    ],
+  },
+  {
+    role: "ADMIN",
+    title: "子管理员",
+    tone: "border-amber-200 bg-amber-50 text-amber-800",
+    bullets: [
+      "作为企业员工，可按授权维护会员内容和新增会员。",
+      "不能免审发布，不能拥有全局最高权限。",
+    ],
+  },
+  {
+    role: "SUPER_ADMIN",
+    title: "主管理员",
+    tone: "border-emerald-200 bg-emerald-50 text-emerald-800",
+    bullets: [
+      "作为企业负责人，保留最终审核、权限分配和企业认证审核。",
+      "拥有全局编辑、删除和系统设置权限。",
+    ],
+  },
+];
+
+function formatRole(role: string | null) {
+  if (role === "SUPER_ADMIN") return "主管理员";
+  if (role === "ADMIN") return "子管理员";
+  return "会员";
+}
+
+function formatMemberType(memberType: string) {
+  if (memberType === "enterprise_advanced") return "企业高级会员";
+  if (memberType === "enterprise_basic") return "企业基础会员";
+  return "个人会员";
+}
+
+function formatDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function roleTone(role: string | null) {
+  if (role === "SUPER_ADMIN") return "border-emerald-200 bg-emerald-50 text-emerald-800";
+  if (role === "ADMIN") return "border-amber-200 bg-amber-50 text-amber-800";
+  return "border-slate-200 bg-slate-50 text-slate-700";
+}
+
+function fixedPermissionLabels(member: MemberRow) {
+  if (member.role === "SUPER_ADMIN") {
+    return ["最终审核", "权限分配", "全局编辑", "全局删除", "企业认证审核", "系统设置"];
+  }
+
+  const labels: string[] = [];
+  if (member.canPublishWithoutReview) labels.push("免审发布");
+  if (member.canEditAllContent) labels.push("全局编辑");
+  if (member.canDeleteAllContent) labels.push("全局删除");
+
+  return labels;
+}
+
+function Toggle({
+  checked,
+  onClick,
+  disabled,
+}: {
+  checked: boolean;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`inline-flex min-w-16 items-center justify-center rounded-full border px-3 py-1 text-xs font-medium transition ${
+        checked
+          ? "border-emerald-500 bg-emerald-500 text-white"
+          : "border-border bg-white text-muted"
+      } ${disabled ? "cursor-not-allowed opacity-60" : "hover:border-accent hover:text-accent"}`}
+    >
+      {checked ? "已开启" : "未开启"}
+    </button>
+  );
+}
+
 export default function AdminPermissionsPage() {
   const [role, setRole] = useState<string | null>(null);
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
+  const [savingKey, setSavingKey] = useState<string | null>(null);
 
   const isSuperAdmin = role === "SUPER_ADMIN";
 
@@ -33,6 +173,7 @@ export default function AdminPermissionsPage() {
       setLoading(false);
       return;
     }
+
     const me = await meRes.json();
     setRole(me.role ?? null);
 
@@ -50,7 +191,7 @@ export default function AdminPermissionsPage() {
   }
 
   useEffect(() => {
-    load();
+    void load();
   }, []);
 
   const sortedMembers = useMemo(
@@ -58,7 +199,17 @@ export default function AdminPermissionsPage() {
     [members]
   );
 
-  async function updateMember(id: string, patch: Record<string, unknown>) {
+  const stats = useMemo(() => {
+    const superAdmins = sortedMembers.filter((item) => item.role === "SUPER_ADMIN").length;
+    const admins = sortedMembers.filter((item) => item.role === "ADMIN").length;
+    const membersOnly = sortedMembers.filter((item) => item.role !== "SUPER_ADMIN" && item.role !== "ADMIN").length;
+    return { superAdmins, admins, membersOnly, total: sortedMembers.length };
+  }, [sortedMembers]);
+
+  async function updateMember(id: string, patch: Partial<Record<EditablePermissionKey, boolean>>) {
+    const patchKey = Object.keys(patch)[0] ?? "unknown";
+    setSavingKey(`${id}:${patchKey}`);
+
     const res = await fetch(`/api/admin/members/${id}`, {
       method: "PATCH",
       credentials: "include",
@@ -66,11 +217,19 @@ export default function AdminPermissionsPage() {
       body: JSON.stringify(patch),
     });
     const data = await res.json().catch(() => ({}));
+
     if (!res.ok) {
+      setSavingKey(null);
       setMessage(data.error ?? "更新失败");
       return;
     }
-    setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, ...data, account: data.account ?? data.email ?? m.account } : m)));
+
+    setMembers((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, ...data, account: data.account ?? data.email ?? item.account } : item
+      )
+    );
+    setSavingKey(null);
     setMessage("权限已更新");
   }
 
@@ -82,75 +241,191 @@ export default function AdminPermissionsPage() {
 
   return (
     <div className="max-w-6xl space-y-6">
-      <header>
-        <h1 className="font-serif text-xl font-bold text-primary">权限管理</h1>
-        <p className="text-sm text-muted mt-1">
-          仅主管理员可操作。用于分配账号的内容权限，避免误删和越权修改。
-        </p>
-        {message && <p className="text-sm text-accent mt-2">{message}</p>}
+      <header className="rounded-2xl border border-border bg-surface-elevated p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-2">
+            <div className="inline-flex rounded-full border border-accent/20 bg-accent/10 px-3 py-1 text-xs font-medium text-accent">
+              企业后台权限中枢
+            </div>
+            <h1 className="font-serif text-2xl font-bold text-primary">权限授予</h1>
+            <p className="max-w-3xl text-sm leading-6 text-muted">
+              这里不再展示难读的权限表，而是按角色和账号逐一说明。你可以直接看到每个账号属于哪一层、哪些能力是固定的、哪些能力是可授权的。
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <StatCard label="总账号数" value={String(stats.total)} />
+            <StatCard label="主管理员" value={String(stats.superAdmins)} />
+            <StatCard label="子管理员" value={String(stats.admins)} />
+            <StatCard label="会员" value={String(stats.membersOnly)} />
+          </div>
+        </div>
+
+        {message && <p className="mt-4 text-sm text-accent">{message}</p>}
       </header>
 
-      <section className="rounded-xl border border-border bg-surface-elevated p-4 text-sm text-muted space-y-1">
-        <p>功能说明：</p>
-        <p>1. `添加会员`：允许子管理员创建会员账号。</p>
-        <p>1.1 `发布免审`：开启后，该账号新增内容可直接发布（无需审核）。</p>
-        <p>2. `改自己/改会员/改全部`：直接修改内容的范围权限。</p>
-        <p>3. `删自己/删会员/删全部`：直接删除内容的范围权限。</p>
-        <p>4. 未开通修改权限时，子管理员和会员只能提交“修改申请”走审核。</p>
+      <section className="grid gap-4 lg:grid-cols-3">
+        {ROLE_CARDS.map((item) => (
+          <article key={item.role} className={`rounded-2xl border p-5 ${item.tone}`}>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h2 className="font-serif text-lg font-semibold">{item.title}</h2>
+              <span className="rounded-full border border-current/20 px-2.5 py-1 text-[11px] font-medium">
+                {item.role}
+              </span>
+            </div>
+            <div className="space-y-2 text-sm leading-6">
+              {item.bullets.map((bullet) => (
+                <p key={bullet}>{bullet}</p>
+              ))}
+            </div>
+          </article>
+        ))}
       </section>
 
-      <section className="rounded-xl border border-border bg-surface-elevated p-4 overflow-x-auto">
-        <table className="w-full text-sm border-collapse">
-          <thead>
-            <tr className="border-b border-border">
-              <th className="text-left py-2">账号</th>
-                <th className="text-left py-2">角色</th>
-                <th className="text-left py-2">发布免审</th>
-                <th className="text-left py-2">添加会员</th>
-              <th className="text-left py-2">改自己</th>
-              <th className="text-left py-2">改会员</th>
-              <th className="text-left py-2">改全部</th>
-              <th className="text-left py-2">删自己</th>
-              <th className="text-left py-2">删会员</th>
-              <th className="text-left py-2">删全部</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sortedMembers.map((m) => (
-              <tr key={m.id} className="border-b border-border last:border-0">
-                <td className="py-2 pr-4">
-                  <div className="text-primary">{m.account}</div>
-                  <div className="text-xs text-muted">{m.name || "未命名"}</div>
-                </td>
-                <td className="py-2 pr-4 text-muted">
-                  {m.role === "SUPER_ADMIN" ? "主管理员" : m.role === "ADMIN" ? "子管理员" : "会员"}
-                </td>
-                <td className="py-2 pr-4"><Toggle checked={m.canPublishWithoutReview} disabled={m.role === "SUPER_ADMIN"} onClick={() => updateMember(m.id, { canPublishWithoutReview: !m.canPublishWithoutReview })} /></td>
-                <td className="py-2 pr-4"><Toggle checked={m.canManageMembers} disabled={m.role === "SUPER_ADMIN"} onClick={() => updateMember(m.id, { canManageMembers: !m.canManageMembers })} /></td>
-                <td className="py-2 pr-4"><Toggle checked={m.canEditOwnContent} disabled={m.role === "SUPER_ADMIN"} onClick={() => updateMember(m.id, { canEditOwnContent: !m.canEditOwnContent })} /></td>
-                <td className="py-2 pr-4"><Toggle checked={m.canEditMemberContent} disabled={m.role === "SUPER_ADMIN"} onClick={() => updateMember(m.id, { canEditMemberContent: !m.canEditMemberContent })} /></td>
-                <td className="py-2 pr-4"><Toggle checked={m.canEditAllContent} disabled={m.role === "SUPER_ADMIN"} onClick={() => updateMember(m.id, { canEditAllContent: !m.canEditAllContent })} /></td>
-                <td className="py-2 pr-4"><Toggle checked={m.canDeleteOwnContent} disabled={m.role === "SUPER_ADMIN"} onClick={() => updateMember(m.id, { canDeleteOwnContent: !m.canDeleteOwnContent })} /></td>
-                <td className="py-2 pr-4"><Toggle checked={m.canDeleteMemberContent} disabled={m.role === "SUPER_ADMIN"} onClick={() => updateMember(m.id, { canDeleteMemberContent: !m.canDeleteMemberContent })} /></td>
-                <td className="py-2 pr-4"><Toggle checked={m.canDeleteAllContent} disabled={m.role === "SUPER_ADMIN"} onClick={() => updateMember(m.id, { canDeleteAllContent: !m.canDeleteAllContent })} /></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <section className="rounded-2xl border border-border bg-surface-elevated p-5">
+        <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
+          <div className="rounded-xl border border-border bg-surface p-4">
+            <p className="text-sm font-semibold text-primary">授予原则</p>
+            <div className="mt-3 space-y-2 text-sm leading-6 text-muted">
+              <p>1. 会员默认只走审核流，不能直接发布，也不能参与后台管理。</p>
+              <p>2. 子管理员只保留协作型权限，例如新增会员、编辑会员内容、删除会员内容。</p>
+              <p>3. 主管理员权限固定，不在这里做拆分，避免负责人权限被误改。</p>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-dashed border-border bg-surface p-4">
+            <p className="text-sm font-semibold text-primary">页面阅读方式</p>
+            <div className="mt-3 space-y-2 text-sm leading-6 text-muted">
+              <p>1. 先看账号顶部的角色标签，确认这是会员、子管理员还是主管理员。</p>
+              <p>2. 再看“固定能力”，这里显示该角色天然拥有、不能在本页拆掉的权限。</p>
+              <p>3. 最后看“可授权能力”，只有子管理员会出现可切换开关。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        {sortedMembers.map((member) => {
+          const fixedLabels = fixedPermissionLabels(member);
+          const editable = member.role === "ADMIN";
+
+          return (
+            <article key={member.id} className="rounded-2xl border border-border bg-surface-elevated p-5 shadow-sm">
+              <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className={`rounded-full border px-3 py-1 text-xs font-medium ${roleTone(member.role)}`}>
+                      {formatRole(member.role)}
+                    </span>
+                    <span className="rounded-full border border-border bg-surface px-3 py-1 text-xs text-muted">
+                      {formatMemberType(member.memberType)}
+                    </span>
+                    <span className="rounded-full border border-border bg-surface px-3 py-1 text-xs text-muted">
+                      创建于 {formatDate(member.createdAt)}
+                    </span>
+                  </div>
+
+                  <div>
+                    <h2 className="text-lg font-semibold text-primary">{member.name?.trim() || "未命名账号"}</h2>
+                    <p className="mt-1 text-sm text-muted">{member.account}</p>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-border bg-surface px-4 py-3 text-sm text-muted xl:min-w-[260px]">
+                  {member.role === "SUPER_ADMIN" ? (
+                    <p>负责人账号，权限固定为最高级，不建议在此页做细分操作。</p>
+                  ) : member.role === "ADMIN" ? (
+                    <p>这是企业员工账号，可按需要授予协作权限，但不会拥有免审发布和全局权限。</p>
+                  ) : (
+                    <p>这是普通会员账号，只可投稿和跟进审核状态，本页不提供额外授权。</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-5 grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+                <section className="rounded-xl border border-border bg-surface p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <h3 className="text-sm font-semibold text-primary">固定能力</h3>
+                    <span className="text-xs text-muted">角色自动生效</span>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {fixedLabels.length > 0 ? (
+                      fixedLabels.map((label) => (
+                        <span
+                          key={label}
+                          className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700"
+                        >
+                          {label}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-600">
+                        无额外固定后台权限
+                      </span>
+                    )}
+                  </div>
+                </section>
+
+                <section className="rounded-xl border border-border bg-surface p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <h3 className="text-sm font-semibold text-primary">可授权能力</h3>
+                    <span className="text-xs text-muted">
+                      {editable ? "仅对子管理员开放" : "当前角色不可单独授予"}
+                    </span>
+                  </div>
+
+                  {editable ? (
+                    <div className="mt-4 space-y-3">
+                      {EDITABLE_PERMISSIONS.map((permission) => {
+                        const isSaving = savingKey === `${member.id}:${permission.key}`;
+                        return (
+                          <div
+                            key={permission.key}
+                            className="flex flex-col gap-3 rounded-xl border border-border bg-surface-elevated p-4 md:flex-row md:items-center md:justify-between"
+                          >
+                            <div className="space-y-1">
+                              <p className="text-sm font-medium text-primary">{permission.label}</p>
+                              <p className="text-xs leading-5 text-muted">{permission.description}</p>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                              {isSaving && <span className="text-xs text-muted">保存中...</span>}
+                              <Toggle
+                                checked={member[permission.key]}
+                                disabled={isSaving}
+                                onClick={() =>
+                                  void updateMember(member.id, {
+                                    [permission.key]: !member[permission.key],
+                                  })
+                                }
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="mt-4 rounded-xl border border-dashed border-border bg-surface-elevated p-4 text-sm leading-6 text-muted">
+                      {member.role === "SUPER_ADMIN"
+                        ? "主管理员权限固定，不在此页拆分开关。"
+                        : "会员不参与后台管理，本页不提供可切换权限。"}
+                    </div>
+                  )}
+                </section>
+              </div>
+            </article>
+          );
+        })}
       </section>
     </div>
   );
 }
 
-function Toggle({ checked, onClick, disabled }: { checked: boolean; onClick: () => void; disabled?: boolean }) {
+function StatCard({ label, value }: { label: string; value: string }) {
   return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      className={`text-xs px-2 py-1 rounded border ${checked ? "border-green-600 text-green-700" : "border-border text-muted"} ${disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-surface"}`}
-    >
-      {checked ? "开" : "关"}
-    </button>
+    <div className="rounded-xl border border-border bg-surface px-4 py-3 text-center">
+      <div className="text-lg font-semibold text-primary">{value}</div>
+      <div className="mt-1 text-xs text-muted">{label}</div>
+    </div>
   );
 }

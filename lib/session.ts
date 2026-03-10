@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { asMemberType, ensureEffectiveMemberType, type MemberType } from "@/lib/member-access";
+import { resolvePermissionFlags } from "@/lib/member-permissions";
 
 export type Session = {
   sub: string;
@@ -96,6 +97,18 @@ export async function getSession(): Promise<Session | null> {
     rankingWeight: dbMember.rankingWeight,
   });
 
+  const permissions = resolvePermissionFlags({
+    role: dbMember.role ?? payload.role ?? null,
+    canPublishWithoutReview: dbMember.canPublishWithoutReview ?? false,
+    canManageMembers: dbMember.canManageMembers ?? false,
+    canDeleteOwnContent: dbMember.canDeleteOwnContent ?? false,
+    canDeleteMemberContent: dbMember.canDeleteMemberContent ?? false,
+    canDeleteAllContent: dbMember.canDeleteAllContent ?? false,
+    canEditOwnContent: dbMember.canEditOwnContent ?? false,
+    canEditMemberContent: dbMember.canEditMemberContent ?? false,
+    canEditAllContent: dbMember.canEditAllContent ?? false,
+  });
+
   return {
     sub: payload.sub,
     account: dbMember.email,
@@ -105,14 +118,14 @@ export async function getSession(): Promise<Session | null> {
     memberType: asMemberType(effective.memberType),
     rankingWeight: effective.rankingWeight,
     memberTypeExpiresAt: dbMember.memberTypeExpiresAt?.toISOString() ?? null,
-    canPublishWithoutReview: dbMember.canPublishWithoutReview ?? false,
-    canManageMembers: dbMember.canManageMembers ?? false,
-    canDeleteOwnContent: dbMember.canDeleteOwnContent ?? false,
-    canDeleteMemberContent: dbMember.canDeleteMemberContent ?? false,
-    canDeleteAllContent: dbMember.canDeleteAllContent ?? false,
-    canEditOwnContent: dbMember.canEditOwnContent ?? false,
-    canEditMemberContent: dbMember.canEditMemberContent ?? false,
-    canEditAllContent: dbMember.canEditAllContent ?? false,
+    canPublishWithoutReview: permissions.canPublishWithoutReview,
+    canManageMembers: permissions.canManageMembers,
+    canDeleteOwnContent: permissions.canDeleteOwnContent,
+    canDeleteMemberContent: permissions.canDeleteMemberContent,
+    canDeleteAllContent: permissions.canDeleteAllContent,
+    canEditOwnContent: permissions.canEditOwnContent,
+    canEditMemberContent: permissions.canEditMemberContent,
+    canEditAllContent: permissions.canEditAllContent,
   };
 }
 

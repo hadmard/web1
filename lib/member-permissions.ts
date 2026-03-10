@@ -1,0 +1,85 @@
+import type { ContentStatus } from "@/lib/member-access";
+
+export type MemberRole = "SUPER_ADMIN" | "ADMIN" | "MEMBER";
+
+export type PermissionFlags = {
+  canPublishWithoutReview: boolean;
+  canManageMembers: boolean;
+  canDeleteOwnContent: boolean;
+  canDeleteMemberContent: boolean;
+  canDeleteAllContent: boolean;
+  canEditOwnContent: boolean;
+  canEditMemberContent: boolean;
+  canEditAllContent: boolean;
+};
+
+type PermissionInput = {
+  role: string | null | undefined;
+} & Partial<PermissionFlags>;
+
+const EMPTY_FLAGS: PermissionFlags = {
+  canPublishWithoutReview: false,
+  canManageMembers: false,
+  canDeleteOwnContent: false,
+  canDeleteMemberContent: false,
+  canDeleteAllContent: false,
+  canEditOwnContent: false,
+  canEditMemberContent: false,
+  canEditAllContent: false,
+};
+
+export function normalizeMemberRole(role: string | null | undefined): MemberRole {
+  if (role === "SUPER_ADMIN" || role === "ADMIN") return role;
+  return "MEMBER";
+}
+
+export function resolvePermissionFlags(input: PermissionInput): PermissionFlags {
+  const role = normalizeMemberRole(input.role);
+
+  if (role === "SUPER_ADMIN") {
+    return {
+      canPublishWithoutReview: true,
+      canManageMembers: true,
+      canDeleteOwnContent: true,
+      canDeleteMemberContent: true,
+      canDeleteAllContent: true,
+      canEditOwnContent: true,
+      canEditMemberContent: true,
+      canEditAllContent: true,
+    };
+  }
+
+  if (role === "ADMIN") {
+    return {
+      canPublishWithoutReview: false,
+      canManageMembers: input.canManageMembers === true,
+      canDeleteOwnContent: input.canDeleteOwnContent === true,
+      canDeleteMemberContent: input.canDeleteMemberContent === true,
+      canDeleteAllContent: false,
+      canEditOwnContent: input.canEditOwnContent === true,
+      canEditMemberContent: input.canEditMemberContent === true,
+      canEditAllContent: false,
+    };
+  }
+
+  return { ...EMPTY_FLAGS };
+}
+
+export function resolveSubmissionStatus(options?: {
+  reviewRequired?: boolean;
+  role?: string | null;
+}): ContentStatus {
+  const role = normalizeMemberRole(options?.role);
+  const reviewRequired = options?.reviewRequired ?? true;
+
+  if (role === "SUPER_ADMIN") return "approved";
+  if (!reviewRequired && role === "ADMIN") return "approved";
+  return "pending";
+}
+
+export function mergeEffectivePermissionFlags<T extends PermissionInput>(input: T): T & PermissionFlags {
+  return {
+    ...input,
+    ...resolvePermissionFlags(input),
+  };
+}

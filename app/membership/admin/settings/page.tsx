@@ -261,7 +261,7 @@ export default function AdminSettingsPage() {
 
       <form onSubmit={handleSaveSettings} className="rounded-xl border border-border bg-surface-elevated p-6 space-y-4">
         <label className="flex items-center justify-between gap-4 text-sm">
-          <span className="text-primary">启用内容审核（关闭后上传默认直接发布）</span>
+          <span className="text-primary">启用内容审核（关闭后仅子管理员后台直发，会员投稿仍需审核）</span>
           <input
             type="checkbox"
             checked={settings.contentReviewRequired}

@@ -38,7 +38,8 @@ export async function POST(request: NextRequest) {
   const reviewRequired = await isContentReviewRequired();
   const submissionStatus = defaultContentStatusForSubmission({
     reviewRequired,
-    canPublishWithoutReview: session.role === "SUPER_ADMIN" || session.canPublishWithoutReview === true,
+    role: session.role,
+    canPublishWithoutReview: session.canPublishWithoutReview === true,
   });
 
   const body = await request.json().catch(() => ({}));

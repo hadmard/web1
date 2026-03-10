@@ -42,7 +42,7 @@ export async function GET() {
 
     return NextResponse.json({
       hasGeminiApiKey: !!map.get(APP_SETTING_KEYS.GEMINI_API_KEY),
-      contentReviewRequired: parseBool(map.get(APP_SETTING_KEYS.CONTENT_REVIEW_REQUIRED), false),
+      contentReviewRequired: parseBool(map.get(APP_SETTING_KEYS.CONTENT_REVIEW_REQUIRED), true),
       memberDownloadStandardEnabled:
         parseBool(map.get(APP_SETTING_KEYS.MEMBER_DOWNLOAD_STANDARD_ENABLED), true),
       memberDownloadReportEnabled:
