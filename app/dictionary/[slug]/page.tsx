@@ -10,6 +10,7 @@ import { DefinitionBlock } from "@/components/DefinitionBlock";
 import { JsonLd } from "@/components/JsonLd";
 import { RichContent } from "@/components/RichContent";
 import { getSiteVisualSettings } from "@/lib/site-visual-settings";
+import { PUBLIC_SITE_URL } from "@/lib/public-site-config";
 
 export const revalidate = 300;
 
@@ -191,7 +192,7 @@ export default async function TermPage({ params }: Props) {
       dateModified: article.updatedAt,
     };
 
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://cnzhengmu.com";
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? PUBLIC_SITE_URL;
     const termUrl = `${baseUrl}/dictionary/${article.slug}`;
     const breadcrumbSchema = {
       "@context": "https://schema.org",
@@ -248,7 +249,7 @@ export default async function TermPage({ params }: Props) {
     dateModified: term.updatedAt,
   };
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://cnzhengmu.com";
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? PUBLIC_SITE_URL;
   const termUrl = `${baseUrl}/dictionary/${term.slug}`;
   const breadcrumbSchema = {
     "@context": "https://schema.org",

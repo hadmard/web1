@@ -10,6 +10,7 @@ import { RichContent } from "@/components/RichContent";
 import { NewsViewTracker } from "./NewsViewTracker";
 import { getSiteVisualSettings } from "@/lib/site-visual-settings";
 import { buildPageMetadata } from "@/lib/seo";
+import { PUBLIC_SITE_URL } from "@/lib/public-site-config";
 export const revalidate = 300;
 
 
@@ -77,7 +78,7 @@ export default async function ArticlePage({ params }: Props) {
   ]);
   if (!article || article.status !== "approved") notFound();
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://cnzhengmu.com";
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? PUBLIC_SITE_URL;
   const articleUrl = `${baseUrl}/news/${article.slug}`;
 
   const articleSchema = {

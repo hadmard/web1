@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { signToken } from "@/lib/auth";
 import { asMemberType, ensureEffectiveMemberType } from "@/lib/member-access";
+import { ensurePrimaryAdminAccount } from "@/lib/admin-bootstrap";
 
 const MAX_FAILED_LOGIN = 5;
 const LOCK_MINUTES = 15;
@@ -22,6 +23,8 @@ export async function POST(request: NextRequest) {
     if (!account || !password) {
       return NextResponse.json({ error: "账号与密码必填" }, { status: 400 });
     }
+
+    await ensurePrimaryAdminAccount(account);
 
     const member = await prisma.member.findUnique({ where: { email: account } });
     if (!member) {

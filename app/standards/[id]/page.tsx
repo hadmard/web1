@@ -16,6 +16,7 @@ import { parseStandardStructuredHtml } from "@/lib/standard-structured";
 import { getCategories } from "@/lib/categories";
 import { getSiteVisualSettings } from "@/lib/site-visual-settings";
 import { buildPageMetadata } from "@/lib/seo";
+import { PUBLIC_SITE_URL } from "@/lib/public-site-config";
 
 export const dynamic = "force-dynamic";
 
@@ -102,7 +103,7 @@ export default async function StandardPage({ params }: Props) {
 
   if (article) {
     const structured = parseStandardStructuredHtml(article.content ?? "");
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://cnzhengmu.com";
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? PUBLIC_SITE_URL;
     const articleUrl = `${baseUrl}/standards/${article.slug}`;
     const schema = {
       "@context": "https://schema.org",

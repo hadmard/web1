@@ -36,6 +36,8 @@ export type SiteVisualSettings = {
   ads: Record<HomeAdKey, SiteAdSlot>;
 };
 
+const LEGACY_VISUAL_PREFIXES = ["/images/seedance2/"];
+
 export const BACKGROUND_IMAGE_FIELDS: Array<{
   key: BackgroundImageKey;
   label: string;
@@ -123,6 +125,16 @@ function toBool(value: unknown, fallback: boolean) {
   return typeof value === "boolean" ? value : fallback;
 }
 
+function sanitizeImageUrl(value: string) {
+  if (!value) return "";
+  const normalized = value.trim();
+  if (!normalized) return "";
+  if (LEGACY_VISUAL_PREFIXES.some((prefix) => normalized.startsWith(prefix))) {
+    return "";
+  }
+  return normalized;
+}
+
 export function normalizeSiteVisualSettings(input: unknown): SiteVisualSettings {
   const raw = (input && typeof input === "object" ? input : {}) as Partial<SiteVisualSettings>;
   const rawBackgrounds = (raw.backgrounds && typeof raw.backgrounds === "object"
@@ -133,7 +145,7 @@ export function normalizeSiteVisualSettings(input: unknown): SiteVisualSettings 
     : {}) as Partial<Record<HomeAdKey, Partial<SiteAdSlot>>>;
 
   const backgrounds = BACKGROUND_IMAGE_FIELDS.reduce((acc, field) => {
-    const incoming = toText(rawBackgrounds[field.key]);
+    const incoming = sanitizeImageUrl(toText(rawBackgrounds[field.key]));
     acc[field.key] = incoming || DEFAULT_SITE_VISUAL_SETTINGS.backgrounds[field.key];
     return acc;
   }, {} as Record<BackgroundImageKey, string>);
@@ -144,7 +156,7 @@ export function normalizeSiteVisualSettings(input: unknown): SiteVisualSettings 
     acc[field.key] = {
       enabled: toBool(incoming.enabled, fallback.enabled),
       title: toText(incoming.title) || fallback.title,
-      imageUrl: toText(incoming.imageUrl) || fallback.imageUrl,
+      imageUrl: sanitizeImageUrl(toText(incoming.imageUrl)) || fallback.imageUrl,
       href: toText(incoming.href) || fallback.href,
     };
     return acc;

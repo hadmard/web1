@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
+import { PUBLIC_SITE_URL } from "@/lib/public-site-config";
 
-const FALLBACK_SITE_URL = "https://cnzhengmu.com";
+const FALLBACK_SITE_URL = PUBLIC_SITE_URL;
 
 export const SITE_NAME = "整木网";
 export const SITE_TITLE = `${SITE_NAME} | 整体木作行业知识共享平台`;

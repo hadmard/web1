@@ -3,6 +3,7 @@ import Image from "next/image";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { getSiteVisualSettings } from "@/lib/site-visual-settings";
+import { PUBLIC_CONTACT_ITEMS } from "@/lib/public-site-config";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -20,19 +21,6 @@ export default async function MembershipPage() {
   }
 
   const membershipHero = visualSettings.backgrounds.membershipHero?.trim() || "";
-  const contactItems = [
-    process.env.NEXT_PUBLIC_MEMBER_CONTACT_EMAIL?.trim()
-      ? `会员咨询：${process.env.NEXT_PUBLIC_MEMBER_CONTACT_EMAIL.trim()}`
-      : "",
-    process.env.NEXT_PUBLIC_BUSINESS_CONTACT_EMAIL?.trim()
-      ? `商务合作：${process.env.NEXT_PUBLIC_BUSINESS_CONTACT_EMAIL.trim()}`
-      : "",
-    process.env.NEXT_PUBLIC_CONTACT_PHONE?.trim()
-      ? `联系电话：${process.env.NEXT_PUBLIC_CONTACT_PHONE.trim()}`
-      : "",
-    "工作时间：周一至周五 09:00-18:00",
-  ].filter(Boolean);
-
   return (
     <div className="min-h-screen">
       <section className="apple-hero relative overflow-hidden border-b border-border py-16 sm:py-20">
@@ -104,7 +92,7 @@ export default async function MembershipPage() {
           <article className="glass-panel p-5">
             <h2 className="font-serif text-lg font-semibold text-primary">联系方式</h2>
             <ul className="mt-3 space-y-2 text-sm text-muted">
-              {contactItems.map((item) => (
+              {PUBLIC_CONTACT_ITEMS.map((item) => (
                 <li key={item}>{item}</li>
               ))}
             </ul>

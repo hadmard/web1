@@ -10,6 +10,7 @@ import { RichContent } from "@/components/RichContent";
 import { parseBrandStructuredHtml } from "@/lib/brand-structured";
 import { getSiteVisualSettings } from "@/lib/site-visual-settings";
 import { buildPageMetadata } from "@/lib/seo";
+import { PUBLIC_SITE_URL } from "@/lib/public-site-config";
 
 export const revalidate = 300;
 
@@ -189,7 +190,7 @@ export default async function BrandDetailPage({ params }: Props) {
   const brandDetailHero = visualSettings.backgrounds.brandDetailHero?.trim() || "";
 
   const profile = parseBrandStructuredHtml(article.content ?? "");
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://cnzhengmu.com";
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? PUBLIC_SITE_URL;
   const articleUrl = `${baseUrl}/brands/${article.slug}`;
   const articleSchema = {
     "@context": "https://schema.org",
