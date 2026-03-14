@@ -87,16 +87,29 @@ const jsonLdGraph = [
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const categories = await getCategories();
 
-  const navItems = navOrder.map((href) => {
-    const cat = categories.find((c) => c.href === href || (href === "/membership" && c.href === "/membership"));
-    return {
-      href,
-      label: cat?.title ?? (href === "/membership" ? "会员系统" : href),
-      isMembership: href === "/membership",
-      desc: cat?.desc,
-      subcategories: cat?.subcategories?.length ? cat.subcategories : undefined,
-    };
-  });
+  const navItems = navOrder
+    .map((href) => {
+      const cat = categories.find((c) => c.href === href || (href === "/membership" && c.href === "/membership"));
+      return {
+        href,
+        label: cat?.title ?? (href === "/membership" ? "会员系统" : href),
+        isMembership: href === "/membership",
+        desc: cat?.desc,
+        subcategories: cat?.subcategories?.length ? cat.subcategories : undefined,
+      };
+    })
+    .flatMap((item) =>
+      item.href === "/membership"
+        ? [
+            {
+              href: "https://jiu.cnzhengmu.com",
+              label: "整木旧站",
+              external: true,
+            },
+            item,
+          ]
+        : [item],
+    );
 
   return (
     <html lang="zh-CN" className="scroll-smooth">

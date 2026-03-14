@@ -8,6 +8,7 @@ export type NavItem = {
   href: string;
   label: string;
   isMembership?: boolean;
+  external?: boolean;
   desc?: string;
   subcategories?: { href: string; label: string }[];
 };
@@ -173,7 +174,7 @@ export function Header({
           </Link>
 
           <nav className="hidden md:flex items-center gap-1.5 sm:gap-2 overflow-x-auto md:overflow-visible no-scrollbar" aria-label="主导航">
-            {navItems.map(({ href, label, isMembership, subcategories }) => {
+            {navItems.map(({ href, label, isMembership, external, subcategories }) => {
               const isMemberItem = href === "/membership";
               const hasSubcategories = Boolean(subcategories && subcategories.length > 0);
               const showBrandsFallback = href === "/brands" && !hasSubcategories;
@@ -195,6 +196,8 @@ export function Header({
                 >
                   <Link
                     href={finalHref}
+                    target={external ? "_blank" : undefined}
+                    rel={external ? "noreferrer" : undefined}
                     className={`nav-pill inline-flex items-center rounded-full px-3.5 py-1.5 text-[13px] sm:text-sm font-medium whitespace-nowrap ${
                       isMembership
                         ? "text-white bg-[var(--color-accent)] hover:brightness-105"
@@ -332,7 +335,7 @@ export function Header({
             </div>
 
             <nav className="mt-3 space-y-2" aria-label="移动端主导航">
-              {navItems.map(({ href, label, isMembership, subcategories }) => {
+              {navItems.map(({ href, label, isMembership, external, subcategories }) => {
                 const isMemberItem = href === "/membership";
                 const finalLabel = isMemberItem && memberGreeting ? memberGreeting : label;
                 const finalHref = isMemberItem ? memberHref : href;
@@ -352,6 +355,8 @@ export function Header({
                     <div className="flex items-center gap-1.5">
                       <Link
                         href={finalHref}
+                        target={external ? "_blank" : undefined}
+                        rel={external ? "noreferrer" : undefined}
                         onClick={closeMobileMenu}
                         className={`nav-pill flex-1 inline-flex items-center justify-between rounded-full px-3.5 py-2 text-sm font-medium ${
                           isMembership
