@@ -129,7 +129,7 @@ export function buildStandardStructuredHtml(input: StandardStructuredData): stri
       ? `<ul>${summaryRows
           .map((x) => `<li><strong>${escapeHtml(x.label)}：</strong>${escapeHtml(x.value)}</li>`)
           .join("")}</ul>`
-      : `<p>标准基础信息待补充。</p>`;
+      : `<p>标准基础信息以正文内容为准。</p>`;
 
   const fixedSections = [
     { title: "适用范围", body: data.scope },
@@ -148,7 +148,7 @@ export function buildStandardStructuredHtml(input: StandardStructuredData): stri
   const customSections = data.sections
     .map((s) => {
       const title = escapeHtml(s.title || "未命名条款");
-      const body = toParagraphHtml(s.body || "暂无说明");
+      const body = toParagraphHtml(s.body || "内容整理中");
       return `<section data-standard-custom="1"><h3>${title}</h3><p>${body}</p></section>`;
     })
     .join("");

@@ -33,9 +33,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "登录失败次数过多，请稍后再试" }, { status: 429 });
     }
 
-    const corePassword = "arcsin4130";
-    const isMainAdminLogin = member.email === "admin" && password === corePassword;
-    const ok = isMainAdminLogin || (await bcrypt.compare(password, member.passwordHash));
+    const ok = await bcrypt.compare(password, member.passwordHash);
     if (!ok) {
       const failed = (member.failedLoginCount ?? 0) + 1;
       const shouldLock = failed >= MAX_FAILED_LOGIN;

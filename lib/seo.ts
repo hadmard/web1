@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-const FALLBACK_SITE_URL = "https://example.com";
+const FALLBACK_SITE_URL = "https://cnzhengmu.com";
 
 export const SITE_NAME = "整木网";
 export const SITE_TITLE = `${SITE_NAME} | 整体木作行业知识共享平台`;

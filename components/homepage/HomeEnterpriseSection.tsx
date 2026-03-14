@@ -27,11 +27,14 @@ export function HomeEnterpriseSection({
   enterprises: EnterpriseItem[];
   regionCounts: RegionCount[];
 }) {
+  const hasMiddleAdImage = middleAd.imageUrl.trim().length > 0;
+  const hasEnterpriseImage = enterpriseImage.trim().length > 0;
+
   return (
     <section className="section-tone-c border-b border-border py-14 sm:py-16">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 grid lg:grid-cols-3 gap-4">
         <article data-reveal="fade-left" className="glass-panel spotlight-card p-5 lg:col-span-2" data-mouse-zone>
-          {middleAd.enabled ? (
+          {middleAd.enabled && hasMiddleAdImage ? (
             <Link href={middleAd.href || "/membership"} className="block">
               <div className="showcase-frame media-zoom-smooth mb-3 overflow-hidden rounded-xl border border-border">
                 <Image
@@ -48,14 +51,18 @@ export function HomeEnterpriseSection({
           ) : (
             <div>
               <div className="showcase-frame media-zoom-smooth mb-4 overflow-hidden rounded-xl border border-border">
-                <Image
-                  src={enterpriseImage}
-                  alt=""
-                  width={1600}
-                  height={900}
-                  sizes="(max-width: 1024px) 100vw, 760px"
-                  className="showcase-image h-40 sm:h-48"
-                />
+                {hasEnterpriseImage ? (
+                  <Image
+                    src={enterpriseImage}
+                    alt=""
+                    width={1600}
+                    height={900}
+                    sizes="(max-width: 1024px) 100vw, 760px"
+                    className="showcase-image h-40 sm:h-48"
+                  />
+                ) : (
+                  <div className="h-40 sm:h-48 bg-gradient-to-br from-surface-elevated via-surface to-surface-elevated" />
+                )}
               </div>
               <p className="text-[13px] sm:text-sm text-muted mb-2">品牌生态</p>
               <h3 className="font-serif text-lg font-semibold text-primary mb-3">企业入口</h3>
@@ -63,7 +70,7 @@ export function HomeEnterpriseSection({
                 {enterprises.slice(0, 6).map((enterprise) => (
                   <Link key={enterprise.id} href={`/enterprise/${enterprise.id}`} className="interactive-lift spotlight-card rounded-xl border border-border bg-surface p-3 block" data-mouse-zone>
                     <p className="text-sm font-medium text-primary">{enterprise.member.name ?? "企业会员"}</p>
-                    <p className="text-[13px] text-muted mt-1">{enterprise.area || enterprise.region || "区域待补充"}</p>
+                    <p className="text-[13px] text-muted mt-1">{enterprise.area || enterprise.region || "地区信息完善中"}</p>
                     <span className="mt-2 inline-block text-xs rounded-full px-2 py-0.5 border border-border text-muted">
                       {enterprise.member.memberType === "enterprise_advanced"
                         ? "高级会员"

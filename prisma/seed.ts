@@ -4,6 +4,14 @@ import { categories as staticCategories } from "../lib/site-structure";
 
 const prisma = new PrismaClient();
 
+function getRequiredEnv(name: string) {
+  const value = process.env[name]?.trim();
+  if (!value) {
+    throw new Error(`缺少环境变量 ${name}，已停止写入默认管理员账号。`);
+  }
+  return value;
+}
+
 const categoryDefinitions: Record<string, { definitionText: string; versionLabel?: string; versionYear?: number; relatedTermSlugs?: string[]; faqs: { q: string; a: string }[] }> = {
   "/news": {
     definitionText: "本栏目用于发布整木行业趋势、企业动态、技术发展与行业活动信息，供从业者与关注者了解行业在发生什么。",
@@ -90,14 +98,17 @@ async function main() {
     },
   });
 
-  // 删除所有已有账号，仅保留唯一主管理员：账户 admin，初始密码 admin；核心密码 arcsin4130 在登录逻辑中固定、不可修改
+  // 仅在显式提供环境变量时重建主管理员账号，避免商用环境继续使用默认凭证。
   await prisma.member.deleteMany({});
-  const initialPassword = "admin";
+  const adminAccount = getRequiredEnv("ADMIN_ACCOUNT");
+  const adminPassword = getRequiredEnv("ADMIN_PASSWORD");
+  const adminName = process.env.ADMIN_NAME?.trim() || "站点管理员";
+  const initialPassword = adminPassword;
   const adminHash = await bcrypt.hash(initialPassword, 10);
   await prisma.member.create({
     data: {
-      email: "admin",
-      name: "主管理员",
+      email: adminAccount,
+      name: adminName,
       passwordHash: adminHash,
       passwordPlaintext: initialPassword,
       role: "SUPER_ADMIN",
@@ -106,7 +117,7 @@ async function main() {
       rankingWeight: 100,
     },
   });
-  console.log("已重置账号：仅保留主管理员 admin / 初始密码 admin");
+  console.log(`已重置主管理员账号：${adminAccount}`);
 
   const existing = await prisma.category.count();
   if (existing === 0) {

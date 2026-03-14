@@ -77,7 +77,7 @@ export default async function ArticlePage({ params }: Props) {
   ]);
   if (!article || article.status !== "approved") notFound();
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://example.com";
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://cnzhengmu.com";
   const articleUrl = `${baseUrl}/news/${article.slug}`;
 
   const articleSchema = {

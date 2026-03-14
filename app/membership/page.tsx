@@ -19,16 +19,32 @@ export default async function MembershipPage() {
     redirect("/membership/content/publish?tab=articles");
   }
 
+  const membershipHero = visualSettings.backgrounds.membershipHero?.trim() || "";
+  const contactItems = [
+    process.env.NEXT_PUBLIC_MEMBER_CONTACT_EMAIL?.trim()
+      ? `会员咨询：${process.env.NEXT_PUBLIC_MEMBER_CONTACT_EMAIL.trim()}`
+      : "",
+    process.env.NEXT_PUBLIC_BUSINESS_CONTACT_EMAIL?.trim()
+      ? `商务合作：${process.env.NEXT_PUBLIC_BUSINESS_CONTACT_EMAIL.trim()}`
+      : "",
+    process.env.NEXT_PUBLIC_CONTACT_PHONE?.trim()
+      ? `联系电话：${process.env.NEXT_PUBLIC_CONTACT_PHONE.trim()}`
+      : "",
+    "工作时间：周一至周五 09:00-18:00",
+  ].filter(Boolean);
+
   return (
     <div className="min-h-screen">
       <section className="apple-hero relative overflow-hidden border-b border-border py-16 sm:py-20">
-        <Image
-          src={visualSettings.backgrounds.membershipHero}
-          alt=""
-          fill
-          priority
-          className="object-cover opacity-30"
-        />
+        {membershipHero ? (
+          <Image
+            src={membershipHero}
+            alt=""
+            fill
+            priority
+            className="object-cover opacity-30"
+          />
+        ) : null}
         <div className="absolute inset-0 bg-gradient-to-b from-surface/55 via-surface/70 to-surface/88" />
         <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 text-center">
           <h1 className="font-serif text-3xl sm:text-4xl font-semibold tracking-tight text-primary">会员系统</h1>
@@ -88,10 +104,9 @@ export default async function MembershipPage() {
           <article className="glass-panel p-5">
             <h2 className="font-serif text-lg font-semibold text-primary">联系方式</h2>
             <ul className="mt-3 space-y-2 text-sm text-muted">
-              <li>会员咨询：member@zhengmu.example</li>
-              <li>商务合作：service@zhengmu.example</li>
-              <li>联系电话：400-000-0000</li>
-              <li>工作时间：周一至周五 09:00-18:00</li>
+              {contactItems.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
             </ul>
           </article>
         </div>

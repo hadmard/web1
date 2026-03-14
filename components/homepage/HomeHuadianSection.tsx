@@ -17,19 +17,25 @@ export function HomeHuadianSection({
   top10: TopItem[];
   partner: string[];
 }) {
+  const hasImage = image.trim().length > 0;
+
   return (
     <section className="section-tone-b border-b border-border py-14 sm:py-16">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <article data-reveal="zoom-soft" className="glass-panel spotlight-card p-6 sm:p-7" data-mouse-zone>
           <div className="showcase-frame media-zoom-smooth mb-4 overflow-hidden rounded-xl border border-border">
-            <Image
-              src={image}
-              alt=""
-              width={1600}
-              height={900}
-              sizes="(max-width: 1024px) 100vw, 1152px"
-              className="showcase-image h-40 sm:h-48"
-            />
+            {hasImage ? (
+              <Image
+                src={image}
+                alt=""
+                width={1600}
+                height={900}
+                sizes="(max-width: 1024px) 100vw, 1152px"
+                className="showcase-image h-40 sm:h-48"
+              />
+            ) : (
+              <div className="h-40 sm:h-48 bg-gradient-to-br from-surface-elevated via-surface to-surface-elevated" />
+            )}
           </div>
           <p className="text-[13px] sm:text-sm text-muted">信用推荐体系</p>
           <h2 className="mt-1 font-serif text-2xl sm:text-3xl font-semibold text-primary">华点榜 · 本年度信用推荐</h2>

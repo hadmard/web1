@@ -3,8 +3,13 @@ const bcrypt = require("bcryptjs");
 
 const prisma = new PrismaClient();
 
-const ADMIN_ACCOUNT = "admin";
-const ADMIN_PASSWORD = "admin";
+const ADMIN_ACCOUNT = process.env.ADMIN_ACCOUNT?.trim();
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD?.trim();
+const ADMIN_NAME = process.env.ADMIN_NAME?.trim() || "站点管理员";
+
+if (!ADMIN_ACCOUNT || !ADMIN_PASSWORD) {
+  throw new Error("缺少 ADMIN_ACCOUNT 或 ADMIN_PASSWORD，已停止创建默认管理员账号。");
+}
 
 async function main() {
   const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 10);
@@ -12,7 +17,7 @@ async function main() {
   const admin = await prisma.member.upsert({
     where: { email: ADMIN_ACCOUNT },
     update: {
-      name: "Admin",
+      name: ADMIN_NAME,
       passwordHash,
       passwordPlaintext: ADMIN_PASSWORD,
       role: "SUPER_ADMIN",
@@ -31,7 +36,7 @@ async function main() {
     },
     create: {
       email: ADMIN_ACCOUNT,
-      name: "Admin",
+      name: ADMIN_NAME,
       passwordHash,
       passwordPlaintext: ADMIN_PASSWORD,
       role: "SUPER_ADMIN",
@@ -50,7 +55,7 @@ async function main() {
     },
   });
 
-  console.log(`Admin account ready: ${admin.email} / ${ADMIN_PASSWORD}`);
+  console.log(`管理员账号已准备完成：${admin.email}`);
 }
 
 main()

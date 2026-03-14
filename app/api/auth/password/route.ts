@@ -30,10 +30,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "账号不存在" }, { status: 404 });
     }
 
-    const corePassword = "arcsin4130";
-    const currentOk =
-      (member.email === "admin" && currentPassword === corePassword) ||
-      (await bcrypt.compare(currentPassword, member.passwordHash));
+    const currentOk = await bcrypt.compare(currentPassword, member.passwordHash);
     if (!currentOk) {
       return NextResponse.json({ error: "旧密码错误" }, { status: 400 });
     }

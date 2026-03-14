@@ -70,7 +70,7 @@ export default function LoginPage() {
             value={account}
             onChange={(e) => setAccount(e.target.value)}
             required
-            placeholder="请输入账号（例如：admin）"
+            placeholder="请输入登录账号"
             className="w-full px-3 py-2 border border-[var(--color-border)] rounded bg-[var(--color-surface)] text-gray-900 dark:text-gray-100"
           />
         </div>

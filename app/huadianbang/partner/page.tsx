@@ -6,6 +6,7 @@ import { getSiteVisualSettings } from "@/lib/site-visual-settings";
 
 export default async function HuadianPartnerPage() {
   const visualSettings = await getSiteVisualSettings();
+  const heroImage = visualSettings.backgrounds.huadianPartnerHero?.trim() || "";
 
   return (
     <main className="max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-12">
@@ -22,7 +23,11 @@ export default async function HuadianPartnerPage() {
       <section className="glass-panel p-6 sm:p-8">
         <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-primary">配套商推荐</h1>
         <div className="mt-4 overflow-hidden rounded-2xl border border-border">
-          <Image src={visualSettings.backgrounds.huadianPartnerHero} alt="" width={1920} height={900} className="h-44 sm:h-56 w-full object-cover" />
+          {heroImage ? (
+            <Image src={heroImage} alt="" width={1920} height={900} className="h-44 sm:h-56 w-full object-cover" />
+          ) : (
+            <div className="h-44 sm:h-56 w-full bg-gradient-to-br from-surface-elevated via-surface to-surface-elevated" />
+          )}
         </div>
         <p className="mt-3 text-sm text-muted">{HUADIAN_DEFINITION}</p>
       </section>

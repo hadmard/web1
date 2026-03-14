@@ -131,12 +131,12 @@ export function buildBrandStructuredHtml(input: BrandStructuredData): string {
               `<li><strong>${escapeHtml(x.label)}：</strong>${escapeHtml(x.value)}</li>`
           )
           .join("")}</ul>`
-      : `<p>基础信息待补充。</p>`;
+      : `<p>基础信息以正文内容为准。</p>`;
 
   const moduleHtml = data.modules
     .map((m) => {
       const title = escapeHtml(m.title || "未命名模块");
-      const body = toParagraphHtml(m.body || "暂无说明");
+      const body = toParagraphHtml(m.body || "内容整理中");
       return `<section data-brand-module="1"><h3>${title}</h3><p>${body}</p></section>`;
     })
     .join("");

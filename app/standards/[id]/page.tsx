@@ -102,7 +102,7 @@ export default async function StandardPage({ params }: Props) {
 
   if (article) {
     const structured = parseStandardStructuredHtml(article.content ?? "");
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://example.com";
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://cnzhengmu.com";
     const articleUrl = `${baseUrl}/standards/${article.slug}`;
     const schema = {
       "@context": "https://schema.org",

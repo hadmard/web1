@@ -15,6 +15,7 @@ export default async function HuadianAnnualBrandDetailPage({ params }: Props) {
   if (!item) notFound();
   const history = getBrandAwardHistory(item.name);
   const visualSettings = await getSiteVisualSettings();
+  const heroImage = visualSettings.backgrounds.huadianAnnualBrandHero?.trim() || "";
 
   return (
     <main className="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-12">
@@ -31,7 +32,11 @@ export default async function HuadianAnnualBrandDetailPage({ params }: Props) {
       <section className="glass-panel p-6 sm:p-8">
         <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-primary">{item.name}</h1>
         <div className="mt-4 overflow-hidden rounded-2xl border border-border">
-          <Image src={visualSettings.backgrounds.huadianAnnualBrandHero} alt="" width={1600} height={900} className="h-44 sm:h-56 w-full object-cover" />
+          {heroImage ? (
+            <Image src={heroImage} alt="" width={1600} height={900} className="h-44 sm:h-56 w-full object-cover" />
+          ) : (
+            <div className="h-44 sm:h-56 w-full bg-gradient-to-br from-surface-elevated via-surface to-surface-elevated" />
+          )}
         </div>
         <p className="mt-3 text-sm text-muted">{HUADIAN_DEFINITION}</p>
         <span className="mt-3 inline-block text-xs rounded-full border border-border px-2.5 py-1 text-accent">

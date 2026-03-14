@@ -186,9 +186,10 @@ export default async function BrandDetailPage({ params }: Props) {
   const article = await findBrandArticleBySegment(segment);
   if (!article || article.status !== "approved") notFound();
   const visualSettings = await getSiteVisualSettings();
+  const brandDetailHero = visualSettings.backgrounds.brandDetailHero?.trim() || "";
 
   const profile = parseBrandStructuredHtml(article.content ?? "");
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://example.com";
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://cnzhengmu.com";
   const articleUrl = `${baseUrl}/brands/${article.slug}`;
   const articleSchema = {
     "@context": "https://schema.org",
@@ -214,13 +215,17 @@ export default async function BrandDetailPage({ params }: Props) {
 
       <h1 className="font-serif text-2xl font-bold text-primary mb-2">{article.title}</h1>
       <div className="mb-4 overflow-hidden rounded-2xl border border-border">
-        <Image
-          src={visualSettings.backgrounds.brandDetailHero}
-          alt=""
-          width={1600}
-          height={900}
-          className="h-44 sm:h-56 w-full object-cover"
-        />
+        {brandDetailHero ? (
+          <Image
+            src={brandDetailHero}
+            alt=""
+            width={1600}
+            height={900}
+            className="h-44 sm:h-56 w-full object-cover"
+          />
+        ) : (
+          <div className="h-44 sm:h-56 w-full bg-gradient-to-br from-surface-elevated via-surface to-surface-elevated" />
+        )}
       </div>
       <p className="text-xs text-muted mb-4">更新于 {article.updatedAt.toLocaleDateString("zh-CN")}</p>
 

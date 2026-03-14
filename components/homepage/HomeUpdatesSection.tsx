@@ -16,6 +16,8 @@ export function HomeUpdatesSection({
   latestNews: NewsItem[];
   hotNews: NewsItem[];
 }) {
+  const hasBanner = bannerSrc.trim().length > 0;
+
   return (
     <section className="section-tone-a border-b border-border py-14 sm:py-16">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
@@ -24,8 +26,17 @@ export function HomeUpdatesSection({
           className="showcase-frame media-zoom-smooth spotlight-card relative mb-6 overflow-hidden rounded-2xl border border-border"
           data-mouse-zone
         >
-          <Image src={bannerSrc} alt="" fill sizes="(max-width: 1024px) 100vw, 1152px" className="showcase-backdrop absolute inset-0" />
-          <Image src={bannerSrc} alt="" fill sizes="(max-width: 1024px) 100vw, 1152px" className="showcase-image absolute inset-0" />
+          {hasBanner ? (
+            <>
+              <Image src={bannerSrc} alt="" fill sizes="(max-width: 1024px) 100vw, 1152px" className="showcase-backdrop absolute inset-0" />
+              <Image src={bannerSrc} alt="" fill sizes="(max-width: 1024px) 100vw, 1152px" className="showcase-image absolute inset-0" />
+            </>
+          ) : (
+            <>
+              <div className="absolute inset-0 bg-gradient-to-r from-surface-elevated via-surface to-surface-elevated" />
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(179,142,93,0.18),transparent_32%)]" />
+            </>
+          )}
           <div className="absolute inset-0 bg-gradient-to-r from-surface/82 via-surface/45 to-transparent" />
           <div className="h-44 sm:h-56" />
         </div>

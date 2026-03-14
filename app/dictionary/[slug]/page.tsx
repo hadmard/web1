@@ -191,7 +191,7 @@ export default async function TermPage({ params }: Props) {
       dateModified: article.updatedAt,
     };
 
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://example.com";
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://cnzhengmu.com";
     const termUrl = `${baseUrl}/dictionary/${article.slug}`;
     const breadcrumbSchema = {
       "@context": "https://schema.org",
@@ -248,7 +248,7 @@ export default async function TermPage({ params }: Props) {
     dateModified: term.updatedAt,
   };
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://example.com";
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://cnzhengmu.com";
   const termUrl = `${baseUrl}/dictionary/${term.slug}`;
   const breadcrumbSchema = {
     "@context": "https://schema.org",
