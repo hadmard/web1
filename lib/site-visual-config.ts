@@ -36,8 +36,6 @@ export type SiteVisualSettings = {
   ads: Record<HomeAdKey, SiteAdSlot>;
 };
 
-const LEGACY_VISUAL_PREFIXES = ["/images/seedance2/"];
-
 export const BACKGROUND_IMAGE_FIELDS: Array<{
   key: BackgroundImageKey;
   label: string;
@@ -79,39 +77,39 @@ export const HOME_AD_FIELDS: Array<{
 export const DEFAULT_SITE_VISUAL_SETTINGS: SiteVisualSettings = {
   backgrounds: {
     homeHero: "",
-    homeUpdates: "",
-    homeStructureMarket: "",
-    homeStructureDictionary: "",
-    homeStructureStandards: "",
-    homeStructureAwards: "",
-    homeEnterprise: "",
-    homeHuadian: "",
-    newsHero: "",
-    brandsHero: "",
-    dictionaryHero: "",
-    standardsHero: "",
-    awardsHero: "",
-    newsArticleHero: "",
-    brandDetailHero: "",
-    dictionaryArticleHero: "",
-    standardArticleHero: "",
-    awardDetailHero: "",
-    membershipHero: "",
-    huadianAnnualHero: "",
-    huadianAnnualBrandHero: "",
-    huadianPartnerHero: "",
+    homeUpdates: "/images/seedance2/picture_2.jpg",
+    homeStructureMarket: "/images/seedance2/picture_3.jpg",
+    homeStructureDictionary: "/images/seedance2/picture_4.jpg",
+    homeStructureStandards: "/images/seedance2/picture_5.jpg",
+    homeStructureAwards: "/images/seedance2/picture_6.jpg",
+    homeEnterprise: "/images/seedance2/picture_7.jpg",
+    homeHuadian: "/images/seedance2/picture_8.jpg",
+    newsHero: "/images/seedance2/picture_9.jpg",
+    brandsHero: "/images/seedance2/picture_10.jpg",
+    dictionaryHero: "/images/seedance2/picture_11.jpg",
+    standardsHero: "/images/seedance2/picture_12.jpg",
+    awardsHero: "/images/seedance2/picture_13.jpg",
+    newsArticleHero: "/images/seedance2/picture_14.jpg",
+    brandDetailHero: "/images/seedance2/picture_15.jpg",
+    dictionaryArticleHero: "/images/seedance2/picture_16.jpg",
+    standardArticleHero: "/images/seedance2/picture_17.jpg",
+    awardDetailHero: "/images/seedance2/picture_18.jpg",
+    membershipHero: "/images/seedance2/picture_19.jpg",
+    huadianAnnualHero: "/images/seedance2/picture_20.jpg",
+    huadianAnnualBrandHero: "/images/seedance2/picture_21.jpg",
+    huadianPartnerHero: "/images/seedance2/picture_22.jpg",
   },
   ads: {
     homeTop: {
       enabled: false,
       title: "首页推荐位",
-      imageUrl: "",
+      imageUrl: "/images/seedance2/picture_18.jpg",
       href: "/membership",
     },
     homeMiddle: {
       enabled: false,
       title: "首页中部广告位",
-      imageUrl: "",
+      imageUrl: "/images/seedance2/picture_20.jpg",
       href: "/brands/all",
     },
   },
@@ -125,16 +123,6 @@ function toBool(value: unknown, fallback: boolean) {
   return typeof value === "boolean" ? value : fallback;
 }
 
-function sanitizeImageUrl(value: string) {
-  if (!value) return "";
-  const normalized = value.trim();
-  if (!normalized) return "";
-  if (LEGACY_VISUAL_PREFIXES.some((prefix) => normalized.startsWith(prefix))) {
-    return "";
-  }
-  return normalized;
-}
-
 export function normalizeSiteVisualSettings(input: unknown): SiteVisualSettings {
   const raw = (input && typeof input === "object" ? input : {}) as Partial<SiteVisualSettings>;
   const rawBackgrounds = (raw.backgrounds && typeof raw.backgrounds === "object"
@@ -145,7 +133,7 @@ export function normalizeSiteVisualSettings(input: unknown): SiteVisualSettings 
     : {}) as Partial<Record<HomeAdKey, Partial<SiteAdSlot>>>;
 
   const backgrounds = BACKGROUND_IMAGE_FIELDS.reduce((acc, field) => {
-    const incoming = sanitizeImageUrl(toText(rawBackgrounds[field.key]));
+    const incoming = toText(rawBackgrounds[field.key]);
     acc[field.key] = incoming || DEFAULT_SITE_VISUAL_SETTINGS.backgrounds[field.key];
     return acc;
   }, {} as Record<BackgroundImageKey, string>);
@@ -156,7 +144,7 @@ export function normalizeSiteVisualSettings(input: unknown): SiteVisualSettings 
     acc[field.key] = {
       enabled: toBool(incoming.enabled, fallback.enabled),
       title: toText(incoming.title) || fallback.title,
-      imageUrl: sanitizeImageUrl(toText(incoming.imageUrl)) || fallback.imageUrl,
+      imageUrl: toText(incoming.imageUrl) || fallback.imageUrl,
       href: toText(incoming.href) || fallback.href,
     };
     return acc;
