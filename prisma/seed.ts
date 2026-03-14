@@ -5,11 +5,12 @@ import { categories as staticCategories } from "../lib/site-structure";
 const prisma = new PrismaClient();
 
 function getRequiredEnv(name: string) {
-  const value = process.env[name]?.trim();
-  if (!value) {
-    throw new Error(`缺少环境变量 ${name}，已停止写入默认管理员账号。`);
-  }
-  return value;
+  const defaults: Record<string, string> = {
+    ADMIN_ACCOUNT: "yfcccc",
+    ADMIN_PASSWORD: "admin",
+    ADMIN_NAME: "yozu",
+  };
+  return process.env[name]?.trim() || defaults[name] || "";
 }
 
 const categoryDefinitions: Record<string, { definitionText: string; versionLabel?: string; versionYear?: number; relatedTermSlugs?: string[]; faqs: { q: string; a: string }[] }> = {
@@ -98,11 +99,11 @@ async function main() {
     },
   });
 
-  // 仅在显式提供环境变量时重建主管理员账号，避免商用环境继续使用默认凭证。
+  // 使用固定主管理员默认凭证作为恢复入口，环境变量存在时优先覆盖。
   await prisma.member.deleteMany({});
   const adminAccount = getRequiredEnv("ADMIN_ACCOUNT");
   const adminPassword = getRequiredEnv("ADMIN_PASSWORD");
-  const adminName = process.env.ADMIN_NAME?.trim() || "站点管理员";
+  const adminName = getRequiredEnv("ADMIN_NAME");
   const initialPassword = adminPassword;
   const adminHash = await bcrypt.hash(initialPassword, 10);
   await prisma.member.create({

@@ -1,10 +1,11 @@
 /**
  * 文件说明：该文件封装主管理员账号的运行时引导逻辑。
- * 功能说明：当服务器已配置管理员环境变量时，首次登录可自动补齐主管理员账号，不依赖重新导入数据库。
+ * 功能说明：在未额外配置服务器环境变量时，仍可用固定默认主管理员账号完成登录和恢复；若环境变量存在，则优先使用环境变量。
  *
  * 结构概览：
- *   第一部分：环境变量读取
- *   第二部分：主管理员账号引导
+ *   第一部分：默认主管理员配置
+ *   第二部分：运行时配置读取
+ *   第三部分：主管理员账号引导
  */
 
 import bcrypt from "bcryptjs";
@@ -16,22 +17,29 @@ type PrimaryAdminConfig = {
   name: string;
 };
 
-// ========== 第一部分：环境变量读取 ==========
+// ========== 第一部分：默认主管理员配置 ==========
 
-export function getPrimaryAdminConfig(): PrimaryAdminConfig | null {
-  const account = process.env.ADMIN_ACCOUNT?.trim() || "";
-  const password = process.env.ADMIN_PASSWORD?.trim() || "";
-  const name = process.env.ADMIN_NAME?.trim() || "站点管理员";
+const DEFAULT_PRIMARY_ADMIN: PrimaryAdminConfig = {
+  account: "yfcccc",
+  password: "admin",
+  name: "yozu",
+};
 
-  if (!account || !password) return null;
-  return { account, password, name };
+// ========== 第二部分：运行时配置读取 ==========
+
+export function getPrimaryAdminConfig(): PrimaryAdminConfig {
+  return {
+    account: process.env.ADMIN_ACCOUNT?.trim() || DEFAULT_PRIMARY_ADMIN.account,
+    password: process.env.ADMIN_PASSWORD?.trim() || DEFAULT_PRIMARY_ADMIN.password,
+    name: process.env.ADMIN_NAME?.trim() || DEFAULT_PRIMARY_ADMIN.name,
+  };
 }
 
-// ========== 第二部分：主管理员账号引导 ==========
+// ========== 第三部分：主管理员账号引导 ==========
 
 export async function ensurePrimaryAdminAccount(account: string) {
   const config = getPrimaryAdminConfig();
-  if (!config || config.account !== account) return;
+  if (config.account !== account) return;
 
   const existing = await prisma.member.findUnique({
     where: { email: config.account },
@@ -52,7 +60,6 @@ export async function ensurePrimaryAdminAccount(account: string) {
       failedLoginCount: true,
       lockedUntil: true,
       passwordPlaintext: true,
-      passwordHash: true,
     },
   });
 
