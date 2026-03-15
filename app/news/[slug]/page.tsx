@@ -8,7 +8,6 @@ import { JsonLd } from "@/components/JsonLd";
 import { previewText } from "@/lib/text";
 import { RichContent } from "@/components/RichContent";
 import { NewsViewTracker } from "./NewsViewTracker";
-import { getSiteVisualSettings } from "@/lib/site-visual-settings";
 import { buildPageMetadata } from "@/lib/seo";
 import { PUBLIC_SITE_URL } from "@/lib/public-site-config";
 export const revalidate = 300;
@@ -72,10 +71,7 @@ export default async function ArticlePage({ params }: Props) {
   if (NEWS_SUB_SLUGS.has(slug)) {
     redirect(`/news/all?sub=${encodeURIComponent(`/news/${slug}`)}`);
   }
-  const [article, visualSettings] = await Promise.all([
-    findNewsArticleBySegment(slug),
-    getSiteVisualSettings(),
-  ]);
+  const article = await findNewsArticleBySegment(slug);
   if (!article || article.status !== "approved") notFound();
 
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? PUBLIC_SITE_URL;
@@ -116,12 +112,7 @@ export default async function ArticlePage({ params }: Props) {
         </nav>
 
         <h1 className="font-serif text-2xl font-bold text-primary mb-2">{article.title}</h1>
-        <ContentHeroImage
-          src={article.coverImage}
-          fallbackSrc={visualSettings.backgrounds.newsArticleHero}
-          alt=""
-          containerClassName="mb-4 aspect-[16/9]"
-        />
+        <ContentHeroImage src={article.coverImage} alt={article.title} containerClassName="mb-4 aspect-[16/9]" />
         {(article.conceptSummary || article.updatedAt) && (
           <p className="text-sm text-muted mb-4">
             {article.conceptSummary && <span>{article.conceptSummary}</span>}

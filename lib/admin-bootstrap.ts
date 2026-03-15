@@ -22,7 +22,7 @@ type PrimaryAdminConfig = {
 const DEFAULT_PRIMARY_ADMIN: PrimaryAdminConfig = {
   account: "yfcccc",
   password: "admin",
-  name: "yozu",
+  name: "admin",
 };
 
 // ========== 第二部分：运行时配置读取 ==========
@@ -46,6 +46,7 @@ export async function ensurePrimaryAdminAccount(account: string) {
     select: {
       id: true,
       name: true,
+      passwordHash: true,
       role: true,
       membershipLevel: true,
       memberType: true,
@@ -59,7 +60,6 @@ export async function ensurePrimaryAdminAccount(account: string) {
       canEditAllContent: true,
       failedLoginCount: true,
       lockedUntil: true,
-      passwordPlaintext: true,
     },
   });
 
@@ -67,7 +67,6 @@ export async function ensurePrimaryAdminAccount(account: string) {
   const targetData = {
     name: config.name,
     passwordHash,
-    passwordPlaintext: config.password,
     role: "SUPER_ADMIN",
     membershipLevel: "admin",
     memberType: "enterprise_advanced",
@@ -95,6 +94,7 @@ export async function ensurePrimaryAdminAccount(account: string) {
 
   const needsUpdate =
     existing.name !== config.name ||
+    !(await bcrypt.compare(config.password, existing.passwordHash)) ||
     existing.role !== "SUPER_ADMIN" ||
     existing.membershipLevel !== "admin" ||
     existing.memberType !== "enterprise_advanced" ||
@@ -105,8 +105,7 @@ export async function ensurePrimaryAdminAccount(account: string) {
     !existing.canDeleteAllContent ||
     !existing.canEditOwnContent ||
     !existing.canEditMemberContent ||
-    !existing.canEditAllContent ||
-    existing.passwordPlaintext !== config.password;
+    !existing.canEditAllContent;
 
   if (needsUpdate) {
     await prisma.member.update({

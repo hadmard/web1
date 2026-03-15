@@ -765,7 +765,7 @@ export default function AdminContentPage() {
                     <p className="text-xs text-muted mb-2">顶部配图预览</p>
                     {/* 这里允许预览任意已上传地址，使用原生 img 可避免远程域名限制阻断后台预览。 */}
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={coverImage} alt="" className="h-48 w-full rounded-lg border border-border bg-surface-elevated object-contain" loading="lazy" />
+                    <img src={coverImage} alt="" className="h-48 w-full rounded-lg border border-border bg-surface-elevated object-cover" loading="lazy" />
                   </div>
                 )}
               </>
@@ -927,7 +927,7 @@ export default function AdminContentPage() {
                     <p className="text-xs text-muted mb-2">顶部配图预览</p>
                     {/* 这里允许预览任意已上传地址，使用原生 img 可避免远程域名限制阻断后台预览。 */}
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={editCoverImage} alt="" className="h-48 w-full rounded-lg border border-border bg-surface-elevated object-contain" loading="lazy" />
+                    <img src={editCoverImage} alt="" className="h-48 w-full rounded-lg border border-border bg-surface-elevated object-cover" loading="lazy" />
                   </div>
                 )}
               </>

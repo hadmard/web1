@@ -20,7 +20,6 @@ function serializeMember(
     id: string;
     email: string;
     name: string | null;
-    passwordPlaintext?: string | null;
     role: string | null;
     memberType: string;
     memberTypeExpiresAt?: Date | null;
@@ -54,7 +53,6 @@ export async function GET() {
       id: true,
       email: true,
       name: true,
-      passwordPlaintext: true,
       role: true,
       memberType: true,
       memberTypeExpiresAt: true,
@@ -141,7 +139,6 @@ export async function POST(request: NextRequest) {
       data: {
         email: normalizedEmail,
         passwordHash,
-        passwordPlaintext: String(password),
         name: typeof name === "string" ? name.trim() || null : null,
         role: safeRole,
         membershipLevel: safeRole === "ADMIN" ? "admin" : "member",
@@ -154,7 +151,6 @@ export async function POST(request: NextRequest) {
         id: true,
         email: true,
         name: true,
-        passwordPlaintext: true,
         role: true,
         memberType: true,
         memberTypeExpiresAt: true,

@@ -142,11 +142,7 @@ export default async function StandardPage({ params }: Props) {
             </div>
           </div>
         </header>
-        <ContentHeroImage
-          src={article.coverImage}
-          fallbackSrc={visualSettings.backgrounds.standardArticleHero}
-          alt={article.title}
-        />
+        <ContentHeroImage src={article.coverImage} alt={article.title} />
 
         {structured ? (
           <section className="mt-6 space-y-4">

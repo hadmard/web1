@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 
 const DEFAULT_ADMIN_ACCOUNT = "yfcccc";
 const DEFAULT_ADMIN_PASSWORD = "admin";
-const DEFAULT_ADMIN_NAME = "yozu";
+const DEFAULT_ADMIN_NAME = "admin";
 
 const ADMIN_ACCOUNT = process.env.ADMIN_ACCOUNT?.trim() || DEFAULT_ADMIN_ACCOUNT;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD?.trim() || DEFAULT_ADMIN_PASSWORD;
@@ -19,7 +19,6 @@ async function main() {
     update: {
       name: ADMIN_NAME,
       passwordHash,
-      passwordPlaintext: ADMIN_PASSWORD,
       role: "SUPER_ADMIN",
       membershipLevel: "admin",
       memberType: "enterprise_advanced",
@@ -38,7 +37,6 @@ async function main() {
       email: ADMIN_ACCOUNT,
       name: ADMIN_NAME,
       passwordHash,
-      passwordPlaintext: ADMIN_PASSWORD,
       role: "SUPER_ADMIN",
       membershipLevel: "admin",
       memberType: "enterprise_advanced",

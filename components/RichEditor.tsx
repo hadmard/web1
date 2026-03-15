@@ -121,7 +121,10 @@ export function RichEditor({ value, onChange, minHeight = 260, placeholder = "è¯
 
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({
+        link: false,
+        underline: false,
+      }),
       Underline,
       Link.configure({
         openOnClick: false,

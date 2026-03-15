@@ -40,7 +40,6 @@ export async function POST(request: NextRequest) {
       where: { id: member.id },
       data: {
         passwordHash,
-        passwordPlaintext: newPassword,
       },
     });
 

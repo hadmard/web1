@@ -210,11 +210,7 @@ export default async function TermPage({ params }: Props) {
         <JsonLd data={breadcrumbSchema} />
 
         <h1 className="font-serif text-3xl font-bold text-primary">{article.title}</h1>
-        <ContentHeroImage
-          src={article.coverImage}
-          fallbackSrc={visualSettings.backgrounds.dictionaryArticleHero}
-          alt={article.title}
-        />
+        <ContentHeroImage src={article.coverImage} alt={article.title} />
         {article.excerpt && (
           <blockquote className="mt-4 rounded-r-lg border-l-4 border-accent bg-surface px-4 py-3 text-sm text-muted">
             {article.excerpt}

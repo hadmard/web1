@@ -8,7 +8,7 @@ function getRequiredEnv(name: string) {
   const defaults: Record<string, string> = {
     ADMIN_ACCOUNT: "yfcccc",
     ADMIN_PASSWORD: "admin",
-    ADMIN_NAME: "yozu",
+    ADMIN_NAME: "admin",
   };
   return process.env[name]?.trim() || defaults[name] || "";
 }
@@ -111,7 +111,6 @@ async function main() {
       email: adminAccount,
       name: adminName,
       passwordHash: adminHash,
-      passwordPlaintext: initialPassword,
       role: "SUPER_ADMIN",
       membershipLevel: "admin",
       memberType: "enterprise_advanced",

@@ -55,7 +55,6 @@ export default async function AwardDetailPage({ params }: Props) {
 
       <ContentHeroImage
         src={award.coverImage}
-        fallbackSrc={visualSettings.backgrounds.awardDetailHero}
         alt={award.title}
         containerClassName="mt-6 aspect-[16/9]"
       />
