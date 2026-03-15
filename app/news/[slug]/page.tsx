@@ -119,7 +119,7 @@ export default async function ArticlePage({ params }: Props) {
         <ContentHeroImage
           src={article.coverImage}
           fallbackSrc={visualSettings.backgrounds.newsArticleHero}
-          alt={article.title}
+          alt=""
           containerClassName="mb-4 aspect-[16/9]"
         />
         {(article.conceptSummary || article.updatedAt) && (

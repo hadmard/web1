@@ -40,6 +40,7 @@ import {
   type AwardStructuredData,
 } from "@/lib/award-structured";
 import { uploadImageToServer } from "@/lib/client-image";
+import { previewText } from "@/lib/text";
 
 type Status = "draft" | "pending" | "approved" | "rejected";
 type Mode = "publish" | "manage" | "review";
@@ -68,6 +69,7 @@ type ArticleItem = {
   tagSlugs?: string | null;
   isPinned?: boolean;
   status: Status;
+  previewHref?: string | null;
   authorMember?: {
     id: string;
     name: string | null;
@@ -190,6 +192,10 @@ function buildPreviewHref(
   return `/news/${encoded}`;
 }
 
+function buildAutoExcerpt(text: string) {
+  return previewText(text, 120);
+}
+
 export default function AdminContentPage() {
   const searchParams = useSearchParams();
   const mode = parseMode(searchParams.get("mode"));
@@ -199,6 +205,7 @@ export default function AdminContentPage() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const messageRef = useRef<HTMLDivElement | null>(null);
+  const editFormRef = useRef<HTMLElement | null>(null);
   const [lastSubmitted, setLastSubmitted] = useState<SubmitPreview | null>(null);
 
   const [items, setItems] = useState<ArticleItem[]>([]);
@@ -290,7 +297,7 @@ export default function AdminContentPage() {
         maxBytes: COVER_IMAGE_MAX_BYTES,
       });
       setCoverImage(imageUrl);
-      setMessage("封面图已加载，提交后生效。");
+      setMessage("顶部配图已加载，可先预览，提交后生效。");
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "图片上传失败");
     }
@@ -304,7 +311,7 @@ export default function AdminContentPage() {
         maxBytes: COVER_IMAGE_MAX_BYTES,
       });
       setEditCoverImage(imageUrl);
-      setMessage("编辑封面图已加载，保存后生效。");
+      setMessage("顶部配图已加载，可先预览，保存后生效。");
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "图片上传失败");
     }
@@ -356,6 +363,74 @@ export default function AdminContentPage() {
     if (!message) return;
     messageRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [message]);
+
+  useEffect(() => {
+    if (!editingId) return;
+    window.requestAnimationFrame(() => {
+      editFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [editingId]);
+
+  const manageItems = useMemo(
+    () =>
+      items.map((item) => ({
+        ...item,
+        previewHref: buildPreviewHref(item.categoryHref ?? null, item.subHref ?? null, item.slug ?? null, item.title),
+      })),
+    [items]
+  );
+
+  function getPublishSourceText() {
+    return (
+      tab === "terms"
+        ? termSections.map((x) => `${x.heading} ${x.body}`).join(" ")
+        : tab === "brands"
+          ? brandStructuredToSearchText(brandStructured)
+          : tab === "standards"
+            ? standardStructuredToSearchText(standardStructured)
+            : tab === "industry-data"
+              ? dataStructuredToSearchText(dataStructured)
+              : tab === "awards"
+                ? awardStructuredToSearchText(awardStructured)
+                : content
+    ).trim();
+  }
+
+  function getEditSourceText() {
+    return (
+      tab === "terms"
+        ? editTermSections.map((x) => `${x.heading} ${x.body}`).join(" ")
+        : tab === "brands"
+          ? brandStructuredToSearchText(editBrandStructured)
+          : tab === "standards"
+            ? standardStructuredToSearchText(editStandardStructured)
+            : tab === "industry-data"
+              ? dataStructuredToSearchText(editDataStructured)
+              : tab === "awards"
+                ? awardStructuredToSearchText(editAwardStructured)
+                : editContent
+    ).trim();
+  }
+
+  function autoFillPublishExcerpt() {
+    const nextExcerpt = buildAutoExcerpt(getPublishSourceText());
+    if (!nextExcerpt) {
+      setMessage("未提取到可用于生成摘要的正文内容，请先补充内容。");
+      return;
+    }
+    setExcerpt(nextExcerpt);
+    setMessage("已根据当前内容自动生成摘要，你可以继续手动修改。");
+  }
+
+  function autoFillEditExcerpt() {
+    const nextExcerpt = buildAutoExcerpt(getEditSourceText());
+    if (!nextExcerpt) {
+      setMessage("未提取到可用于生成摘要的正文内容，请先补充内容。");
+      return;
+    }
+    setEditExcerpt(nextExcerpt);
+    setMessage("已根据当前内容自动生成摘要，你可以继续手动修改。");
+  }
 
   async function submitPublish(e: FormEvent) {
     e.preventDefault();
@@ -582,39 +657,15 @@ export default function AdminContentPage() {
   }
 
   function autoFillPublishTags() {
-    const sourceText =
-      tab === "terms"
-        ? termSections.map((x) => `${x.heading} ${x.body}`).join(" ")
-        : tab === "brands"
-          ? brandStructuredToSearchText(brandStructured)
-          : tab === "standards"
-            ? standardStructuredToSearchText(standardStructured)
-            : tab === "industry-data"
-              ? dataStructuredToSearchText(dataStructured)
-              : tab === "awards"
-                ? awardStructuredToSearchText(awardStructured)
-          : content;
-    const tags = suggestTagsFromText([title, excerpt, sourceText, selectedCategory.href, subHref].filter(Boolean).join(" "));
+    const tags = suggestTagsFromText([title, excerpt, getPublishSourceText(), selectedCategory.href, subHref].filter(Boolean).join(" "));
     setTagSlugs(tags.join(","));
-    setMessage(tags.length > 0 ? "已自动识别标签，可手动修改。" : "未识别到明显标签，请手动补充。");
+    setMessage(tags.length > 0 ? "已自动生成关键词，可继续手动修改。" : "未识别到明显关键词，请手动补充。");
   }
 
   function autoFillEditTags() {
-    const sourceText =
-      tab === "terms"
-        ? editTermSections.map((x) => `${x.heading} ${x.body}`).join(" ")
-        : tab === "brands"
-          ? brandStructuredToSearchText(editBrandStructured)
-          : tab === "standards"
-            ? standardStructuredToSearchText(editStandardStructured)
-            : tab === "industry-data"
-              ? dataStructuredToSearchText(editDataStructured)
-              : tab === "awards"
-                ? awardStructuredToSearchText(editAwardStructured)
-          : editContent;
-    const tags = suggestTagsFromText([editTitle, editExcerpt, sourceText, selectedCategory.href, subHref].filter(Boolean).join(" "));
+    const tags = suggestTagsFromText([editTitle, editExcerpt, getEditSourceText(), selectedCategory.href, subHref].filter(Boolean).join(" "));
     setEditTagSlugs(tags.join(","));
-    setMessage(tags.length > 0 ? "已自动识别标签，可手动修改。" : "未识别到明显标签，请手动补充。");
+    setMessage(tags.length > 0 ? "已自动生成关键词，可继续手动修改。" : "未识别到明显关键词，请手动补充。");
   }
 
   if (loading) return <p className="text-muted">加载中...</p>;
@@ -632,7 +683,7 @@ export default function AdminContentPage() {
                 {lastSubmitted.status === "approved" && lastSubmitted.href ? (
                   <>
                     点击标题预览：
-                    <a href={lastSubmitted.href} className="ml-1 text-accent hover:underline">
+                    <a href={lastSubmitted.href} target="_blank" rel="noreferrer" className="ml-1 text-accent hover:underline">
                       {lastSubmitted.title}
                     </a>
                   </>
@@ -674,10 +725,14 @@ export default function AdminContentPage() {
               </>
             )}
             <label className="block text-sm text-muted">标题</label><input className="w-full border border-border rounded px-3 py-2 bg-surface" value={title} onChange={(e) => setTitle(e.target.value)} required />
-            <label className="block text-sm text-muted">{tab === "standards" ? "标准摘要" : "摘要"}</label><textarea className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[80px] whitespace-pre-wrap resize-y" value={excerpt} onChange={(e) => setExcerpt(e.target.value)} />
+            <div className="flex items-center justify-between gap-3">
+              <label className="block text-sm text-muted">{tab === "standards" ? "标准摘要" : "摘要"}</label>
+              <button type="button" onClick={autoFillPublishExcerpt} className="text-xs px-3 py-1.5 rounded border border-border hover:bg-surface">自动生成摘要</button>
+            </div>
+            <textarea className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[80px] whitespace-pre-wrap resize-y" value={excerpt} onChange={(e) => setExcerpt(e.target.value)} />
             {tab !== "brands" && (
               <>
-                <label className="block text-sm text-muted">封面图片（可选）</label>
+                <label className="block text-sm text-muted">顶部配图（可选）</label>
                 <input
                   className="w-full border border-border rounded px-3 py-2 bg-surface"
                   value={coverImage}
@@ -705,6 +760,14 @@ export default function AdminContentPage() {
                     </button>
                   )}
                 </div>
+                {coverImage && (
+                  <div className="rounded-lg border border-border bg-surface p-3">
+                    <p className="text-xs text-muted mb-2">顶部配图预览</p>
+                    {/* 这里允许预览任意已上传地址，使用原生 img 可避免远程域名限制阻断后台预览。 */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={coverImage} alt="" className="h-48 w-full rounded-lg border border-border bg-surface-elevated object-contain" loading="lazy" />
+                  </div>
+                )}
               </>
             )}
             <label className="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface px-3 py-2 text-sm">
@@ -751,10 +814,10 @@ export default function AdminContentPage() {
                 </div>
               </div>
             )}
-            <label className="block text-sm text-muted">标签（逗号分隔）</label>
+            <label className="block text-sm text-muted">关键词（逗号分隔）</label>
             <div className="flex gap-2">
               <input className="flex-1 border border-border rounded px-3 py-2 bg-surface" value={tagSlugs} onChange={(e) => setTagSlugs(e.target.value)} placeholder="如：行业趋势,技术发展,品牌建设" />
-              <button type="button" onClick={autoFillPublishTags} className="px-3 py-2 rounded border border-border text-xs hover:bg-surface">自动识别</button>
+              <button type="button" onClick={autoFillPublishTags} className="px-3 py-2 rounded border border-border text-xs hover:bg-surface">自动生成</button>
             </div>
             {tab !== "terms" && tab !== "brands" && tab !== "standards" && tab !== "industry-data" && tab !== "awards" && (
               <>
@@ -793,7 +856,7 @@ export default function AdminContentPage() {
 
       {mode === "manage" && (
         <ManageContentList
-          items={items}
+          items={manageItems}
           canEdit={canEdit}
           canDelete={canDelete}
           onEdit={openEdit}
@@ -815,19 +878,23 @@ export default function AdminContentPage() {
       )}
 
       {editingId && (
-        <section className="rounded-xl border border-border bg-surface-elevated p-5">
+        <section ref={editFormRef} className="rounded-xl border border-border bg-surface-elevated p-5">
           <h2 className="text-sm font-semibold mb-3">编辑内容</h2>
           <form onSubmit={(e) => { e.preventDefault(); void saveEdit(); }} className="space-y-3">
             <label className="block text-sm text-muted">标题</label><input className="w-full border border-border rounded px-3 py-2 bg-surface" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} required />
-            <label className="block text-sm text-muted">{tab === "standards" ? "标准摘要" : "摘要"}</label><textarea className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[80px] whitespace-pre-wrap resize-y" value={editExcerpt} onChange={(e) => setEditExcerpt(e.target.value)} />
-            <label className="block text-sm text-muted">标签（逗号分隔）</label>
+            <div className="flex items-center justify-between gap-3">
+              <label className="block text-sm text-muted">{tab === "standards" ? "标准摘要" : "摘要"}</label>
+              <button type="button" onClick={autoFillEditExcerpt} className="text-xs px-3 py-1.5 rounded border border-border hover:bg-surface">自动生成摘要</button>
+            </div>
+            <textarea className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[80px] whitespace-pre-wrap resize-y" value={editExcerpt} onChange={(e) => setEditExcerpt(e.target.value)} />
+            <label className="block text-sm text-muted">关键词（逗号分隔）</label>
             <div className="flex gap-2">
               <input className="flex-1 border border-border rounded px-3 py-2 bg-surface" value={editTagSlugs} onChange={(e) => setEditTagSlugs(e.target.value)} placeholder="如：行业趋势,技术发展,品牌建设" />
-              <button type="button" onClick={autoFillEditTags} className="px-3 py-2 rounded border border-border text-xs hover:bg-surface">自动识别</button>
+              <button type="button" onClick={autoFillEditTags} className="px-3 py-2 rounded border border-border text-xs hover:bg-surface">自动生成</button>
             </div>
             {tab !== "brands" && (
               <>
-                <label className="block text-sm text-muted">封面图片（可选）</label>
+                <label className="block text-sm text-muted">顶部配图（可选）</label>
                 <input
                   className="w-full border border-border rounded px-3 py-2 bg-surface"
                   value={editCoverImage}
@@ -855,6 +922,14 @@ export default function AdminContentPage() {
                     </button>
                   )}
                 </div>
+                {editCoverImage && (
+                  <div className="rounded-lg border border-border bg-surface p-3">
+                    <p className="text-xs text-muted mb-2">顶部配图预览</p>
+                    {/* 这里允许预览任意已上传地址，使用原生 img 可避免远程域名限制阻断后台预览。 */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={editCoverImage} alt="" className="h-48 w-full rounded-lg border border-border bg-surface-elevated object-contain" loading="lazy" />
+                  </div>
+                )}
               </>
             )}
             <label className="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface px-3 py-2 text-sm">

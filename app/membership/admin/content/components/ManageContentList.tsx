@@ -7,6 +7,7 @@ type ArticleItem = {
   content: string;
   status: Status;
   isPinned?: boolean;
+  previewHref?: string | null;
   authorMember?: {
     id: string;
     name: string | null;
@@ -52,7 +53,13 @@ export function ManageContentList({
             <li key={item.id} className="flex items-center justify-between border-b border-border pb-2">
               <div>
                 <p className="text-sm flex items-center gap-2">
-                  <span>{item.title}</span>
+                  {item.previewHref ? (
+                    <a href={item.previewHref} target="_blank" rel="noreferrer" className="hover:text-accent hover:underline">
+                      {item.title}
+                    </a>
+                  ) : (
+                    <span>{item.title}</span>
+                  )}
                   {item.isPinned && <span className="text-[11px] rounded-full border border-accent/40 px-2 py-0.5 text-accent">置顶</span>}
                 </p>
                 <p className="text-xs text-muted">{item.slug} · {STATUS_TEXT[item.status]}</p>

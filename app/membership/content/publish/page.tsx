@@ -55,6 +55,7 @@ import {
   type AwardStructuredData,
 } from "@/lib/award-structured";
 import { uploadImageToServer } from "@/lib/client-image";
+import { previewText } from "@/lib/text";
 
 type MemberType = "enterprise_basic" | "enterprise_advanced" | "personal";
 type Status = "draft" | "pending" | "approved" | "rejected";
@@ -177,6 +178,10 @@ function buildPreviewHref(
   return `/news/${encoded}`;
 }
 
+function buildAutoExcerpt(text: string) {
+  return previewText(text, 120);
+}
+
 function PublishCenterPageInner() {
   const router = useRouter();
   const pathname = usePathname();
@@ -189,6 +194,7 @@ function PublishCenterPageInner() {
   const [items, setItems] = useState<Row[]>([]);
   const [message, setMessage] = useState("");
   const messageRef = useRef<HTMLDivElement | null>(null);
+  const editFormRef = useRef<HTMLElement | null>(null);
   const [loading, setLoading] = useState(false);
   const [lastSubmitted, setLastSubmitted] = useState<SubmitPreview | null>(null);
 
@@ -283,6 +289,65 @@ function PublishCenterPageInner() {
     if (!message) return;
     messageRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [message]);
+
+  useEffect(() => {
+    if (!editingId) return;
+    window.requestAnimationFrame(() => {
+      editFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [editingId]);
+
+  function getPublishSourceText() {
+    return (
+      safeTab === "terms"
+        ? termSections.map((x) => `${x.heading} ${x.body}`).join(" ")
+        : safeTab === "brands"
+          ? brandStructuredToSearchText(brandStructured)
+          : safeTab === "standards"
+            ? standardStructuredToSearchText(standardStructured)
+            : safeTab === "industry-data"
+              ? dataStructuredToSearchText(dataStructured)
+              : safeTab === "awards"
+                ? awardStructuredToSearchText(awardStructured)
+                : content
+    ).trim();
+  }
+
+  function getEditSourceText() {
+    return (
+      safeTab === "terms"
+        ? editTermSections.map((x) => `${x.heading} ${x.body}`).join(" ")
+        : safeTab === "brands"
+          ? brandStructuredToSearchText(editBrandStructured)
+          : safeTab === "standards"
+            ? standardStructuredToSearchText(editStandardStructured)
+            : safeTab === "industry-data"
+              ? dataStructuredToSearchText(editDataStructured)
+              : safeTab === "awards"
+                ? awardStructuredToSearchText(editAwardStructured)
+                : editContent
+    ).trim();
+  }
+
+  function autoFillExcerpt() {
+    const nextExcerpt = buildAutoExcerpt(getPublishSourceText());
+    if (!nextExcerpt) {
+      setMessage("未提取到可用于生成摘要的正文内容，请先补充内容。");
+      return;
+    }
+    setExcerpt(nextExcerpt);
+    setMessage("已根据当前内容自动生成摘要，你可以继续手动修改。");
+  }
+
+  function autoFillEditExcerpt() {
+    const nextExcerpt = buildAutoExcerpt(getEditSourceText());
+    if (!nextExcerpt) {
+      setMessage("未提取到可用于生成摘要的正文内容，请先补充内容。");
+      return;
+    }
+    setEditExcerpt(nextExcerpt);
+    setMessage("已根据当前内容自动生成摘要，你可以继续手动修改。");
+  }
 
   function resetCategoryMeta() {
     setCoverImage("");
@@ -506,27 +571,15 @@ function PublishCenterPageInner() {
   }
 
   function autoFillTags() {
-    const sourceText =
-      safeTab === "terms"
-        ? termSections.map((x) => `${x.heading} ${x.body}`).join(" ")
-        : safeTab === "brands"
-          ? brandStructuredToSearchText(brandStructured)
-        : safeTab === "standards"
-          ? standardStructuredToSearchText(standardStructured)
-        : safeTab === "industry-data"
-          ? dataStructuredToSearchText(dataStructured)
-        : safeTab === "awards"
-          ? awardStructuredToSearchText(awardStructured)
-        : content;
     const tags = suggestTagsFromText(
-      [title, excerpt, sourceText, selectedCategory?.href, subHref].filter(Boolean).join(" ")
+      [title, excerpt, getPublishSourceText(), selectedCategory?.href, subHref].filter(Boolean).join(" ")
     );
     if (tags.length === 0) {
-      setMessage("未识别到明显标签，请手动补充。");
+      setMessage("未识别到明显关键词，请手动补充。");
       return;
     }
     setTagSlugs(tags.join(","));
-    setMessage("已自动识别标签，可继续手动修改。");
+    setMessage("已自动生成关键词，可继续手动修改。");
   }
 
   async function handleCoverImageUpload(file: File | null) {
@@ -537,7 +590,7 @@ function PublishCenterPageInner() {
         maxBytes: COVER_IMAGE_MAX_BYTES,
       });
       setCoverImage(imageUrl);
-      setMessage("封面图已加载，请提交后生效。");
+      setMessage("顶部配图已加载，可先预览，提交后生效。");
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "图片上传失败");
     }
@@ -551,7 +604,7 @@ function PublishCenterPageInner() {
         maxBytes: COVER_IMAGE_MAX_BYTES,
       });
       setEditCoverImage(imageUrl);
-      setMessage("修改封面图已加载，请提交后生效。");
+      setMessage("顶部配图已加载，可先预览，提交后生效。");
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "图片上传失败");
     }
@@ -641,7 +694,7 @@ function PublishCenterPageInner() {
         )}
 
         <>
-          <label className="block text-sm text-muted">标签（逗号分隔）</label>
+          <label className="block text-sm text-muted">关键词（逗号分隔）</label>
           <div className="flex gap-2">
             <input
               className="flex-1 border border-border rounded px-3 py-2 bg-surface"
@@ -650,7 +703,7 @@ function PublishCenterPageInner() {
               placeholder="如：行业趋势,技术发展,品牌建设"
             />
             <button type="button" onClick={autoFillTags} className="px-3 py-2 rounded border border-border text-xs hover:bg-surface">
-              自动识别
+              自动生成
             </button>
           </div>
         </>
@@ -722,7 +775,7 @@ function PublishCenterPageInner() {
                   {lastSubmitted.status === "approved" && lastSubmitted.href ? (
                     <>
                       点击标题预览：
-                      <Link href={lastSubmitted.href} className="ml-1 text-accent hover:underline">
+                      <Link href={lastSubmitted.href} target="_blank" rel="noreferrer" className="ml-1 text-accent hover:underline">
                         {lastSubmitted.title}
                       </Link>
                     </>
@@ -778,7 +831,10 @@ function PublishCenterPageInner() {
           <label className="block text-sm text-muted">标题</label>
           <input className="w-full border border-border rounded px-3 py-2 bg-surface" value={title} onChange={(e) => setTitle(e.target.value)} required />
 
-          <label className="block text-sm text-muted">{safeTab === "standards" ? "标准摘要" : "摘要"}</label>
+          <div className="flex items-center justify-between gap-3">
+            <label className="block text-sm text-muted">{safeTab === "standards" ? "标准摘要" : "摘要"}</label>
+            <button type="button" onClick={autoFillExcerpt} className="text-xs px-3 py-1.5 rounded border border-border hover:bg-surface">自动生成摘要</button>
+          </div>
           <textarea
             className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[80px] whitespace-pre-wrap resize-y"
             value={excerpt}
@@ -787,7 +843,7 @@ function PublishCenterPageInner() {
 
           {safeTab !== "brands" && (
             <>
-              <label className="block text-sm text-muted">封面图片（可选）</label>
+              <label className="block text-sm text-muted">顶部配图（可选）</label>
               <input
                 className="w-full border border-border rounded px-3 py-2 bg-surface"
                 value={coverImage}
@@ -815,6 +871,14 @@ function PublishCenterPageInner() {
                   </button>
                 )}
               </div>
+              {coverImage && (
+                <div className="rounded-lg border border-border bg-surface p-3">
+                  <p className="text-xs text-muted mb-2">顶部配图预览</p>
+                  {/* 这里允许预览任意已上传地址，使用原生 img 可避免远程域名限制阻断后台预览。 */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={coverImage} alt="" className="h-48 w-full rounded-lg border border-border bg-surface-elevated object-contain" loading="lazy" />
+                </div>
+              )}
             </>
           )}
 
@@ -879,12 +943,15 @@ function PublishCenterPageInner() {
       </section>
 
       {editingId && (
-        <section className="mt-6 rounded-xl border border-border bg-surface-elevated p-5">
+        <section ref={editFormRef} className="mt-6 rounded-xl border border-border bg-surface-elevated p-5">
           <h2 className="text-sm font-medium text-primary mb-3">提交修改申请</h2>
           <form onSubmit={submitEditRequest} className="space-y-3">
             <label className="block text-sm text-muted">新标题</label>
             <input className="w-full border border-border rounded px-3 py-2 bg-surface" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
-            <label className="block text-sm text-muted">{safeTab === "standards" ? "标准摘要" : "新摘要"}</label>
+            <div className="flex items-center justify-between gap-3">
+              <label className="block text-sm text-muted">{safeTab === "standards" ? "标准摘要" : "新摘要"}</label>
+              <button type="button" onClick={autoFillEditExcerpt} className="text-xs px-3 py-1.5 rounded border border-border hover:bg-surface">自动生成摘要</button>
+            </div>
             <textarea
               className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[80px] whitespace-pre-wrap resize-y"
               value={editExcerpt}
@@ -892,7 +959,7 @@ function PublishCenterPageInner() {
             />
             {safeTab !== "brands" && (
               <>
-                <label className="block text-sm text-muted">新封面图片（可选）</label>
+                <label className="block text-sm text-muted">新顶部配图（可选）</label>
                 <input
                   className="w-full border border-border rounded px-3 py-2 bg-surface"
                   value={editCoverImage}
@@ -920,6 +987,14 @@ function PublishCenterPageInner() {
                     </button>
                   )}
                 </div>
+                {editCoverImage && (
+                  <div className="rounded-lg border border-border bg-surface p-3">
+                    <p className="text-xs text-muted mb-2">顶部配图预览</p>
+                    {/* 这里允许预览任意已上传地址，使用原生 img 可避免远程域名限制阻断后台预览。 */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={editCoverImage} alt="" className="h-48 w-full rounded-lg border border-border bg-surface-elevated object-contain" loading="lazy" />
+                  </div>
+                )}
               </>
             )}
             {safeTab === "terms" ? (
