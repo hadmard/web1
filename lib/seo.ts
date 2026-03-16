@@ -22,6 +22,7 @@ type PageMetadataOptions = {
   path?: string;
   type?: "website" | "article";
   keywords?: string[];
+  siteName?: string;
 };
 
 export function buildPageMetadata({
@@ -30,6 +31,7 @@ export function buildPageMetadata({
   path = "/",
   type = "website",
   keywords,
+  siteName = SITE_NAME,
 }: PageMetadataOptions): Metadata {
   const url = absoluteUrl(path);
 
@@ -42,7 +44,7 @@ export function buildPageMetadata({
       title,
       description,
       url,
-      siteName: SITE_NAME,
+      siteName,
       locale: "zh_CN",
       type,
     },

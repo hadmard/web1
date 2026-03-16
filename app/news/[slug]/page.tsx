@@ -10,8 +10,10 @@ import { RichContent } from "@/components/RichContent";
 import { NewsViewTracker } from "./NewsViewTracker";
 import { buildPageMetadata } from "@/lib/seo";
 import { PUBLIC_SITE_URL } from "@/lib/public-site-config";
+import { ArticleShareActions } from "@/components/ArticleShareActions";
 export const revalidate = 300;
 
+const SHARE_SITE_NAME = "中华整木网";
 
 type Props = { params: Promise<{ slug: string }> };
 const NEWS_SUB_SLUGS = new Set(["trends", "enterprise", "tech", "events"]);
@@ -59,10 +61,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!article || article.status !== "approved") return { title: "资讯" };
   const description = previewText(article.excerpt ?? article.content, 160);
   return buildPageMetadata({
-    title: `${article.title} | 整木网 · 整木资讯`,
+    title: `${article.title} | ${SHARE_SITE_NAME}`,
     description,
     path: `/news/${article.slug}`,
     type: "article",
+    siteName: SHARE_SITE_NAME,
   });
 }
 
@@ -127,6 +130,7 @@ export default async function ArticlePage({ params }: Props) {
           </blockquote>
         )}
         <RichContent html={article.content} className="prose prose-neutral dark:prose-invert max-w-none" />
+        <ArticleShareActions title={article.title} url={articleUrl} siteName={SHARE_SITE_NAME} />
         {article.applicableScenarios && (
           <section className="mt-8 pt-6 border-t border-border">
             <h2 className="text-lg font-semibold text-primary mb-2">适用场景</h2>
