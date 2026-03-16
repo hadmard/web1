@@ -18,6 +18,11 @@ export function ArticleShareActions({ title, url, siteName }: ArticleShareAction
   }, [url]);
 
   useEffect(() => {
+    const image = new window.Image();
+    image.src = qrUrl;
+  }, [qrUrl]);
+
+  useEffect(() => {
     function handlePointerDown(event: MouseEvent) {
       if (!rootRef.current?.contains(event.target as Node)) {
         setOpen(false);
@@ -94,7 +99,7 @@ export function ArticleShareActions({ title, url, siteName }: ArticleShareAction
               <p className="mt-2 text-center text-[11px] tracking-[0.12em] text-[#6b7280]">微信扫码分享</p>
             </div>
 
-            <div className="fixed inset-0 z-50 bg-[rgba(24,28,36,0.74)] md:hidden">
+            <div className="fixed inset-0 z-50 bg-[rgba(18,22,30,0.82)] md:hidden">
               <button
                 type="button"
                 aria-label="关闭分享提示"
@@ -102,17 +107,17 @@ export function ArticleShareActions({ title, url, siteName }: ArticleShareAction
                 onClick={() => setOpen(false)}
               />
 
-              <div className="pointer-events-none absolute right-3 top-5 h-24 w-28">
-                <svg viewBox="0 0 120 120" className="h-full w-full" fill="none" aria-hidden="true">
+              <div className="pointer-events-none absolute right-3 top-3 h-32 w-36">
+                <svg viewBox="0 0 144 132" className="h-full w-full" fill="none" aria-hidden="true">
                   <path
-                    d="M18 98C56 82 76 57 94 20"
+                    d="M20 110C60 95 88 68 114 22"
                     stroke="white"
                     strokeWidth="3.5"
                     strokeLinecap="round"
-                    strokeDasharray="9 10"
+                    strokeDasharray="9 11"
                   />
                   <path
-                    d="M85 21L99 18L97 33"
+                    d="M103 24L118 19L115 35"
                     stroke="white"
                     strokeWidth="3.5"
                     strokeLinecap="round"
@@ -121,22 +126,30 @@ export function ArticleShareActions({ title, url, siteName }: ArticleShareAction
                 </svg>
               </div>
 
-              <div className="pointer-events-none absolute right-16 top-28 text-right text-white">
-                <p className="text-[1.25rem] font-semibold tracking-[0.08em]">点击右上角</p>
+              <div className="pointer-events-none absolute right-[74px] top-[108px] text-right text-white">
+                <p className="text-[1.35rem] font-semibold tracking-[0.08em]">点击右上角</p>
               </div>
 
-              <div className="pointer-events-none absolute left-1/2 top-[32%] flex w-[240px] -translate-x-1/2 items-start justify-between">
-                <div className="flex w-[102px] flex-col items-center">
-                  <div className="flex h-[84px] w-[84px] items-center justify-center rounded-[22px] bg-white shadow-[0_16px_36px_rgba(0,0,0,0.24)]">
+              <div className="pointer-events-none absolute right-[86px] top-[144px] flex h-[54px] w-[54px] items-center justify-center rounded-full bg-white/90 shadow-[0_10px_24px_rgba(255,255,255,0.18)]">
+                <div className="flex items-center gap-[5px]">
+                  <span className="h-[6px] w-[6px] rounded-full bg-[#3f3f46]" />
+                  <span className="h-[6px] w-[6px] rounded-full bg-[#3f3f46]" />
+                  <span className="h-[6px] w-[6px] rounded-full bg-[#3f3f46]" />
+                </div>
+              </div>
+
+              <div className="pointer-events-none absolute left-1/2 top-[35%] flex w-[248px] -translate-x-1/2 items-start justify-between">
+                <div className="flex w-[108px] flex-col items-center">
+                  <div className="flex h-[88px] w-[88px] items-center justify-center rounded-[24px] bg-white shadow-[0_18px_36px_rgba(0,0,0,0.26)]">
                     <svg viewBox="0 0 24 24" className="h-10 w-10 text-[#4ade80]" fill="currentColor" aria-hidden="true">
                       <path d="M10.6 5.2c-2.6 0-4.9 1-6.4 2.8a1 1 0 0 0 .12 1.44l.92.78a1 1 0 0 0 1.4-.12 5.56 5.56 0 0 1 4-1.8v2.67a1 1 0 0 0 1.72.7l4.7-4.62a1 1 0 0 0 0-1.42l-4.7-4.62a1 1 0 0 0-1.72.7v2.5Z" />
                     </svg>
                   </div>
-                  <p className="mt-3 text-center text-[14px] text-white">发送给朋友</p>
+                  <p className="mt-3 text-center text-[15px] text-white">发送给朋友</p>
                 </div>
 
-                <div className="flex w-[102px] flex-col items-center">
-                  <div className="flex h-[84px] w-[84px] items-center justify-center rounded-[22px] bg-white shadow-[0_16px_36px_rgba(0,0,0,0.24)]">
+                <div className="flex w-[108px] flex-col items-center">
+                  <div className="flex h-[88px] w-[88px] items-center justify-center rounded-[24px] bg-white shadow-[0_18px_36px_rgba(0,0,0,0.26)]">
                     <div className="grid h-10 w-10 grid-cols-2 gap-1.5">
                       <span className="rounded-full bg-[#f97316]" />
                       <span className="rounded-full bg-[#60a5fa]" />
@@ -144,7 +157,7 @@ export function ArticleShareActions({ title, url, siteName }: ArticleShareAction
                       <span className="rounded-full bg-[#f43f5e]" />
                     </div>
                   </div>
-                  <p className="mt-3 text-center text-[14px] text-white">分享到朋友圈</p>
+                  <p className="mt-3 text-center text-[15px] text-white">分享到朋友圈</p>
                 </div>
               </div>
             </div>
