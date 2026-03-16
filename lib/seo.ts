@@ -9,7 +9,10 @@ export const SITE_DESCRIPTION =
   "整木网是整体木作行业知识共享平台，覆盖整木资讯、整木市场、整木词库、整木标准与整木评选。";
 
 export function getSiteUrl() {
-  return process.env.NEXT_PUBLIC_SITE_URL?.trim() || FALLBACK_SITE_URL;
+  if (process.env.NODE_ENV === "development") {
+    return process.env.NEXT_PUBLIC_SITE_URL?.trim() || FALLBACK_SITE_URL;
+  }
+  return FALLBACK_SITE_URL;
 }
 
 export function absoluteUrl(path = "/") {

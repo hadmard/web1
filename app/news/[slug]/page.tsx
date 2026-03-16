@@ -8,8 +8,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { previewText } from "@/lib/text";
 import { RichContent } from "@/components/RichContent";
 import { NewsViewTracker } from "./NewsViewTracker";
-import { buildPageMetadata } from "@/lib/seo";
-import { PUBLIC_SITE_URL } from "@/lib/public-site-config";
+import { buildPageMetadata, getSiteUrl } from "@/lib/seo";
 import { ArticleShareActions } from "@/components/ArticleShareActions";
 export const revalidate = 300;
 
@@ -77,7 +76,7 @@ export default async function ArticlePage({ params }: Props) {
   const article = await findNewsArticleBySegment(slug);
   if (!article || article.status !== "approved") notFound();
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? PUBLIC_SITE_URL;
+  const baseUrl = getSiteUrl();
   const articleUrl = `${baseUrl}/news/${article.slug}`;
 
   const articleSchema = {
