@@ -8,92 +8,73 @@ type ArticleShareActionsProps = {
   siteName: string;
 };
 
-type ShareTarget = "friend" | "moments";
-
-const TARGET_LABEL: Record<ShareTarget, string> = {
-  friend: "微信好友",
-  moments: "朋友圈",
-};
-
 export function ArticleShareActions({ title, url, siteName }: ArticleShareActionsProps) {
+  const [copied, setCopied] = useState(false);
   const [tip, setTip] = useState("");
-  const [panel, setPanel] = useState<ShareTarget | null>(null);
 
   const shareTitle = useMemo(() => `${title} | ${siteName}`, [siteName, title]);
-  const shareText = useMemo(() => `${shareTitle} ${url}`, [shareTitle, url]);
-  const isWeChat =
-    typeof navigator !== "undefined" && /MicroMessenger/i.test(navigator.userAgent || "");
+  const qrUrl = useMemo(() => {
+    const data = encodeURIComponent(url);
+    return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${data}`;
+  }, [url]);
 
-  async function copyShareText(message: string) {
+  async function handleCopy() {
+    const shareText = `${shareTitle}\n${url}`;
+
     try {
       await navigator.clipboard.writeText(shareText);
-      setTip(message);
-      return true;
+      setCopied(true);
+      setTip("已复制文章标题和链接，可以直接粘贴发送。");
+      window.setTimeout(() => setCopied(false), 1800);
     } catch {
-      setTip(`已准备分享文案，请手动复制链接：${url}`);
-      return false;
+      setTip(`复制失败，请手动复制链接：${url}`);
     }
-  }
-
-  async function handleShare(target: ShareTarget) {
-    if (isWeChat) {
-      await copyShareText(`已复制分享文案，请在右上角菜单选择“${TARGET_LABEL[target]}”`);
-      setPanel(target);
-      return;
-    }
-
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: shareTitle,
-          text: shareTitle,
-          url,
-        });
-        setTip(`已调起系统分享，可继续发送到${TARGET_LABEL[target]}`);
-        return;
-      } catch {
-        // fall through to copy
-      }
-    }
-
-    await copyShareText(`已复制分享文案，可粘贴发送到${TARGET_LABEL[target]}`);
   }
 
   return (
-    <section className="mt-8 rounded-2xl border border-border bg-surface px-5 py-4">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-base font-semibold text-primary">分享这篇资讯</h2>
-          <p className="mt-1 text-sm text-muted">分享时将显示“{title}”和“{siteName}”。</p>
+    <section className="mt-8 rounded-[28px] border border-border bg-surface px-5 py-5 sm:px-6">
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+        <div className="max-w-xl">
+          <h2 className="text-lg font-semibold text-primary">分享这篇资讯</h2>
+          <p className="mt-2 text-sm leading-7 text-muted">
+            扫码可直接在微信打开文章，分享标题显示为“{title}”，来源显示为“{siteName}”。
+          </p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => void handleCopy()}
+              className="rounded-full bg-[#07c160] px-5 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
+            >
+              {copied ? "已复制" : "复制链接"}
+            </button>
+            <a
+              href={url}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-full border border-border px-5 py-2.5 text-sm font-medium text-primary transition-colors hover:bg-surface-elevated"
+            >
+              新窗口打开
+            </a>
+          </div>
+          <p className="mt-3 text-sm text-muted">
+            微信里可通过右上角菜单转发给朋友或分享到朋友圈。
+          </p>
+          {tip ? <p className="mt-2 text-sm text-accent">{tip}</p> : null}
         </div>
-        <div className="flex flex-wrap gap-3">
-          <button
-            type="button"
-            onClick={() => void handleShare("friend")}
-            className="rounded-full bg-[#07c160] px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
-          >
-            微信好友
-          </button>
-          <button
-            type="button"
-            onClick={() => void handleShare("moments")}
-            className="rounded-full border border-[#07c160] px-4 py-2 text-sm font-medium text-[#07c160] transition-colors hover:bg-[#07c160]/10"
-          >
-            朋友圈
-          </button>
+
+        <div className="mx-auto w-full max-w-[220px] shrink-0 rounded-[24px] border border-border bg-white p-4 shadow-[0_18px_40px_rgba(16,24,40,0.08)]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={qrUrl}
+            alt={`${title} 分享二维码`}
+            width={220}
+            height={220}
+            className="h-auto w-full rounded-2xl"
+            loading="lazy"
+          />
+          <p className="mt-3 text-center text-xs leading-6 text-muted">微信扫码查看并分享本文</p>
         </div>
       </div>
-
-      {tip ? <p className="mt-3 text-sm text-muted">{tip}</p> : null}
-
-      {panel ? (
-        <div className="mt-4 rounded-xl border border-dashed border-border bg-white/70 px-4 py-3 text-sm text-muted">
-          <p className="font-medium text-primary">微信内分享提示</p>
-          <p className="mt-1">1. 点击右上角“...”。</p>
-          <p>2. 选择“{TARGET_LABEL[panel]}”。</p>
-          <p>3. 分享标题会优先显示文章标题，来源名称显示为“{siteName}”。</p>
-        </div>
-      ) : null}
     </section>
   );
 }
