@@ -11,11 +11,16 @@ type ArticleShareActionsProps = {
 export function ArticleShareActions({ title, url, siteName }: ArticleShareActionsProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const shareUrl = useMemo(() => {
+    const nextUrl = new URL(url);
+    nextUrl.searchParams.set("sharev", "mobile-share-20260316");
+    return nextUrl.toString();
+  }, [url]);
 
   const qrUrl = useMemo(() => {
-    const data = encodeURIComponent(url);
+    const data = encodeURIComponent(shareUrl);
     return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${data}`;
-  }, [url]);
+  }, [shareUrl]);
 
   useEffect(() => {
     const image = new window.Image();
