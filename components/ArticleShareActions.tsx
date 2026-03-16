@@ -4,18 +4,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 type ArticleShareActionsProps = {
   title: string;
-  url: string;
+  shareUrl: string;
   siteName: string;
 };
 
-export function ArticleShareActions({ title, url, siteName }: ArticleShareActionsProps) {
+export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareActionsProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
-  const shareUrl = useMemo(() => {
-    const nextUrl = new URL(url);
-    nextUrl.searchParams.set("sharev", "mobile-share-20260316");
-    return nextUrl.toString();
-  }, [url]);
 
   const qrUrl = useMemo(() => {
     const data = encodeURIComponent(shareUrl);

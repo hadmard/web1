@@ -10,6 +10,7 @@ import { RichContent } from "@/components/RichContent";
 import { NewsViewTracker } from "./NewsViewTracker";
 import { buildPageMetadata, getSiteUrl } from "@/lib/seo";
 import { ArticleShareActions } from "@/components/ArticleShareActions";
+import { SHARE_CACHE_VERSION } from "@/lib/share-config";
 export const revalidate = 300;
 export const dynamic = "force-dynamic";
 
@@ -79,6 +80,7 @@ export default async function ArticlePage({ params }: Props) {
 
   const baseUrl = getSiteUrl();
   const articleUrl = `${baseUrl}/news/${article.slug}`;
+  const shareEntryUrl = `${baseUrl}/share/news/${encodeURIComponent(article.slug)}?sharev=${SHARE_CACHE_VERSION}`;
 
   const articleSchema = {
     "@context": "https://schema.org",
@@ -130,7 +132,7 @@ export default async function ArticlePage({ params }: Props) {
           </blockquote>
         )}
         <RichContent html={article.content} className="prose prose-neutral dark:prose-invert max-w-none" />
-        <ArticleShareActions title={article.title} url={articleUrl} siteName={SHARE_SITE_NAME} />
+        <ArticleShareActions title={article.title} shareUrl={shareEntryUrl} siteName={SHARE_SITE_NAME} />
         {article.applicableScenarios && (
           <section className="mt-8 pt-6 border-t border-border">
             <h2 className="text-lg font-semibold text-primary mb-2">适用场景</h2>
