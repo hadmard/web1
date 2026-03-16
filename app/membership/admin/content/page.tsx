@@ -218,6 +218,8 @@ export default function AdminContentPage() {
   const editFormRef = useRef<HTMLElement | null>(null);
   const publishCoverPreviewRef = useRef<HTMLDivElement | null>(null);
   const editCoverPreviewRef = useRef<HTMLDivElement | null>(null);
+  const publishObjectUrlRef = useRef<string | null>(null);
+  const editObjectUrlRef = useRef<string | null>(null);
   const suppressMessageScrollRef = useRef(false);
   const [lastSubmitted, setLastSubmitted] = useState<SubmitPreview | null>(null);
   const [pendingPreviewScroll, setPendingPreviewScroll] = useState<"publish" | "edit" | null>(null);
@@ -237,6 +239,7 @@ export default function AdminContentPage() {
   const [awardStructured, setAwardStructured] = useState<AwardStructuredData>(createDefaultAwardStructuredData());
   const [subHref, setSubHref] = useState("");
   const [coverImage, setCoverImage] = useState("");
+  const [coverPreviewSrc, setCoverPreviewSrc] = useState("");
   const [tagSlugs, setTagSlugs] = useState("");
   const [isPinned, setIsPinned] = useState(false);
 
@@ -251,6 +254,7 @@ export default function AdminContentPage() {
   const [editDataStructured, setEditDataStructured] = useState<DataStructuredData>(createDefaultDataStructuredData());
   const [editAwardStructured, setEditAwardStructured] = useState<AwardStructuredData>(createDefaultAwardStructuredData());
   const [editCoverImage, setEditCoverImage] = useState("");
+  const [editCoverPreviewSrc, setEditCoverPreviewSrc] = useState("");
   const [editTagSlugs, setEditTagSlugs] = useState("");
   const [editSubHref, setEditSubHref] = useState("");
   const [editIsPinned, setEditIsPinned] = useState(false);
@@ -277,6 +281,7 @@ export default function AdminContentPage() {
     if (tab === "industry-data") setDataStructured(createDefaultDataStructuredData());
     if (tab === "awards") setAwardStructured(createDefaultAwardStructuredData());
     setCoverImage("");
+    replacePreviewUrl("publish", "");
     setIsPinned(false);
   }, [tab]);
 
@@ -304,15 +309,26 @@ export default function AdminContentPage() {
     setEditTermSections((prev) => prev.filter((x) => x.id !== id));
   }
 
+  function replacePreviewUrl(kind: "publish" | "edit", nextUrl: string) {
+    const targetRef = kind === "publish" ? publishObjectUrlRef : editObjectUrlRef;
+    const setPreview = kind === "publish" ? setCoverPreviewSrc : setEditCoverPreviewSrc;
+    if (targetRef.current?.startsWith("blob:")) {
+      URL.revokeObjectURL(targetRef.current);
+    }
+    targetRef.current = nextUrl.startsWith("blob:") ? nextUrl : null;
+    setPreview(nextUrl);
+  }
+
   async function uploadPublishCover(file: File | null) {
     if (!file) return;
     try {
+      replacePreviewUrl("publish", URL.createObjectURL(file));
+      setPendingPreviewScroll("publish");
       const imageUrl = await uploadImageToServer(file, {
         folder: "content/covers",
         maxBytes: COVER_IMAGE_MAX_BYTES,
       });
       setCoverImage(imageUrl);
-      setPendingPreviewScroll("publish");
       setMessage("顶部配图已加载，可先预览，提交后生效。");
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "图片上传失败");
@@ -322,12 +338,13 @@ export default function AdminContentPage() {
   async function uploadEditCover(file: File | null) {
     if (!file) return;
     try {
+      replacePreviewUrl("edit", URL.createObjectURL(file));
+      setPendingPreviewScroll("edit");
       const imageUrl = await uploadImageToServer(file, {
         folder: "content/covers",
         maxBytes: COVER_IMAGE_MAX_BYTES,
       });
       setEditCoverImage(imageUrl);
-      setPendingPreviewScroll("edit");
       setMessage("顶部配图已加载，可先预览，保存后生效。");
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "图片上传失败");
@@ -340,9 +357,11 @@ export default function AdminContentPage() {
       maxBytes: COVER_IMAGE_MAX_BYTES,
     });
     if (target === "publish") {
+      replacePreviewUrl("publish", URL.createObjectURL(file));
       setCoverImage(imageUrl);
       setPendingPreviewScroll("publish");
     } else {
+      replacePreviewUrl("edit", URL.createObjectURL(file));
       setEditCoverImage(imageUrl);
       setPendingPreviewScroll("edit");
     }
@@ -404,19 +423,19 @@ export default function AdminContentPage() {
   }, [message, pendingPreviewScroll]);
 
   useEffect(() => {
-    if (pendingPreviewScroll === "publish" && coverImage) {
+    if (pendingPreviewScroll === "publish" && (coverPreviewSrc || coverImage)) {
       window.requestAnimationFrame(() => {
         publishCoverPreviewRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
         setPendingPreviewScroll(null);
       });
     }
-    if (pendingPreviewScroll === "edit" && editCoverImage) {
+    if (pendingPreviewScroll === "edit" && (editCoverPreviewSrc || editCoverImage)) {
       window.requestAnimationFrame(() => {
         editCoverPreviewRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
         setPendingPreviewScroll(null);
       });
     }
-  }, [coverImage, editCoverImage, pendingPreviewScroll]);
+  }, [coverImage, editCoverImage, coverPreviewSrc, editCoverPreviewSrc, pendingPreviewScroll]);
 
   useEffect(() => {
     if (!editingId) return;
@@ -587,6 +606,7 @@ export default function AdminContentPage() {
         : createDefaultAwardStructuredData()
     );
     setEditCoverImage(item.coverImage ?? "");
+    replacePreviewUrl("edit", item.coverImage ?? "");
     setEditTagSlugs(item.tagSlugs ?? "");
     setEditSubHref(item.subHref ?? subHref);
     setEditIsPinned(item.isPinned === true);
@@ -621,6 +641,7 @@ export default function AdminContentPage() {
         : createDefaultAwardStructuredData()
     );
     setEditCoverImage(item.patchCoverImage ?? item.article.coverImage ?? "");
+    replacePreviewUrl("edit", item.patchCoverImage ?? item.article.coverImage ?? "");
     setEditTagSlugs(item.patchTagSlugs ?? item.article.tagSlugs ?? "");
     setEditSubHref(item.patchSubHref ?? item.article.subHref ?? subHref);
     setEditIsPinned(item.article.isPinned === true);
@@ -824,16 +845,16 @@ export default function AdminContentPage() {
                     className="block"
                   />
                   <span>支持本地上传，最大 2MB</span>
-                  {coverImage && (
+                  {(coverPreviewSrc || coverImage) && (
                     <button
                       type="button"
-                      onClick={() => setCoverImage("")}
+                      onClick={() => { setCoverImage(""); replacePreviewUrl("publish", ""); }}
                       className="px-2 py-1 rounded border border-border hover:bg-surface"
                     >
                       清除
                     </button>
                   )}
-                  {coverImage && (
+                  {(coverPreviewSrc || coverImage) && (
                     <button
                       type="button"
                       onClick={() => setCropTarget("publish")}
@@ -844,12 +865,12 @@ export default function AdminContentPage() {
                   )}
                 </div>
                 {tab === "terms" && <p className="text-xs text-muted">最佳尺寸：1600 x 900 px，建议使用横版 16:9 图片。</p>}
-                {coverImage && (
+                {(coverPreviewSrc || coverImage) && (
                   <div ref={publishCoverPreviewRef} className="rounded-lg border border-border bg-surface p-3">
                     <p className="text-xs text-muted mb-2">顶部配图预览</p>
                     {/* 这里允许预览任意已上传地址，使用原生 img 可避免远程域名限制阻断后台预览。 */}
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={coverImage} alt="" className="max-h-80 w-full rounded-lg border border-border bg-surface-elevated object-contain" loading="lazy" />
+                    <img src={coverPreviewSrc || coverImage} alt="" className="max-h-80 w-full rounded-lg border border-border bg-surface-elevated object-contain" loading="lazy" />
                   </div>
                 )}
               </>
@@ -996,16 +1017,16 @@ export default function AdminContentPage() {
                     className="block"
                   />
                   <span>支持本地上传，最大 2MB</span>
-                  {editCoverImage && (
+                  {(editCoverPreviewSrc || editCoverImage) && (
                     <button
                       type="button"
-                      onClick={() => setEditCoverImage("")}
+                      onClick={() => { setEditCoverImage(""); replacePreviewUrl("edit", ""); }}
                       className="px-2 py-1 rounded border border-border hover:bg-surface"
                     >
                       清除
                     </button>
                   )}
-                  {editCoverImage && (
+                  {(editCoverPreviewSrc || editCoverImage) && (
                     <button
                       type="button"
                       onClick={() => setCropTarget("edit")}
@@ -1016,12 +1037,12 @@ export default function AdminContentPage() {
                   )}
                 </div>
                 {tab === "terms" && <p className="text-xs text-muted">最佳尺寸：1600 x 900 px，建议使用横版 16:9 图片。</p>}
-                {editCoverImage && (
+                {(editCoverPreviewSrc || editCoverImage) && (
                   <div ref={editCoverPreviewRef} className="rounded-lg border border-border bg-surface p-3">
                     <p className="text-xs text-muted mb-2">顶部配图预览</p>
                     {/* 这里允许预览任意已上传地址，使用原生 img 可避免远程域名限制阻断后台预览。 */}
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={editCoverImage} alt="" className="max-h-80 w-full rounded-lg border border-border bg-surface-elevated object-contain" loading="lazy" />
+                    <img src={editCoverPreviewSrc || editCoverImage} alt="" className="max-h-80 w-full rounded-lg border border-border bg-surface-elevated object-contain" loading="lazy" />
                   </div>
                 )}
               </>

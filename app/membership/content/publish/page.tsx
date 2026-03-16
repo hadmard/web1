@@ -207,6 +207,8 @@ function PublishCenterPageInner() {
   const editFormRef = useRef<HTMLElement | null>(null);
   const publishCoverPreviewRef = useRef<HTMLDivElement | null>(null);
   const editCoverPreviewRef = useRef<HTMLDivElement | null>(null);
+  const publishObjectUrlRef = useRef<string | null>(null);
+  const editObjectUrlRef = useRef<string | null>(null);
   const suppressMessageScrollRef = useRef(false);
   const [loading, setLoading] = useState(false);
   const [lastSubmitted, setLastSubmitted] = useState<SubmitPreview | null>(null);
@@ -223,6 +225,7 @@ function PublishCenterPageInner() {
   const [awardStructured, setAwardStructured] = useState<AwardStructuredData>(createDefaultAwardStructuredData());
   const [subHref, setSubHref] = useState("");
   const [coverImage, setCoverImage] = useState("");
+  const [coverPreviewSrc, setCoverPreviewSrc] = useState("");
   const [conceptSummary, setConceptSummary] = useState("");
   const [applicableScenarios, setApplicableScenarios] = useState("");
   const [versionLabel, setVersionLabel] = useState("");
@@ -242,6 +245,7 @@ function PublishCenterPageInner() {
   const [editDataStructured, setEditDataStructured] = useState<DataStructuredData>(createDefaultDataStructuredData());
   const [editAwardStructured, setEditAwardStructured] = useState<AwardStructuredData>(createDefaultAwardStructuredData());
   const [editCoverImage, setEditCoverImage] = useState("");
+  const [editCoverPreviewSrc, setEditCoverPreviewSrc] = useState("");
   const [editReason, setEditReason] = useState("");
 
   const allowedCategories = useMemo(() => getAllowedCategories(memberType), [memberType]);
@@ -311,19 +315,19 @@ function PublishCenterPageInner() {
   }, [message, pendingPreviewScroll]);
 
   useEffect(() => {
-    if (pendingPreviewScroll === "publish" && coverImage) {
+    if (pendingPreviewScroll === "publish" && (coverPreviewSrc || coverImage)) {
       window.requestAnimationFrame(() => {
         publishCoverPreviewRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
         setPendingPreviewScroll(null);
       });
     }
-    if (pendingPreviewScroll === "edit" && editCoverImage) {
+    if (pendingPreviewScroll === "edit" && (editCoverPreviewSrc || editCoverImage)) {
       window.requestAnimationFrame(() => {
         editCoverPreviewRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
         setPendingPreviewScroll(null);
       });
     }
-  }, [coverImage, editCoverImage, pendingPreviewScroll]);
+  }, [coverImage, editCoverImage, coverPreviewSrc, editCoverPreviewSrc, pendingPreviewScroll]);
 
   useEffect(() => {
     if (!editingId) return;
@@ -388,8 +392,9 @@ function PublishCenterPageInner() {
     setMessage("已根据标题与正文提炼摘要，结果更利于搜索抓取与页面概览。");
   }
 
-  function resetCategoryMeta() {
+  const resetCategoryMeta = useCallback(() => {
     setCoverImage("");
+    replacePreviewUrl("publish", "");
     setConceptSummary("");
     setApplicableScenarios("");
     setVersionLabel("");
@@ -397,7 +402,7 @@ function PublishCenterPageInner() {
     setRelatedStandardIds("");
     setRelatedBrandIds("");
     setTagSlugs("");
-  }
+  }, []);
 
   function resetTermSections() {
     setTermSections(createDefaultTermSections());
@@ -441,9 +446,19 @@ function PublishCenterPageInner() {
     setEditTermSections((prev) => prev.filter((x) => x.id !== id));
   }
 
+  function replacePreviewUrl(kind: "publish" | "edit", nextUrl: string) {
+    const targetRef = kind === "publish" ? publishObjectUrlRef : editObjectUrlRef;
+    const setPreview = kind === "publish" ? setCoverPreviewSrc : setEditCoverPreviewSrc;
+    if (targetRef.current?.startsWith("blob:")) {
+      URL.revokeObjectURL(targetRef.current);
+    }
+    targetRef.current = nextUrl.startsWith("blob:") ? nextUrl : null;
+    setPreview(nextUrl);
+  }
+
   useEffect(() => {
     resetCategoryMeta();
-  }, [safeTab]);
+  }, [safeTab, resetCategoryMeta]);
 
   useEffect(() => {
     if (safeTab === "terms") resetTermSections();
@@ -570,6 +585,7 @@ function PublishCenterPageInner() {
         : createDefaultAwardStructuredData()
     );
     setEditCoverImage(item.coverImage ?? "");
+    replacePreviewUrl("edit", item.coverImage ?? "");
     setEditReason("");
   }
 
@@ -630,12 +646,13 @@ function PublishCenterPageInner() {
   async function handleCoverImageUpload(file: File | null) {
     if (!file) return;
     try {
+      replacePreviewUrl("publish", URL.createObjectURL(file));
+      setPendingPreviewScroll("publish");
       const imageUrl = await uploadImageToServer(file, {
         folder: "content/covers",
         maxBytes: COVER_IMAGE_MAX_BYTES,
       });
       setCoverImage(imageUrl);
-      setPendingPreviewScroll("publish");
       setMessage("顶部配图已加载，可先预览，提交后生效。");
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "图片上传失败");
@@ -645,12 +662,13 @@ function PublishCenterPageInner() {
   async function handleEditCoverImageUpload(file: File | null) {
     if (!file) return;
     try {
+      replacePreviewUrl("edit", URL.createObjectURL(file));
+      setPendingPreviewScroll("edit");
       const imageUrl = await uploadImageToServer(file, {
         folder: "content/covers",
         maxBytes: COVER_IMAGE_MAX_BYTES,
       });
       setEditCoverImage(imageUrl);
-      setPendingPreviewScroll("edit");
       setMessage("顶部配图已加载，可先预览，提交后生效。");
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "图片上传失败");
@@ -663,9 +681,11 @@ function PublishCenterPageInner() {
       maxBytes: COVER_IMAGE_MAX_BYTES,
     });
     if (target === "publish") {
+      replacePreviewUrl("publish", URL.createObjectURL(file));
       setCoverImage(imageUrl);
       setPendingPreviewScroll("publish");
     } else {
+      replacePreviewUrl("edit", URL.createObjectURL(file));
       setEditCoverImage(imageUrl);
       setPendingPreviewScroll("edit");
     }
@@ -925,16 +945,16 @@ function PublishCenterPageInner() {
                   className="block"
                 />
                 <span>支持本地上传，最大 2MB</span>
-                {coverImage && (
+                {(coverPreviewSrc || coverImage) && (
                   <button
                     type="button"
-                    onClick={() => setCoverImage("")}
+                    onClick={() => { setCoverImage(""); replacePreviewUrl("publish", ""); }}
                     className="px-2 py-1 rounded border border-border hover:bg-surface"
                   >
                     清除
                   </button>
                 )}
-                {coverImage && (
+                {(coverPreviewSrc || coverImage) && (
                   <button
                     type="button"
                     onClick={() => setCropTarget("publish")}
@@ -945,12 +965,12 @@ function PublishCenterPageInner() {
                 )}
               </div>
               {safeTab === "terms" && <p className="text-xs text-muted">最佳尺寸：1600 x 900 px，建议使用横版 16:9 图片。</p>}
-              {coverImage && (
+              {(coverPreviewSrc || coverImage) && (
                 <div ref={publishCoverPreviewRef} className="rounded-lg border border-border bg-surface p-3">
                   <p className="text-xs text-muted mb-2">顶部配图预览</p>
                   {/* 这里允许预览任意已上传地址，使用原生 img 可避免远程域名限制阻断后台预览。 */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={coverImage} alt="" className="max-h-80 w-full rounded-lg border border-border bg-surface-elevated object-contain" loading="lazy" />
+                  <img src={coverPreviewSrc || coverImage} alt="" className="max-h-80 w-full rounded-lg border border-border bg-surface-elevated object-contain" loading="lazy" />
                 </div>
               )}
             </>
@@ -1051,16 +1071,16 @@ function PublishCenterPageInner() {
                     className="block"
                   />
                   <span>支持本地上传，最大 2MB</span>
-                  {editCoverImage && (
+                  {(editCoverPreviewSrc || editCoverImage) && (
                     <button
                       type="button"
-                      onClick={() => setEditCoverImage("")}
+                      onClick={() => { setEditCoverImage(""); replacePreviewUrl("edit", ""); }}
                       className="px-2 py-1 rounded border border-border hover:bg-surface"
                     >
                       清除
                     </button>
                   )}
-                  {editCoverImage && (
+                  {(editCoverPreviewSrc || editCoverImage) && (
                     <button
                       type="button"
                       onClick={() => setCropTarget("edit")}
@@ -1071,12 +1091,12 @@ function PublishCenterPageInner() {
                   )}
                 </div>
                 {safeTab === "terms" && <p className="text-xs text-muted">最佳尺寸：1600 x 900 px，建议使用横版 16:9 图片。</p>}
-                {editCoverImage && (
+                {(editCoverPreviewSrc || editCoverImage) && (
                   <div ref={editCoverPreviewRef} className="rounded-lg border border-border bg-surface p-3">
                     <p className="text-xs text-muted mb-2">顶部配图预览</p>
                     {/* 这里允许预览任意已上传地址，使用原生 img 可避免远程域名限制阻断后台预览。 */}
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={editCoverImage} alt="" className="max-h-80 w-full rounded-lg border border-border bg-surface-elevated object-contain" loading="lazy" />
+                    <img src={editCoverPreviewSrc || editCoverImage} alt="" className="max-h-80 w-full rounded-lg border border-border bg-surface-elevated object-contain" loading="lazy" />
                   </div>
                 )}
               </>
