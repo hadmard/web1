@@ -4,7 +4,7 @@ type TagRule = {
   base?: number;
 };
 
-export const AUTO_TAG_LIMIT = 3;
+export const AUTO_TAG_LIMIT = 4;
 
 const TAG_RULES: TagRule[] = [
   {
@@ -192,6 +192,56 @@ export function suggestTagsFromText(text: string, max = AUTO_TAG_LIMIT): string[
   return uniq(ranked).slice(0, max);
 }
 
+export function suggestTagsForGeo(params: {
+  title?: string | null;
+  excerpt?: string | null;
+  content?: string | null;
+  categoryHref?: string | null;
+  subHref?: string | null;
+  max?: number;
+}): string[] {
+  const max = params.max ?? AUTO_TAG_LIMIT;
+  const scoreMap = new Map<string, number>();
+  const segments = [
+    { text: params.title ?? "", weight: 4 },
+    { text: params.excerpt ?? "", weight: 3 },
+    { text: params.content ?? "", weight: 2 },
+    { text: [params.categoryHref, params.subHref].filter(Boolean).join(" "), weight: 2 },
+  ];
+
+  for (const segment of segments) {
+    const source = normalize(segment.text);
+    if (!source) continue;
+
+    for (const rule of TAG_RULES) {
+      let score = 0;
+      for (const word of rule.words) {
+        const hit = countOccurrences(source, normalize(word));
+        if (hit > 0) {
+          score += hit * segment.weight * (word.length >= 4 ? 4 : 2);
+        }
+      }
+      if (score > 0) {
+        scoreMap.set(rule.label, (scoreMap.get(rule.label) ?? 0) + score + (rule.base ?? 0));
+      }
+    }
+  }
+
+  const hintSource = normalize([params.categoryHref, params.subHref, params.title, params.excerpt].filter(Boolean).join(" "));
+  for (const hint of CATEGORY_HINTS) {
+    if (!hintSource.includes(hint.hit)) continue;
+    for (const tag of hint.tags) {
+      scoreMap.set(tag, (scoreMap.get(tag) ?? 0) + 6);
+    }
+  }
+
+  const ranked = Array.from(scoreMap.entries())
+    .sort((a, b) => b[1] - a[1] || b[0].length - a[0].length)
+    .map(([label]) => label);
+
+  return uniq(ranked).slice(0, max);
+}
+
 export function parseTagInput(input?: string | null): string[] {
   if (!input) return [];
   return uniq(input.split(/[\uff0c,\n\r\t ]+/g));
@@ -208,9 +258,5 @@ export function resolveTagSlugs(params: {
   const manual = parseTagInput(params.manualTagInput);
   if (manual.length > 0) return manual;
 
-  return suggestTagsFromText(
-    [params.title, params.excerpt, params.content, params.categoryHref, params.subHref]
-      .filter(Boolean)
-      .join(" ")
-  );
+  return suggestTagsForGeo(params);
 }

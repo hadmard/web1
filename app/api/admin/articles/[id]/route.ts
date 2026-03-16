@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { writeOperationLog } from "@/lib/operation-log";
@@ -17,6 +18,25 @@ function isValidTermStructuredContent(input: string) {
   const headingCount = (input.match(/<h3>/g) ?? []).length;
   const paragraphCount = (input.match(/<p>/g) ?? []).length;
   return sectionCount > 0 && sectionCount === headingCount && sectionCount === paragraphCount;
+}
+
+function revalidateArticlePaths(article: {
+  slug?: string | null;
+  title?: string | null;
+  categoryHref?: string | null;
+  subHref?: string | null;
+}) {
+  const segment = (article.slug || article.title || "").trim();
+  const isDictionary =
+    isDictionaryPath(article.categoryHref) || isDictionaryPath(article.subHref);
+
+  if (isDictionary) {
+    revalidatePath("/dictionary");
+    revalidatePath("/dictionary/all");
+    if (segment) {
+      revalidatePath(`/dictionary/${encodeURIComponent(segment)}`);
+    }
+  }
 }
 
 export async function GET(
@@ -136,7 +156,38 @@ export async function PATCH(
     return NextResponse.json({ error: "当前账号没有直接修改权限，请提交修改申请" }, { status: 403 });
   }
 
-  const article = await prisma.article.update({ where: { id }, data });
+  const article = await prisma.article.update({
+    where: { id },
+    data,
+    select: {
+      id: true,
+      slug: true,
+      title: true,
+      categoryHref: true,
+      subHref: true,
+      authorMemberId: true,
+      publishedAt: true,
+      excerpt: true,
+      content: true,
+      coverImage: true,
+      tagSlugs: true,
+      isPinned: true,
+      status: true,
+      reviewNote: true,
+      reviewedAt: true,
+      reviewedById: true,
+      updatedAt: true,
+      createdAt: true,
+      conceptSummary: true,
+      applicableScenarios: true,
+      versionLabel: true,
+      relatedTermSlugs: true,
+      relatedStandardIds: true,
+      relatedBrandIds: true,
+      syncToMainSite: true,
+    },
+  });
+  revalidateArticlePaths(article);
   if (typeof data.status === "string") {
     await writeOperationLog({
       actorId: session.sub,

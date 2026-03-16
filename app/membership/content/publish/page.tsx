@@ -55,7 +55,8 @@ import {
   type AwardStructuredData,
 } from "@/lib/award-structured";
 import { uploadImageToServer } from "@/lib/client-image";
-import { previewText } from "@/lib/text";
+import { buildGeoExcerpt, previewText } from "@/lib/text";
+import { suggestTagsForGeo } from "@/lib/tag-suggest";
 
 type MemberType = "enterprise_basic" | "enterprise_advanced" | "personal";
 type Status = "draft" | "pending" | "approved" | "rejected";
@@ -124,6 +125,14 @@ function buildTermContentHtml(sections: TermSection[]) {
     .join("");
 }
 
+function extractTermBody(node: Element | null) {
+  if (!node) return "";
+  const html = node.innerHTML.replace(/<br\s*\/?>/gi, "\n");
+  const temp = document.createElement("div");
+  temp.innerHTML = html;
+  return (temp.textContent || "").trim();
+}
+
 function parseTermContentSections(html: string): TermSection[] {
   try {
     const parser = new DOMParser();
@@ -132,7 +141,7 @@ function parseTermContentSections(html: string): TermSection[] {
     const fromSections = blocks
       .map((node, idx) => {
         const heading = (node.querySelector("h1,h2,h3,h4,h5,h6")?.textContent || "").trim();
-        const body = (node.querySelector("p")?.textContent || node.textContent || "").trim();
+        const body = extractTermBody(node.querySelector("p")) || (node.textContent || "").trim();
         return { id: `parsed-${idx + 1}`, heading, body };
       })
       .filter((x) => x.heading || x.body);
@@ -195,8 +204,12 @@ function PublishCenterPageInner() {
   const [message, setMessage] = useState("");
   const messageRef = useRef<HTMLDivElement | null>(null);
   const editFormRef = useRef<HTMLElement | null>(null);
+  const publishCoverPreviewRef = useRef<HTMLDivElement | null>(null);
+  const editCoverPreviewRef = useRef<HTMLDivElement | null>(null);
+  const suppressMessageScrollRef = useRef(false);
   const [loading, setLoading] = useState(false);
   const [lastSubmitted, setLastSubmitted] = useState<SubmitPreview | null>(null);
+  const [pendingPreviewScroll, setPendingPreviewScroll] = useState<"publish" | "edit" | null>(null);
 
   const [title, setTitle] = useState("");
   const [excerpt, setExcerpt] = useState("");
@@ -287,8 +300,28 @@ function PublishCenterPageInner() {
 
   useEffect(() => {
     if (!message) return;
+    if (pendingPreviewScroll) return;
+    if (suppressMessageScrollRef.current) {
+      suppressMessageScrollRef.current = false;
+      return;
+    }
     messageRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, [message]);
+  }, [message, pendingPreviewScroll]);
+
+  useEffect(() => {
+    if (pendingPreviewScroll === "publish" && coverImage) {
+      window.requestAnimationFrame(() => {
+        publishCoverPreviewRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+        setPendingPreviewScroll(null);
+      });
+    }
+    if (pendingPreviewScroll === "edit" && editCoverImage) {
+      window.requestAnimationFrame(() => {
+        editCoverPreviewRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+        setPendingPreviewScroll(null);
+      });
+    }
+  }, [coverImage, editCoverImage, pendingPreviewScroll]);
 
   useEffect(() => {
     if (!editingId) return;
@@ -330,23 +363,27 @@ function PublishCenterPageInner() {
   }
 
   function autoFillExcerpt() {
-    const nextExcerpt = buildAutoExcerpt(getPublishSourceText());
+    const nextExcerpt = buildGeoExcerpt(title, getPublishSourceText(), 120);
     if (!nextExcerpt) {
+      suppressMessageScrollRef.current = true;
       setMessage("未提取到可用于生成摘要的正文内容，请先补充内容。");
       return;
     }
     setExcerpt(nextExcerpt);
-    setMessage("已根据当前内容自动生成摘要，你可以继续手动修改。");
+    suppressMessageScrollRef.current = true;
+    setMessage("已根据标题与正文提炼摘要，结果更利于搜索抓取与页面概览。");
   }
 
   function autoFillEditExcerpt() {
-    const nextExcerpt = buildAutoExcerpt(getEditSourceText());
+    const nextExcerpt = buildGeoExcerpt(editTitle, getEditSourceText(), 120);
     if (!nextExcerpt) {
+      suppressMessageScrollRef.current = true;
       setMessage("未提取到可用于生成摘要的正文内容，请先补充内容。");
       return;
     }
     setEditExcerpt(nextExcerpt);
-    setMessage("已根据当前内容自动生成摘要，你可以继续手动修改。");
+    suppressMessageScrollRef.current = true;
+    setMessage("已根据标题与正文提炼摘要，结果更利于搜索抓取与页面概览。");
   }
 
   function resetCategoryMeta() {
@@ -571,15 +608,21 @@ function PublishCenterPageInner() {
   }
 
   function autoFillTags() {
-    const tags = suggestTagsFromText(
-      [title, excerpt, getPublishSourceText(), selectedCategory?.href, subHref].filter(Boolean).join(" ")
-    );
+    const tags = suggestTagsForGeo({
+      title,
+      excerpt,
+      content: getPublishSourceText(),
+      categoryHref: selectedCategory?.href,
+      subHref,
+    });
     if (tags.length === 0) {
+      suppressMessageScrollRef.current = true;
       setMessage("未识别到明显关键词，请手动补充。");
       return;
     }
     setTagSlugs(tags.join(","));
-    setMessage("已自动生成关键词，可继续手动修改。");
+    suppressMessageScrollRef.current = true;
+    setMessage(`已按标题、摘要、正文和栏目语义生成 ${tags.length} 个关键词。`);
   }
 
   async function handleCoverImageUpload(file: File | null) {
@@ -590,6 +633,7 @@ function PublishCenterPageInner() {
         maxBytes: COVER_IMAGE_MAX_BYTES,
       });
       setCoverImage(imageUrl);
+      setPendingPreviewScroll("publish");
       setMessage("顶部配图已加载，可先预览，提交后生效。");
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "图片上传失败");
@@ -604,6 +648,7 @@ function PublishCenterPageInner() {
         maxBytes: COVER_IMAGE_MAX_BYTES,
       });
       setEditCoverImage(imageUrl);
+      setPendingPreviewScroll("edit");
       setMessage("顶部配图已加载，可先预览，提交后生效。");
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "图片上传失败");
@@ -871,12 +916,13 @@ function PublishCenterPageInner() {
                   </button>
                 )}
               </div>
+              {safeTab === "terms" && <p className="text-xs text-muted">最佳尺寸：1600 x 900 px，建议使用横版 16:9 图片。</p>}
               {coverImage && (
-                <div className="rounded-lg border border-border bg-surface p-3">
+                <div ref={publishCoverPreviewRef} className="rounded-lg border border-border bg-surface p-3">
                   <p className="text-xs text-muted mb-2">顶部配图预览</p>
                   {/* 这里允许预览任意已上传地址，使用原生 img 可避免远程域名限制阻断后台预览。 */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={coverImage} alt="" className="h-48 w-full rounded-lg border border-border bg-surface-elevated object-cover" loading="lazy" />
+                  <img src={coverImage} alt="" className="max-h-80 w-full rounded-lg border border-border bg-surface-elevated object-contain" loading="lazy" />
                 </div>
               )}
             </>
@@ -987,12 +1033,13 @@ function PublishCenterPageInner() {
                     </button>
                   )}
                 </div>
+                {safeTab === "terms" && <p className="text-xs text-muted">最佳尺寸：1600 x 900 px，建议使用横版 16:9 图片。</p>}
                 {editCoverImage && (
-                  <div className="rounded-lg border border-border bg-surface p-3">
+                  <div ref={editCoverPreviewRef} className="rounded-lg border border-border bg-surface p-3">
                     <p className="text-xs text-muted mb-2">顶部配图预览</p>
                     {/* 这里允许预览任意已上传地址，使用原生 img 可避免远程域名限制阻断后台预览。 */}
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={editCoverImage} alt="" className="h-48 w-full rounded-lg border border-border bg-surface-elevated object-cover" loading="lazy" />
+                    <img src={editCoverImage} alt="" className="max-h-80 w-full rounded-lg border border-border bg-surface-elevated object-contain" loading="lazy" />
                   </div>
                 )}
               </>
