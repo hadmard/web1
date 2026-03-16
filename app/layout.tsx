@@ -43,9 +43,9 @@ export const metadata: Metadata = {
   },
   alternates: { canonical: absoluteUrl("/") },
   icons: {
-    icon: "/icon.svg",
-    shortcut: "/icon.svg",
-    apple: "/icon.svg",
+    icon: "/icon.png?v=20260316",
+    shortcut: "/icon.png?v=20260316",
+    apple: "/icon.png?v=20260316",
   },
   robots: { index: true, follow: true },
 };
