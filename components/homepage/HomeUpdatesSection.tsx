@@ -29,7 +29,7 @@ export function HomeUpdatesSection({
           {hasBanner ? (
             <>
               <Image src={bannerSrc} alt="" fill sizes="(max-width: 1024px) 100vw, 1152px" className="showcase-backdrop absolute inset-0" />
-              <Image src={bannerSrc} alt="" fill sizes="(max-width: 1024px) 100vw, 1152px" className="showcase-image absolute inset-0" />
+              <Image src={bannerSrc} alt="" fill sizes="(max-width: 1024px) 100vw, 1152px" className="absolute inset-0 h-full w-full object-cover" />
             </>
           ) : (
             <>
