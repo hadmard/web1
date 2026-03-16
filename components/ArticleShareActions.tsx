@@ -39,6 +39,17 @@ export function ArticleShareActions({ title, url, siteName }: ArticleShareAction
     };
   }, []);
 
+  useEffect(() => {
+    if (!open) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open]);
+
   return (
     <div ref={rootRef} className="relative z-20 mt-8 flex justify-end">
       <div className="relative">
@@ -82,33 +93,55 @@ export function ArticleShareActions({ title, url, siteName }: ArticleShareAction
               </div>
               <p className="mt-2 text-center text-[11px] tracking-[0.12em] text-[#6b7280]">微信扫码分享</p>
             </div>
-            <div className="fixed inset-0 z-50 bg-[rgba(15,23,42,0.62)] backdrop-blur-[2px] md:hidden">
+
+            <div className="fixed inset-0 z-50 bg-[rgba(24,28,36,0.74)] md:hidden">
               <button
                 type="button"
                 aria-label="关闭分享提示"
                 className="absolute inset-0"
                 onClick={() => setOpen(false)}
               />
-              <div className="pointer-events-none absolute right-5 top-16 text-right text-white">
-                <div className="mr-2 text-[2rem] leading-none">↗</div>
-                <p className="mt-2 text-[1.9rem] font-semibold tracking-[0.08em]">点击右上角</p>
+
+              <div className="pointer-events-none absolute right-3 top-5 h-24 w-28">
+                <svg viewBox="0 0 120 120" className="h-full w-full" fill="none" aria-hidden="true">
+                  <path
+                    d="M18 98C56 82 76 57 94 20"
+                    stroke="white"
+                    strokeWidth="3.5"
+                    strokeLinecap="round"
+                    strokeDasharray="9 10"
+                  />
+                  <path
+                    d="M85 21L99 18L97 33"
+                    stroke="white"
+                    strokeWidth="3.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
               </div>
-              <div className="pointer-events-none absolute left-1/2 top-[38%] flex -translate-x-1/2 gap-6">
-                <div className="flex w-[92px] flex-col items-center">
-                  <div className="flex h-[84px] w-[84px] items-center justify-center rounded-[24px] bg-white shadow-[0_16px_36px_rgba(15,23,42,0.2)]">
-                    <svg viewBox="0 0 24 24" className="h-10 w-10 text-[#22c55e]" fill="currentColor" aria-hidden="true">
-                      <path d="M10.2 6.1c-2 0-4 .9-5.3 2.4a1 1 0 0 0 .1 1.5l.7.6a1 1 0 0 0 1.4-.1 4.8 4.8 0 0 1 3.7-1.6v2.3a1 1 0 0 0 1.7.7l4.2-4.1a1 1 0 0 0 0-1.4l-4.2-4.1a1 1 0 0 0-1.7.7v2.1Z" />
+
+              <div className="pointer-events-none absolute right-16 top-28 text-right text-white">
+                <p className="text-[1.25rem] font-semibold tracking-[0.08em]">点击右上角</p>
+              </div>
+
+              <div className="pointer-events-none absolute left-1/2 top-[32%] flex w-[240px] -translate-x-1/2 items-start justify-between">
+                <div className="flex w-[102px] flex-col items-center">
+                  <div className="flex h-[84px] w-[84px] items-center justify-center rounded-[22px] bg-white shadow-[0_16px_36px_rgba(0,0,0,0.24)]">
+                    <svg viewBox="0 0 24 24" className="h-10 w-10 text-[#4ade80]" fill="currentColor" aria-hidden="true">
+                      <path d="M10.6 5.2c-2.6 0-4.9 1-6.4 2.8a1 1 0 0 0 .12 1.44l.92.78a1 1 0 0 0 1.4-.12 5.56 5.56 0 0 1 4-1.8v2.67a1 1 0 0 0 1.72.7l4.7-4.62a1 1 0 0 0 0-1.42l-4.7-4.62a1 1 0 0 0-1.72.7v2.5Z" />
                     </svg>
                   </div>
                   <p className="mt-3 text-center text-[14px] text-white">发送给朋友</p>
                 </div>
-                <div className="flex w-[92px] flex-col items-center">
-                  <div className="flex h-[84px] w-[84px] items-center justify-center rounded-[24px] bg-white shadow-[0_16px_36px_rgba(15,23,42,0.2)]">
-                    <div className="grid h-10 w-10 grid-cols-2 gap-1">
-                      <span className="rounded-full bg-[#ef4444]" />
-                      <span className="rounded-full bg-[#f59e0b]" />
+
+                <div className="flex w-[102px] flex-col items-center">
+                  <div className="flex h-[84px] w-[84px] items-center justify-center rounded-[22px] bg-white shadow-[0_16px_36px_rgba(0,0,0,0.24)]">
+                    <div className="grid h-10 w-10 grid-cols-2 gap-1.5">
+                      <span className="rounded-full bg-[#f97316]" />
+                      <span className="rounded-full bg-[#60a5fa]" />
                       <span className="rounded-full bg-[#22c55e]" />
-                      <span className="rounded-full bg-[#3b82f6]" />
+                      <span className="rounded-full bg-[#f43f5e]" />
                     </div>
                   </div>
                   <p className="mt-3 text-center text-[14px] text-white">分享到朋友圈</p>
