@@ -99,7 +99,7 @@ export function ArticleShareActions({ title, url, siteName }: ArticleShareAction
               <p className="mt-2 text-center text-[11px] tracking-[0.12em] text-[#6b7280]">微信扫码分享</p>
             </div>
 
-            <div className="fixed inset-0 z-50 bg-[rgba(18,22,30,0.82)] md:hidden">
+            <div className="fixed inset-0 z-50 bg-[rgba(18,22,30,0.8)] md:hidden">
               <button
                 type="button"
                 aria-label="关闭分享提示"
@@ -107,17 +107,17 @@ export function ArticleShareActions({ title, url, siteName }: ArticleShareAction
                 onClick={() => setOpen(false)}
               />
 
-              <div className="pointer-events-none absolute right-3 top-3 h-32 w-36">
-                <svg viewBox="0 0 144 132" className="h-full w-full" fill="none" aria-hidden="true">
+              <div className="pointer-events-none absolute right-2 top-4 h-36 w-40">
+                <svg viewBox="0 0 160 144" className="h-full w-full" fill="none" aria-hidden="true">
                   <path
-                    d="M20 110C60 95 88 68 114 22"
+                    d="M24 118C70 98 98 70 126 24"
                     stroke="white"
                     strokeWidth="3.5"
                     strokeLinecap="round"
-                    strokeDasharray="9 11"
+                    strokeDasharray="8 11"
                   />
                   <path
-                    d="M103 24L118 19L115 35"
+                    d="M114 27L130 21L126 38"
                     stroke="white"
                     strokeWidth="3.5"
                     strokeLinecap="round"
@@ -126,38 +126,37 @@ export function ArticleShareActions({ title, url, siteName }: ArticleShareAction
                 </svg>
               </div>
 
-              <div className="pointer-events-none absolute right-[74px] top-[108px] text-right text-white">
-                <p className="text-[1.35rem] font-semibold tracking-[0.08em]">点击右上角</p>
-              </div>
-
-              <div className="pointer-events-none absolute right-[86px] top-[144px] flex h-[54px] w-[54px] items-center justify-center rounded-full bg-white/90 shadow-[0_10px_24px_rgba(255,255,255,0.18)]">
-                <div className="flex items-center gap-[5px]">
-                  <span className="h-[6px] w-[6px] rounded-full bg-[#3f3f46]" />
-                  <span className="h-[6px] w-[6px] rounded-full bg-[#3f3f46]" />
-                  <span className="h-[6px] w-[6px] rounded-full bg-[#3f3f46]" />
+              <div className="pointer-events-none absolute left-1/2 top-[148px] flex -translate-x-1/2 items-center gap-3 text-white">
+                <p className="text-[1.55rem] font-semibold tracking-[0.08em]">点击右上角</p>
+                <div className="flex h-[52px] w-[52px] items-center justify-center rounded-full bg-white/92 shadow-[0_10px_28px_rgba(255,255,255,0.16)]">
+                  <div className="flex items-center gap-[5px]">
+                    <span className="h-[6px] w-[6px] rounded-full bg-[#3f3f46]" />
+                    <span className="h-[6px] w-[6px] rounded-full bg-[#3f3f46]" />
+                    <span className="h-[6px] w-[6px] rounded-full bg-[#3f3f46]" />
+                  </div>
                 </div>
               </div>
 
-              <div className="pointer-events-none absolute left-1/2 top-[35%] flex w-[248px] -translate-x-1/2 items-start justify-between">
-                <div className="flex w-[108px] flex-col items-center">
-                  <div className="flex h-[88px] w-[88px] items-center justify-center rounded-[24px] bg-white shadow-[0_18px_36px_rgba(0,0,0,0.26)]">
+              <div className="pointer-events-none absolute left-1/2 top-[260px] flex w-[270px] -translate-x-1/2 items-start justify-between">
+                <div className="flex w-[118px] flex-col items-center">
+                  <div className="flex h-[92px] w-[92px] items-center justify-center rounded-[24px] bg-white shadow-[0_18px_36px_rgba(0,0,0,0.26)]">
                     <svg viewBox="0 0 24 24" className="h-10 w-10 text-[#4ade80]" fill="currentColor" aria-hidden="true">
                       <path d="M10.6 5.2c-2.6 0-4.9 1-6.4 2.8a1 1 0 0 0 .12 1.44l.92.78a1 1 0 0 0 1.4-.12 5.56 5.56 0 0 1 4-1.8v2.67a1 1 0 0 0 1.72.7l4.7-4.62a1 1 0 0 0 0-1.42l-4.7-4.62a1 1 0 0 0-1.72.7v2.5Z" />
                     </svg>
                   </div>
-                  <p className="mt-3 text-center text-[15px] text-white">发送给朋友</p>
+                  <p className="mt-4 text-center text-[15px] font-medium text-white">发送给朋友</p>
                 </div>
 
-                <div className="flex w-[108px] flex-col items-center">
-                  <div className="flex h-[88px] w-[88px] items-center justify-center rounded-[24px] bg-white shadow-[0_18px_36px_rgba(0,0,0,0.26)]">
-                    <div className="grid h-10 w-10 grid-cols-2 gap-1.5">
-                      <span className="rounded-full bg-[#f97316]" />
+                <div className="flex w-[118px] flex-col items-center">
+                  <div className="flex h-[92px] w-[92px] items-center justify-center rounded-[24px] bg-white shadow-[0_18px_36px_rgba(0,0,0,0.26)]">
+                    <div className="grid h-11 w-11 grid-cols-2 gap-1.5">
+                      <span className="rounded-full bg-[#fb923c]" />
                       <span className="rounded-full bg-[#60a5fa]" />
-                      <span className="rounded-full bg-[#22c55e]" />
-                      <span className="rounded-full bg-[#f43f5e]" />
+                      <span className="rounded-full bg-[#4ade80]" />
+                      <span className="rounded-full bg-[#f472b6]" />
                     </div>
                   </div>
-                  <p className="mt-3 text-center text-[15px] text-white">分享到朋友圈</p>
+                  <p className="mt-4 text-center text-[15px] font-medium text-white">分享到朋友圈</p>
                 </div>
               </div>
             </div>
