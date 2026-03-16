@@ -9,6 +9,11 @@ const nextConfig = {
         permanent: false,
       },
       {
+        source: "/news/:id.html",
+        destination: "https://jiu.cnzhengmu.com/news/:id.html",
+        permanent: false,
+      },
+      {
         source: "/zhanhui/:section/:id.html",
         destination: "https://jiu.cnzhengmu.com/zhanhui/:section/:id.html",
         permanent: false,
