@@ -11,6 +11,7 @@ import { NewsViewTracker } from "./NewsViewTracker";
 import { buildPageMetadata, getSiteUrl } from "@/lib/seo";
 import { ArticleShareActions } from "@/components/ArticleShareActions";
 export const revalidate = 300;
+export const dynamic = "force-dynamic";
 
 const SHARE_SITE_NAME = "中华整木网";
 
