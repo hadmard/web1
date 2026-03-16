@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { cropImageSourceToFile } from "@/lib/client-image";
 
 type ImageCropDialogProps = {
@@ -9,11 +9,15 @@ type ImageCropDialogProps = {
   onConfirm: (file: File) => Promise<void> | void;
 };
 
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 2.5;
+
 export function ImageCropDialog({ source, onCancel, onConfirm }: ImageCropDialogProps) {
   const [zoom, setZoom] = useState(1);
   const [offsetX, setOffsetX] = useState(0);
   const [offsetY, setOffsetY] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const dragStateRef = useRef<{ x: number; y: number; startX: number; startY: number } | null>(null);
 
   useEffect(() => {
     const previous = document.body.style.overflow;
@@ -27,9 +31,46 @@ export function ImageCropDialog({ source, onCancel, onConfirm }: ImageCropDialog
     () => ({
       transform: `translate(${offsetX}px, ${offsetY}px) scale(${zoom})`,
       transformOrigin: "center center",
+      cursor: submitting ? "progress" : "grab",
     }),
-    [offsetX, offsetY, zoom]
+    [offsetX, offsetY, submitting, zoom]
   );
+
+  function clampZoom(next: number) {
+    return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, next));
+  }
+
+  function handleWheel(event: React.WheelEvent<HTMLDivElement>) {
+    event.preventDefault();
+    const delta = event.deltaY > 0 ? -0.08 : 0.08;
+    setZoom((prev) => clampZoom(prev + delta));
+  }
+
+  function handlePointerDown(event: React.PointerEvent<HTMLImageElement>) {
+    if (submitting) return;
+    dragStateRef.current = {
+      x: event.clientX,
+      y: event.clientY,
+      startX: offsetX,
+      startY: offsetY,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function handlePointerMove(event: React.PointerEvent<HTMLImageElement>) {
+    if (!dragStateRef.current || submitting) return;
+    const deltaX = event.clientX - dragStateRef.current.x;
+    const deltaY = event.clientY - dragStateRef.current.y;
+    setOffsetX(dragStateRef.current.startX + deltaX);
+    setOffsetY(dragStateRef.current.startY + deltaY);
+  }
+
+  function handlePointerEnd(event: React.PointerEvent<HTMLImageElement>) {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    dragStateRef.current = null;
+  }
 
   async function handleConfirm() {
     setSubmitting(true);
@@ -47,6 +88,12 @@ export function ImageCropDialog({ source, onCancel, onConfirm }: ImageCropDialog
     } finally {
       setSubmitting(false);
     }
+  }
+
+  function resetCrop() {
+    setZoom(1);
+    setOffsetX(0);
+    setOffsetY(0);
   }
 
   return (
@@ -68,43 +115,31 @@ export function ImageCropDialog({ source, onCancel, onConfirm }: ImageCropDialog
 
         <div className="space-y-5 p-5">
           <div className="overflow-hidden rounded-2xl border border-border bg-slate-100">
-            <div className="relative mx-auto aspect-[16/9] w-full max-w-3xl overflow-hidden bg-slate-200">
+            <div
+              className="relative mx-auto aspect-[16/9] w-full max-w-3xl overflow-hidden bg-slate-200"
+              onWheel={handleWheel}
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={source}
                 alt=""
-                className="absolute inset-0 h-full w-full object-cover"
+                className="absolute inset-0 h-full w-full object-cover select-none"
                 style={previewStyle}
                 draggable={false}
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerEnd}
+                onPointerCancel={handlePointerEnd}
               />
             </div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-3">
-            <label className="space-y-2 text-sm">
-              <span className="text-muted">缩放</span>
-              <input type="range" min="1" max="2.5" step="0.01" value={zoom} onChange={(e) => setZoom(Number(e.target.value))} className="w-full" />
-            </label>
-            <label className="space-y-2 text-sm">
-              <span className="text-muted">左右位置</span>
-              <input type="range" min="-240" max="240" step="1" value={offsetX} onChange={(e) => setOffsetX(Number(e.target.value))} className="w-full" />
-            </label>
-            <label className="space-y-2 text-sm">
-              <span className="text-muted">上下位置</span>
-              <input type="range" min="-180" max="180" step="1" value={offsetY} onChange={(e) => setOffsetY(Number(e.target.value))} className="w-full" />
-            </label>
-          </div>
-
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-xs text-muted">调整到你觉得最舒服的画面后，再点击使用裁剪结果。</p>
+            <p className="text-xs text-muted">直接在图片上滚轮缩放、按住拖动调整位置，确认后再使用裁剪结果。</p>
             <div className="flex gap-2">
               <button
                 type="button"
-                onClick={() => {
-                  setZoom(1);
-                  setOffsetX(0);
-                  setOffsetY(0);
-                }}
+                onClick={resetCrop}
                 className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-surface"
               >
                 重置

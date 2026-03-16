@@ -316,16 +316,16 @@ function PublishCenterPageInner() {
 
   useEffect(() => {
     if (pendingPreviewScroll === "publish" && (coverPreviewSrc || coverImage)) {
-      window.requestAnimationFrame(() => {
+      window.setTimeout(() => {
         publishCoverPreviewRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
         setPendingPreviewScroll(null);
-      });
+      }, 80);
     }
     if (pendingPreviewScroll === "edit" && (editCoverPreviewSrc || editCoverImage)) {
-      window.requestAnimationFrame(() => {
+      window.setTimeout(() => {
         editCoverPreviewRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
         setPendingPreviewScroll(null);
-      });
+      }, 80);
     }
   }, [coverImage, editCoverImage, coverPreviewSrc, editCoverPreviewSrc, pendingPreviewScroll]);
 
@@ -653,6 +653,7 @@ function PublishCenterPageInner() {
         maxBytes: COVER_IMAGE_MAX_BYTES,
       });
       setCoverImage(imageUrl);
+      suppressMessageScrollRef.current = true;
       setMessage("顶部配图已加载，可先预览，提交后生效。");
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "图片上传失败");
@@ -669,6 +670,7 @@ function PublishCenterPageInner() {
         maxBytes: COVER_IMAGE_MAX_BYTES,
       });
       setEditCoverImage(imageUrl);
+      suppressMessageScrollRef.current = true;
       setMessage("顶部配图已加载，可先预览，提交后生效。");
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "图片上传失败");
