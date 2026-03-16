@@ -60,7 +60,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!article || article.status !== "approved") return { title: "资讯" };
   const description = previewText(article.excerpt ?? article.content, 160);
   return buildPageMetadata({
-    title: `${article.title} | ${SHARE_SITE_NAME}`,
+    title: article.title,
     description,
     path: `/news/${article.slug}`,
     type: "article",
