@@ -23,6 +23,11 @@ const nextConfig = {
         destination: "https://jiu.cnzhengmu.com/shangxueyuan/:section/:id.html",
         permanent: false,
       },
+      {
+        source: "/companynews/:slug.html",
+        destination: "https://jiu.cnzhengmu.com/companynews/:slug.html",
+        permanent: false,
+      },
     ];
   },
 };
