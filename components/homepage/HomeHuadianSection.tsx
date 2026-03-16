@@ -31,7 +31,7 @@ export function HomeHuadianSection({
                 width={1600}
                 height={900}
                 sizes="(max-width: 1024px) 100vw, 1152px"
-                className="showcase-image h-40 sm:h-48"
+                className="h-40 w-full object-cover object-[center_38%] sm:h-48"
               />
             ) : (
               <div className="h-40 sm:h-48 bg-gradient-to-br from-surface-elevated via-surface to-surface-elevated" />

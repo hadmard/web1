@@ -43,7 +43,7 @@ export function HomeEnterpriseSection({
                   width={1440}
                   height={320}
                   sizes="(max-width: 1024px) 100vw, 760px"
-                  className="h-40 w-full object-cover sm:h-48"
+                  className="h-40 w-full object-cover object-[center_42%] sm:h-48"
                 />
               </div>
               <p className="text-sm font-medium text-primary">{middleAd.title}</p>
@@ -58,7 +58,7 @@ export function HomeEnterpriseSection({
                     width={1600}
                     height={900}
                     sizes="(max-width: 1024px) 100vw, 760px"
-                    className="h-40 w-full object-cover sm:h-48"
+                    className="h-40 w-full object-cover object-[center_42%] sm:h-48"
                   />
                 ) : (
                   <div className="h-40 sm:h-48 bg-gradient-to-br from-surface-elevated via-surface to-surface-elevated" />
