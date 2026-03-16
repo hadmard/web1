@@ -315,18 +315,32 @@ function PublishCenterPageInner() {
   }, [message, pendingPreviewScroll]);
 
   useEffect(() => {
-    if (pendingPreviewScroll === "publish" && (coverPreviewSrc || coverImage)) {
-      window.setTimeout(() => {
-        publishCoverPreviewRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (!pendingPreviewScroll) return;
+    const ref = pendingPreviewScroll === "publish" ? publishCoverPreviewRef : editCoverPreviewRef;
+    const hasPreview = pendingPreviewScroll === "publish" ? (coverPreviewSrc || coverImage) : (editCoverPreviewSrc || editCoverImage);
+    if (!hasPreview) return;
+
+    let cancelled = false;
+    let attempts = 0;
+
+    const run = () => {
+      if (cancelled) return;
+      attempts += 1;
+      const element = ref.current;
+      if (element) {
+        element.scrollIntoView({ behavior: attempts === 1 ? "auto" : "smooth", block: "center" });
+      }
+      if (attempts >= 4) {
         setPendingPreviewScroll(null);
-      }, 80);
-    }
-    if (pendingPreviewScroll === "edit" && (editCoverPreviewSrc || editCoverImage)) {
-      window.setTimeout(() => {
-        editCoverPreviewRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-        setPendingPreviewScroll(null);
-      }, 80);
-    }
+        return;
+      }
+      window.setTimeout(run, 160);
+    };
+
+    window.requestAnimationFrame(run);
+    return () => {
+      cancelled = true;
+    };
   }, [coverImage, editCoverImage, coverPreviewSrc, editCoverPreviewSrc, pendingPreviewScroll]);
 
   useEffect(() => {
@@ -454,6 +468,10 @@ function PublishCenterPageInner() {
     }
     targetRef.current = nextUrl.startsWith("blob:") ? nextUrl : null;
     setPreview(nextUrl);
+  }
+
+  function queuePreviewScroll(target: "publish" | "edit") {
+    setPendingPreviewScroll(target);
   }
 
   useEffect(() => {
@@ -647,7 +665,7 @@ function PublishCenterPageInner() {
     if (!file) return;
     try {
       replacePreviewUrl("publish", URL.createObjectURL(file));
-      setPendingPreviewScroll("publish");
+      queuePreviewScroll("publish");
       const imageUrl = await uploadImageToServer(file, {
         folder: "content/covers",
         maxBytes: COVER_IMAGE_MAX_BYTES,
@@ -664,7 +682,7 @@ function PublishCenterPageInner() {
     if (!file) return;
     try {
       replacePreviewUrl("edit", URL.createObjectURL(file));
-      setPendingPreviewScroll("edit");
+      queuePreviewScroll("edit");
       const imageUrl = await uploadImageToServer(file, {
         folder: "content/covers",
         maxBytes: COVER_IMAGE_MAX_BYTES,
@@ -685,11 +703,11 @@ function PublishCenterPageInner() {
     if (target === "publish") {
       replacePreviewUrl("publish", URL.createObjectURL(file));
       setCoverImage(imageUrl);
-      setPendingPreviewScroll("publish");
+      queuePreviewScroll("publish");
     } else {
       replacePreviewUrl("edit", URL.createObjectURL(file));
       setEditCoverImage(imageUrl);
-      setPendingPreviewScroll("edit");
+      queuePreviewScroll("edit");
     }
     suppressMessageScrollRef.current = true;
     setMessage("顶部配图已裁剪并更新预览。");
