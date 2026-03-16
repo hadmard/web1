@@ -40,14 +40,14 @@ export function ArticleShareActions({ title, url, siteName }: ArticleShareAction
   }, []);
 
   return (
-    <div ref={rootRef} className="mt-8 flex justify-end">
+    <div ref={rootRef} className="relative z-20 mt-8 flex justify-end">
       <div className="relative">
         <button
           type="button"
           aria-label={`分享 ${siteName} 文章：${title}`}
           aria-expanded={open}
           onClick={() => setOpen((value) => !value)}
-          className="group flex h-11 w-11 items-center justify-center rounded-full border border-[rgba(15,23,42,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.94),rgba(245,247,250,0.98))] shadow-[0_10px_30px_rgba(15,23,42,0.08),inset_0_1px_0_rgba(255,255,255,0.96)] backdrop-blur transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(15,23,42,0.12),inset_0_1px_0_rgba(255,255,255,0.98)]"
+          className="group inline-flex h-11 items-center gap-2 rounded-full border border-[rgba(15,23,42,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.94),rgba(245,247,250,0.98))] px-4 shadow-[0_10px_30px_rgba(15,23,42,0.08),inset_0_1px_0_rgba(255,255,255,0.96)] backdrop-blur transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(15,23,42,0.12),inset_0_1px_0_rgba(255,255,255,0.98)]"
         >
           <svg
             viewBox="0 0 24 24"
@@ -63,10 +63,11 @@ export function ArticleShareActions({ title, url, siteName }: ArticleShareAction
             <path d="M8.5 8.5 12 5l3.5 3.5" />
             <path d="M5 13.5v3a2.5 2.5 0 0 0 2.5 2.5h9a2.5 2.5 0 0 0 2.5-2.5v-3" />
           </svg>
+          <span className="text-sm font-medium tracking-[0.08em] text-[#111827]">分享</span>
         </button>
 
         {open ? (
-          <div className="absolute right-0 top-[calc(100%+12px)] z-20 w-[168px] rounded-[26px] border border-[rgba(15,23,42,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.97),rgba(245,247,250,0.98))] p-3 shadow-[0_24px_60px_rgba(15,23,42,0.14),inset_0_1px_0_rgba(255,255,255,0.98)] backdrop-blur">
+          <div className="absolute bottom-[calc(100%+14px)] right-0 z-50 w-[176px] rounded-[26px] border border-[rgba(15,23,42,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.97),rgba(245,247,250,0.98))] p-3 shadow-[0_24px_60px_rgba(15,23,42,0.14),inset_0_1px_0_rgba(255,255,255,0.98)] backdrop-blur">
             <div className="rounded-[18px] bg-white p-2 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -78,6 +79,7 @@ export function ArticleShareActions({ title, url, siteName }: ArticleShareAction
                 loading="lazy"
               />
             </div>
+            <p className="mt-2 text-center text-[11px] tracking-[0.12em] text-[#6b7280]">微信扫码分享</p>
           </div>
         ) : null}
       </div>
