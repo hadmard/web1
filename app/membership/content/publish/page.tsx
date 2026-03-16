@@ -20,6 +20,7 @@ import {
   type CategoryOption,
   type ContentTabKey,
 } from "@/lib/content-taxonomy";
+import { ImageCropDialog } from "@/components/ImageCropDialog";
 import { RichEditor } from "@/components/RichEditor";
 import { suggestTagsFromText } from "@/lib/tag-suggest";
 import { BrandStructuredEditor } from "@/components/BrandStructuredEditor";
@@ -210,6 +211,7 @@ function PublishCenterPageInner() {
   const [loading, setLoading] = useState(false);
   const [lastSubmitted, setLastSubmitted] = useState<SubmitPreview | null>(null);
   const [pendingPreviewScroll, setPendingPreviewScroll] = useState<"publish" | "edit" | null>(null);
+  const [cropTarget, setCropTarget] = useState<"publish" | "edit" | null>(null);
 
   const [title, setTitle] = useState("");
   const [excerpt, setExcerpt] = useState("");
@@ -655,6 +657,23 @@ function PublishCenterPageInner() {
     }
   }
 
+  async function applyCroppedCover(file: File, target: "publish" | "edit") {
+    const imageUrl = await uploadImageToServer(file, {
+      folder: "content/covers",
+      maxBytes: COVER_IMAGE_MAX_BYTES,
+    });
+    if (target === "publish") {
+      setCoverImage(imageUrl);
+      setPendingPreviewScroll("publish");
+    } else {
+      setEditCoverImage(imageUrl);
+      setPendingPreviewScroll("edit");
+    }
+    suppressMessageScrollRef.current = true;
+    setMessage("顶部配图已裁剪并更新预览。");
+    setCropTarget(null);
+  }
+
   function renderCategoryFeatureFields(currentTab: ContentTabKey) {
     return (
       <>
@@ -915,6 +934,15 @@ function PublishCenterPageInner() {
                     清除
                   </button>
                 )}
+                {coverImage && (
+                  <button
+                    type="button"
+                    onClick={() => setCropTarget("publish")}
+                    className="px-2 py-1 rounded border border-border hover:bg-surface"
+                  >
+                    裁剪
+                  </button>
+                )}
               </div>
               {safeTab === "terms" && <p className="text-xs text-muted">最佳尺寸：1600 x 900 px，建议使用横版 16:9 图片。</p>}
               {coverImage && (
@@ -1032,6 +1060,15 @@ function PublishCenterPageInner() {
                       清除
                     </button>
                   )}
+                  {editCoverImage && (
+                    <button
+                      type="button"
+                      onClick={() => setCropTarget("edit")}
+                      className="px-2 py-1 rounded border border-border hover:bg-surface"
+                    >
+                      裁剪
+                    </button>
+                  )}
                 </div>
                 {safeTab === "terms" && <p className="text-xs text-muted">最佳尺寸：1600 x 900 px，建议使用横版 16:9 图片。</p>}
                 {editCoverImage && (
@@ -1117,6 +1154,16 @@ function PublishCenterPageInner() {
             </div>
           </form>
         </section>
+      )}
+
+      {cropTarget && (
+        <ImageCropDialog
+          source={cropTarget === "publish" ? coverImage : editCoverImage}
+          onCancel={() => setCropTarget(null)}
+          onConfirm={async (file) => {
+            await applyCroppedCover(file, cropTarget);
+          }}
+        />
       )}
     </div>
   );

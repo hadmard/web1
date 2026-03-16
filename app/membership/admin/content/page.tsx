@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { CONTENT_TAB_DEFS, MEMBER_PUBLISH_CATEGORY_OPTIONS, resolveTabKeyFromHref, type ContentTabKey } from "@/lib/content-taxonomy";
 import { ManageContentList } from "@/app/membership/admin/content/components/ManageContentList";
 import { ReviewPanels } from "@/app/membership/admin/content/components/ReviewPanels";
+import { ImageCropDialog } from "@/components/ImageCropDialog";
 import { RichEditor } from "@/components/RichEditor";
 import { suggestTagsFromText } from "@/lib/tag-suggest";
 import { BrandStructuredEditor } from "@/components/BrandStructuredEditor";
@@ -220,6 +221,7 @@ export default function AdminContentPage() {
   const suppressMessageScrollRef = useRef(false);
   const [lastSubmitted, setLastSubmitted] = useState<SubmitPreview | null>(null);
   const [pendingPreviewScroll, setPendingPreviewScroll] = useState<"publish" | "edit" | null>(null);
+  const [cropTarget, setCropTarget] = useState<"publish" | "edit" | null>(null);
 
   const [items, setItems] = useState<ArticleItem[]>([]);
   const [pendingItems, setPendingItems] = useState<ArticleItem[]>([]);
@@ -330,6 +332,23 @@ export default function AdminContentPage() {
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "图片上传失败");
     }
+  }
+
+  async function applyCroppedCover(file: File, target: "publish" | "edit") {
+    const imageUrl = await uploadImageToServer(file, {
+      folder: "content/covers",
+      maxBytes: COVER_IMAGE_MAX_BYTES,
+    });
+    if (target === "publish") {
+      setCoverImage(imageUrl);
+      setPendingPreviewScroll("publish");
+    } else {
+      setEditCoverImage(imageUrl);
+      setPendingPreviewScroll("edit");
+    }
+    suppressMessageScrollRef.current = true;
+    setMessage("顶部配图已裁剪并更新预览。");
+    setCropTarget(null);
   }
 
   const loadSession = useCallback(async () => {
@@ -652,6 +671,8 @@ export default function AdminContentPage() {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) { setMessage(data.error ?? "保存失败"); setReviewAction(null); return; }
+    setItems((prev) => prev.map((item) => (item.id === editingId ? { ...item, ...data } : item)));
+    setPendingItems((prev) => prev.map((item) => (item.id === editingId ? { ...item, ...data } : item)));
     setMessage(nextStatus ? "已修改并审核。" : "已保存修改。");
     setEditingId(null); setEditingChangeId(null); setReviewAction(null);
     if (mode === "review") await loadReview(); else await loadList();
@@ -810,6 +831,15 @@ export default function AdminContentPage() {
                       className="px-2 py-1 rounded border border-border hover:bg-surface"
                     >
                       清除
+                    </button>
+                  )}
+                  {coverImage && (
+                    <button
+                      type="button"
+                      onClick={() => setCropTarget("publish")}
+                      className="px-2 py-1 rounded border border-border hover:bg-surface"
+                    >
+                      裁剪
                     </button>
                   )}
                 </div>
@@ -975,6 +1005,15 @@ export default function AdminContentPage() {
                       清除
                     </button>
                   )}
+                  {editCoverImage && (
+                    <button
+                      type="button"
+                      onClick={() => setCropTarget("edit")}
+                      className="px-2 py-1 rounded border border-border hover:bg-surface"
+                    >
+                      裁剪
+                    </button>
+                  )}
                 </div>
                 {tab === "terms" && <p className="text-xs text-muted">最佳尺寸：1600 x 900 px，建议使用横版 16:9 图片。</p>}
                 {editCoverImage && (
@@ -1082,6 +1121,16 @@ export default function AdminContentPage() {
             {reviewAction && <p className="text-xs text-muted">处理中：{STATUS_TEXT[reviewAction]}</p>}
           </form>
         </section>
+      )}
+
+      {cropTarget && (
+        <ImageCropDialog
+          source={cropTarget === "publish" ? coverImage : editCoverImage}
+          onCancel={() => setCropTarget(null)}
+          onConfirm={async (file) => {
+            await applyCroppedCover(file, cropTarget);
+          }}
+        />
       )}
     </div>
   );

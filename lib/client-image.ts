@@ -32,6 +32,7 @@ function dataUrlToFile(dataUrl: string, fileName: string) {
 function loadImage(source: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new window.Image();
+    img.crossOrigin = "anonymous";
     img.onload = () => resolve(img);
     img.onerror = () => reject(new Error("图片解码失败"));
     img.src = source;
@@ -129,4 +130,66 @@ export async function uploadImageToServer(
   }
 
   return data.url;
+}
+
+export type CropSelection = {
+  zoom: number;
+  offsetX: number;
+  offsetY: number;
+  aspectWidth?: number;
+  aspectHeight?: number;
+  outputWidth?: number;
+  outputHeight?: number;
+};
+
+export async function cropImageSourceToFile(
+  source: string,
+  selection: CropSelection,
+  fileName = `cropped-${Date.now()}.webp`
+): Promise<File> {
+  const img = await loadImage(source);
+  const aspectWidth = selection.aspectWidth ?? 16;
+  const aspectHeight = selection.aspectHeight ?? 9;
+  const outputWidth = selection.outputWidth ?? 1600;
+  const outputHeight = selection.outputHeight ?? 900;
+  const frameWidth = 1600;
+  const frameHeight = Math.round((frameWidth * aspectHeight) / aspectWidth);
+
+  const baseScale = Math.max(frameWidth / img.naturalWidth, frameHeight / img.naturalHeight);
+  const zoom = Math.max(1, selection.zoom || 1);
+  const displayWidth = img.naturalWidth * baseScale * zoom;
+  const displayHeight = img.naturalHeight * baseScale * zoom;
+  const left = (frameWidth - displayWidth) / 2 + selection.offsetX;
+  const top = (frameHeight - displayHeight) / 2 + selection.offsetY;
+
+  let sourceX = (-left / displayWidth) * img.naturalWidth;
+  let sourceY = (-top / displayHeight) * img.naturalHeight;
+  let sourceWidth = (frameWidth / displayWidth) * img.naturalWidth;
+  let sourceHeight = (frameHeight / displayHeight) * img.naturalHeight;
+
+  sourceWidth = Math.min(sourceWidth, img.naturalWidth);
+  sourceHeight = Math.min(sourceHeight, img.naturalHeight);
+  sourceX = Math.max(0, Math.min(sourceX, img.naturalWidth - sourceWidth));
+  sourceY = Math.max(0, Math.min(sourceY, img.naturalHeight - sourceHeight));
+
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("浏览器不支持图片裁剪");
+
+  canvas.width = outputWidth;
+  canvas.height = outputHeight;
+  ctx.drawImage(
+    img,
+    sourceX,
+    sourceY,
+    sourceWidth,
+    sourceHeight,
+    0,
+    0,
+    outputWidth,
+    outputHeight
+  );
+
+  const dataUrl = canvas.toDataURL("image/webp", 0.92);
+  return dataUrlToFile(dataUrl, fileName);
 }
