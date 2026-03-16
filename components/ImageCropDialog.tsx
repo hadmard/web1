@@ -47,8 +47,18 @@ export function ImageCropDialog({ source, onCancel, onConfirm }: ImageCropDialog
 
   function handleWheel(event: React.WheelEvent<HTMLDivElement>) {
     event.preventDefault();
-    const delta = event.deltaY > 0 ? -0.08 : 0.08;
-    setZoom((prev) => clampZoom(prev + delta));
+    if (event.ctrlKey) {
+      const delta = event.deltaY > 0 ? -0.08 : 0.08;
+      setZoom((prev) => clampZoom(prev + delta));
+      return;
+    }
+
+    if (event.shiftKey) {
+      setOffsetX((prev) => prev - event.deltaY * 0.45);
+      return;
+    }
+
+    setOffsetY((prev) => prev - event.deltaY * 0.45);
   }
 
   function handlePointerDown(event: React.PointerEvent<HTMLImageElement>) {
@@ -153,7 +163,7 @@ export function ImageCropDialog({ source, onCancel, onConfirm }: ImageCropDialog
               </div>
 
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-xs text-muted">直接在图片上滚轮缩放、按住拖动调整位置，确认后再使用裁剪结果。</p>
+                <p className="text-xs text-muted">按住图片可直接拖动位置；滚动鼠标滚轮可上下移动图片查看下部；按住 Ctrl 再滚轮可缩放；按住 Shift 再滚轮可左右微调。</p>
                 <div className="flex gap-2 self-end sm:self-auto">
                   <button
                     type="button"
