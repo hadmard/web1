@@ -8,6 +8,11 @@ const nextConfig = {
         destination: "https://jiu.cnzhengmu.com/news/:section/:id.html",
         permanent: false,
       },
+      {
+        source: "/zhanhui/:section/:id.html",
+        destination: "https://jiu.cnzhengmu.com/zhanhui/:section/:id.html",
+        permanent: false,
+      },
     ];
   },
 };
