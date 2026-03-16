@@ -10,6 +10,7 @@
 // ========== 第一部分：站点基础常量 ==========
 
 export const PUBLIC_SITE_URL = "https://cnzhengmu.com";
+export const LEGACY_SITE_URL = "https://jiu.cnzhengmu.com";
 export const PUBLIC_MEMBER_CONTACT_EMAIL = "yfcccc@zju.edu.cn";
 export const PUBLIC_BUSINESS_CONTACT_EMAIL = "yfcccc@zju.edu.cn";
 export const PUBLIC_CONTACT_PHONE = "13386531653";
