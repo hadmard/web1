@@ -11,6 +11,8 @@ type ImageCropDialogProps = {
 
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 2.5;
+const MOVE_LIMIT_X = 420;
+const MOVE_LIMIT_Y = 320;
 
 export function ImageCropDialog({ source, onCancel, onConfirm }: ImageCropDialogProps) {
   const [zoom, setZoom] = useState(1);
@@ -30,6 +32,9 @@ export function ImageCropDialog({ source, onCancel, onConfirm }: ImageCropDialog
 
   useEffect(() => {
     setLoadFailed(false);
+    setZoom(1);
+    setOffsetX(0);
+    setOffsetY(0);
   }, [source]);
 
   const previewStyle = useMemo(
@@ -45,6 +50,14 @@ export function ImageCropDialog({ source, onCancel, onConfirm }: ImageCropDialog
     return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, next));
   }
 
+  function clampOffsetX(next: number) {
+    return Math.min(MOVE_LIMIT_X, Math.max(-MOVE_LIMIT_X, next));
+  }
+
+  function clampOffsetY(next: number) {
+    return Math.min(MOVE_LIMIT_Y, Math.max(-MOVE_LIMIT_Y, next));
+  }
+
   function handleWheel(event: React.WheelEvent<HTMLDivElement>) {
     event.preventDefault();
     if (event.ctrlKey) {
@@ -54,11 +67,11 @@ export function ImageCropDialog({ source, onCancel, onConfirm }: ImageCropDialog
     }
 
     if (event.shiftKey) {
-      setOffsetX((prev) => prev - event.deltaY * 0.45);
+      setOffsetX((prev) => clampOffsetX(prev - event.deltaY * 0.45));
       return;
     }
 
-    setOffsetY((prev) => prev - event.deltaY * 0.45);
+    setOffsetY((prev) => clampOffsetY(prev - event.deltaY * 0.45));
   }
 
   function handlePointerDown(event: React.PointerEvent<HTMLImageElement>) {
@@ -76,8 +89,8 @@ export function ImageCropDialog({ source, onCancel, onConfirm }: ImageCropDialog
     if (!dragStateRef.current || submitting || loadFailed) return;
     const deltaX = event.clientX - dragStateRef.current.x;
     const deltaY = event.clientY - dragStateRef.current.y;
-    setOffsetX(dragStateRef.current.startX + deltaX);
-    setOffsetY(dragStateRef.current.startY + deltaY);
+    setOffsetX(clampOffsetX(dragStateRef.current.startX + deltaX));
+    setOffsetY(clampOffsetY(dragStateRef.current.startY + deltaY));
   }
 
   function handlePointerEnd(event: React.PointerEvent<HTMLImageElement>) {
@@ -162,9 +175,38 @@ export function ImageCropDialog({ source, onCancel, onConfirm }: ImageCropDialog
                 </div>
               </div>
 
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-xs text-muted">按住图片可直接拖动位置；滚动鼠标滚轮可上下移动图片查看下部；按住 Ctrl 再滚轮可缩放；按住 Shift 再滚轮可左右微调。</p>
-                <div className="flex gap-2 self-end sm:self-auto">
+              <div className="grid gap-4 rounded-xl border border-border bg-surface p-4 sm:grid-cols-[1fr_220px]">
+                <div className="space-y-3">
+                  <p className="text-xs text-muted">
+                    按住图片可直接拖动位置；滚动鼠标滚轮可上下查看图片下部；按住 Ctrl 再滚轮可缩放；按住 Shift 再滚轮可左右微调。
+                  </p>
+                  <label className="block space-y-2 text-sm">
+                    <span className="text-muted">上下查看</span>
+                    <input
+                      type="range"
+                      min={-MOVE_LIMIT_Y}
+                      max={MOVE_LIMIT_Y}
+                      step="1"
+                      value={offsetY}
+                      onChange={(event) => setOffsetY(Number(event.target.value))}
+                      className="w-full"
+                    />
+                  </label>
+                  <label className="block space-y-2 text-sm">
+                    <span className="text-muted">左右微调</span>
+                    <input
+                      type="range"
+                      min={-MOVE_LIMIT_X}
+                      max={MOVE_LIMIT_X}
+                      step="1"
+                      value={offsetX}
+                      onChange={(event) => setOffsetX(Number(event.target.value))}
+                      className="w-full"
+                    />
+                  </label>
+                </div>
+
+                <div className="flex items-end justify-end gap-2">
                   <button
                     type="button"
                     onClick={resetCrop}
