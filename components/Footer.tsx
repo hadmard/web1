@@ -22,8 +22,8 @@ const resourcesLinks = [{ href: "/membership", label: "会员系统" }];
 
 export function Footer() {
   return (
-    <footer className="mt-16 sm:mt-20 px-3 sm:px-5 pb-6 sm:pb-8">
-      <div className="glass-card max-w-6xl mx-auto px-5 sm:px-8 py-10 sm:py-12">
+    <footer className="mt-16 px-3 pb-6 sm:mt-20 sm:px-5 sm:pb-8">
+      <div className="glass-card mx-auto max-w-6xl px-5 py-10 sm:px-8 sm:py-12">
         <section className="rounded-2xl border border-border bg-surface-elevated/80 p-4 sm:p-5">
           <div className="mb-3 flex items-center justify-between gap-3">
             <p className="text-sm font-semibold text-primary">常用入口</p>
@@ -83,13 +83,26 @@ export function Footer() {
           </div>
 
           <div className="col-span-2 sm:col-span-1">
-            <p className="text-sm leading-relaxed text-muted">整木行业知识基础设施，连接资讯、品牌、标准与会员共建。</p>
+            <p className="text-sm leading-relaxed text-muted">
+              整木行业知识基础设施，连接资讯、品牌、标准与会员共建。
+            </p>
           </div>
         </div>
 
-        <div className="mt-10 flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-primary/85">整木网</p>
-          <p className="text-xs text-muted">© {new Date().getFullYear()} All rights reserved.</p>
+        <div className="mt-10 flex flex-col gap-3 border-t border-border pt-6 text-center sm:grid sm:grid-cols-3 sm:items-center">
+          <p className="text-sm text-primary/85 sm:text-left">整木网</p>
+          <p className="text-xs text-muted">
+            工信部ICP备案：
+            <a
+              href="https://beian.miit.gov.cn/"
+              target="_blank"
+              rel="noreferrer"
+              className="ml-1 transition-colors hover:text-accent"
+            >
+              浙ICP备2021004169号-1
+            </a>
+          </p>
+          <p className="text-xs text-muted sm:text-right">© {new Date().getFullYear()} All rights reserved.</p>
         </div>
       </div>
     </footer>
