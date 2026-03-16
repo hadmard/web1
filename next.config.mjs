@@ -33,6 +33,11 @@ const nextConfig = {
         destination: "https://jiu.cnzhengmu.com/platform/:path*",
         permanent: false,
       },
+      {
+        source: "/info/:slug.html",
+        destination: "https://jiu.cnzhengmu.com/info/:slug.html",
+        permanent: false,
+      },
     ];
   },
 };
