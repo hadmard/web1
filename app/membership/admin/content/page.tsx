@@ -1166,7 +1166,7 @@ export default function AdminContentPage() {
 
       {cropTarget && (
         <ImageCropDialog
-          source={cropTarget === "publish" ? coverImage : editCoverImage}
+          source={cropTarget === "publish" ? (coverPreviewSrc || coverImage) : (editCoverPreviewSrc || editCoverImage)}
           onCancel={() => setCropTarget(null)}
           onConfirm={async (file) => {
             await applyCroppedCover(file, cropTarget);
