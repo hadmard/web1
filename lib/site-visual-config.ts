@@ -1,3 +1,5 @@
+import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
+
 export type BackgroundImageKey =
   | "homeHero"
   | "homeUpdates"
@@ -134,7 +136,8 @@ export function normalizeSiteVisualSettings(input: unknown): SiteVisualSettings 
 
   const backgrounds = BACKGROUND_IMAGE_FIELDS.reduce((acc, field) => {
     const incoming = toText(rawBackgrounds[field.key]);
-    acc[field.key] = incoming || DEFAULT_SITE_VISUAL_SETTINGS.backgrounds[field.key];
+    const next = incoming || DEFAULT_SITE_VISUAL_SETTINGS.backgrounds[field.key];
+    acc[field.key] = resolveUploadedImageUrl(next);
     return acc;
   }, {} as Record<BackgroundImageKey, string>);
 
@@ -144,7 +147,7 @@ export function normalizeSiteVisualSettings(input: unknown): SiteVisualSettings 
     acc[field.key] = {
       enabled: toBool(incoming.enabled, fallback.enabled),
       title: toText(incoming.title) || fallback.title,
-      imageUrl: toText(incoming.imageUrl) || fallback.imageUrl,
+      imageUrl: resolveUploadedImageUrl(toText(incoming.imageUrl) || fallback.imageUrl),
       href: toText(incoming.href) || fallback.href,
     };
     return acc;

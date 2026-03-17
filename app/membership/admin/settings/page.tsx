@@ -12,6 +12,7 @@ import {
   type SiteVisualSettings,
 } from "@/lib/site-visual-config";
 import { uploadImageToServer } from "@/lib/client-image";
+import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
 
 type SettingsState = {
   contentReviewRequired: boolean;
@@ -40,18 +41,32 @@ function parseRequiredSize(requiredSize: string) {
 }
 
 function ImagePreview({ src, alt }: { src: string; alt: string }) {
-  if (!src.trim()) return null;
+  const finalSrc = resolveUploadedImageUrl(src);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    setFailed(false);
+  }, [finalSrc]);
+
+  if (!finalSrc) return null;
 
   return (
     <div className="mt-3 rounded-lg border border-border bg-surface p-3">
       <p className="mb-2 text-xs text-muted">当前图片预览</p>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={src}
-        alt={alt}
-        className="max-h-64 w-full rounded-lg border border-border bg-surface-elevated object-contain"
-        loading="lazy"
-      />
+      {failed ? (
+        <div className="rounded-lg border border-dashed border-border bg-surface-elevated px-3 py-6 text-xs text-muted">
+          预览加载失败。请重新上传，或检查该图片文件是否仍然存在。
+        </div>
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={finalSrc}
+          alt={alt}
+          className="max-h-64 w-full rounded-lg border border-border bg-surface-elevated object-contain"
+          loading="lazy"
+          onError={() => setFailed(true)}
+        />
+      )}
     </div>
   );
 }
@@ -87,12 +102,7 @@ export default function AdminSettingsPage() {
         }
 
         if (categoryRes.ok) {
-          const data = (await categoryRes.json()) as Array<{
-            id: string;
-            href: string;
-            title: string;
-            desc: string | null;
-          }>;
+          const data = (await categoryRes.json()) as Array<{ id: string; href: string; title: string; desc: string | null }>;
           setCategories(
             data
               .map((item) => ({
@@ -121,26 +131,16 @@ export default function AdminSettingsPage() {
   );
 
   function updateBackgroundField(key: BackgroundImageKey, value: string) {
-    setSettings((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        siteVisualSettings: {
-          ...prev.siteVisualSettings,
-          backgrounds: {
-            ...prev.siteVisualSettings.backgrounds,
-            [key]: value,
-          },
-        },
-      };
-    });
+    setSettings((prev) => prev ? {
+      ...prev,
+      siteVisualSettings: {
+        ...prev.siteVisualSettings,
+        backgrounds: { ...prev.siteVisualSettings.backgrounds, [key]: value },
+      },
+    } : prev);
   }
 
-  function updateAdField(
-    key: HomeAdKey,
-    field: keyof SiteVisualSettings["ads"][HomeAdKey],
-    value: string | boolean
-  ) {
+  function updateAdField(key: HomeAdKey, field: keyof SiteVisualSettings["ads"][HomeAdKey], value: string | boolean) {
     setSettings((prev) => {
       if (!prev) return prev;
       const current = prev.siteVisualSettings.ads[key] ?? DEFAULT_SITE_VISUAL_SETTINGS.ads[key];
@@ -150,10 +150,7 @@ export default function AdminSettingsPage() {
           ...prev.siteVisualSettings,
           ads: {
             ...prev.siteVisualSettings.ads,
-            [key]: {
-              ...current,
-              [field]: value,
-            },
+            [key]: { ...current, [field]: value },
           },
         },
       };
@@ -166,7 +163,6 @@ export default function AdminSettingsPage() {
 
     setSaving(true);
     setMessage("");
-
     try {
       const res = await fetch("/api/admin/settings", {
         method: "POST",
@@ -211,10 +207,7 @@ export default function AdminSettingsPage() {
   async function uploadBackgroundImage(key: BackgroundImageKey, file: File | null) {
     if (!file) return;
     try {
-      const imageUrl = await uploadImageToServer(file, {
-        folder: "site-visual/backgrounds",
-        maxBytes: VISUAL_IMAGE_MAX_BYTES,
-      });
+      const imageUrl = await uploadImageToServer(file, { folder: "site-visual/backgrounds", maxBytes: VISUAL_IMAGE_MAX_BYTES });
       updateBackgroundField(key, imageUrl);
       setMessage("图片已加载，请点击“保存”生效。");
     } catch (err) {
@@ -225,10 +218,7 @@ export default function AdminSettingsPage() {
   async function uploadAdImage(key: HomeAdKey, file: File | null) {
     if (!file) return;
     try {
-      const imageUrl = await uploadImageToServer(file, {
-        folder: "site-visual/ads",
-        maxBytes: VISUAL_IMAGE_MAX_BYTES,
-      });
+      const imageUrl = await uploadImageToServer(file, { folder: "site-visual/ads", maxBytes: VISUAL_IMAGE_MAX_BYTES });
       updateAdField(key, "imageUrl", imageUrl);
       setMessage("广告图已加载，请点击“保存”生效。");
     } catch (err) {
@@ -242,13 +232,11 @@ export default function AdminSettingsPage() {
         folder: target.kind === "background" ? "site-visual/backgrounds" : "site-visual/ads",
         maxBytes: VISUAL_IMAGE_MAX_BYTES,
       });
-
       if (target.kind === "background") {
         updateBackgroundField(target.key, imageUrl);
       } else {
         updateAdField(target.key, "imageUrl", imageUrl);
       }
-
       setMessage(`${target.label}已裁剪，请点击“保存”生效。`);
       setCropTarget(null);
     } catch (err) {
@@ -259,7 +247,6 @@ export default function AdminSettingsPage() {
   async function handleSaveCategory(id: string) {
     const target = categories.find((item) => item.id === id);
     if (!target) return;
-
     setSavingCategoryId(id);
     setCategoryMessage("");
 
@@ -268,29 +255,18 @@ export default function AdminSettingsPage() {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: target.title.trim(),
-          desc: target.desc.trim(),
-        }),
+        body: JSON.stringify({ title: target.title.trim(), desc: target.desc.trim() }),
       });
-
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setCategoryMessage(data.error ?? `保存失败：${target.href}`);
         return;
       }
-
-      setCategories((prev) =>
-        prev.map((item) =>
-          item.id === id
-            ? {
-                ...item,
-                title: (data.title ?? item.title) as string,
-                desc: ((data.desc ?? item.desc) as string | null) ?? "",
-              }
-            : item
-        )
-      );
+      setCategories((prev) => prev.map((item) => item.id === id ? {
+        ...item,
+        title: (data.title ?? item.title) as string,
+        desc: ((data.desc ?? item.desc) as string | null) ?? "",
+      } : item));
       setCategoryMessage(`栏目已保存：${target.href}`);
     } catch {
       setCategoryMessage("网络错误，请稍后重试");
@@ -313,41 +289,15 @@ export default function AdminSettingsPage() {
       <form onSubmit={handleSaveSettings} className="space-y-4 rounded-xl border border-border bg-surface-elevated p-6">
         <label className="flex items-center justify-between gap-4 text-sm">
           <span className="text-primary">启用内容审核（关闭后仅子管理员后台直发，会员投稿仍需审核）</span>
-          <input
-            type="checkbox"
-            checked={settings.contentReviewRequired}
-            onChange={(e) =>
-              setSettings((prev) =>
-                prev ? { ...prev, contentReviewRequired: e.target.checked } : prev
-              )
-            }
-          />
+          <input type="checkbox" checked={settings.contentReviewRequired} onChange={(e) => setSettings((prev) => prev ? { ...prev, contentReviewRequired: e.target.checked } : prev)} />
         </label>
-
         <label className="flex items-center justify-between gap-4 text-sm">
           <span className="text-primary">个人会员可下载标准文件</span>
-          <input
-            type="checkbox"
-            checked={settings.memberDownloadStandardEnabled}
-            onChange={(e) =>
-              setSettings((prev) =>
-                prev ? { ...prev, memberDownloadStandardEnabled: e.target.checked } : prev
-              )
-            }
-          />
+          <input type="checkbox" checked={settings.memberDownloadStandardEnabled} onChange={(e) => setSettings((prev) => prev ? { ...prev, memberDownloadStandardEnabled: e.target.checked } : prev)} />
         </label>
-
         <label className="flex items-center justify-between gap-4 text-sm">
           <span className="text-primary">个人会员可下载行业报告</span>
-          <input
-            type="checkbox"
-            checked={settings.memberDownloadReportEnabled}
-            onChange={(e) =>
-              setSettings((prev) =>
-                prev ? { ...prev, memberDownloadReportEnabled: e.target.checked } : prev
-              )
-            }
-          />
+          <input type="checkbox" checked={settings.memberDownloadReportEnabled} onChange={(e) => setSettings((prev) => prev ? { ...prev, memberDownloadReportEnabled: e.target.checked } : prev)} />
         </label>
 
         <section className="space-y-4 rounded-lg border border-border bg-surface p-4">
@@ -366,55 +316,14 @@ export default function AdminSettingsPage() {
                     <label className="text-sm text-primary">{field.label}</label>
                     <span className="text-[11px] text-muted">建议尺寸：{field.requiredSize}</span>
                   </div>
-                  {field.key === "homeHero" && (
-                    <p className="mb-2 text-[11px] text-muted">留空将使用首页纯色背景；上传图片后会覆盖纯色背景。</p>
-                  )}
-                  {field.key === "homeHuadian" && (
-                    <p className="mb-2 text-[11px] text-muted">对应前台首页“华点榜 · 本年度信用推荐”顶部图片。</p>
-                  )}
-                  <input
-                    value={imageUrl}
-                    onChange={(e) => updateBackgroundField(field.key, e.target.value)}
-                    className="w-full rounded border border-border bg-surface px-3 py-2 text-sm"
-                    placeholder="请输入图片 URL（如 /images/xxx.jpg）"
-                  />
+                  {field.key === "homeHero" && <p className="mb-2 text-[11px] text-muted">留空将使用首页纯色背景；上传图片后会覆盖纯色背景。</p>}
+                  {field.key === "homeHuadian" && <p className="mb-2 text-[11px] text-muted">对应前台首页“华点榜 · 本年度信用推荐”顶部图片。</p>}
+                  <input value={imageUrl} onChange={(e) => updateBackgroundField(field.key, e.target.value)} className="w-full rounded border border-border bg-surface px-3 py-2 text-sm" placeholder="请输入图片 URL（如 /images/xxx.jpg）" />
                   <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => {
-                        void uploadBackgroundImage(field.key, e.target.files?.[0] ?? null);
-                        e.currentTarget.value = "";
-                      }}
-                      className="block text-xs text-muted"
-                    />
+                    <input type="file" accept="image/*" onChange={(e) => { void uploadBackgroundImage(field.key, e.target.files?.[0] ?? null); e.currentTarget.value = ""; }} className="block text-xs text-muted" />
                     <span className="text-[11px] text-muted">支持本地上传，最大 2MB</span>
-                    {imageUrl && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setCropTarget({
-                            kind: "background",
-                            key: field.key,
-                            label: field.label,
-                            requiredSize: field.requiredSize,
-                            source: imageUrl,
-                          })
-                        }
-                        className="rounded border border-border px-2 py-1 text-xs hover:bg-surface"
-                      >
-                        裁剪
-                      </button>
-                    )}
-                    {isCustomized && (
-                      <button
-                        type="button"
-                        onClick={() => restoreBackgroundDefault(field.key)}
-                        className="rounded border border-border px-2 py-1 text-xs hover:bg-surface"
-                      >
-                        恢复默认图
-                      </button>
-                    )}
+                    {imageUrl && <button type="button" onClick={() => setCropTarget({ kind: "background", key: field.key, label: field.label, requiredSize: field.requiredSize, source: imageUrl })} className="rounded border border-border px-2 py-1 text-xs hover:bg-surface">裁剪</button>}
+                    {isCustomized && <button type="button" onClick={() => restoreBackgroundDefault(field.key)} className="rounded border border-border px-2 py-1 text-xs hover:bg-surface">恢复默认图</button>}
                   </div>
                   <ImagePreview src={imageUrl} alt={field.label} />
                 </div>
@@ -432,73 +341,20 @@ export default function AdminSettingsPage() {
                     <p className="text-sm text-primary">{field.label}</p>
                     <span className="text-[11px] text-muted">建议尺寸：{field.requiredSize}</span>
                   </div>
-
                   <label className="flex items-center justify-between gap-3 text-xs text-muted">
                     <span>启用广告位</span>
-                    <input
-                      type="checkbox"
-                      checked={ad.enabled}
-                      onChange={(e) => updateAdField(field.key, "enabled", e.target.checked)}
-                    />
+                    <input type="checkbox" checked={ad.enabled} onChange={(e) => updateAdField(field.key, "enabled", e.target.checked)} />
                   </label>
-
-                  <input
-                    value={ad.title}
-                    onChange={(e) => updateAdField(field.key, "title", e.target.value)}
-                    className="w-full rounded border border-border bg-surface px-3 py-2 text-sm"
-                    placeholder="广告位标题"
-                  />
-                  <input
-                    value={ad.imageUrl}
-                    onChange={(e) => updateAdField(field.key, "imageUrl", e.target.value)}
-                    className="w-full rounded border border-border bg-surface px-3 py-2 text-sm"
-                    placeholder="广告图片 URL（如 /images/xxx.jpg）"
-                  />
+                  <input value={ad.title} onChange={(e) => updateAdField(field.key, "title", e.target.value)} className="w-full rounded border border-border bg-surface px-3 py-2 text-sm" placeholder="广告位标题" />
+                  <input value={ad.imageUrl} onChange={(e) => updateAdField(field.key, "imageUrl", e.target.value)} className="w-full rounded border border-border bg-surface px-3 py-2 text-sm" placeholder="广告图片 URL（如 /images/xxx.jpg）" />
                   <div className="flex flex-wrap items-center gap-2">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => {
-                        void uploadAdImage(field.key, e.target.files?.[0] ?? null);
-                        e.currentTarget.value = "";
-                      }}
-                      className="block text-xs text-muted"
-                    />
+                    <input type="file" accept="image/*" onChange={(e) => { void uploadAdImage(field.key, e.target.files?.[0] ?? null); e.currentTarget.value = ""; }} className="block text-xs text-muted" />
                     <span className="text-[11px] text-muted">支持本地上传，最大 2MB</span>
-                    {ad.imageUrl && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setCropTarget({
-                            kind: "ad",
-                            key: field.key,
-                            label: field.label,
-                            requiredSize: field.requiredSize,
-                            source: ad.imageUrl,
-                          })
-                        }
-                        className="rounded border border-border px-2 py-1 text-xs hover:bg-surface"
-                      >
-                        裁剪
-                      </button>
-                    )}
-                    {isCustomized && (
-                      <button
-                        type="button"
-                        onClick={() => restoreAdDefaultImage(field.key)}
-                        className="rounded border border-border px-2 py-1 text-xs hover:bg-surface"
-                      >
-                        恢复默认图
-                      </button>
-                    )}
+                    {ad.imageUrl && <button type="button" onClick={() => setCropTarget({ kind: "ad", key: field.key, label: field.label, requiredSize: field.requiredSize, source: ad.imageUrl })} className="rounded border border-border px-2 py-1 text-xs hover:bg-surface">裁剪</button>}
+                    {isCustomized && <button type="button" onClick={() => restoreAdDefaultImage(field.key)} className="rounded border border-border px-2 py-1 text-xs hover:bg-surface">恢复默认图</button>}
                   </div>
                   <ImagePreview src={ad.imageUrl} alt={field.label} />
-                  <input
-                    value={ad.href}
-                    onChange={(e) => updateAdField(field.key, "href", e.target.value)}
-                    className="w-full rounded border border-border bg-surface px-3 py-2 text-sm"
-                    placeholder="点击跳转链接（如 /membership）"
-                  />
+                  <input value={ad.href} onChange={(e) => updateAdField(field.key, "href", e.target.value)} className="w-full rounded border border-border bg-surface px-3 py-2 text-sm" placeholder="点击跳转链接（如 /membership）" />
                 </article>
               );
             })}
@@ -506,14 +362,7 @@ export default function AdminSettingsPage() {
         </section>
 
         {message && <p className="text-xs text-accent">{message}</p>}
-
-        <button
-          type="submit"
-          disabled={saving}
-          className="rounded bg-accent px-4 py-2 text-sm text-white hover:opacity-90 disabled:opacity-50"
-        >
-          {saving ? "保存中..." : "保存"}
-        </button>
+        <button type="submit" disabled={saving} className="rounded bg-accent px-4 py-2 text-sm text-white hover:opacity-90 disabled:opacity-50">{saving ? "保存中..." : "保存"}</button>
       </form>
 
       <section className="space-y-4 rounded-xl border border-border bg-surface-elevated p-6">
@@ -521,7 +370,6 @@ export default function AdminSettingsPage() {
           <h2 className="font-serif text-lg font-semibold text-primary">栏目名称与简介（SEO）</h2>
           <p className="text-sm text-muted">可自主调整栏目名称和栏目简介，栏目简介会用于页面 SEO 描述。</p>
         </header>
-
         {categoryLoading ? (
           <p className="text-sm text-muted">栏目加载中...</p>
         ) : categories.length === 0 ? (
@@ -532,43 +380,24 @@ export default function AdminSettingsPage() {
               <article key={item.id} className="rounded-lg border border-border bg-surface p-4">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <p className="text-xs text-muted">{item.href}</p>
-                  <button
-                    type="button"
-                    onClick={() => void handleSaveCategory(item.id)}
-                    disabled={savingCategoryId === item.id || !item.title.trim()}
-                    className="rounded border border-border px-3 py-1.5 text-xs text-primary hover:bg-surface-elevated disabled:opacity-50"
-                  >
+                  <button type="button" onClick={() => void handleSaveCategory(item.id)} disabled={savingCategoryId === item.id || !item.title.trim()} className="rounded border border-border px-3 py-1.5 text-xs text-primary hover:bg-surface-elevated disabled:opacity-50">
                     {savingCategoryId === item.id ? "保存中..." : "保存栏目"}
                   </button>
                 </div>
-
                 <label className="mb-1 block text-xs text-muted">栏目名称</label>
-                <input
-                  value={item.title}
-                  onChange={(e) => updateCategoryField(item.id, "title", e.target.value)}
-                  className="w-full rounded border border-border bg-surface px-3 py-2 text-sm"
-                  placeholder="请输入栏目名称"
-                />
-
+                <input value={item.title} onChange={(e) => updateCategoryField(item.id, "title", e.target.value)} className="w-full rounded border border-border bg-surface px-3 py-2 text-sm" placeholder="请输入栏目名称" />
                 <label className="mb-1 mt-3 block text-xs text-muted">栏目简介（用于 SEO）</label>
-                <textarea
-                  value={item.desc}
-                  onChange={(e) => updateCategoryField(item.id, "desc", e.target.value)}
-                  className="w-full rounded border border-border bg-surface px-3 py-2 text-sm"
-                  rows={3}
-                  placeholder="请输入栏目简介"
-                />
+                <textarea value={item.desc} onChange={(e) => updateCategoryField(item.id, "desc", e.target.value)} className="w-full rounded border border-border bg-surface px-3 py-2 text-sm" rows={3} placeholder="请输入栏目简介" />
               </article>
             ))}
           </div>
         )}
-
         {categoryMessage && <p className="text-xs text-accent">{categoryMessage}</p>}
       </section>
 
       {cropTarget && (
         <ImageCropDialog
-          source={cropTarget.source}
+          source={resolveUploadedImageUrl(cropTarget.source)}
           title={`裁剪${cropTarget.label}`}
           description={`按建议尺寸裁剪：${cropTarget.requiredSize}。裁剪后会直接替换当前图片，记得再点击“保存”。`}
           aspectWidth={cropSize.width}
@@ -576,9 +405,7 @@ export default function AdminSettingsPage() {
           outputWidth={cropSize.width}
           outputHeight={cropSize.height}
           onCancel={() => setCropTarget(null)}
-          onConfirm={async (file) => {
-            await applyCroppedImage(file, cropTarget);
-          }}
+          onConfirm={async (file) => { await applyCroppedImage(file, cropTarget); }}
         />
       )}
     </div>

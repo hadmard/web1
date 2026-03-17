@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
 
 type ContentHeroImageProps = {
   src?: string | null;
@@ -13,7 +14,7 @@ export function ContentHeroImage({
   alt,
   containerClassName = "mt-4 aspect-[16/9]",
 }: ContentHeroImageProps) {
-  const finalSrc = src?.trim() || fallbackSrc?.trim() || "";
+  const finalSrc = resolveUploadedImageUrl(src?.trim() || fallbackSrc?.trim() || "");
 
   if (!finalSrc) {
     return null;

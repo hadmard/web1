@@ -56,6 +56,7 @@ import {
   type AwardStructuredData,
 } from "@/lib/award-structured";
 import { uploadImageToServer } from "@/lib/client-image";
+import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
 import { buildGeoExcerpt, previewText } from "@/lib/text";
 import { suggestTagsForGeo } from "@/lib/tag-suggest";
 
@@ -990,7 +991,7 @@ function PublishCenterPageInner() {
                   <p className="text-xs text-muted mb-2">顶部配图预览</p>
                   {/* 这里允许预览任意已上传地址，使用原生 img 可避免远程域名限制阻断后台预览。 */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={coverPreviewSrc || coverImage} alt="" className="max-h-80 w-full rounded-lg border border-border bg-surface-elevated object-contain" loading="lazy" />
+                    <img src={resolveUploadedImageUrl(coverPreviewSrc || coverImage)} alt="" className="max-h-80 w-full rounded-lg border border-border bg-surface-elevated object-contain" loading="lazy" />
                 </div>
               )}
             </>
@@ -1116,7 +1117,7 @@ function PublishCenterPageInner() {
                     <p className="text-xs text-muted mb-2">顶部配图预览</p>
                     {/* 这里允许预览任意已上传地址，使用原生 img 可避免远程域名限制阻断后台预览。 */}
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={editCoverPreviewSrc || editCoverImage} alt="" className="max-h-80 w-full rounded-lg border border-border bg-surface-elevated object-contain" loading="lazy" />
+                    <img src={resolveUploadedImageUrl(editCoverPreviewSrc || editCoverImage)} alt="" className="max-h-80 w-full rounded-lg border border-border bg-surface-elevated object-contain" loading="lazy" />
                   </div>
                 )}
               </>
@@ -1198,7 +1199,7 @@ function PublishCenterPageInner() {
 
       {cropTarget && (
         <ImageCropDialog
-          source={cropTarget === "publish" ? (coverPreviewSrc || coverImage) : (editCoverPreviewSrc || editCoverImage)}
+          source={resolveUploadedImageUrl(cropTarget === "publish" ? (coverPreviewSrc || coverImage) : (editCoverPreviewSrc || editCoverImage))}
           onCancel={() => setCropTarget(null)}
           onConfirm={async (file) => {
             await applyCroppedCover(file, cropTarget);

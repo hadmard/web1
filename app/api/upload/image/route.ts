@@ -1,8 +1,9 @@
 import { randomUUID } from "crypto";
-import { mkdir, writeFile } from "fs/promises";
+import { access, mkdir, readFile, writeFile } from "fs/promises";
 import path from "path";
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
+import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
 
 const MAX_SERVER_IMAGE_BYTES = 5 * 1024 * 1024;
 const MIME_EXTENSIONS: Record<string, string> = {
@@ -13,6 +14,15 @@ const MIME_EXTENSIONS: Record<string, string> = {
   "image/svg+xml": ".svg",
 };
 
+const EXTENSION_MIME: Record<string, string> = {
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".png": "image/png",
+  ".webp": "image/webp",
+  ".gif": "image/gif",
+  ".svg": "image/svg+xml",
+};
+
 function sanitizeFolder(input: string) {
   const cleaned = input
     .split("/")
@@ -21,6 +31,41 @@ function sanitizeFolder(input: string) {
     .slice(0, 3);
 
   return cleaned.length > 0 ? cleaned : ["misc"];
+}
+
+function toUploadDiskPath(src: string) {
+  const trimmed = src.trim();
+  if (!trimmed.startsWith("/uploads/")) return null;
+  const parts = trimmed
+    .replace(/^\/+/, "")
+    .split("/")
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+  if (parts.length < 2 || parts[0] !== "uploads") return null;
+  return path.join(process.cwd(), "public", ...parts);
+}
+
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const src = url.searchParams.get("src") ?? "";
+  const diskPath = toUploadDiskPath(src);
+  if (!diskPath) {
+    return NextResponse.json({ error: "图片路径无效" }, { status: 400 });
+  }
+
+  try {
+    await access(diskPath);
+    const file = await readFile(diskPath);
+    const ext = path.extname(diskPath).toLowerCase();
+    return new NextResponse(file, {
+      headers: {
+        "Content-Type": EXTENSION_MIME[ext] ?? "application/octet-stream",
+        "Cache-Control": "public, max-age=31536000, immutable",
+      },
+    });
+  } catch {
+    return NextResponse.json({ error: "图片不存在" }, { status: 404 });
+  }
 }
 
 export async function POST(request: Request) {
@@ -55,11 +100,13 @@ export async function POST(request: Request) {
   const relativeDir = path.posix.join("uploads", ...folderSegments);
   const outputDir = path.join(process.cwd(), "public", ...relativeDir.split("/"));
   const outputPath = path.join(outputDir, fileName);
+  const publicUrl = `/${relativeDir}/${fileName}`;
 
   await mkdir(outputDir, { recursive: true });
   await writeFile(outputPath, Buffer.from(await file.arrayBuffer()));
 
   return NextResponse.json({
-    url: `/${relativeDir}/${fileName}`,
+    url: publicUrl,
+    servedUrl: resolveUploadedImageUrl(publicUrl),
   });
 }

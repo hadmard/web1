@@ -5,6 +5,7 @@ import { buildCategoryMetadata } from "@/lib/category-metadata";
 import { articleOrderByPinnedLatest, articleOrderByPinnedOldest } from "@/lib/articles";
 import { prisma } from "@/lib/prisma";
 import { parseBrandStructuredHtml } from "@/lib/brand-structured";
+import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
 
 export const revalidate = 300;
 
@@ -227,7 +228,7 @@ export default async function BrandsAllPage({ searchParams }: Props) {
                   </div>
                   {logoUrl ? (
                     <Image
-                      src={logoUrl}
+                      src={resolveUploadedImageUrl(logoUrl)}
                       alt={`${item.title} logo`}
                       width={56}
                       height={56}

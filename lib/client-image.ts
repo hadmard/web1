@@ -1,5 +1,7 @@
 "use client";
 
+import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
+
 export const MAX_UPLOAD_IMAGE_MB = 3;
 export const MAX_UPLOAD_IMAGE_BYTES = MAX_UPLOAD_IMAGE_MB * 1024 * 1024;
 
@@ -129,7 +131,7 @@ export async function uploadImageToServer(
     throw new Error(data.error ?? "图片上传到服务器失败");
   }
 
-  return data.url;
+  return typeof data.servedUrl === "string" ? data.servedUrl : resolveUploadedImageUrl(data.url);
 }
 
 export type CropSelection = {
@@ -178,17 +180,7 @@ export async function cropImageSourceToFile(
 
   canvas.width = outputWidth;
   canvas.height = outputHeight;
-  ctx.drawImage(
-    img,
-    sourceX,
-    sourceY,
-    sourceWidth,
-    sourceHeight,
-    0,
-    0,
-    outputWidth,
-    outputHeight
-  );
+  ctx.drawImage(img, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, outputWidth, outputHeight);
 
   const dataUrl = canvas.toDataURL("image/webp", 0.92);
   return dataUrlToFile(dataUrl, fileName);

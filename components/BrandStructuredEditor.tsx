@@ -8,6 +8,7 @@ import {
   normalizeBrandStructuredData,
 } from "@/lib/brand-structured";
 import { MAX_UPLOAD_IMAGE_MB, uploadImageToServer } from "@/lib/client-image";
+import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
 
 type BrandStructuredEditorProps = {
   value: BrandStructuredData;
@@ -170,7 +171,7 @@ export function BrandStructuredEditor({ value, onChange, className }: BrandStruc
         <div className="rounded-md border border-border bg-surface-elevated p-3">
           <p className="text-xs text-muted mb-2">Logo 预览</p>
           <Image
-            src={data.logoUrl}
+            src={resolveUploadedImageUrl(data.logoUrl)}
             alt="品牌 Logo 预览"
             width={160}
             height={96}

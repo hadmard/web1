@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { MAX_UPLOAD_IMAGE_MB, uploadImageToServer } from "@/lib/client-image";
+import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
 
 type VerifyStatus = "pending" | "approved" | "rejected";
 
@@ -308,7 +309,7 @@ export default function MemberVerificationPage() {
               <p className="text-[11px] text-muted">单张最大 {MAX_UPLOAD_IMAGE_MB}MB，超限可自动压缩。</p>
               {form.logoUrl && (
                 <Image
-                  src={form.logoUrl}
+                  src={resolveUploadedImageUrl(form.logoUrl)}
                   alt="logo"
                   width={64}
                   height={64}
@@ -322,7 +323,7 @@ export default function MemberVerificationPage() {
               <p className="text-[11px] text-muted">单张最大 {MAX_UPLOAD_IMAGE_MB}MB，超限可自动压缩。</p>
               {form.licenseImageUrl && (
                 <Image
-                  src={form.licenseImageUrl}
+                  src={resolveUploadedImageUrl(form.licenseImageUrl)}
                   alt="license"
                   width={240}
                   height={96}
@@ -348,7 +349,7 @@ export default function MemberVerificationPage() {
                   title="点击删除该附件"
                 >
                   <Image
-                    src={img}
+                    src={resolveUploadedImageUrl(img)}
                     alt={`attachment-${idx + 1}`}
                     width={160}
                     height={80}
