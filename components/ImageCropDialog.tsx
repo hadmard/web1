@@ -7,6 +7,12 @@ type ImageCropDialogProps = {
   source: string;
   onCancel: () => void;
   onConfirm: (file: File) => Promise<void> | void;
+  title?: string;
+  description?: string;
+  aspectWidth?: number;
+  aspectHeight?: number;
+  outputWidth?: number;
+  outputHeight?: number;
 };
 
 const MIN_ZOOM = 1;
@@ -14,7 +20,17 @@ const MAX_ZOOM = 2.5;
 const MOVE_LIMIT_X = 420;
 const MOVE_LIMIT_Y = 320;
 
-export function ImageCropDialog({ source, onCancel, onConfirm }: ImageCropDialogProps) {
+export function ImageCropDialog({
+  source,
+  onCancel,
+  onConfirm,
+  title = "裁剪图片",
+  description = "按 16:9 裁剪，建议使用 1600 x 900 px 横版图片。",
+  aspectWidth = 16,
+  aspectHeight = 9,
+  outputWidth = 1600,
+  outputHeight = 900,
+}: ImageCropDialogProps) {
   const [zoom, setZoom] = useState(1);
   const [offsetX, setOffsetX] = useState(0);
   const [offsetY, setOffsetY] = useState(0);
@@ -108,10 +124,10 @@ export function ImageCropDialog({ source, onCancel, onConfirm }: ImageCropDialog
         zoom,
         offsetX,
         offsetY,
-        aspectWidth: 16,
-        aspectHeight: 9,
-        outputWidth: 1600,
-        outputHeight: 900,
+        aspectWidth,
+        aspectHeight,
+        outputWidth,
+        outputHeight,
       });
       await onConfirm(file);
     } finally {
@@ -131,8 +147,8 @@ export function ImageCropDialog({ source, onCancel, onConfirm }: ImageCropDialog
         <div className="flex max-h-[calc(100vh-2rem)] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-white/15 bg-white shadow-2xl sm:max-h-[calc(100vh-3rem)]">
           <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-border bg-white px-5 py-4">
             <div className="min-w-0">
-              <h3 className="text-base font-semibold text-primary">裁剪顶部配图</h3>
-              <p className="mt-1 text-xs text-muted">按 16:9 裁切，建议用于 1600 x 900 px 横版头图。</p>
+              <h3 className="text-base font-semibold text-primary">{title}</h3>
+              <p className="mt-1 text-xs text-muted">{description}</p>
             </div>
             <button
               type="button"
@@ -147,7 +163,8 @@ export function ImageCropDialog({ source, onCancel, onConfirm }: ImageCropDialog
             <div className="space-y-5">
               <div className="overflow-hidden rounded-2xl border border-border bg-slate-100">
                 <div
-                  className="relative mx-auto aspect-[16/9] w-full max-w-4xl overflow-hidden bg-slate-200"
+                  className="relative mx-auto w-full max-w-4xl overflow-hidden bg-slate-200"
+                  style={{ aspectRatio: `${aspectWidth} / ${aspectHeight}` }}
                   onWheel={handleWheel}
                 >
                   {loadFailed ? (
@@ -178,7 +195,7 @@ export function ImageCropDialog({ source, onCancel, onConfirm }: ImageCropDialog
               <div className="grid gap-4 rounded-xl border border-border bg-surface p-4 sm:grid-cols-[1fr_220px]">
                 <div className="space-y-3">
                   <p className="text-xs text-muted">
-                    按住图片可直接拖动位置；滚动鼠标滚轮可上下查看图片下部；按住 Ctrl 再滚轮可缩放；按住 Shift 再滚轮可左右微调。
+                    按住图片可直接拖动位置；滚动鼠标滚轮可上下查看图片内容；按住 Ctrl 再滚轮可缩放；按住 Shift 再滚轮可左右微调。
                   </p>
                   <label className="block space-y-2 text-sm">
                     <span className="text-muted">上下查看</span>
