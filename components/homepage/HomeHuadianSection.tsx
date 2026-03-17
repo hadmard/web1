@@ -21,7 +21,7 @@ export function HomeHuadianSection({
 
   return (
     <section className="section-tone-b border-b border-border py-14 sm:py-16">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <article data-reveal="zoom-soft" className="glass-panel spotlight-card p-6 sm:p-7" data-mouse-zone>
           <div className="showcase-frame media-zoom-smooth mb-4 overflow-hidden rounded-xl border border-border">
             {hasImage ? (
@@ -34,16 +34,16 @@ export function HomeHuadianSection({
                 className="h-40 w-full object-cover object-[center_38%] sm:h-48"
               />
             ) : (
-              <div className="h-40 sm:h-48 bg-gradient-to-br from-surface-elevated via-surface to-surface-elevated" />
+              <div className="h-40 bg-gradient-to-br from-surface-elevated via-surface to-surface-elevated sm:h-48" />
             )}
           </div>
-          <p className="text-[13px] sm:text-sm text-muted">信用推荐体系</p>
-          <h2 className="mt-1 font-serif text-2xl sm:text-3xl font-semibold text-primary">华点榜 · 本年度信用推荐</h2>
+          <p className="text-[13px] text-muted sm:text-sm">信用推荐体系</p>
+          <h2 className="mt-1 font-serif text-2xl font-semibold text-primary sm:text-3xl">华点榜 · 本年度信用推荐</h2>
           <p className="mt-3 text-sm text-muted">华点榜作为长期运行的信用体系，按年度更新并持续归档公示。</p>
-          <div className="mt-6 grid lg:grid-cols-3 gap-4">
-            <article className="lg:col-span-2 rounded-xl border border-border bg-surface-elevated p-4">
+          <div className="mt-6 grid gap-4 lg:grid-cols-3">
+            <article className="rounded-xl border border-border bg-surface-elevated p-4 lg:col-span-2">
               <h3 className="text-sm font-semibold text-primary">本年度十大推荐品牌</h3>
-              <ul className="list-cascade mt-3 grid sm:grid-cols-2 gap-2">
+              <ul className="list-cascade mt-3 grid gap-2 sm:grid-cols-2">
                 {top10.slice(0, 10).map((item) => (
                   <li key={item.slug}>
                     <Link href={`/huadianbang/${year}/${item.slug}`} className="text-sm text-primary hover:text-accent">
@@ -67,7 +67,9 @@ export function HomeHuadianSection({
             </article>
           </div>
           <div className="mt-6">
-            <Link href={`/huadianbang/${year}`} className="text-sm font-medium text-accent hover:underline">查看完整榜单</Link>
+            <Link href={`/huadianbang/${year}`} className="text-sm font-medium text-accent hover:underline">
+              查看完整榜单
+            </Link>
           </div>
         </article>
       </div>

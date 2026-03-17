@@ -43,10 +43,8 @@ export async function GET() {
     return NextResponse.json({
       hasGeminiApiKey: !!map.get(APP_SETTING_KEYS.GEMINI_API_KEY),
       contentReviewRequired: parseBool(map.get(APP_SETTING_KEYS.CONTENT_REVIEW_REQUIRED), true),
-      memberDownloadStandardEnabled:
-        parseBool(map.get(APP_SETTING_KEYS.MEMBER_DOWNLOAD_STANDARD_ENABLED), true),
-      memberDownloadReportEnabled:
-        parseBool(map.get(APP_SETTING_KEYS.MEMBER_DOWNLOAD_REPORT_ENABLED), true),
+      memberDownloadStandardEnabled: parseBool(map.get(APP_SETTING_KEYS.MEMBER_DOWNLOAD_STANDARD_ENABLED), true),
+      memberDownloadReportEnabled: parseBool(map.get(APP_SETTING_KEYS.MEMBER_DOWNLOAD_REPORT_ENABLED), true),
       siteVisualSettings: (() => {
         const raw = map.get(APP_SETTING_KEYS.SITE_VISUAL_SETTINGS);
         if (!raw) return DEFAULT_SITE_VISUAL_SETTINGS;
@@ -90,6 +88,7 @@ export async function POST(request: NextRequest) {
         value: body.memberDownloadStandardEnabled ? "true" : "false",
       });
     }
+
     if (typeof body.contentReviewRequired === "boolean") {
       updates.push({
         key: APP_SETTING_KEYS.CONTENT_REVIEW_REQUIRED,
@@ -103,6 +102,7 @@ export async function POST(request: NextRequest) {
         value: body.memberDownloadReportEnabled ? "true" : "false",
       });
     }
+
     if (body.siteVisualSettings && typeof body.siteVisualSettings === "object") {
       updates.push({
         key: APP_SETTING_KEYS.SITE_VISUAL_SETTINGS,

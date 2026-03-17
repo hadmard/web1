@@ -119,7 +119,7 @@ export async function getHomepageData() {
     {
       title: "整木词库",
       subtitle: "术语与知识结构",
-      desc: "沉淀概念定义、工艺术语与行业语义，形成统一表达。",
+      desc: "沉淀概念定义、工艺术语与行业释义，形成统一表达。",
       href: "/dictionary/all",
       image: visualSettings.backgrounds.homeStructureDictionary,
       items: [

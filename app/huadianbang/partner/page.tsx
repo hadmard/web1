@@ -9,7 +9,7 @@ export default async function HuadianPartnerPage() {
   const heroImage = visualSettings.backgrounds.huadianPartnerHero?.trim() || "";
 
   return (
-    <main className="max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-12">
+    <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-12">
       <JsonLd
         data={{
           "@context": "https://schema.org",
@@ -21,12 +21,12 @@ export default async function HuadianPartnerPage() {
       />
 
       <section className="glass-panel p-6 sm:p-8">
-        <h1 className="font-serif text-3xl sm:text-4xl font-semibold text-primary">配套商推荐</h1>
+        <h1 className="font-serif text-3xl font-semibold text-primary sm:text-4xl">配套商推荐</h1>
         <div className="mt-4 overflow-hidden rounded-2xl border border-border">
           {heroImage ? (
-            <Image src={heroImage} alt="" width={1920} height={900} className="h-44 sm:h-56 w-full object-cover" />
+            <Image src={heroImage} alt="" width={1920} height={900} className="h-44 w-full object-cover sm:h-56" />
           ) : (
-            <div className="h-44 sm:h-56 w-full bg-gradient-to-br from-surface-elevated via-surface to-surface-elevated" />
+            <div className="h-44 w-full bg-gradient-to-br from-surface-elevated via-surface to-surface-elevated sm:h-56" />
           )}
         </div>
         <p className="mt-3 text-sm text-muted">{HUADIAN_DEFINITION}</p>
@@ -34,7 +34,7 @@ export default async function HuadianPartnerPage() {
 
       <section className="mt-8 glass-panel p-6">
         <h2 className="text-lg font-semibold text-primary">分类列表</h2>
-        <div className="mt-4 grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {Object.entries(ENGINEER_CATEGORY_LABELS).map(([key, label]) => (
             <Link
               key={key}

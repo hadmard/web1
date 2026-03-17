@@ -55,26 +55,26 @@ export async function CategoryHome({
 
   return (
     <div className="min-h-screen">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-12">
+      <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-12">
         <nav className="mb-6" aria-label="面包屑">
-          <Link href="/" className="text-sm text-muted hover:text-accent transition-colors">
+          <Link href="/" className="text-sm text-muted transition-colors hover:text-accent">
             首页
           </Link>
-          <span className="text-muted mx-2">/</span>
-          <span className="text-primary font-medium">{displayTitle}</span>
+          <span className="mx-2 text-muted">/</span>
+          <span className="font-medium text-primary">{displayTitle}</span>
         </nav>
 
         <section className="glass-panel p-6 sm:p-8">
-          <div className="flex flex-wrap gap-4 items-start justify-between">
-            <div className="flex gap-4 items-start">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex items-start gap-4">
               {iconSrc && (
-                <div className="shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-surface border border-border flex items-center justify-center text-accent">
-                  <Image src={iconSrc} alt="" width={42} height={42} className="w-10 h-10 sm:w-11 sm:h-11" />
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-border bg-surface text-accent sm:h-16 sm:w-16">
+                  <Image src={iconSrc} alt="" width={42} height={42} className="h-10 w-10 sm:h-11 sm:w-11" />
                 </div>
               )}
               <div className="min-w-0">
-                <h1 className="font-serif text-3xl sm:text-4xl font-semibold tracking-tight text-primary">{displayTitle}</h1>
-                <p className="mt-2 text-muted text-sm sm:text-base">{displayDesc}</p>
+                <h1 className="font-serif text-3xl font-semibold tracking-tight text-primary sm:text-4xl">{displayTitle}</h1>
+                <p className="mt-2 text-sm text-muted sm:text-base">{displayDesc}</p>
               </div>
             </div>
 
@@ -100,8 +100,8 @@ export async function CategoryHome({
 
           {!hideSubcategories && subcategories.length > 0 ? (
             <div className="mt-5 rounded-2xl border border-border bg-surface p-4 sm:p-5">
-              <h2 className="section-label text-primary mb-3">栏目分类</h2>
-              <div className="grid sm:grid-cols-2 gap-3">
+              <h2 className="section-label mb-3 text-primary">栏目分类</h2>
+              <div className="grid gap-3 sm:grid-cols-2">
                 {subcategories.map((sub) => {
                   const latest = (subcategoryLatest?.[sub.href] ?? []).slice(0, 3);
                   return (
@@ -117,9 +117,9 @@ export async function CategoryHome({
                       {latest.length > 0 && (
                         <ul className="mt-2 space-y-1.5">
                           {latest.map((item) => (
-                            <li key={`${sub.href}-${item.href}`} className="flex items-center gap-2 min-w-0">
+                            <li key={`${sub.href}-${item.href}`} className="flex min-w-0 items-center gap-2">
                               <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-black" aria-hidden />
-                              <Link href={item.href} className="text-xs text-primary hover:text-accent line-clamp-1">
+                              <Link href={item.href} className="line-clamp-1 text-xs text-primary hover:text-accent">
                                 {item.title}
                               </Link>
                             </li>

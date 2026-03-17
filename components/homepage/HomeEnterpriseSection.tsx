@@ -32,7 +32,7 @@ export function HomeEnterpriseSection({
 
   return (
     <section className="section-tone-c border-b border-border py-14 sm:py-16">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 grid lg:grid-cols-3 gap-4">
+      <div className="mx-auto grid max-w-6xl gap-4 px-4 sm:px-6 lg:grid-cols-3">
         <article data-reveal="fade-left" className="glass-panel spotlight-card p-5 lg:col-span-2" data-mouse-zone>
           {middleAd.enabled && hasMiddleAdImage ? (
             <Link href={middleAd.href || "/membership"} className="block">
@@ -61,17 +61,22 @@ export function HomeEnterpriseSection({
                     className="h-40 w-full object-cover object-[center_42%] sm:h-48"
                   />
                 ) : (
-                  <div className="h-40 sm:h-48 bg-gradient-to-br from-surface-elevated via-surface to-surface-elevated" />
+                  <div className="h-40 bg-gradient-to-br from-surface-elevated via-surface to-surface-elevated sm:h-48" />
                 )}
               </div>
-              <p className="text-[13px] sm:text-sm text-muted mb-2">品牌生态</p>
-              <h3 className="font-serif text-lg font-semibold text-primary mb-3">企业入口</h3>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <p className="mb-2 text-[13px] text-muted sm:text-sm">品牌生态</p>
+              <h3 className="mb-3 font-serif text-lg font-semibold text-primary">企业入口</h3>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {enterprises.slice(0, 6).map((enterprise) => (
-                  <Link key={enterprise.id} href={`/enterprise/${enterprise.id}`} className="interactive-lift spotlight-card rounded-xl border border-border bg-surface p-3 block" data-mouse-zone>
+                  <Link
+                    key={enterprise.id}
+                    href={`/enterprise/${enterprise.id}`}
+                    className="interactive-lift spotlight-card block rounded-xl border border-border bg-surface p-3"
+                    data-mouse-zone
+                  >
                     <p className="text-sm font-medium text-primary">{enterprise.member.name ?? "企业会员"}</p>
-                    <p className="text-[13px] text-muted mt-1">{enterprise.area || enterprise.region || "地区信息完善中"}</p>
-                    <span className="mt-2 inline-block text-xs rounded-full px-2 py-0.5 border border-border text-muted">
+                    <p className="mt-1 text-[13px] text-muted">{enterprise.area || enterprise.region || "地区信息完善中"}</p>
+                    <span className="mt-2 inline-block rounded-full border border-border px-2 py-0.5 text-xs text-muted">
                       {enterprise.member.memberType === "enterprise_advanced"
                         ? "高级会员"
                         : enterprise.member.memberType === "enterprise_basic"
@@ -86,8 +91,8 @@ export function HomeEnterpriseSection({
         </article>
 
         <article data-reveal="fade-right" data-reveal-delay="80" className="glass-panel spotlight-card p-5" data-mouse-zone>
-          <p className="text-[13px] sm:text-sm text-muted mb-2">区域热度</p>
-          <h3 className="font-serif text-lg font-semibold text-primary mb-3">品牌数量</h3>
+          <p className="mb-2 text-[13px] text-muted sm:text-sm">区域热度</p>
+          <h3 className="mb-3 font-serif text-lg font-semibold text-primary">品牌数量</h3>
           <ul className="list-cascade space-y-2 text-sm">
             {regionCounts.map((region) => (
               <li key={region.region} className="flex items-center justify-between">
