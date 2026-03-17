@@ -1,4 +1,4 @@
-import { revalidateTag } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 import { APP_SETTING_KEYS } from "@/lib/app-settings";
 import { prisma } from "@/lib/prisma";
@@ -126,6 +126,7 @@ export async function POST(request: NextRequest) {
 
     if (updates.some((u) => u.key === APP_SETTING_KEYS.SITE_VISUAL_SETTINGS)) {
       revalidateTag("site-visual-settings");
+      revalidatePath("/", "layout");
     }
 
     return NextResponse.json({ ok: true });
