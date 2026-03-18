@@ -13,26 +13,49 @@ export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareA
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [qrLoadFailed, setQrLoadFailed] = useState(false);
+  const [qrReady, setQrReady] = useState(false);
   const [mounted, setMounted] = useState(false);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const popupRef = useRef<HTMLDivElement | null>(null);
+  const qrWarmStartedRef = useRef(false);
 
   const qrUrl = useMemo(() => {
     const data = encodeURIComponent(shareUrl);
     return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${data}`;
   }, [shareUrl]);
 
+  function warmQrCode() {
+    if (typeof window === "undefined" || qrWarmStartedRef.current) return;
+
+    qrWarmStartedRef.current = true;
+    setQrLoadFailed(false);
+
+    const image = new window.Image();
+    image.decoding = "async";
+    image.onload = () => {
+      setQrReady(true);
+    };
+    image.onerror = () => {
+      setQrLoadFailed(true);
+    };
+    image.src = qrUrl;
+  }
+
   useEffect(() => {
     setMounted(true);
   }, []);
 
   useEffect(() => {
-    if (!open) return;
-
+    qrWarmStartedRef.current = false;
+    setQrReady(false);
     setQrLoadFailed(false);
-    const image = new window.Image();
-    image.src = qrUrl;
-    image.onerror = () => setQrLoadFailed(true);
+    warmQrCode();
+  }, [qrUrl]);
+
+  useEffect(() => {
+    if (open) {
+      warmQrCode();
+    }
   }, [open, qrUrl]);
 
   useEffect(() => {
@@ -118,16 +141,21 @@ export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareA
                     </button>
                   </div>
                 ) : (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={qrUrl}
-                    alt={`${title} 分享二维码`}
-                    width={232}
-                    height={232}
-                    className="mx-auto h-auto w-full max-w-[232px] rounded-[14px]"
-                    loading="lazy"
-                    onError={() => setQrLoadFailed(true)}
-                  />
+                  <div className="relative min-h-[232px]">
+                    {!qrReady ? <div className="absolute inset-0 animate-pulse rounded-[14px] bg-[#f3f4f6]" /> : null}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={qrUrl}
+                      alt={`${title} 分享二维码`}
+                      width={232}
+                      height={232}
+                      className={`mx-auto h-auto w-full max-w-[232px] rounded-[14px] transition-opacity duration-150 ${qrReady ? "opacity-100" : "opacity-0"}`}
+                      loading="eager"
+                      decoding="async"
+                      onLoad={() => setQrReady(true)}
+                      onError={() => setQrLoadFailed(true)}
+                    />
+                  </div>
                 )}
               </div>
             </div>
@@ -224,7 +252,13 @@ export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareA
         type="button"
         aria-label={`分享 ${siteName} 文章：${title}`}
         aria-expanded={open}
-        onClick={() => setOpen((value) => !value)}
+        onClick={() => {
+          warmQrCode();
+          setOpen((value) => !value);
+        }}
+        onMouseEnter={warmQrCode}
+        onFocus={warmQrCode}
+        onTouchStart={warmQrCode}
         className="group inline-flex h-11 items-center gap-2 rounded-full border border-[rgba(15,23,42,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.94),rgba(245,247,250,0.98))] px-4 shadow-[0_10px_30px_rgba(15,23,42,0.08),inset_0_1px_0_rgba(255,255,255,0.96)] backdrop-blur transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(15,23,42,0.12),inset_0_1px_0_rgba(255,255,255,0.98)]"
       >
         <svg
