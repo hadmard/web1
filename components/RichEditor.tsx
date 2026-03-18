@@ -85,19 +85,21 @@ function ToolButton({
   active,
   label,
   onClick,
+  className = "",
 }: {
   active?: boolean;
   label: string;
   onClick: () => void;
+  className?: string;
 }) {
   return (
     <button
       type="button"
       onMouseDown={(e) => e.preventDefault()}
       onClick={onClick}
-      className={`px-2.5 py-1.5 rounded text-xs border ${
+      className={`px-2.5 py-1.5 rounded text-xs border transition-colors ${
         active ? "bg-accent text-white border-accent" : "border-border text-primary hover:bg-surface"
-      }`}
+      } ${className}`}
     >
       {label}
     </button>
@@ -238,6 +240,7 @@ export function RichEditor({ value, onChange, minHeight = 260, placeholder = "�
   }, [editor]);
 
   const isImageActive = !!editor?.isActive("image");
+  const imageAlign = ((editor?.getAttributes("image") as ImageAttrs | undefined)?.align ?? "center") as NonNullable<ImageAttrs["align"]>;
 
   const insertImage = useMemo(
     () => async (file: File) => {
@@ -404,17 +407,17 @@ export function RichEditor({ value, onChange, minHeight = 260, placeholder = "�
       </div>
 
       {isImageActive && (
-        <div className="border-b border-[rgba(194,182,154,0.36)] bg-[linear-gradient(180deg,rgba(255,252,246,0.98),rgba(246,240,231,0.92))] px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)]">
-          <div className="mb-2 flex items-center gap-2">
-            <span className="rounded-full border border-[rgba(170,154,122,0.32)] bg-white/78 px-2 py-0.5 text-[11px] font-medium tracking-[0.04em] text-[#7b6647]">
+        <div className="border-b border-[rgba(194,182,154,0.28)] bg-[linear-gradient(180deg,rgba(255,253,250,0.98),rgba(247,242,235,0.95))] px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.82)] backdrop-blur">
+          <div className="mb-2.5 flex items-center gap-2">
+            <span className="rounded-full border border-[rgba(198,182,150,0.34)] bg-[rgba(255,255,255,0.76)] px-2.5 py-1 text-[11px] font-medium tracking-[0.08em] text-[#786546] shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]">
               已选中图片
             </span>
-            <span className="text-[11px] text-[#8d7a5a]">可调整尺寸与对齐</span>
+            <span className="text-[11px] tracking-[0.03em] text-[#938160]">可调整尺寸与版式</span>
           </div>
-          <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="text-[#8d7a5a]">图片尺寸</span>
+          <div className="flex flex-wrap items-center gap-2.5 text-xs">
+            <span className="text-[#8d7a5a]">尺寸</span>
           <input
-            className="w-36 rounded-lg border border-[rgba(194,182,154,0.34)] bg-white/92 px-2.5 py-1.5 shadow-[inset_0_1px_1px_rgba(15,23,42,0.03)]"
+            className="w-32 rounded-xl border border-[rgba(194,182,154,0.28)] bg-[rgba(255,255,255,0.9)] px-3 py-1.5 text-[13px] text-[#433527] shadow-[0_6px_16px_rgba(15,23,42,0.04),inset_0_1px_0_rgba(255,255,255,0.8)] outline-none transition focus:border-[rgba(180,154,107,0.45)] focus:shadow-[0_10px_22px_rgba(180,154,107,0.12),inset_0_1px_0_rgba(255,255,255,0.82)]"
             value={imgWidth}
             inputMode="numeric"
             onChange={(e) => onWidthChange(e.target.value.replace(/[^\d]/g, ""))}
@@ -426,8 +429,9 @@ export function RichEditor({ value, onChange, minHeight = 260, placeholder = "�
             }}
             placeholder="宽（默认420）"
           />
+          <span className="text-[#b39b73]">×</span>
           <input
-            className="w-28 rounded-lg border border-[rgba(194,182,154,0.34)] bg-white/92 px-2.5 py-1.5 shadow-[inset_0_1px_1px_rgba(15,23,42,0.03)]"
+            className="w-24 rounded-xl border border-[rgba(194,182,154,0.28)] bg-[rgba(255,255,255,0.9)] px-3 py-1.5 text-[13px] text-[#433527] shadow-[0_6px_16px_rgba(15,23,42,0.04),inset_0_1px_0_rgba(255,255,255,0.8)] outline-none transition focus:border-[rgba(180,154,107,0.45)] focus:shadow-[0_10px_22px_rgba(180,154,107,0.12),inset_0_1px_0_rgba(255,255,255,0.82)]"
             value={imgHeight}
             inputMode="numeric"
             onChange={(e) => onHeightChange(e.target.value.replace(/[^\d]/g, ""))}
@@ -439,14 +443,47 @@ export function RichEditor({ value, onChange, minHeight = 260, placeholder = "�
             }}
             placeholder="高"
           />
-          <label className="inline-flex items-center gap-1 text-[#8d7a5a]">
-            <input type="checkbox" checked={lockRatio} onChange={(e) => setLockRatio(e.target.checked)} />
+          <label className="inline-flex h-9 items-center gap-1.5 rounded-full border border-[rgba(194,182,154,0.24)] bg-[rgba(255,255,255,0.7)] px-3 text-[#8d7a5a] shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
+            <input type="checkbox" checked={lockRatio} onChange={(e) => setLockRatio(e.target.checked)} className="accent-[#b49a6b]" />
             同比例
           </label>
-          <ToolButton label="应用尺寸" onClick={applyImageSize} />
-          <ToolButton label="居左" onClick={() => void updateSelectedImage({ align: "left" })} />
-          <ToolButton label="居中" onClick={() => void updateSelectedImage({ align: "center" })} />
-          <ToolButton label="居右" onClick={() => void updateSelectedImage({ align: "right" })} />
+          <ToolButton
+            label="应用尺寸"
+            onClick={applyImageSize}
+            className="rounded-full border-[rgba(180,154,107,0.28)] bg-[linear-gradient(180deg,rgba(255,255,255,0.9),rgba(248,242,233,0.94))] px-3.5 text-[#5f4e34] shadow-[0_10px_24px_rgba(15,23,42,0.04),inset_0_1px_0_rgba(255,255,255,0.88)] hover:border-[rgba(180,154,107,0.42)] hover:bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(250,245,237,0.98))]"
+          />
+          <div className="inline-flex h-9 items-center rounded-full border border-[rgba(194,182,154,0.24)] bg-[rgba(255,255,255,0.72)] p-1 shadow-[0_10px_24px_rgba(15,23,42,0.04),inset_0_1px_0_rgba(255,255,255,0.86)]">
+            <ToolButton
+              label="居左"
+              active={imageAlign === "left"}
+              onClick={() => void updateSelectedImage({ align: "left" })}
+              className={`rounded-full border-0 px-3 py-1.5 ${
+                imageAlign === "left"
+                  ? "bg-[linear-gradient(180deg,#c7ac7d,#b49464)] text-white shadow-[0_8px_18px_rgba(180,154,107,0.28)]"
+                  : "bg-transparent text-[#6c5a3f] hover:bg-[rgba(244,236,221,0.9)]"
+              }`}
+            />
+            <ToolButton
+              label="居中"
+              active={imageAlign === "center"}
+              onClick={() => void updateSelectedImage({ align: "center" })}
+              className={`rounded-full border-0 px-3 py-1.5 ${
+                imageAlign === "center"
+                  ? "bg-[linear-gradient(180deg,#c7ac7d,#b49464)] text-white shadow-[0_8px_18px_rgba(180,154,107,0.28)]"
+                  : "bg-transparent text-[#6c5a3f] hover:bg-[rgba(244,236,221,0.9)]"
+              }`}
+            />
+            <ToolButton
+              label="居右"
+              active={imageAlign === "right"}
+              onClick={() => void updateSelectedImage({ align: "right" })}
+              className={`rounded-full border-0 px-3 py-1.5 ${
+                imageAlign === "right"
+                  ? "bg-[linear-gradient(180deg,#c7ac7d,#b49464)] text-white shadow-[0_8px_18px_rgba(180,154,107,0.28)]"
+                  : "bg-transparent text-[#6c5a3f] hover:bg-[rgba(244,236,221,0.9)]"
+              }`}
+            />
+          </div>
           </div>
         </div>
       )}
