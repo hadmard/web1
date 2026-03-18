@@ -51,7 +51,6 @@ export async function CategoryHome({
   const finalSearchHref = searchHref ?? defaultSearchHref;
   const isEditorial = variant === "editorial";
   const isNewsEditorial = isEditorial && basePath === "/news";
-  const totalLatest = Object.values(subcategoryLatest ?? {}).reduce((sum, entries) => sum + entries.length, 0);
 
   const getSubHref = (href: string) => {
     if (basePath === "/news") return `/news/all?sub=${encodeURIComponent(href)}`;
@@ -96,10 +95,12 @@ export async function CategoryHome({
 
               <div className="min-w-0">
                 <h1
-                  className={`font-serif font-semibold tracking-tight text-primary ${
-                    isEditorial
-                        ? "text-[2rem] sm:text-[2.5rem]"
-                        : "text-3xl sm:text-4xl"
+                  className={`font-semibold tracking-tight text-primary ${
+                    isNewsEditorial
+                      ? "text-[2rem] sm:text-[2.5rem]"
+                      : isEditorial
+                        ? "font-serif text-[2rem] sm:text-[2.5rem]"
+                        : "font-serif text-3xl sm:text-4xl"
                   }`}
                 >
                   {displayTitle}
@@ -132,7 +133,7 @@ export async function CategoryHome({
 
           {heroSrc ? (
             isNewsEditorial ? (
-              <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-stretch">
+              <div className="mt-6 space-y-5">
                 <div className="overflow-hidden rounded-[26px] border border-border bg-[linear-gradient(180deg,rgba(255,255,255,0.9),rgba(243,245,248,0.96))]">
                   <Image
                     src={heroSrc}
@@ -143,20 +144,7 @@ export async function CategoryHome({
                   />
                 </div>
 
-                <div className="flex flex-col gap-4">
-                  <div className="rounded-[24px] border border-border bg-surface-elevated p-5">
-                    <div className="grid gap-4">
-                      <div className="rounded-[18px] bg-surface px-4 py-4">
-                        <div className="text-[2rem] font-semibold leading-none text-primary">{subcategories.length}</div>
-                        <div className="mt-2 text-sm text-muted">资讯分栏</div>
-                      </div>
-                      <div className="rounded-[18px] bg-surface px-4 py-4">
-                        <div className="text-[2rem] font-semibold leading-none text-primary">{totalLatest}</div>
-                        <div className="mt-2 text-sm text-muted">精选条目</div>
-                      </div>
-                    </div>
-                  </div>
-
+                <div className="flex justify-end">
                   <Link
                     href={finalSearchHref}
                     className="interactive-lift inline-flex items-center justify-center rounded-full bg-[#111214] px-5 py-3 text-sm font-medium text-white transition hover:bg-black"
