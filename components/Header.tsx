@@ -200,13 +200,13 @@ export function Header({
                     rel={external ? "noreferrer" : undefined}
                     className={`nav-pill inline-flex items-center rounded-full px-3.5 py-1.5 text-[13px] sm:text-sm font-medium whitespace-nowrap ${
                       isMembership
-                        ? "text-white bg-[var(--color-accent)] hover:brightness-105"
+                        ? "border border-[rgba(194,182,154,0.26)] bg-[linear-gradient(180deg,rgba(255,252,246,0.98),rgba(246,240,231,0.94))] text-primary shadow-[0_10px_24px_rgba(15,23,42,0.05),inset_0_1px_0_rgba(255,255,255,0.96)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[rgba(170,154,122,0.34)] hover:bg-[linear-gradient(180deg,rgba(255,253,248,0.99),rgba(250,245,237,0.96))] hover:text-primary"
                         : "text-[var(--color-muted)] hover:text-[var(--color-primary)] hover:bg-[color-mix(in_srgb,var(--color-surface-elevated)_82%,transparent)]"
                     }`}
                   >
                     {isMemberItem && me ? (
                       <span className="inline-flex items-center gap-1.5">
-                        <span className="inline-flex h-[18px] w-[18px] items-center justify-center rounded-full bg-white/25 text-[10px] font-semibold">
+                        <span className="inline-flex h-[18px] w-[18px] items-center justify-center rounded-full bg-[rgba(201,189,161,0.24)] text-[10px] font-semibold text-primary/85 ring-1 ring-[rgba(194,182,154,0.22)]">
                           {avatarText}
                         </span>
                         <span>{finalLabel}</span>
@@ -304,9 +304,9 @@ export function Header({
           </button>
 
           {pathname.startsWith("/news/") && pathname !== "/news/all" && (
-            <div className="pointer-events-none absolute left-0 right-0 bottom-0 h-1 bg-transparent">
+            <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-px bg-[rgba(201,191,168,0.22)]">
               <div
-                className="h-full bg-[var(--color-accent)] origin-left transition-transform duration-100 ease-linear"
+                className="h-full origin-left bg-[linear-gradient(90deg,rgba(156,134,92,0.82),rgba(191,171,135,0.72))] transition-transform duration-100 ease-linear"
                 style={{ transform: `scaleX(${readingProgress})` }}
               />
             </div>
@@ -360,13 +360,13 @@ export function Header({
                         onClick={closeMobileMenu}
                         className={`nav-pill flex-1 inline-flex items-center justify-between rounded-full px-3.5 py-2 text-sm font-medium ${
                           isMembership
-                            ? "text-white bg-[var(--color-accent)]"
+                            ? "border border-[rgba(194,182,154,0.26)] bg-[linear-gradient(180deg,rgba(255,252,246,0.98),rgba(246,240,231,0.94))] text-primary shadow-[0_10px_24px_rgba(15,23,42,0.05),inset_0_1px_0_rgba(255,255,255,0.94)]"
                             : "text-primary bg-surface/65 hover:bg-surface"
                         }`}
                       >
                         <span className="inline-flex items-center gap-2 min-w-0">
                           {isMemberItem && me && (
-                            <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/20 text-[10px] font-semibold">
+                            <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[rgba(201,189,161,0.24)] text-[10px] font-semibold text-primary/85 ring-1 ring-[rgba(194,182,154,0.22)]">
                               {avatarText}
                             </span>
                           )}

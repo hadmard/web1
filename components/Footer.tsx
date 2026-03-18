@@ -27,7 +27,7 @@ export function Footer() {
         <section className="rounded-2xl border border-border bg-surface-elevated/80 p-3 sm:p-5">
           <div className="mb-3 flex items-center justify-between gap-3">
             <p className="text-sm font-semibold text-primary">常用入口</p>
-            <Link href="/membership" className="text-xs text-accent hover:underline">
+            <Link href="/membership" className="inline-flex items-center rounded-full border border-[rgba(194,182,154,0.26)] bg-[linear-gradient(180deg,rgba(255,252,246,0.98),rgba(246,240,231,0.94))] px-3 py-1.5 text-xs font-medium text-primary shadow-[0_10px_24px_rgba(15,23,42,0.05),inset_0_1px_0_rgba(255,255,255,0.94)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[rgba(170,154,122,0.34)] hover:bg-[linear-gradient(180deg,rgba(255,253,248,0.99),rgba(250,245,237,0.96))]">
               进入会员系统
             </Link>
           </div>
