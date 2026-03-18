@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Script from "next/script";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { findNewsArticleBySegment, resolveArticleShareImage } from "@/lib/news-sharing";
@@ -10,7 +9,7 @@ import { previewText } from "@/lib/text";
 export const revalidate = 300;
 export const dynamic = "force-dynamic";
 
-const SHARE_SITE_NAME = "涓崕鏁存湪缃?";
+const SHARE_SITE_NAME = "中华整木网";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -59,15 +58,11 @@ export default async function ShareNewsPage({ params }: Props) {
 
   return (
     <main className="mx-auto flex min-h-[60vh] max-w-xl items-center px-6 py-16">
-      <Script
-        id="share-news-redirect"
-        strategy="afterInteractive"
-      >{`window.location.replace(${JSON.stringify(targetPath)});`}</Script>
       <section className="w-full rounded-[28px] border border-border bg-surface-elevated p-8 text-center shadow-sm">
-        <p className="text-sm tracking-[0.08em] text-muted">正在打开文章</p>
+        <p className="text-sm tracking-[0.08em] text-muted">分享页已准备好</p>
         <h1 className="mt-3 text-2xl font-semibold leading-tight text-primary">{article.title}</h1>
         <p className="mt-4 text-sm leading-7 text-muted">
-          如果没有自动跳转，请点击下方按钮继续阅读正文。
+          为了让微信等分享平台稳定读取封面图，这里会先展示分享页。点击下方按钮即可进入正文。
         </p>
         <div className="mt-6">
           <Link
