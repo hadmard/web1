@@ -87,7 +87,7 @@ async function fetchLegacyUpload(src: string) {
         },
       });
     } catch {
-      // try next candidate
+      // Try the next legacy origin.
     }
   }
 

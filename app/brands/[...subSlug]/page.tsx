@@ -11,6 +11,7 @@ import { parseBrandStructuredHtml } from "@/lib/brand-structured";
 import { getSiteVisualSettings } from "@/lib/site-visual-settings";
 import { buildPageMetadata } from "@/lib/seo";
 import { getSiteUrl } from "@/lib/seo";
+import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
 
 export const revalidate = 300;
 
@@ -242,7 +243,7 @@ export default async function BrandDetailPage({ params }: Props) {
             <div className="flex flex-col md:flex-row md:items-start gap-4">
               {profile.logoUrl ? (
                 <Image
-                  src={profile.logoUrl}
+                  src={resolveUploadedImageUrl(profile.logoUrl)}
                   alt={`${article.title} logo`}
                   width={112}
                   height={112}

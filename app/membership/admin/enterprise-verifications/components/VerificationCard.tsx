@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
 
 type Status = "pending" | "approved" | "rejected";
 
@@ -92,7 +93,7 @@ export function VerificationCard({
           <p className="text-xs text-muted mb-1">企业 Logo</p>
           {item.logoUrl ? (
             <Image
-              src={item.logoUrl}
+              src={resolveUploadedImageUrl(item.logoUrl)}
               alt="logo"
               width={80}
               height={80}
@@ -105,7 +106,7 @@ export function VerificationCard({
         <div>
           <p className="text-xs text-muted mb-1">营业执照</p>
           <Image
-            src={item.licenseImageUrl}
+            src={resolveUploadedImageUrl(item.licenseImageUrl)}
             alt="license"
             width={240}
             height={112}

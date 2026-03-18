@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { articleOrderByPinnedLatest } from "@/lib/articles";
 import { prisma } from "@/lib/prisma";
+import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
 
 export const revalidate = 300;
 
@@ -160,9 +161,9 @@ export default async function EnterprisePage({ params }: Props) {
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {gallery.map((image) => (
-              <a key={image.id} href={image.imageUrl} target="_blank" rel="noreferrer" className="block rounded border border-border overflow-hidden">
+              <a key={image.id} href={resolveUploadedImageUrl(image.imageUrl)} target="_blank" rel="noreferrer" className="block rounded border border-border overflow-hidden">
                 <Image
-                  src={image.imageUrl}
+                  src={resolveUploadedImageUrl(image.imageUrl)}
                   alt={image.title ?? "企业图片"}
                   width={400}
                   height={280}
