@@ -73,6 +73,31 @@ export default async function StandardsPage() {
       searchHref="/standards/all"
       subcategoryLatest={subcategoryLatest}
     >
+      <section className="glass-panel p-6 sm:p-7">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="max-w-3xl">
+            <p className="text-xs uppercase tracking-[0.24em] text-muted">Whole Wood Standards</p>
+            <h2 className="mt-3 font-serif text-2xl sm:text-3xl font-semibold text-primary">整木行业标准文档库</h2>
+            <p className="mt-3 text-sm leading-7 text-muted">
+              面向材料、工艺、服务与流程规范的长期标准沉淀区，支持版本记录、共建参与、持续更新和标准化阅读体验。
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <a
+              href="/membership/content/publish?tab=standards"
+              className="interactive-lift rounded-full bg-[var(--color-accent)] px-4 py-2 text-sm font-medium text-white hover:brightness-105"
+            >
+              创建标准
+            </a>
+            <a
+              href="/standards/all"
+              className="rounded-full border border-border px-4 py-2 text-sm text-primary hover:border-accent/40 hover:text-accent"
+            >
+              浏览标准库
+            </a>
+          </div>
+        </div>
+      </section>
       <PublishedContentPanel
         sectionTitle="标准发布内容"
         items={items.map((x) => ({

@@ -44,6 +44,12 @@ import { uploadImageToServer } from "@/lib/client-image";
 import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
 import { buildGeoExcerpt, previewText } from "@/lib/text";
 import { suggestTagsForGeo } from "@/lib/tag-suggest";
+import {
+  createEmptyDocumentMetadata,
+  parseDocumentMetadata,
+  stringifyDocumentMetadata,
+  type DocumentMetadata,
+} from "@/lib/document-metadata";
 
 type Status = "draft" | "pending" | "approved" | "rejected";
 type Mode = "publish" | "manage" | "review";
@@ -70,6 +76,7 @@ type ArticleItem = {
   subHref?: string | null;
   categoryHref?: string | null;
   tagSlugs?: string | null;
+  faqJson?: string | null;
   isPinned?: boolean;
   status: Status;
   previewHref?: string | null;
@@ -231,6 +238,7 @@ export default function AdminContentPage() {
   const [pendingChanges, setPendingChanges] = useState<ChangeRequestItem[]>([]);
 
   const [title, setTitle] = useState("");
+  const [slug, setSlug] = useState("");
   const [excerpt, setExcerpt] = useState("");
   const [content, setContent] = useState("");
   const [termSections, setTermSections] = useState<TermSection[]>(createDefaultTermSections());
@@ -243,9 +251,11 @@ export default function AdminContentPage() {
   const [coverPreviewSrc, setCoverPreviewSrc] = useState("");
   const [tagSlugs, setTagSlugs] = useState("");
   const [isPinned, setIsPinned] = useState(false);
+  const [documentMeta, setDocumentMeta] = useState<DocumentMetadata>(createEmptyDocumentMetadata());
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingChangeId, setEditingChangeId] = useState<string | null>(null);
+  const [editSlug, setEditSlug] = useState("");
   const [editTitle, setEditTitle] = useState("");
   const [editExcerpt, setEditExcerpt] = useState("");
   const [editContent, setEditContent] = useState("");
@@ -259,6 +269,7 @@ export default function AdminContentPage() {
   const [editTagSlugs, setEditTagSlugs] = useState("");
   const [editSubHref, setEditSubHref] = useState("");
   const [editIsPinned, setEditIsPinned] = useState(false);
+  const [editDocumentMeta, setEditDocumentMeta] = useState<DocumentMetadata>(createEmptyDocumentMetadata());
   const [reviewAction, setReviewAction] = useState<Status | null>(null);
 
 
@@ -284,6 +295,8 @@ export default function AdminContentPage() {
     setCoverImage("");
     replacePreviewUrl("publish", "");
     setIsPinned(false);
+    setSlug("");
+    setDocumentMeta(createEmptyDocumentMetadata());
   }, [tab]);
 
   function updateTermSection(id: string, patch: Partial<Omit<TermSection, "id">>) {
@@ -476,12 +489,10 @@ export default function AdminContentPage() {
 
   function getPublishSourceText() {
     return (
-      tab === "terms"
-        ? termSections.map((x) => `${x.heading} ${x.body}`).join(" ")
-        : tab === "brands"
+      tab === "brands"
           ? brandStructuredToSearchText(brandStructured)
-          : tab === "standards"
-            ? standardStructuredToSearchText(standardStructured)
+          : tab === "terms" || tab === "standards"
+            ? content
             : tab === "industry-data"
               ? dataStructuredToSearchText(dataStructured)
               : tab === "awards"
@@ -492,12 +503,10 @@ export default function AdminContentPage() {
 
   function getEditSourceText() {
     return (
-      tab === "terms"
-        ? editTermSections.map((x) => `${x.heading} ${x.body}`).join(" ")
-        : tab === "brands"
+      tab === "brands"
           ? brandStructuredToSearchText(editBrandStructured)
-          : tab === "standards"
-            ? standardStructuredToSearchText(editStandardStructured)
+          : tab === "terms" || tab === "standards"
+            ? editContent
             : tab === "industry-data"
               ? dataStructuredToSearchText(editDataStructured)
               : tab === "awards"
@@ -534,21 +543,20 @@ export default function AdminContentPage() {
     e.preventDefault();
     setLastSubmitted(null);
     const composedContent =
-      tab === "terms"
-        ? buildTermContentHtml(termSections)
-        : tab === "brands"
+      tab === "brands"
           ? buildBrandStructuredHtml(brandStructured)
-          : tab === "standards"
-            ? buildStandardStructuredHtml(standardStructured)
+          : tab === "terms" || tab === "standards"
+            ? content
             : tab === "industry-data"
               ? buildDataStructuredHtml(dataStructured)
               : tab === "awards"
                 ? buildAwardStructuredHtml(awardStructured)
-          : content;
+                : content;
     const res = await fetch("/api/admin/articles", {
       method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         title: title.trim(),
+        slug: slug.trim() || null,
         excerpt: excerpt || null,
         content: composedContent,
         coverImage:
@@ -570,6 +578,7 @@ export default function AdminContentPage() {
         categoryHref: selectedCategory.href,
         subHref: tab === "brands" ? null : subHref,
         tagSlugs: tagSlugs || null,
+        faqJson: tab === "terms" || tab === "standards" ? stringifyDocumentMetadata(documentMeta) : null,
         syncToMainSite: true,
         isPinned,
       }),
@@ -587,11 +596,13 @@ export default function AdminContentPage() {
     setLastSubmitted({ title: submittedTitle, href: previewHref, status: submittedStatus });
     setMessage("提交成功。");
     setTitle("");
+    setSlug("");
     setExcerpt("");
     setContent("");
     setCoverImage("");
     setTagSlugs("");
     setIsPinned(false);
+    setDocumentMeta(createEmptyDocumentMetadata());
     setTermSections(createDefaultTermSections());
     setBrandStructured(createDefaultBrandStructuredData());
     setStandardStructured(createDefaultStandardStructuredData());
@@ -602,6 +613,7 @@ export default function AdminContentPage() {
   function openEdit(item: ArticleItem) {
     setEditingId(item.id);
     setEditingChangeId(null);
+    setEditSlug(item.slug ?? "");
     setEditTitle(item.title);
     setEditExcerpt(item.excerpt ?? "");
     setEditContent(item.content);
@@ -631,12 +643,14 @@ export default function AdminContentPage() {
     setEditTagSlugs(item.tagSlugs ?? "");
     setEditSubHref(item.subHref ?? subHref);
     setEditIsPinned(item.isPinned === true);
+    setEditDocumentMeta(parseDocumentMetadata(item.faqJson));
   }
 
   function openEditFromChange(item: ChangeRequestItem) {
     const nextContent = item.patchContent ?? item.article.content ?? "";
     setEditingId(item.article.id);
     setEditingChangeId(item.id);
+    setEditSlug("");
     setEditTitle(item.patchTitle ?? item.article.title);
     setEditExcerpt(item.patchExcerpt ?? item.article.excerpt ?? "");
     setEditContent(nextContent);
@@ -666,27 +680,27 @@ export default function AdminContentPage() {
     setEditTagSlugs(item.patchTagSlugs ?? item.article.tagSlugs ?? "");
     setEditSubHref(item.patchSubHref ?? item.article.subHref ?? subHref);
     setEditIsPinned(item.article.isPinned === true);
+    setEditDocumentMeta(createEmptyDocumentMetadata());
   }
 
   async function saveEdit(nextStatus?: Status) {
     if (!editingId) return;
     setReviewAction(nextStatus ?? null);
     const composedEditContent =
-      tab === "terms"
-        ? buildTermContentHtml(editTermSections)
-        : tab === "brands"
+      tab === "brands"
           ? buildBrandStructuredHtml(editBrandStructured)
-          : tab === "standards"
-            ? buildStandardStructuredHtml(editStandardStructured)
+          : tab === "terms" || tab === "standards"
+            ? editContent
             : tab === "industry-data"
               ? buildDataStructuredHtml(editDataStructured)
               : tab === "awards"
                 ? buildAwardStructuredHtml(editAwardStructured)
-          : editContent;
+                : editContent;
     const res = await fetch(`/api/admin/articles/${editingId}`, {
       method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         title: editTitle,
+        slug: editSlug || undefined,
         excerpt: editExcerpt || null,
         content: composedEditContent,
         coverImage:
@@ -707,6 +721,7 @@ export default function AdminContentPage() {
               : undefined,
         subHref: tab === "brands" ? null : editSubHref || subHref,
         tagSlugs: editTagSlugs || null,
+        faqJson: tab === "terms" || tab === "standards" ? stringifyDocumentMetadata(editDocumentMeta) : null,
         isPinned: editIsPinned,
         status: nextStatus,
       }),
@@ -841,11 +856,83 @@ export default function AdminContentPage() {
               </>
             )}
             <label className="block text-sm text-muted">标题</label><input className="w-full border border-border rounded px-3 py-2 bg-surface" value={title} onChange={(e) => setTitle(e.target.value)} required />
+            {(tab === "terms" || tab === "standards") && (
+              <>
+                <label className="block text-sm text-muted">文档 Slug</label>
+                <input
+                  className="w-full border border-border rounded px-3 py-2 bg-surface"
+                  value={slug}
+                  onChange={(e) => setSlug(e.target.value)}
+                  placeholder="留空则按标题自动生成，建议使用拼音或英文短链"
+                />
+              </>
+            )}
             <div className="flex items-center justify-between gap-3">
               <label className="block text-sm text-muted">{tab === "standards" ? "标准摘要" : "摘要"}</label>
               <button type="button" onClick={autoFillPublishExcerpt} className="text-xs px-3 py-1.5 rounded border border-border hover:bg-surface">自动生成摘要</button>
             </div>
             <textarea className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[80px] whitespace-pre-wrap resize-y" value={excerpt} onChange={(e) => setExcerpt(e.target.value)} />
+            {(tab === "terms" || tab === "standards") && (
+              <div className="rounded-2xl border border-border bg-surface p-4 space-y-3">
+                <p className="text-sm font-medium text-primary">文档信息</p>
+                <textarea
+                  className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[88px]"
+                  value={documentMeta.intro}
+                  onChange={(e) => setDocumentMeta((prev) => ({ ...prev, intro: e.target.value }))}
+                  placeholder={tab === "terms" ? "词条简介，用一段话说明术语定义与适用语境。" : "标准简介，用一段话说明标准适用范围和核心价值。"}
+                />
+                {tab === "standards" && (
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <input className="w-full border border-border rounded px-3 py-2 bg-surface" value={documentMeta.standardCode} onChange={(e) => setDocumentMeta((prev) => ({ ...prev, standardCode: e.target.value }))} placeholder="标准编号" />
+                    <input className="w-full border border-border rounded px-3 py-2 bg-surface" value={documentMeta.versions[0]?.version ?? ""} onChange={(e) => setDocumentMeta((prev) => ({ ...prev, versions: [{ version: e.target.value, updatedAt: prev.versions[0]?.updatedAt, note: prev.versions[0]?.note }, ...prev.versions.slice(1)] }))} placeholder="当前版本，如 V1.0" />
+                    <textarea className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[84px] md:col-span-2" value={documentMeta.scope} onChange={(e) => setDocumentMeta((prev) => ({ ...prev, scope: e.target.value }))} placeholder="适用范围" />
+                    <textarea className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[84px]" value={documentMeta.materialRequirements} onChange={(e) => setDocumentMeta((prev) => ({ ...prev, materialRequirements: e.target.value }))} placeholder="材料要求" />
+                    <textarea className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[84px]" value={documentMeta.processRequirements} onChange={(e) => setDocumentMeta((prev) => ({ ...prev, processRequirements: e.target.value }))} placeholder="工艺要求" />
+                    <textarea className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[84px]" value={documentMeta.executionFlow} onChange={(e) => setDocumentMeta((prev) => ({ ...prev, executionFlow: e.target.value }))} placeholder="执行流程" />
+                    <textarea className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[84px]" value={documentMeta.acceptanceCriteria} onChange={(e) => setDocumentMeta((prev) => ({ ...prev, acceptanceCriteria: e.target.value }))} placeholder="验收标准" />
+                  </div>
+                )}
+                <div className="grid gap-3 md:grid-cols-3">
+                  <input className="w-full border border-border rounded px-3 py-2 bg-surface" value={documentMeta.seoTitle} onChange={(e) => setDocumentMeta((prev) => ({ ...prev, seoTitle: e.target.value }))} placeholder="SEO 标题" />
+                  <input className="w-full border border-border rounded px-3 py-2 bg-surface" value={documentMeta.seoKeywords} onChange={(e) => setDocumentMeta((prev) => ({ ...prev, seoKeywords: e.target.value }))} placeholder="SEO 关键词，逗号分隔" />
+                  <input className="w-full border border-border rounded px-3 py-2 bg-surface" value={documentMeta.seoDescription} onChange={(e) => setDocumentMeta((prev) => ({ ...prev, seoDescription: e.target.value }))} placeholder="SEO 描述" />
+                </div>
+                {tab === "standards" && (
+                  <>
+                    <label className="block text-sm text-muted">参与单位（每行一个，格式：企业名称|参与时间）</label>
+                    <textarea
+                      className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[88px]"
+                      value={documentMeta.contributors.map((item) => `${item.name}${item.joinedAt ? `|${item.joinedAt}` : ""}`).join("\n")}
+                      onChange={(e) =>
+                        setDocumentMeta((prev) => ({
+                          ...prev,
+                          contributors: e.target.value.split("\n").map((line) => line.trim()).filter(Boolean).map((line) => {
+                            const [name, joinedAt] = line.split("|").map((part) => part.trim());
+                            return { name, joinedAt };
+                          }),
+                        }))
+                      }
+                      placeholder="示例：某某整木|2026-03-18"
+                    />
+                    <label className="block text-sm text-muted">版本记录（每行一个，格式：版本|更新时间|修改说明）</label>
+                    <textarea
+                      className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[110px]"
+                      value={documentMeta.versions.map((item) => [item.version, item.updatedAt, item.note].filter(Boolean).join("|")).join("\n")}
+                      onChange={(e) =>
+                        setDocumentMeta((prev) => ({
+                          ...prev,
+                          versions: e.target.value.split("\n").map((line) => line.trim()).filter(Boolean).map((line) => {
+                            const [version, updatedAt, note] = line.split("|").map((part) => part.trim());
+                            return { version: version || "未命名版本", updatedAt, note };
+                          }),
+                        }))
+                      }
+                      placeholder="示例：V1.0|2026-03-18|首版发布"
+                    />
+                  </>
+                )}
+              </div>
+            )}
             {tab !== "brands" && (
               <>
                 <label className="block text-sm text-muted">顶部配图（可选）</label>
@@ -900,45 +987,16 @@ export default function AdminContentPage() {
               <span className="text-primary">置顶内容（全站优先显示）</span>
               <input type="checkbox" checked={isPinned} onChange={(e) => setIsPinned(e.target.checked)} />
             </label>
-            {tab === "terms" && (
-              <div className="rounded-lg border border-border bg-surface p-3 space-y-3">
-                <p className="text-xs text-muted">词库结构化录入：词语（标题）+ 摘要 + 多个小标题解释。</p>
-                {termSections.map((sec, idx) => (
-                  <div key={sec.id} className="rounded-md border border-border bg-surface-elevated p-3 space-y-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-xs text-muted">小节 {idx + 1}</p>
-                      <button
-                        type="button"
-                        onClick={() => removeTermSection(sec.id)}
-                        className="text-xs px-2 py-1 rounded border border-border hover:bg-surface"
-                        disabled={termSections.length <= 1}
-                      >
-                        删除
-                      </button>
-                    </div>
-                    <input
-                      className="w-full border border-border rounded px-3 py-2 bg-surface"
-                      placeholder="小标题，如：发展背景"
-                      value={sec.heading}
-                      onChange={(e) => updateTermSection(sec.id, { heading: e.target.value })}
-                    />
-                    <textarea
-                      className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[90px]"
-                      placeholder="该小标题下的解释内容"
-                      value={sec.body}
-                      onChange={(e) => updateTermSection(sec.id, { body: e.target.value })}
-                    />
-                  </div>
-                ))}
-                <div className="flex gap-2">
-                  <button type="button" onClick={addTermSection} className="text-xs px-3 py-2 rounded border border-border hover:bg-surface">
-                    添加小标题
-                  </button>
-                  <button type="button" onClick={() => setTermSections(createDefaultTermSections())} className="text-xs px-3 py-2 rounded border border-border hover:bg-surface">
-                    恢复默认模板
-                  </button>
-                </div>
-              </div>
+            {(tab === "terms" || tab === "standards") && (
+              <>
+                <label className="block text-sm text-muted">{tab === "terms" ? "词条正文" : "标准正文"}</label>
+                <RichEditor
+                  value={content}
+                  onChange={setContent}
+                  minHeight={360}
+                  placeholder={tab === "terms" ? "支持标题、列表、表格、引用、图片的词条正文编辑。" : "支持标题分级、表格、图片和条款结构的标准正文编辑。"}
+                />
+              </>
             )}
             <label className="block text-sm text-muted">关键词（逗号分隔）</label>
             <div className="flex gap-2">
@@ -955,12 +1013,6 @@ export default function AdminContentPage() {
               <>
                 <label className="block text-sm text-muted">品牌结构化内容</label>
                 <BrandStructuredEditor value={brandStructured} onChange={setBrandStructured} />
-              </>
-            )}
-            {tab === "standards" && (
-              <>
-                <label className="block text-sm text-muted">标准结构化内容</label>
-                <StandardStructuredEditor value={standardStructured} onChange={setStandardStructured} />
               </>
             )}
             {tab === "industry-data" && (
@@ -1008,11 +1060,80 @@ export default function AdminContentPage() {
           <h2 className="text-sm font-semibold mb-3">编辑内容</h2>
           <form onSubmit={(e) => { e.preventDefault(); void saveEdit(); }} className="space-y-3">
             <label className="block text-sm text-muted">标题</label><input className="w-full border border-border rounded px-3 py-2 bg-surface" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} required />
+            {(tab === "terms" || tab === "standards") && (
+              <>
+                <label className="block text-sm text-muted">文档 Slug</label>
+                <input
+                  className="w-full border border-border rounded px-3 py-2 bg-surface"
+                  value={editSlug}
+                  onChange={(e) => setEditSlug(e.target.value)}
+                  placeholder="留空则保持当前 slug"
+                />
+              </>
+            )}
             <div className="flex items-center justify-between gap-3">
               <label className="block text-sm text-muted">{tab === "standards" ? "标准摘要" : "摘要"}</label>
               <button type="button" onClick={autoFillEditExcerpt} className="text-xs px-3 py-1.5 rounded border border-border hover:bg-surface">自动生成摘要</button>
             </div>
             <textarea className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[80px] whitespace-pre-wrap resize-y" value={editExcerpt} onChange={(e) => setEditExcerpt(e.target.value)} />
+            {(tab === "terms" || tab === "standards") && (
+              <div className="rounded-2xl border border-border bg-surface p-4 space-y-3">
+                <p className="text-sm font-medium text-primary">文档信息</p>
+                <textarea
+                  className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[88px]"
+                  value={editDocumentMeta.intro}
+                  onChange={(e) => setEditDocumentMeta((prev) => ({ ...prev, intro: e.target.value }))}
+                  placeholder={tab === "terms" ? "词条简介，用一段话说明术语定义与适用语境。" : "标准简介，用一段话说明标准适用范围和核心价值。"}
+                />
+                {tab === "standards" && (
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <input className="w-full border border-border rounded px-3 py-2 bg-surface" value={editDocumentMeta.standardCode} onChange={(e) => setEditDocumentMeta((prev) => ({ ...prev, standardCode: e.target.value }))} placeholder="标准编号" />
+                    <input className="w-full border border-border rounded px-3 py-2 bg-surface" value={editDocumentMeta.scope} onChange={(e) => setEditDocumentMeta((prev) => ({ ...prev, scope: e.target.value }))} placeholder="适用范围" />
+                    <textarea className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[84px]" value={editDocumentMeta.materialRequirements} onChange={(e) => setEditDocumentMeta((prev) => ({ ...prev, materialRequirements: e.target.value }))} placeholder="材料要求" />
+                    <textarea className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[84px]" value={editDocumentMeta.processRequirements} onChange={(e) => setEditDocumentMeta((prev) => ({ ...prev, processRequirements: e.target.value }))} placeholder="工艺要求" />
+                    <textarea className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[84px]" value={editDocumentMeta.executionFlow} onChange={(e) => setEditDocumentMeta((prev) => ({ ...prev, executionFlow: e.target.value }))} placeholder="执行流程" />
+                    <textarea className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[84px]" value={editDocumentMeta.acceptanceCriteria} onChange={(e) => setEditDocumentMeta((prev) => ({ ...prev, acceptanceCriteria: e.target.value }))} placeholder="验收标准" />
+                  </div>
+                )}
+                <div className="grid gap-3 md:grid-cols-3">
+                  <input className="w-full border border-border rounded px-3 py-2 bg-surface" value={editDocumentMeta.seoTitle} onChange={(e) => setEditDocumentMeta((prev) => ({ ...prev, seoTitle: e.target.value }))} placeholder="SEO 标题" />
+                  <input className="w-full border border-border rounded px-3 py-2 bg-surface" value={editDocumentMeta.seoKeywords} onChange={(e) => setEditDocumentMeta((prev) => ({ ...prev, seoKeywords: e.target.value }))} placeholder="SEO 关键词，逗号分隔" />
+                  <input className="w-full border border-border rounded px-3 py-2 bg-surface" value={editDocumentMeta.seoDescription} onChange={(e) => setEditDocumentMeta((prev) => ({ ...prev, seoDescription: e.target.value }))} placeholder="SEO 描述" />
+                </div>
+                {tab === "standards" && (
+                  <>
+                    <label className="block text-sm text-muted">参与单位（每行一个，格式：企业名称|参与时间）</label>
+                    <textarea
+                      className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[88px]"
+                      value={editDocumentMeta.contributors.map((item) => `${item.name}${item.joinedAt ? `|${item.joinedAt}` : ""}`).join("\n")}
+                      onChange={(e) =>
+                        setEditDocumentMeta((prev) => ({
+                          ...prev,
+                          contributors: e.target.value.split("\n").map((line) => line.trim()).filter(Boolean).map((line) => {
+                            const [name, joinedAt] = line.split("|").map((part) => part.trim());
+                            return { name, joinedAt };
+                          }),
+                        }))
+                      }
+                    />
+                    <label className="block text-sm text-muted">版本记录（每行一个，格式：版本|更新时间|修改说明）</label>
+                    <textarea
+                      className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[110px]"
+                      value={editDocumentMeta.versions.map((item) => [item.version, item.updatedAt, item.note].filter(Boolean).join("|")).join("\n")}
+                      onChange={(e) =>
+                        setEditDocumentMeta((prev) => ({
+                          ...prev,
+                          versions: e.target.value.split("\n").map((line) => line.trim()).filter(Boolean).map((line) => {
+                            const [version, updatedAt, note] = line.split("|").map((part) => part.trim());
+                            return { version: version || "未命名版本", updatedAt, note };
+                          }),
+                        }))
+                      }
+                    />
+                  </>
+                )}
+              </div>
+            )}
             <label className="block text-sm text-muted">关键词（逗号分隔）</label>
             <div className="flex gap-2">
               <input className="flex-1 border border-border rounded px-3 py-2 bg-surface" value={editTagSlugs} onChange={(e) => setEditTagSlugs(e.target.value)} placeholder="如：行业趋势,技术发展,品牌建设" />
@@ -1072,45 +1193,16 @@ export default function AdminContentPage() {
               <span className="text-primary">置顶内容（全站优先显示）</span>
               <input type="checkbox" checked={editIsPinned} onChange={(e) => setEditIsPinned(e.target.checked)} />
             </label>
-            {tab === "terms" ? (
-              <div className="rounded-lg border border-border bg-surface p-3 space-y-3">
-                <p className="text-xs text-muted">词库条目编辑（小标题 + 解释）。</p>
-                {editTermSections.map((sec, idx) => (
-                  <div key={sec.id} className="rounded-md border border-border bg-surface-elevated p-3 space-y-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-xs text-muted">小节 {idx + 1}</p>
-                      <button
-                        type="button"
-                        onClick={() => removeEditTermSection(sec.id)}
-                        className="text-xs px-2 py-1 rounded border border-border hover:bg-surface"
-                        disabled={editTermSections.length <= 1}
-                      >
-                        删除
-                      </button>
-                    </div>
-                    <input
-                      className="w-full border border-border rounded px-3 py-2 bg-surface"
-                      placeholder="小标题"
-                      value={sec.heading}
-                      onChange={(e) => updateEditTermSection(sec.id, { heading: e.target.value })}
-                    />
-                    <textarea
-                      className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[90px]"
-                      placeholder="解释内容"
-                      value={sec.body}
-                      onChange={(e) => updateEditTermSection(sec.id, { body: e.target.value })}
-                    />
-                  </div>
-                ))}
-                <div className="flex gap-2">
-                  <button type="button" onClick={addEditTermSection} className="text-xs px-3 py-2 rounded border border-border hover:bg-surface">
-                    添加小标题
-                  </button>
-                  <button type="button" onClick={() => setEditTermSections(createDefaultTermSections())} className="text-xs px-3 py-2 rounded border border-border hover:bg-surface">
-                    恢复默认模板
-                  </button>
-                </div>
-              </div>
+            {(tab === "terms" || tab === "standards") ? (
+              <>
+                <label className="block text-sm text-muted">{tab === "terms" ? "词条正文" : "标准正文"}</label>
+                <RichEditor
+                  value={editContent}
+                  onChange={setEditContent}
+                  minHeight={360}
+                  placeholder={tab === "terms" ? "支持标题、列表、表格、引用、图片的词条正文编辑。" : "支持标题分级、表格、图片和条款结构的标准正文编辑。"}
+                />
+              </>
             ) : tab === "brands" ? (
               <>
                 <label className="block text-sm text-muted">区域选择</label>
@@ -1127,11 +1219,6 @@ export default function AdminContentPage() {
                 </select>
                 <label className="block text-sm text-muted">品牌结构化内容</label>
                 <BrandStructuredEditor value={editBrandStructured} onChange={setEditBrandStructured} />
-              </>
-            ) : tab === "standards" ? (
-              <>
-                <label className="block text-sm text-muted">标准结构化内容</label>
-                <StandardStructuredEditor value={editStandardStructured} onChange={setEditStandardStructured} />
               </>
             ) : tab === "industry-data" ? (
               <>

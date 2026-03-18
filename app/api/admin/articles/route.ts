@@ -81,6 +81,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => ({}));
     const {
       title,
+      slug,
       excerpt,
       content,
       coverImage,
@@ -94,6 +95,7 @@ export async function POST(request: NextRequest) {
       relatedStandardIds,
       relatedBrandIds,
       tagSlugs,
+      faqJson,
       syncToMainSite,
       isPinned,
       status,
@@ -108,7 +110,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "词库内容必须按固定小标题分节格式提交" }, { status: 400 });
       }
     }
-    const slugTrim = await generateUniqueArticleSlug(title);
+    const customSlug = typeof slug === "string" ? slug.trim() : "";
+    const slugTrim = await generateUniqueArticleSlug(customSlug || title);
 
     const reviewRequired = await isContentReviewRequired();
     const safeStatus = isSuperAdmin(session)
@@ -153,6 +156,7 @@ export async function POST(request: NextRequest) {
         relatedTermSlugs: typeof relatedTermSlugs === "string" ? relatedTermSlugs.trim() || null : null,
         relatedStandardIds: typeof relatedStandardIds === "string" ? relatedStandardIds.trim() || null : null,
         relatedBrandIds: typeof relatedBrandIds === "string" ? relatedBrandIds.trim() || null : null,
+        faqJson: typeof faqJson === "string" ? faqJson.trim() || null : null,
         tagSlugs: resolvedTagSlugs.length > 0 ? resolvedTagSlugs.join(",") : null,
         syncToMainSite: syncToMainSite === true,
         isPinned: typeof isPinned === "boolean" ? isPinned : false,

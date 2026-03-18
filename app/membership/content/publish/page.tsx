@@ -59,6 +59,12 @@ import { uploadImageToServer } from "@/lib/client-image";
 import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
 import { buildGeoExcerpt, previewText } from "@/lib/text";
 import { suggestTagsForGeo } from "@/lib/tag-suggest";
+import {
+  createEmptyDocumentMetadata,
+  parseDocumentMetadata,
+  stringifyDocumentMetadata,
+  type DocumentMetadata,
+} from "@/lib/document-metadata";
 
 type MemberType = "enterprise_basic" | "enterprise_advanced" | "personal";
 type Status = "draft" | "pending" | "approved" | "rejected";
@@ -84,6 +90,7 @@ type Row = {
   relatedBrandIds?: string | null;
   tagSlugs?: string | null;
   isPinned?: boolean;
+  faqJson?: string | null;
   createdAt: string;
 };
 
@@ -235,8 +242,11 @@ function PublishCenterPageInner() {
   const [relatedBrandIds, setRelatedBrandIds] = useState("");
   const [tagSlugs, setTagSlugs] = useState("");
   const [isPinned, setIsPinned] = useState(false);
+  const [slug, setSlug] = useState("");
+  const [documentMeta, setDocumentMeta] = useState<DocumentMetadata>(createEmptyDocumentMetadata());
 
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editSlug, setEditSlug] = useState("");
   const [editTitle, setEditTitle] = useState("");
   const [editExcerpt, setEditExcerpt] = useState("");
   const [editContent, setEditContent] = useState("");
@@ -248,6 +258,7 @@ function PublishCenterPageInner() {
   const [editCoverImage, setEditCoverImage] = useState("");
   const [editCoverPreviewSrc, setEditCoverPreviewSrc] = useState("");
   const [editReason, setEditReason] = useState("");
+  const [editDocumentMeta, setEditDocumentMeta] = useState<DocumentMetadata>(createEmptyDocumentMetadata());
 
   const allowedCategories = useMemo(() => getAllowedCategories(memberType), [memberType]);
   const allowedTabs = useMemo(() => allowedCategories.map((x) => tabFromHref(x.href)), [allowedCategories]);
@@ -353,12 +364,10 @@ function PublishCenterPageInner() {
 
   function getPublishSourceText() {
     return (
-      safeTab === "terms"
-        ? termSections.map((x) => `${x.heading} ${x.body}`).join(" ")
-        : safeTab === "brands"
+      safeTab === "brands"
           ? brandStructuredToSearchText(brandStructured)
-          : safeTab === "standards"
-            ? standardStructuredToSearchText(standardStructured)
+          : safeTab === "standards" || safeTab === "terms"
+            ? content
             : safeTab === "industry-data"
               ? dataStructuredToSearchText(dataStructured)
               : safeTab === "awards"
@@ -369,12 +378,10 @@ function PublishCenterPageInner() {
 
   function getEditSourceText() {
     return (
-      safeTab === "terms"
-        ? editTermSections.map((x) => `${x.heading} ${x.body}`).join(" ")
-        : safeTab === "brands"
+      safeTab === "brands"
           ? brandStructuredToSearchText(editBrandStructured)
-          : safeTab === "standards"
-            ? standardStructuredToSearchText(editStandardStructured)
+          : safeTab === "standards" || safeTab === "terms"
+            ? editContent
             : safeTab === "industry-data"
               ? dataStructuredToSearchText(editDataStructured)
               : safeTab === "awards"
@@ -417,6 +424,8 @@ function PublishCenterPageInner() {
     setRelatedStandardIds("");
     setRelatedBrandIds("");
     setTagSlugs("");
+    setSlug("");
+    setDocumentMeta(createEmptyDocumentMetadata());
   }, []);
 
   function resetTermSections() {
@@ -495,20 +504,19 @@ function PublishCenterPageInner() {
     setLastSubmitted(null);
 
     const composedContent =
-      safeTab === "terms"
-        ? buildTermContentHtml(termSections)
-        : safeTab === "brands"
+      safeTab === "brands"
           ? buildBrandStructuredHtml(brandStructured)
-          : safeTab === "standards"
-            ? buildStandardStructuredHtml(standardStructured)
+          : safeTab === "standards" || safeTab === "terms"
+            ? content.trim()
             : safeTab === "industry-data"
               ? buildDataStructuredHtml(dataStructured)
               : safeTab === "awards"
                 ? buildAwardStructuredHtml(awardStructured)
-        : content.trim();
+                : content.trim();
 
     const payload = {
       title: title.trim(),
+      slug: slug.trim() || null,
       excerpt: excerpt.trim() || null,
       content: composedContent,
       categoryHref: selectedCategory.href,
@@ -534,6 +542,7 @@ function PublishCenterPageInner() {
       relatedStandardIds: relatedStandardIds.trim() || null,
       relatedBrandIds: relatedBrandIds.trim() || null,
       tagSlugs: tagSlugs.trim() || null,
+      faqJson: safeTab === "terms" || safeTab === "standards" ? stringifyDocumentMetadata(documentMeta) : null,
       syncToMainSite: true,
       isPinned,
     };
@@ -564,6 +573,7 @@ function PublishCenterPageInner() {
     setLastSubmitted({ title: submittedTitle, href: previewHref, status: submittedStatus });
     setMessage(nextStatus === "approved" ? "提交成功，内容已发布。" : "提交成功，已进入审核流程。");
     setTitle("");
+    setSlug("");
     setExcerpt("");
     setContent("");
     resetTermSections();
@@ -579,6 +589,7 @@ function PublishCenterPageInner() {
 
   function openEditRequest(item: Row) {
     setEditingId(item.id);
+    setEditSlug(item.slug ?? "");
     setEditTitle(item.title ?? "");
     setEditExcerpt(item.excerpt ?? "");
     setEditContent(item.content ?? "");
@@ -606,29 +617,29 @@ function PublishCenterPageInner() {
     setEditCoverImage(item.coverImage ?? "");
     replacePreviewUrl("edit", item.coverImage ?? "");
     setEditReason("");
+    setEditDocumentMeta(parseDocumentMetadata(item.faqJson));
   }
 
   async function submitEditRequest(e: FormEvent) {
     e.preventDefault();
     if (!editingId) return;
     const composedEditContent =
-      safeTab === "terms"
-        ? buildTermContentHtml(editTermSections)
-        : safeTab === "brands"
+      safeTab === "brands"
           ? buildBrandStructuredHtml(editBrandStructured)
-          : safeTab === "standards"
-            ? buildStandardStructuredHtml(editStandardStructured)
+          : safeTab === "standards" || safeTab === "terms"
+            ? editContent.trim()
             : safeTab === "industry-data"
               ? buildDataStructuredHtml(editDataStructured)
               : safeTab === "awards"
                 ? buildAwardStructuredHtml(editAwardStructured)
-          : editContent;
+                : editContent;
     const res = await fetch(`/api/member/articles/${editingId}/changes`, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         title: editTitle,
+        slug: editSlug,
         excerpt: editExcerpt,
         content: composedEditContent,
         coverImage: safeTab === "brands" ? editBrandStructured.logoUrl.trim() || null : editCoverImage.trim() || null,
@@ -718,53 +729,15 @@ function PublishCenterPageInner() {
   function renderCategoryFeatureFields(currentTab: ContentTabKey) {
     return (
       <>
-        {currentTab === "terms" && (
-          <>
-            <div className="rounded-lg border border-border bg-surface p-3 space-y-3">
-              <p className="text-xs text-muted">词库结构化录入：词语（标题）+ 摘要 + 多个小标题解释。</p>
-              {termSections.map((sec, idx) => (
-                <div key={sec.id} className="rounded-md border border-border bg-surface-elevated p-3 space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-xs text-muted">小节 {idx + 1}</p>
-                    <button
-                      type="button"
-                      onClick={() => removeTermSection(sec.id)}
-                      className="text-xs px-2 py-1 rounded border border-border hover:bg-surface"
-                      disabled={termSections.length <= 1}
-                    >
-                      删除
-                    </button>
-                  </div>
-                  <input
-                    className="w-full border border-border rounded px-3 py-2 bg-surface"
-                    placeholder="小标题，如：发展背景"
-                    value={sec.heading}
-                    onChange={(e) => updateTermSection(sec.id, { heading: e.target.value })}
-                  />
-                  <textarea
-                    className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[90px]"
-                    placeholder="该小标题下的解释内容"
-                    value={sec.body}
-                    onChange={(e) => updateTermSection(sec.id, { body: e.target.value })}
-                  />
-                </div>
-              ))}
-              <div className="flex gap-2">
-                <button type="button" onClick={addTermSection} className="text-xs px-3 py-2 rounded border border-border hover:bg-surface">
-                  添加小标题
-                </button>
-                <button type="button" onClick={resetTermSections} className="text-xs px-3 py-2 rounded border border-border hover:bg-surface">
-                  恢复默认模板
-                </button>
-              </div>
-            </div>
-          </>
-        )}
-
-        {currentTab === "standards" && (
+        {(currentTab === "terms" || currentTab === "standards") && (
           <div className="space-y-2">
-            <label className="block text-sm text-muted">标准结构化内容</label>
-            <StandardStructuredEditor value={standardStructured} onChange={setStandardStructured} />
+            <label className="block text-sm text-muted">{currentTab === "terms" ? "词条正文" : "标准正文"}</label>
+            <RichEditor
+              value={content}
+              onChange={setContent}
+              minHeight={360}
+              placeholder={currentTab === "terms" ? "支持标题、列表、表格、引用、图片的词条正文编辑。" : "支持标题分级、表格、图片和条款结构的标准正文编辑。"}
+            />
           </div>
         )}
 
@@ -935,6 +908,17 @@ function PublishCenterPageInner() {
 
           <label className="block text-sm text-muted">标题</label>
           <input className="w-full border border-border rounded px-3 py-2 bg-surface" value={title} onChange={(e) => setTitle(e.target.value)} required />
+          {(safeTab === "terms" || safeTab === "standards") && (
+            <>
+              <label className="block text-sm text-muted">文档 Slug</label>
+              <input
+                className="w-full border border-border rounded px-3 py-2 bg-surface"
+                value={slug}
+                onChange={(e) => setSlug(e.target.value)}
+                placeholder="留空则按标题自动生成，建议使用拼音或英文短链"
+              />
+            </>
+          )}
 
           <div className="flex items-center justify-between gap-3">
             <label className="block text-sm text-muted">{safeTab === "standards" ? "标准摘要" : "摘要"}</label>
@@ -945,6 +929,67 @@ function PublishCenterPageInner() {
             value={excerpt}
             onChange={(e) => setExcerpt(e.target.value)}
           />
+          {(safeTab === "terms" || safeTab === "standards") && (
+            <div className="rounded-2xl border border-border bg-surface p-4 space-y-3">
+              <p className="text-sm font-medium text-primary">文档信息</p>
+              <textarea
+                className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[88px]"
+                value={documentMeta.intro}
+                onChange={(e) => setDocumentMeta((prev) => ({ ...prev, intro: e.target.value }))}
+                placeholder={safeTab === "terms" ? "词条简介，用一段话说明术语定义与适用语境。" : "标准简介，用一段话说明标准适用范围和核心价值。"}
+              />
+              {safeTab === "standards" && (
+                <div className="grid gap-3 md:grid-cols-2">
+                  <input className="w-full border border-border rounded px-3 py-2 bg-surface" value={documentMeta.standardCode} onChange={(e) => setDocumentMeta((prev) => ({ ...prev, standardCode: e.target.value }))} placeholder="标准编号" />
+                  <input className="w-full border border-border rounded px-3 py-2 bg-surface" value={versionLabel} onChange={(e) => setVersionLabel(e.target.value)} placeholder="当前版本，如 V1.0" />
+                  <textarea className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[84px] md:col-span-2" value={documentMeta.scope} onChange={(e) => setDocumentMeta((prev) => ({ ...prev, scope: e.target.value }))} placeholder="适用范围" />
+                  <textarea className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[84px]" value={documentMeta.materialRequirements} onChange={(e) => setDocumentMeta((prev) => ({ ...prev, materialRequirements: e.target.value }))} placeholder="材料要求" />
+                  <textarea className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[84px]" value={documentMeta.processRequirements} onChange={(e) => setDocumentMeta((prev) => ({ ...prev, processRequirements: e.target.value }))} placeholder="工艺要求" />
+                  <textarea className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[84px]" value={documentMeta.executionFlow} onChange={(e) => setDocumentMeta((prev) => ({ ...prev, executionFlow: e.target.value }))} placeholder="执行流程" />
+                  <textarea className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[84px]" value={documentMeta.acceptanceCriteria} onChange={(e) => setDocumentMeta((prev) => ({ ...prev, acceptanceCriteria: e.target.value }))} placeholder="验收标准" />
+                </div>
+              )}
+              <div className="grid gap-3 md:grid-cols-3">
+                <input className="w-full border border-border rounded px-3 py-2 bg-surface" value={documentMeta.seoTitle} onChange={(e) => setDocumentMeta((prev) => ({ ...prev, seoTitle: e.target.value }))} placeholder="SEO 标题" />
+                <input className="w-full border border-border rounded px-3 py-2 bg-surface" value={documentMeta.seoKeywords} onChange={(e) => setDocumentMeta((prev) => ({ ...prev, seoKeywords: e.target.value }))} placeholder="SEO 关键词，逗号分隔" />
+                <input className="w-full border border-border rounded px-3 py-2 bg-surface" value={documentMeta.seoDescription} onChange={(e) => setDocumentMeta((prev) => ({ ...prev, seoDescription: e.target.value }))} placeholder="SEO 描述" />
+              </div>
+              {safeTab === "standards" && (
+                <>
+                  <label className="block text-sm text-muted">参与单位（每行一个，格式：企业名称|参与时间）</label>
+                  <textarea
+                    className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[88px]"
+                    value={documentMeta.contributors.map((item) => `${item.name}${item.joinedAt ? `|${item.joinedAt}` : ""}`).join("\n")}
+                    onChange={(e) =>
+                      setDocumentMeta((prev) => ({
+                        ...prev,
+                        contributors: e.target.value.split("\n").map((line) => line.trim()).filter(Boolean).map((line) => {
+                          const [name, joinedAt] = line.split("|").map((part) => part.trim());
+                          return { name, joinedAt };
+                        }),
+                      }))
+                    }
+                    placeholder="示例：某某整木|2026-03-18"
+                  />
+                  <label className="block text-sm text-muted">版本记录（每行一个，格式：版本|更新时间|修改说明）</label>
+                  <textarea
+                    className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[110px]"
+                    value={documentMeta.versions.map((item) => [item.version, item.updatedAt, item.note].filter(Boolean).join("|")).join("\n")}
+                    onChange={(e) =>
+                      setDocumentMeta((prev) => ({
+                        ...prev,
+                        versions: e.target.value.split("\n").map((line) => line.trim()).filter(Boolean).map((line) => {
+                          const [version, updatedAt, note] = line.split("|").map((part) => part.trim());
+                          return { version: version || "未命名版本", updatedAt, note };
+                        }),
+                      }))
+                    }
+                    placeholder="示例：V1.0|2026-03-18|首版发布"
+                  />
+                </>
+              )}
+            </div>
+          )}
 
           {safeTab !== "brands" && (
             <>

@@ -87,6 +87,7 @@ export async function PATCH(
     relatedStandardIds,
     relatedBrandIds,
     tagSlugs,
+    faqJson,
     syncToMainSite,
     isPinned,
     status,
@@ -115,6 +116,7 @@ export async function PATCH(
   if (typeof relatedStandardIds === "string") data.relatedStandardIds = relatedStandardIds.trim() || null;
   if (typeof relatedBrandIds === "string") data.relatedBrandIds = relatedBrandIds.trim() || null;
   if (typeof tagSlugs === "string") data.tagSlugs = tagSlugs.trim() || null;
+  if (typeof faqJson === "string") data.faqJson = faqJson.trim() || null;
   if (typeof isPinned === "boolean") data.isPinned = isPinned;
   if (syncToMainSite !== undefined) data.syncToMainSite = syncToMainSite === true;
 
@@ -184,6 +186,7 @@ export async function PATCH(
       relatedTermSlugs: true,
       relatedStandardIds: true,
       relatedBrandIds: true,
+      faqJson: true,
       syncToMainSite: true,
     },
   });

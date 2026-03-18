@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCategoryWithMetaByHref } from "@/lib/categories";
 import { articleOrderByPinnedLatest, articleOrderByPinnedOldest } from "@/lib/articles";
 import { parseStandardStructuredHtml } from "@/lib/standard-structured";
+import { parseDocumentMetadata } from "@/lib/document-metadata";
 export const revalidate = 300;
 
 
@@ -93,6 +94,7 @@ export default async function StandardsAllPage({ searchParams }: Props) {
         content: true,
         subHref: true,
         versionLabel: true,
+        faqJson: true,
         updatedAt: true,
         publishedAt: true,
       },
@@ -180,6 +182,7 @@ export default async function StandardsAllPage({ searchParams }: Props) {
         ) : (
           items.map((item) => {
             const structured = parseStandardStructuredHtml(item.content);
+            const metadata = parseDocumentMetadata(item.faqJson);
             const code = structured?.standardCode || "";
             const subLabel = subMap.get(item.subHref ?? "") ?? "标准内容";
             const updated = (item.publishedAt ?? item.updatedAt).toLocaleDateString("zh-CN");
@@ -192,7 +195,7 @@ export default async function StandardsAllPage({ searchParams }: Props) {
                   </div>
                   <div className="text-right shrink-0">
                     <p className="text-xs text-muted">版本</p>
-                    <p className="text-sm font-medium text-primary">{item.versionLabel || structured?.versionNote || "—"}</p>
+                    <p className="text-sm font-medium text-primary">{item.versionLabel || metadata.versions[0]?.version || structured?.versionNote || "—"}</p>
                   </div>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2 text-xs">

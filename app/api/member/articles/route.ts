@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({}));
   const {
     title,
+    slug,
     excerpt,
     content,
     coverImage,
@@ -54,6 +55,7 @@ export async function POST(request: NextRequest) {
     relatedStandardIds,
     relatedBrandIds,
     tagSlugs,
+    faqJson,
     syncToMainSite,
     isPinned,
   } = body;
@@ -78,7 +80,8 @@ export async function POST(request: NextRequest) {
   if (!title || typeof title !== "string") {
     return NextResponse.json({ error: "标题必填" }, { status: 400 });
   }
-  const slugTrim = await generateUniqueArticleSlug(title);
+  const customSlug = typeof slug === "string" ? slug.trim() : "";
+  const slugTrim = await generateUniqueArticleSlug(customSlug || title);
 
   const resolvedTagSlugs = resolveTagSlugs({
     manualTagInput: typeof tagSlugs === "string" ? tagSlugs : null,
@@ -107,6 +110,7 @@ export async function POST(request: NextRequest) {
           ? relatedStandardIds.trim() || null
           : null,
       relatedBrandIds: typeof relatedBrandIds === "string" ? relatedBrandIds.trim() || null : null,
+      faqJson: typeof faqJson === "string" ? faqJson.trim() || null : null,
       tagSlugs: resolvedTagSlugs.length > 0 ? resolvedTagSlugs.join(",") : null,
       syncToMainSite: syncToMainSite === true,
       isPinned: (session.role === "SUPER_ADMIN" || session.role === "ADMIN") && isPinned === true,

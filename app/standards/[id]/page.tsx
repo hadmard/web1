@@ -17,6 +17,12 @@ import { getCategories } from "@/lib/categories";
 import { getSiteVisualSettings } from "@/lib/site-visual-settings";
 import { buildPageMetadata } from "@/lib/seo";
 import { getSiteUrl } from "@/lib/seo";
+import {
+  addHeadingAnchors,
+  extractHeadingAnchors,
+  parseDocumentMetadata,
+  splitCommaLikeList,
+} from "@/lib/document-metadata";
 
 export const dynamic = "force-dynamic";
 
@@ -65,9 +71,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const article = await findStandardArticleBySegment(id);
   if (article) {
-    const description = previewText(article.excerpt ?? article.content, 180);
+    const metadata = parseDocumentMetadata(article.faqJson);
+    const description = metadata.seoDescription || previewText(metadata.intro || (article.excerpt ?? article.content), 180);
     return buildPageMetadata({
-      title: `${article.title} | 整木网 · 整木标准`,
+      title: metadata.seoTitle || `${article.title} | 整木网 · 整木标准`,
       description,
       path: `/standards/${article.slug}`,
       type: "article",
@@ -102,21 +109,43 @@ export default async function StandardPage({ params }: Props) {
   const article = await findStandardArticleBySegment(id);
 
   if (article) {
+    const metadata = parseDocumentMetadata(article.faqJson);
     const structured = parseStandardStructuredHtml(article.content ?? "");
+    const anchoredHtml = addHeadingAnchors(article.content ?? "");
+    const headings = extractHeadingAnchors(anchoredHtml);
     const baseUrl = getSiteUrl();
     const articleUrl = `${baseUrl}/standards/${article.slug}`;
+    const tagSlugs = splitCommaLikeList(article.tagSlugs);
+    const relatedItems = await prisma.article.findMany({
+      where: {
+        id: { not: article.id },
+        status: "approved",
+        OR: [{ categoryHref: { startsWith: "/standards" } }, { subHref: { startsWith: "/standards" } }],
+        ...(tagSlugs.length > 0
+          ? {
+              AND: [{
+                OR: tagSlugs.slice(0, 4).map((tag) => ({
+                tagSlugs: { contains: tag },
+                })),
+              }],
+            }
+          : {}),
+      },
+      take: 6,
+      select: { id: true, title: true, slug: true, excerpt: true, versionLabel: true, updatedAt: true },
+    }).catch(() => []);
     const schema = {
       "@context": "https://schema.org",
       "@type": "TechArticle",
       headline: article.title,
-      description: previewText(article.excerpt ?? article.content, 200),
+      description: previewText(metadata.intro || (article.excerpt ?? article.content), 200),
       datePublished: article.publishedAt ?? article.updatedAt,
       dateModified: article.updatedAt,
       url: articleUrl,
     };
 
     return (
-      <article className="max-w-4xl mx-auto px-4 py-10">
+      <article className="max-w-6xl mx-auto px-4 py-10">
         <JsonLd data={schema} />
 
         <nav className="mb-6 text-sm text-muted" aria-label="面包屑">
@@ -127,77 +156,120 @@ export default async function StandardPage({ params }: Props) {
           <span className="text-primary">{article.title}</span>
         </nav>
 
-        <header className="glass-panel p-6">
+        <header className="glass-panel p-6 sm:p-8">
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
-              {structured?.standardCode && (
-                <p className="text-xs font-mono text-muted mb-2">{structured.standardCode}</p>
+              {(metadata.standardCode || structured?.standardCode) && (
+                <p className="text-xs font-mono text-muted mb-2">{metadata.standardCode || structured?.standardCode}</p>
               )}
-              <h1 className="font-serif text-2xl sm:text-3xl font-semibold text-primary">{article.title}</h1>
-              {article.excerpt && <p className="mt-2 text-sm text-muted">{article.excerpt}</p>}
+              <h1 className="font-serif text-2xl sm:text-4xl font-semibold text-primary">{article.title}</h1>
+              <p className="mt-3 max-w-3xl text-sm sm:text-base leading-7 text-muted">
+                {metadata.intro || article.excerpt || "面向整木行业长期维护的规范文档，适合检索、协作与版本沉淀。"}
+              </p>
             </div>
             <div className="text-xs text-muted">
-              <p>版本：{article.versionLabel || structured?.versionNote || "—"}</p>
+              <p>版本：{article.versionLabel || metadata.versions[0]?.version || structured?.versionNote || "—"}</p>
               <p className="mt-1">更新：{article.updatedAt.toLocaleDateString("zh-CN")}</p>
             </div>
           </div>
         </header>
         <ContentHeroImage src={article.coverImage} alt={article.title} />
 
-        {structured ? (
-          <section className="mt-6 space-y-4">
-            <div className="rounded-xl border border-border bg-surface-elevated p-4">
-              <h2 className="text-base font-semibold text-primary mb-2">标准基础信息</h2>
-              <dl className="grid sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
-                {structured.standardName && <div><dt className="text-muted">标准名称</dt><dd className="text-primary">{structured.standardName}</dd></div>}
-                {structured.publishOrg && <div><dt className="text-muted">发布机构</dt><dd className="text-primary">{structured.publishOrg}</dd></div>}
-                {structured.effectiveDate && <div><dt className="text-muted">实施日期</dt><dd className="text-primary">{structured.effectiveDate}</dd></div>}
-              </dl>
-            </div>
-
-            {[{
-              title: "适用范围",
-              value: structured.scope,
-            }, {
-              title: "规范性引用文件",
-              value: structured.normativeReferences,
-            }, {
-              title: "术语与定义",
-              value: structured.termsAndDefinitions,
-            }, {
-              title: "检测方法",
-              value: structured.inspectionMethod,
-            }, {
-              title: "验收规则",
-              value: structured.acceptanceRule,
-            }]
-              .filter((x) => x.value)
-              .map((x) => (
-                <section key={x.title} className="rounded-xl border border-border bg-surface-elevated p-4">
-                  <h2 className="text-base font-semibold text-primary">{x.title}</h2>
-                  <p className="mt-2 text-sm text-muted whitespace-pre-wrap">{x.value}</p>
+        <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
+          <div className="space-y-6">
+            <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {[
+                { label: "标准编号", value: metadata.standardCode || structured?.standardCode || "未填写" },
+                { label: "适用范围", value: metadata.scope || structured?.scope || article.applicableScenarios || "待补充" },
+                { label: "当前版本", value: article.versionLabel || metadata.versions[0]?.version || structured?.versionNote || "未填写" },
+                { label: "材料要求", value: metadata.materialRequirements || "待补充" },
+                { label: "工艺要求", value: metadata.processRequirements || "待补充" },
+                { label: "验收标准", value: metadata.acceptanceCriteria || structured?.acceptanceRule || "待补充" },
+              ].map((item) => (
+                <section key={item.label} className="rounded-3xl border border-border bg-surface-elevated p-5">
+                  <p className="text-xs uppercase tracking-[0.18em] text-muted">{item.label}</p>
+                  <p className="mt-3 text-sm leading-7 text-primary">{item.value}</p>
                 </section>
               ))}
+            </section>
 
-            {structured.sections.length > 0 && (
-              <section className="rounded-xl border border-border bg-surface-elevated p-4">
-                <h2 className="text-base font-semibold text-primary mb-3">扩展条款</h2>
-                <div className="space-y-3">
-                  {structured.sections.map((sec) => (
-                    <article key={sec.id} className="rounded-lg border border-border bg-surface p-3">
-                      <h3 className="font-medium text-primary">{sec.title || "未命名条款"}</h3>
-                      <p className="mt-1 text-sm text-muted whitespace-pre-wrap">{sec.body || "暂无说明"}</p>
+            <section className="rounded-3xl border border-border bg-surface-elevated p-6">
+              <RichContent html={anchoredHtml} className="prose prose-neutral dark:prose-invert max-w-none" />
+            </section>
+
+            {metadata.versions.length > 0 && (
+              <section className="rounded-3xl border border-border bg-surface-elevated p-6">
+                <h2 className="text-lg font-semibold text-primary">版本记录</h2>
+                <div className="mt-4 space-y-3">
+                  {metadata.versions.map((item, index) => (
+                    <article key={`${item.version}-${index}`} className="rounded-2xl border border-border bg-surface p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <p className="text-sm font-semibold text-primary">{item.version}</p>
+                        <p className="text-xs text-muted">{item.updatedAt || "未记录时间"}</p>
+                      </div>
+                      {item.note && <p className="mt-2 text-sm leading-7 text-muted">{item.note}</p>}
                     </article>
                   ))}
                 </div>
               </section>
             )}
-          </section>
-        ) : (
-          <section className="mt-6 rounded-xl border border-border bg-surface-elevated p-5">
-            <RichContent html={article.content} className="prose prose-neutral dark:prose-invert max-w-none" />
-          </section>
-        )}
+
+            {relatedItems.length > 0 && (
+              <section className="rounded-3xl border border-border bg-surface-elevated p-6">
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="text-lg font-semibold text-primary">相关标准</h2>
+                  <Link href="/standards/all" className="text-sm text-accent hover:underline">查看标准库</Link>
+                </div>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  {relatedItems.map((item) => (
+                    <Link key={item.id} href={`/standards/${item.slug}`} className="rounded-2xl border border-border bg-surface p-4 hover:border-accent/40">
+                      <p className="text-sm font-medium text-primary">{item.title}</p>
+                      <p className="mt-2 text-xs text-muted">
+                        {item.versionLabel || "标准文档"} · {item.updatedAt.toLocaleDateString("zh-CN")}
+                      </p>
+                      <p className="mt-2 text-xs leading-6 text-muted line-clamp-2">
+                        {item.excerpt || "查看该标准的适用范围、执行要求与更新记录。"}
+                      </p>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            )}
+          </div>
+
+          <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
+            {headings.length > 0 && (
+              <section className="rounded-3xl border border-border bg-surface-elevated p-5">
+                <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-muted">目录</h2>
+                <nav className="mt-4 space-y-2">
+                  {headings.map((heading) => (
+                    <a
+                      key={heading.id}
+                      href={`#${heading.id}`}
+                      className={`block text-sm text-primary hover:text-accent ${heading.level === 3 ? "pl-4" : heading.level === 2 ? "pl-2" : ""}`}
+                    >
+                      {heading.text}
+                    </a>
+                  ))}
+                </nav>
+              </section>
+            )}
+
+            {metadata.contributors.length > 0 && (
+              <section className="rounded-3xl border border-border bg-surface-elevated p-5">
+                <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-muted">参与单位</h2>
+                <div className="mt-4 space-y-3">
+                  {metadata.contributors.map((item, index) => (
+                    <div key={`${item.name}-${index}`} className="rounded-2xl border border-border bg-surface p-3">
+                      <p className="text-sm font-medium text-primary">{item.name}</p>
+                      <p className="mt-1 text-xs text-muted">{item.joinedAt || "时间待补充"}</p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+          </aside>
+        </div>
       </article>
     );
   }
