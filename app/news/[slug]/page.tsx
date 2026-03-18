@@ -1,5 +1,5 @@
 ﻿import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound, permanentRedirect, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { ContentHeroImage } from "@/components/ContentHeroImage";
 import { prisma } from "@/lib/prisma";
@@ -10,13 +10,16 @@ import { RichContent } from "@/components/RichContent";
 import { NewsViewTracker } from "./NewsViewTracker";
 import { buildPageMetadata } from "@/lib/seo";
 import { ArticleShareActions } from "@/components/ArticleShareActions";
-import { buildNewsShareEntryUrl, buildPublicNewsUrl } from "@/lib/share-config";
+import { buildNewsPath, buildNewsShareEntryUrl, buildPublicNewsUrl } from "@/lib/share-config";
 export const revalidate = 300;
 export const dynamic = "force-dynamic";
 
 const SHARE_SITE_NAME = "中华整木网";
 
-type Props = { params: Promise<{ slug: string }> };
+type Props = {
+  params: Promise<{ slug: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+};
 const NEWS_SUB_SLUGS = new Set(["trends", "enterprise", "tech", "events"]);
 
 function normalizeSegment(raw: string) {
@@ -43,6 +46,7 @@ async function findNewsArticleBySegment(segment: string) {
       AND: [
         {
           OR: [
+            { id: s },
             { slug: s },
             { title: s },
             { slug: { contains: s } },
@@ -64,13 +68,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return buildPageMetadata({
     title: article.title,
     description,
-    path: `/news/${article.slug}`,
+    path: buildNewsPath(article.id),
     type: "article",
     siteName: SHARE_SITE_NAME,
   });
 }
 
-export default async function ArticlePage({ params }: Props) {
+function getSearchParamValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+export default async function ArticlePage({ params, searchParams }: Props) {
   const { slug } = await params;
   if (NEWS_SUB_SLUGS.has(slug)) {
     redirect(`/news/all?sub=${encodeURIComponent(`/news/${slug}`)}`);
@@ -78,8 +86,17 @@ export default async function ArticlePage({ params }: Props) {
   const article = await findNewsArticleBySegment(slug);
   if (!article || article.status !== "approved") notFound();
 
-  const articleUrl = buildPublicNewsUrl(article.slug);
-  const shareEntryUrl = buildNewsShareEntryUrl(article.slug);
+  const currentSegment = normalizeSegment(slug);
+  if (currentSegment !== article.id) {
+    const nextSearchParams = searchParams ? await searchParams : {};
+    const shareVersion = getSearchParamValue(nextSearchParams.sharev);
+    const target = new URL(buildNewsPath(article.id), "https://dummy.local");
+    if (shareVersion) target.searchParams.set("sharev", shareVersion);
+    permanentRedirect(`${target.pathname}${target.search}`);
+  }
+
+  const articleUrl = buildPublicNewsUrl(article.id);
+  const shareEntryUrl = buildNewsShareEntryUrl(article.id);
   const publicBaseUrl = articleUrl.replace(/\/news\/.*$/, "");
 
   const articleSchema = {

@@ -5,6 +5,7 @@ import { getCategoryWithMetaByHref } from "@/lib/categories";
 import { buildCategoryMetadata } from "@/lib/category-metadata";
 import { articleOrderByPinnedLatest } from "@/lib/articles";
 import { prisma } from "@/lib/prisma";
+import { buildNewsPath } from "@/lib/share-config";
 
 export const revalidate = 300;
 
@@ -48,7 +49,7 @@ export default async function NewsPage() {
   const subcategoryLatest = subcategories.reduce<Record<string, Array<{ title: string; href: string }>>>((acc, sub, idx) => {
     acc[sub.href] = (subcategoryRows[idx] ?? []).map((item) => ({
       title: item.title,
-      href: `/news/${item.slug}`,
+      href: buildNewsPath(item.id),
     }));
     return acc;
   }, {});
@@ -65,7 +66,7 @@ export default async function NewsPage() {
         items={articles.map((x) => ({
           id: x.id,
           title: x.title,
-          href: `/news/${x.slug}`,
+          href: buildNewsPath(x.id),
           meta: `发布时间：${(x.publishedAt ?? x.updatedAt).toLocaleDateString("zh-CN")}`,
         }))}
         categoryHref="/news/all"

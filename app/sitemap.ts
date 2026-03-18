@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCategories } from "@/lib/categories";
 import { annualBoards, engineerSuppliers, specialAwards, getTop10ByYear } from "@/lib/huadianbang";
 import { absoluteUrl } from "@/lib/seo";
+import { buildNewsPath } from "@/lib/share-config";
 
 const now = new Date();
 
@@ -78,7 +79,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       }),
       prisma.article.findMany({
         where: { publishedAt: { not: null } },
-        select: { slug: true, updatedAt: true, publishedAt: true },
+        select: { id: true, slug: true, updatedAt: true, publishedAt: true },
       }),
       prisma.tag.findMany({ select: { type: true, slug: true, updatedAt: true } }),
     ]);
@@ -100,7 +101,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     );
 
     const articleUrls = newsArticles.map((article) =>
-      createEntry(`/news/${article.slug}`, article.publishedAt ?? article.updatedAt, "weekly", 0.8)
+      createEntry(buildNewsPath(article.id), article.publishedAt ?? article.updatedAt, "weekly", 0.8)
     );
 
     const tagUrls = tags.map((tag) =>

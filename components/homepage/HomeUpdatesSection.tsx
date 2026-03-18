@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { buildNewsPath } from "@/lib/share-config";
 
 type NewsItem = {
   id: string;
@@ -50,7 +51,7 @@ export function HomeUpdatesSection({
               {latestNews.map((item) => (
                 <li key={item.id} className="flex min-w-0 items-center gap-2">
                   <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-black" aria-hidden />
-                  <Link href={`/news/${item.slug}`} className="line-clamp-1 text-sm text-primary hover:text-accent">
+                  <Link href={buildNewsPath(item.id)} className="line-clamp-1 text-sm text-primary hover:text-accent">
                     {item.title}
                   </Link>
                 </li>
@@ -67,7 +68,7 @@ export function HomeUpdatesSection({
               {hotNews.map((item) => (
                 <li key={item.id} className="flex min-w-0 items-center gap-2">
                   <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-black" aria-hidden />
-                  <Link href={`/news/${item.slug}`} className="line-clamp-1 text-sm text-primary hover:text-accent">
+                  <Link href={buildNewsPath(item.id)} className="line-clamp-1 text-sm text-primary hover:text-accent">
                     {item.title}
                   </Link>
                 </li>

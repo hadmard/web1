@@ -1,6 +1,7 @@
 ﻿import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { articleOrderByPinnedLatest, articleOrderByPinnedOldest } from "@/lib/articles";
+import { buildNewsPath } from "@/lib/share-config";
 export const revalidate = 300;
 
 
@@ -240,7 +241,7 @@ export default async function NewsAllPage({ searchParams }: Props) {
           <ul className="space-y-4">
             {items.map((x) => (
               <li key={x.id} className="border-b border-border pb-4">
-                <Link href={`/news/${x.slug}`} className="text-base font-medium text-primary hover:text-accent">
+                <Link href={buildNewsPath(x.id)} className="text-base font-medium text-primary hover:text-accent">
                   {x.title}
                 </Link>
                 <p className="mt-1 text-xs text-muted">

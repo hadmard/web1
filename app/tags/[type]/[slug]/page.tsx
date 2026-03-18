@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { buildPageMetadata } from "@/lib/seo";
+import { buildNewsPath } from "@/lib/share-config";
 
 export const revalidate = 300;
 
@@ -66,7 +67,7 @@ export default async function TagSlugPage({ params }: Props) {
           {articles.map((a) => (
             <li key={a.id}>
               <Link
-                href={`/news/${a.slug}`}
+                href={buildNewsPath(a.id)}
                 className="text-primary font-medium hover:text-accent hover:underline"
               >
                 {a.title}
