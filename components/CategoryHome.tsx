@@ -83,12 +83,9 @@ export async function CategoryHome({
               ) : null}
 
               <div className="min-w-0">
-                {isEditorial ? (
-                  <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.22em] text-muted">Newsroom</p>
-                ) : null}
                 <h1
                   className={`font-serif font-semibold tracking-tight text-primary ${
-                    isEditorial ? "text-[2rem] sm:text-[2.6rem]" : "text-3xl sm:text-4xl"
+                    isEditorial ? "text-[2rem] sm:text-[2.5rem]" : "text-3xl sm:text-4xl"
                   }`}
                 >
                   {displayTitle}
@@ -107,7 +104,7 @@ export async function CategoryHome({
               href={finalSearchHref}
               className={`interactive-lift inline-flex items-center border border-border bg-surface text-sm font-medium text-primary hover:border-accent/45 hover:text-accent ${
                 isEditorial
-                  ? "rounded-full px-5 py-2.5 shadow-[0_16px_32px_-28px_rgba(15,23,42,0.32)]"
+                  ? "rounded-full px-5 py-2.5"
                   : "rounded-lg px-4 py-2"
               }`}
             >
@@ -119,7 +116,7 @@ export async function CategoryHome({
             <div
               className={`showcase-frame mt-6 overflow-hidden border border-border ${
                 isEditorial
-                  ? "rounded-[30px] bg-[linear-gradient(180deg,rgba(255,255,255,0.9),rgba(243,245,248,0.96))] p-2.5 shadow-[0_28px_60px_-42px_rgba(15,23,42,0.35)]"
+                  ? "rounded-[26px] bg-[linear-gradient(180deg,rgba(255,255,255,0.9),rgba(243,245,248,0.96))] p-2"
                   : "rounded-2xl"
               }`}
             >
@@ -129,7 +126,7 @@ export async function CategoryHome({
                 width={1600}
                 height={640}
                 className={`showcase-image ${
-                  isEditorial ? "h-44 rounded-[24px] object-cover object-center p-0 sm:h-52 md:h-64" : "h-36 sm:h-44 md:h-52"
+                  isEditorial ? "h-44 rounded-[20px] object-cover object-center p-0 sm:h-52 md:h-64" : "h-36 sm:h-44 md:h-52"
                 }`}
               />
             </div>
@@ -138,14 +135,12 @@ export async function CategoryHome({
           {!hideSubcategories && subcategories.length > 0 ? (
             <div
               className={`mt-6 border border-border bg-surface ${
-                isEditorial ? "rounded-[28px] p-5 sm:p-6" : "rounded-2xl p-4 sm:p-5"
+                isEditorial ? "rounded-[24px] p-5 sm:p-6" : "rounded-2xl p-4 sm:p-5"
               }`}
             >
               <div className="mb-4">
                 <h2 className="section-label text-primary">资讯分栏</h2>
-                {isEditorial ? (
-                  <p className="mt-2 text-sm text-muted">按主题快速进入资讯子栏目，减少层层查找。</p>
-                ) : null}
+                {isEditorial ? <p className="mt-2 text-sm text-muted">按主题快速进入资讯子栏目，减少层层查找。</p> : null}
               </div>
 
               <div className={`grid ${isEditorial ? "gap-4 sm:grid-cols-2 xl:grid-cols-4" : "gap-3 sm:grid-cols-2"}`}>
@@ -156,7 +151,7 @@ export async function CategoryHome({
                       key={sub.href}
                       className={`border border-border bg-surface-elevated transition-colors hover:border-accent/45 ${
                         isEditorial
-                          ? "rounded-[24px] p-4 shadow-[0_22px_44px_-36px_rgba(15,23,42,0.35)]"
+                          ? "rounded-[20px] p-4"
                           : "rounded-xl p-3"
                       }`}
                     >

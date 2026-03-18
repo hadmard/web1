@@ -42,7 +42,7 @@ export function PublishedContentPanel({
                 key={item.id}
                 className={
                   isEditorial
-                    ? "rounded-[24px] border border-border bg-surface-elevated p-4 shadow-[0_22px_44px_-36px_rgba(15,23,42,0.35)]"
+                    ? "rounded-[20px] border border-border bg-surface-elevated p-4"
                     : "border-b border-border pb-3"
                 }
               >

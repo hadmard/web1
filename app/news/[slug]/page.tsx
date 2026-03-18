@@ -179,8 +179,8 @@ export default async function ArticlePage({ params, searchParams }: Props) {
       <JsonLd data={articleSchema} />
       <JsonLd data={breadcrumbSchema} />
 
-      <div className="mx-auto max-w-[940px]">
-        <nav className="mb-8 flex flex-wrap items-center gap-x-2 gap-y-2 text-sm text-muted" aria-label="面包屑">
+      <div className="mx-auto max-w-[860px]">
+        <nav className="mb-7 flex flex-wrap items-center gap-x-2 gap-y-2 text-sm text-muted" aria-label="面包屑">
           <Link href="/" className="hover:text-accent">首页</Link>
           <span>/</span>
           <Link href="/news" className="hover:text-accent">整木资讯</Link>
@@ -188,58 +188,46 @@ export default async function ArticlePage({ params, searchParams }: Props) {
           <span className="line-clamp-1 text-primary">{article.title}</span>
         </nav>
 
-        <header className="rounded-[30px] border border-[rgba(15,23,42,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.9),rgba(246,248,251,0.92))] px-5 py-6 shadow-[0_32px_64px_-52px_rgba(15,23,42,0.4)] sm:px-8 sm:py-8">
-          <div className="flex flex-wrap items-center gap-3 text-[11px] uppercase tracking-[0.22em] text-muted">
-            <span className="rounded-full border border-border bg-white/80 px-3 py-1">News</span>
-            {article.updatedAt ? <span>{new Date(article.updatedAt).toLocaleDateString("zh-CN")}</span> : null}
-          </div>
-
-          <h1 className="mt-5 max-w-[16ch] font-serif text-[2.15rem] font-semibold leading-[1.18] tracking-[-0.015em] text-primary sm:text-[3.25rem]">
+        <header className="px-1 sm:px-0">
+          <h1 className="max-w-[18ch] font-serif text-[2.1rem] font-semibold leading-[1.22] tracking-tight text-primary sm:text-[3rem]">
             {article.title}
           </h1>
 
           {article.conceptSummary ? (
-            <p className="mt-5 max-w-2xl text-[15px] leading-7 text-muted sm:text-base">
+            <p className="mt-4 max-w-2xl text-[15px] leading-7 text-muted sm:text-base">
               {article.conceptSummary}
             </p>
           ) : null}
+
+          <div className="mt-5 flex flex-wrap items-center gap-3 text-sm text-muted">
+            {article.updatedAt ? <span>更新时间：{new Date(article.updatedAt).toLocaleDateString("zh-CN")}</span> : null}
+            {article.versionLabel ? <span>版本：{article.versionLabel}</span> : null}
+          </div>
         </header>
 
-        <div className="mt-7">
+        <div className="mt-8">
           <ContentHeroImage
             src={article.coverImage}
             alt={article.title}
-            containerClassName="mx-auto aspect-[16/10] max-w-[860px] rounded-[32px] border border-[rgba(15,23,42,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(245,247,250,0.95))] p-2.5 shadow-[0_34px_68px_-54px_rgba(15,23,42,0.42)] sm:aspect-[16/9]"
-            imageClassName="rounded-[24px] object-cover object-center p-0"
+            containerClassName="aspect-[16/10] rounded-[24px] border border-border bg-surface-elevated p-2 sm:aspect-[16/9]"
+            imageClassName="rounded-[18px] object-cover object-center p-0"
           />
         </div>
 
-        <div className="mt-8 flex flex-wrap items-center gap-3 text-sm text-muted">
-          <span className="rounded-full border border-border bg-white/80 px-3 py-1.5">资讯栏目</span>
-          {article.updatedAt ? (
-            <span className="rounded-full border border-border bg-white/80 px-3 py-1.5">
-              更新于 {new Date(article.updatedAt).toLocaleDateString("zh-CN")}
-            </span>
-          ) : null}
-          {article.versionLabel ? (
-            <span className="rounded-full border border-border bg-white/80 px-3 py-1.5">版本 {article.versionLabel}</span>
-          ) : null}
-        </div>
-
         {article.excerpt ? (
-          <blockquote className="mt-7 rounded-[26px] border border-[rgba(10,132,255,0.1)] bg-[linear-gradient(180deg,rgba(255,255,255,0.78),rgba(243,247,252,0.88))] px-5 py-5 text-[15px] leading-8 text-muted shadow-[0_24px_54px_-48px_rgba(10,132,255,0.55)] sm:px-7">
+          <blockquote className="mt-7 rounded-r-2xl border-l-[3px] border-accent/80 bg-surface px-5 py-4 text-[15px] leading-8 text-muted sm:px-6">
             {article.excerpt}
           </blockquote>
         ) : null}
 
-        <div className="mt-8 rounded-[30px] border border-[rgba(15,23,42,0.08)] bg-[rgba(255,255,255,0.82)] px-5 py-7 shadow-[0_28px_60px_-52px_rgba(15,23,42,0.32)] backdrop-blur-[10px] sm:px-8 sm:py-9">
+        <div className="mt-8 rounded-[24px] border border-border bg-surface-elevated px-5 py-7 sm:px-7 sm:py-8">
           <RichContent html={article.content} className="prose prose-neutral dark:prose-invert max-w-none" />
         </div>
 
         <ArticleShareActions title={article.title} shareUrl={shareEntryUrl} siteName={SHARE_SITE_NAME} />
 
         {article.applicableScenarios ? (
-          <section className="mt-10 rounded-[28px] border border-border bg-[rgba(255,255,255,0.75)] px-5 py-6 shadow-[0_24px_54px_-50px_rgba(15,23,42,0.28)] sm:px-7">
+          <section className="mt-10 rounded-[24px] border border-border bg-surface-elevated px-5 py-6 sm:px-7">
             <h2 className="mb-2 text-lg font-semibold text-primary">适用场景</h2>
             <p className="leading-7 text-muted">{article.applicableScenarios}</p>
           </section>

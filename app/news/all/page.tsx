@@ -167,8 +167,7 @@ export default async function NewsAllPage({ searchParams }: Props) {
       <section className="glass-panel p-6 sm:p-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-[11px] font-medium uppercase tracking-[0.24em] text-muted">News Archive</p>
-            <h1 className="mt-3 font-serif text-[2rem] font-semibold tracking-tight text-primary sm:text-[2.8rem]">资讯中心</h1>
+            <h1 className="font-serif text-[2rem] font-semibold tracking-tight text-primary sm:text-[2.6rem]">资讯中心</h1>
             <p className="mt-3 max-w-2xl text-sm leading-7 text-muted">
               用更轻盈的方式浏览整木资讯，按栏目、时间和关键词快速筛选重点内容。
             </p>
@@ -183,7 +182,7 @@ export default async function NewsAllPage({ searchParams }: Props) {
             <Link
               key={s.value || "all-sub"}
               href={buildQuery({ sub: s.value, page: "1" })}
-              className={`rounded-full border px-3 py-1.5 ${sub === s.value ? "border-accent bg-white text-accent shadow-[0_14px_28px_-24px_rgba(10,132,255,0.5)]" : "border-border bg-white/72 text-muted hover:text-primary"}`}
+              className={`rounded-full border px-3 py-1.5 ${sub === s.value ? "border-accent bg-white text-accent" : "border-border bg-white/72 text-muted hover:text-primary"}`}
             >
               {s.label}
             </Link>
@@ -200,7 +199,7 @@ export default async function NewsAllPage({ searchParams }: Props) {
             <Link
               key={r.key || "all"}
               href={buildQuery({ range: r.key, start: "", end: "", page: "1" })}
-              className={`rounded-full border px-3 py-1.5 ${range === r.key ? "border-accent bg-white text-accent shadow-[0_14px_28px_-24px_rgba(10,132,255,0.5)]" : "border-border bg-white/72 text-muted hover:text-primary"}`}
+              className={`rounded-full border px-3 py-1.5 ${range === r.key ? "border-accent bg-white text-accent" : "border-border bg-white/72 text-muted hover:text-primary"}`}
             >
               {r.label}
             </Link>
@@ -210,19 +209,19 @@ export default async function NewsAllPage({ searchParams }: Props) {
 
           <Link
             href={buildQuery({ sort: "latest", page: "1" })}
-            className={`rounded-full border px-3 py-1.5 ${sort === "latest" ? "border-accent bg-white text-accent shadow-[0_14px_28px_-24px_rgba(10,132,255,0.5)]" : "border-border bg-white/72 text-muted hover:text-primary"}`}
+            className={`rounded-full border px-3 py-1.5 ${sort === "latest" ? "border-accent bg-white text-accent" : "border-border bg-white/72 text-muted hover:text-primary"}`}
           >
             最新优先
           </Link>
           <Link
             href={buildQuery({ sort: "oldest", page: "1" })}
-            className={`rounded-full border px-3 py-1.5 ${sort === "oldest" ? "border-accent bg-white text-accent shadow-[0_14px_28px_-24px_rgba(10,132,255,0.5)]" : "border-border bg-white/72 text-muted hover:text-primary"}`}
+            className={`rounded-full border px-3 py-1.5 ${sort === "oldest" ? "border-accent bg-white text-accent" : "border-border bg-white/72 text-muted hover:text-primary"}`}
           >
             最早优先
           </Link>
         </div>
 
-        <form method="get" className="mt-6 grid gap-3 rounded-[26px] border border-border bg-[rgba(255,255,255,0.78)] p-5 shadow-[0_24px_54px_-46px_rgba(15,23,42,0.28)] md:grid-cols-4">
+        <form method="get" className="mt-6 grid gap-3 rounded-[22px] border border-border bg-[rgba(255,255,255,0.78)] p-5 md:grid-cols-4">
           <div className="md:col-span-2">
             <label className="mb-1 block text-xs text-muted">关键词</label>
             <input name="q" defaultValue={q} className="w-full rounded-2xl border border-border bg-surface px-4 py-3" placeholder="标题/摘要/正文关键词" />
@@ -238,23 +237,23 @@ export default async function NewsAllPage({ searchParams }: Props) {
           <input type="hidden" name="sort" value={sort} />
           <input type="hidden" name="sub" value={sub} />
           <div className="flex gap-2 md:col-span-4">
-            <button className="rounded-full bg-[#111827] px-5 py-2.5 text-sm text-white shadow-[0_18px_36px_-28px_rgba(17,24,39,0.65)]">筛选</button>
+            <button className="rounded-full bg-[#111827] px-5 py-2.5 text-sm text-white">筛选</button>
             <Link href="/news/all" className="rounded-full border border-border px-5 py-2.5 text-sm text-primary hover:bg-surface">重置</Link>
           </div>
         </form>
       </section>
 
-      <section className="mt-8 rounded-[28px] border border-border bg-[rgba(255,255,255,0.82)] p-5 shadow-[0_26px_56px_-48px_rgba(15,23,42,0.3)] sm:p-6">
+      <section className="mt-8 rounded-[24px] border border-border bg-[rgba(255,255,255,0.82)] p-5 sm:p-6">
         {items.length === 0 ? (
           <p className="text-sm text-muted">未找到符合条件的资讯。</p>
         ) : (
           <ul className="grid gap-4">
             {items.map((x) => (
-              <li key={x.id} className="rounded-[24px] border border-border bg-surface-elevated p-5 shadow-[0_18px_42px_-38px_rgba(15,23,42,0.32)]">
+              <li key={x.id} className="rounded-[20px] border border-border bg-surface-elevated p-5">
                 <Link href={buildNewsPath(x.id)} className="text-lg font-medium leading-8 text-primary hover:text-accent">
                   {x.title}
                 </Link>
-                <p className="mt-3 text-xs uppercase tracking-[0.12em] text-muted">
+                <p className="mt-3 text-xs text-muted">
                   {x.subHref || "/news"} · 发布时间：{(x.publishedAt ?? x.updatedAt).toLocaleDateString("zh-CN")}
                 </p>
                 {x.excerpt ? <p className="mt-3 line-clamp-3 text-sm leading-7 text-muted">{x.excerpt}</p> : null}
