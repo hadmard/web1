@@ -10,6 +10,8 @@ type ArticleShareActionsProps = {
 
 export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareActionsProps) {
   const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [qrLoadFailed, setQrLoadFailed] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
 
   const qrUrl = useMemo(() => {
@@ -18,8 +20,10 @@ export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareA
   }, [shareUrl]);
 
   useEffect(() => {
+    setQrLoadFailed(false);
     const image = new window.Image();
     image.src = qrUrl;
+    image.onerror = () => setQrLoadFailed(true);
   }, [qrUrl]);
 
   useEffect(() => {
@@ -55,6 +59,21 @@ export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareA
     };
   }, [open]);
 
+  useEffect(() => {
+    if (!copied) return;
+    const timer = window.setTimeout(() => setCopied(false), 1600);
+    return () => window.clearTimeout(timer);
+  }, [copied]);
+
+  async function handleCopyLink() {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
+  }
+
   return (
     <div ref={rootRef} className="relative z-20 mt-8 flex justify-end">
       <div className="relative">
@@ -86,17 +105,33 @@ export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareA
           <>
             <div className="absolute bottom-[calc(100%+14px)] right-0 z-50 hidden w-[176px] rounded-[26px] border border-[rgba(15,23,42,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.97),rgba(245,247,250,0.98))] p-3 shadow-[0_24px_60px_rgba(15,23,42,0.14),inset_0_1px_0_rgba(255,255,255,0.98)] backdrop-blur md:block">
               <div className="rounded-[18px] bg-white p-2 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={qrUrl}
-                  alt={`${title} 分享二维码`}
-                  width={220}
-                  height={220}
-                  className="h-auto w-full rounded-[14px]"
-                  loading="lazy"
-                />
+                {qrLoadFailed ? (
+                  <div className="flex min-h-[148px] flex-col items-center justify-center gap-3 rounded-[14px] border border-dashed border-[rgba(15,23,42,0.12)] px-3 py-4 text-center">
+                    <p className="text-xs leading-5 text-[#4b5563]">二维码暂时生成失败，可先复制链接后发送到微信。</p>
+                    <button
+                      type="button"
+                      onClick={handleCopyLink}
+                      className="rounded-full bg-[#111827] px-3 py-1.5 text-xs font-medium text-white"
+                    >
+                      {copied ? "已复制链接" : "复制分享链接"}
+                    </button>
+                  </div>
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={qrUrl}
+                    alt={`${title} 分享二维码`}
+                    width={220}
+                    height={220}
+                    className="h-auto w-full rounded-[14px]"
+                    loading="lazy"
+                    onError={() => setQrLoadFailed(true)}
+                  />
+                )}
               </div>
-              <p className="mt-2 text-center text-[11px] tracking-[0.12em] text-[#6b7280]">微信扫码分享</p>
+              <p className="mt-2 text-center text-[11px] tracking-[0.12em] text-[#6b7280]">
+                {qrLoadFailed ? "复制链接后可直接转发" : "微信扫码即可分享"}
+              </p>
             </div>
 
             <div className="fixed inset-0 z-50 bg-[rgba(18,22,30,0.8)] md:hidden">
@@ -159,6 +194,19 @@ export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareA
                   <p className="mt-4 text-center text-[15px] font-medium text-white">分享到朋友圈</p>
                 </div>
               </div>
+
+              {qrLoadFailed ? (
+                <div className="absolute bottom-12 left-1/2 w-[280px] -translate-x-1/2 rounded-[24px] bg-white/96 p-4 text-center shadow-[0_18px_36px_rgba(0,0,0,0.26)]">
+                  <p className="text-sm leading-6 text-[#374151]">当前二维码服务不可用，先复制链接再分享到微信也可以。</p>
+                  <button
+                    type="button"
+                    onClick={handleCopyLink}
+                    className="mt-3 rounded-full bg-[#111827] px-4 py-2 text-sm font-medium text-white"
+                  >
+                    {copied ? "已复制分享链接" : "复制分享链接"}
+                  </button>
+                </div>
+              ) : null}
             </div>
           </>
         ) : null}

@@ -8,9 +8,9 @@ import { JsonLd } from "@/components/JsonLd";
 import { previewText } from "@/lib/text";
 import { RichContent } from "@/components/RichContent";
 import { NewsViewTracker } from "./NewsViewTracker";
-import { buildPageMetadata, getSiteUrl } from "@/lib/seo";
+import { buildPageMetadata } from "@/lib/seo";
 import { ArticleShareActions } from "@/components/ArticleShareActions";
-import { SHARE_CACHE_VERSION } from "@/lib/share-config";
+import { buildNewsShareEntryUrl, buildPublicNewsUrl } from "@/lib/share-config";
 export const revalidate = 300;
 export const dynamic = "force-dynamic";
 
@@ -78,9 +78,9 @@ export default async function ArticlePage({ params }: Props) {
   const article = await findNewsArticleBySegment(slug);
   if (!article || article.status !== "approved") notFound();
 
-  const baseUrl = getSiteUrl();
-  const articleUrl = `${baseUrl}/news/${article.slug}`;
-  const shareEntryUrl = `${baseUrl}/share/news/${encodeURIComponent(article.slug)}?sharev=${SHARE_CACHE_VERSION}`;
+  const articleUrl = buildPublicNewsUrl(article.slug);
+  const shareEntryUrl = buildNewsShareEntryUrl(article.slug);
+  const publicBaseUrl = articleUrl.replace(/\/news\/.*$/, "");
 
   const articleSchema = {
     "@context": "https://schema.org",
@@ -96,8 +96,8 @@ export default async function ArticlePage({ params }: Props) {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "首页", item: baseUrl },
-      { "@type": "ListItem", position: 2, name: "整木资讯", item: `${baseUrl}/news` },
+      { "@type": "ListItem", position: 1, name: "首页", item: publicBaseUrl },
+      { "@type": "ListItem", position: 2, name: "整木资讯", item: `${publicBaseUrl}/news` },
       { "@type": "ListItem", position: 3, name: article.title, item: articleUrl },
     ],
   };
