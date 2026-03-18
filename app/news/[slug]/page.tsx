@@ -12,7 +12,7 @@ import { NewsUrlSync } from "./NewsUrlSync";
 import { buildPageMetadata } from "@/lib/seo";
 import { ArticleShareActions } from "@/components/ArticleShareActions";
 import { buildNewsPath, buildNewsShareEntryUrl, buildPublicNewsUrl } from "@/lib/share-config";
-import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
+import { resolveUploadedImageShareUrl, resolveUploadedImageUrl } from "@/lib/uploaded-image";
 
 export const revalidate = 300;
 export const dynamic = "force-dynamic";
@@ -89,8 +89,8 @@ function extractFirstContentImage(html: string | null | undefined) {
 
 function resolveArticleShareImage(article: { coverImage?: string | null; content?: string | null }) {
   const candidates = [
-    resolveUploadedImageUrl(article.coverImage),
-    resolveUploadedImageUrl(extractFirstContentImage(article.content)),
+    resolveUploadedImageShareUrl(article.coverImage),
+    resolveUploadedImageShareUrl(extractFirstContentImage(article.content)),
     DEFAULT_NEWS_SHARE_IMAGE,
   ];
 

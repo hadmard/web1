@@ -61,7 +61,7 @@ function toUploadDiskPath(src: string) {
   return path.join(process.cwd(), "public", ...parts);
 }
 
-async function fetchLegacyUpload(src: string) {
+async function fetchLegacyUpload(src: string, method: "GET" | "HEAD") {
   const uploadPath = normalizeUploadPathFromSrc(src);
   if (!uploadPath) return null;
 
@@ -74,12 +74,13 @@ async function fetchLegacyUpload(src: string) {
   for (const candidate of candidates) {
     try {
       const response = await fetch(candidate, {
+        method,
         headers: { Accept: "image/*,*/*;q=0.8" },
         cache: "force-cache",
       });
       if (!response.ok) continue;
       const contentType = response.headers.get("content-type") || "application/octet-stream";
-      const body = await response.arrayBuffer();
+      const body = method === "HEAD" ? null : await response.arrayBuffer();
       return new NextResponse(body, {
         headers: {
           "Content-Type": contentType,
@@ -94,9 +95,7 @@ async function fetchLegacyUpload(src: string) {
   return null;
 }
 
-export async function GET(request: Request) {
-  const url = new URL(request.url);
-  const src = url.searchParams.get("src") ?? "";
+async function buildImageResponse(src: string, method: "GET" | "HEAD") {
   const diskPath = toUploadDiskPath(src);
   if (!diskPath) {
     return NextResponse.json({ error: "图片路径无效" }, { status: 400 });
@@ -104,8 +103,8 @@ export async function GET(request: Request) {
 
   try {
     await access(diskPath);
-    const file = await readFile(diskPath);
     const ext = path.extname(diskPath).toLowerCase();
+    const file = method === "HEAD" ? null : await readFile(diskPath);
     return new NextResponse(file, {
       headers: {
         "Content-Type": EXTENSION_MIME[ext] ?? "application/octet-stream",
@@ -113,10 +112,22 @@ export async function GET(request: Request) {
       },
     });
   } catch {
-    const legacyResponse = await fetchLegacyUpload(src);
+    const legacyResponse = await fetchLegacyUpload(src, method);
     if (legacyResponse) return legacyResponse;
     return NextResponse.json({ error: "图片不存在" }, { status: 404 });
   }
+}
+
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const src = url.searchParams.get("src") ?? "";
+  return buildImageResponse(src, "GET");
+}
+
+export async function HEAD(request: Request) {
+  const url = new URL(request.url);
+  const src = url.searchParams.get("src") ?? "";
+  return buildImageResponse(src, "HEAD");
 }
 
 export async function POST(request: Request) {

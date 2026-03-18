@@ -1,6 +1,6 @@
 import { PUBLIC_SITE_URL } from "@/lib/public-site-config";
 
-export const SHARE_CACHE_VERSION = "mobile-share-20260318";
+export const SHARE_CACHE_VERSION = "mobile-share-20260318-2";
 
 export function buildNewsPath(segment: string) {
   return `/news/${encodeURIComponent(segment)}`;

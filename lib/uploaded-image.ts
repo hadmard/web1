@@ -33,6 +33,27 @@ export function resolveUploadedImageUrl(input: string | null | undefined): strin
   return value;
 }
 
+export function resolveUploadedImageShareUrl(input: string | null | undefined): string {
+  const value = typeof input === "string" ? input.trim() : "";
+  if (!value) return "";
+  if (value.startsWith("data:") || value.startsWith("blob:")) {
+    return "";
+  }
+  if (value.startsWith(UPLOAD_PROXY_PREFIX)) {
+    const encodedSrc = value.slice(UPLOAD_PROXY_PREFIX.length);
+    if (!encodedSrc) return value;
+    try {
+      return decodeURIComponent(encodedSrc);
+    } catch {
+      return value;
+    }
+  }
+  if (value.startsWith("http://") || value.startsWith("https://")) {
+    return value;
+  }
+  return value;
+}
+
 export function isUploadedImagePath(input: string | null | undefined): boolean {
   return typeof input === "string" && input.trim().startsWith(UPLOAD_PREFIX);
 }
