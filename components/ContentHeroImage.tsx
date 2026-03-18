@@ -6,6 +6,7 @@ type ContentHeroImageProps = {
   fallbackSrc?: string | null;
   alt: string;
   containerClassName?: string;
+  imageClassName?: string;
 };
 
 export function ContentHeroImage({
@@ -13,6 +14,7 @@ export function ContentHeroImage({
   fallbackSrc,
   alt,
   containerClassName = "mt-4 aspect-[16/9]",
+  imageClassName,
 }: ContentHeroImageProps) {
   const finalSrc = resolveUploadedImageUrl(src?.trim() || fallbackSrc?.trim() || "");
 
@@ -27,7 +29,7 @@ export function ContentHeroImage({
         alt={alt}
         fill
         sizes="(max-width: 768px) 100vw, 1200px"
-        className="showcase-image absolute inset-0 h-full w-full object-cover"
+        className={`showcase-image absolute inset-0 h-full w-full object-cover ${imageClassName ?? ""}`}
       />
     </div>
   );

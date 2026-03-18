@@ -1,4 +1,4 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import { CategoryHome } from "@/components/CategoryHome";
 import { PublishedContentPanel } from "@/components/PublishedContentPanel";
 import { getCategoryWithMetaByHref } from "@/lib/categories";
@@ -59,11 +59,13 @@ export default async function NewsPage() {
     <CategoryHome
       basePath="/news"
       category={category}
+      variant="editorial"
       searchHref="/news/all"
       subcategoryLatest={subcategoryLatest}
     >
       <PublishedContentPanel
         sectionTitle="资讯速览"
+        sectionDesc="按照发布时间与优先级整理的最新资讯，适合快速浏览当天值得看的内容。"
         items={articles.map((x) => ({
           id: x.id,
           title: x.title,
@@ -71,8 +73,8 @@ export default async function NewsPage() {
           meta: `发布时间：${(x.publishedAt ?? x.updatedAt).toLocaleDateString("zh-CN")}`,
         }))}
         categoryHref="/news/all"
+        variant="editorial"
       />
     </CategoryHome>
   );
 }
-

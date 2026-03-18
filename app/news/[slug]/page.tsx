@@ -1,4 +1,4 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { ContentHeroImage } from "@/components/ContentHeroImage";
@@ -13,6 +13,7 @@ import { buildPageMetadata } from "@/lib/seo";
 import { ArticleShareActions } from "@/components/ArticleShareActions";
 import { buildNewsPath, buildNewsShareEntryUrl, buildPublicNewsUrl } from "@/lib/share-config";
 import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
+
 export const revalidate = 300;
 export const dynamic = "force-dynamic";
 
@@ -41,11 +42,11 @@ type Props = {
   params: Promise<{ slug: string }>;
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
+
 const NEWS_SUB_SLUGS = new Set(["trends", "enterprise", "tech", "events"]);
 
 function normalizeSegment(raw: string) {
   let v = (raw || "").trim();
-  // tolerate manually pasted encoded path segments
   for (let i = 0; i < 2; i += 1) {
     try {
       const d = decodeURIComponent(v);
@@ -108,6 +109,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       image: DEFAULT_NEWS_SHARE_IMAGE,
     });
   }
+
   const article = await findNewsArticleBySegment(slug);
   if (!article || article.status !== "approved") return { title: "资讯" };
   const description = previewText(article.excerpt ?? article.content, 160);
@@ -131,6 +133,7 @@ export default async function ArticlePage({ params, searchParams }: Props) {
   if (NEWS_SUB_SLUGS.has(slug)) {
     redirect(`/news/all?sub=${encodeURIComponent(`/news/${slug}`)}`);
   }
+
   const article = await findNewsArticleBySegment(slug);
   if (!article || article.status !== "approved") notFound();
 
@@ -170,45 +173,78 @@ export default async function ArticlePage({ params, searchParams }: Props) {
   };
 
   return (
-    <article id="news-reading-article" className="max-w-3xl mx-auto px-4 py-10">
+    <article id="news-reading-article" className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
       <NewsUrlSync canonicalPath={buildNewsPath(article.id)} />
       <NewsViewTracker slug={article.slug} />
       <JsonLd data={articleSchema} />
       <JsonLd data={breadcrumbSchema} />
 
-        <nav className="mb-6 text-sm text-muted" aria-label="面包屑">
+      <div className="mx-auto max-w-[940px]">
+        <nav className="mb-8 flex flex-wrap items-center gap-x-2 gap-y-2 text-sm text-muted" aria-label="面包屑">
           <Link href="/" className="hover:text-accent">首页</Link>
-          <span className="mx-2">/</span>
+          <span>/</span>
           <Link href="/news" className="hover:text-accent">整木资讯</Link>
-          <span className="mx-2">/</span>
-          <span className="text-primary">{article.title}</span>
+          <span>/</span>
+          <span className="line-clamp-1 text-primary">{article.title}</span>
         </nav>
 
-        <h1 className="font-serif text-2xl font-bold text-primary mb-2">{article.title}</h1>
-        <ContentHeroImage src={article.coverImage} alt={article.title} containerClassName="mb-4 aspect-[16/9]" />
-        {(article.conceptSummary || article.updatedAt) && (
-          <p className="text-sm text-muted mb-4">
-            {article.conceptSummary && <span>{article.conceptSummary}</span>}
-            {article.updatedAt && (
-              <span className="block mt-1">更新时间：{new Date(article.updatedAt).toLocaleDateString("zh-CN")}</span>
-            )}
-          </p>
-        )}
-        {article.excerpt && (
-          <blockquote className="mb-5 rounded-r-lg border-l-4 border-accent bg-surface px-4 py-3 text-sm text-muted">
+        <header className="rounded-[30px] border border-[rgba(15,23,42,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.9),rgba(246,248,251,0.92))] px-5 py-6 shadow-[0_32px_64px_-52px_rgba(15,23,42,0.4)] sm:px-8 sm:py-8">
+          <div className="flex flex-wrap items-center gap-3 text-[11px] uppercase tracking-[0.22em] text-muted">
+            <span className="rounded-full border border-border bg-white/80 px-3 py-1">News</span>
+            {article.updatedAt ? <span>{new Date(article.updatedAt).toLocaleDateString("zh-CN")}</span> : null}
+          </div>
+
+          <h1 className="mt-5 max-w-[16ch] font-serif text-[2.15rem] font-semibold leading-[1.18] tracking-[-0.015em] text-primary sm:text-[3.25rem]">
+            {article.title}
+          </h1>
+
+          {article.conceptSummary ? (
+            <p className="mt-5 max-w-2xl text-[15px] leading-7 text-muted sm:text-base">
+              {article.conceptSummary}
+            </p>
+          ) : null}
+        </header>
+
+        <div className="mt-7">
+          <ContentHeroImage
+            src={article.coverImage}
+            alt={article.title}
+            containerClassName="mx-auto aspect-[16/10] max-w-[860px] rounded-[32px] border border-[rgba(15,23,42,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(245,247,250,0.95))] p-2.5 shadow-[0_34px_68px_-54px_rgba(15,23,42,0.42)] sm:aspect-[16/9]"
+            imageClassName="rounded-[24px] object-cover object-center p-0"
+          />
+        </div>
+
+        <div className="mt-8 flex flex-wrap items-center gap-3 text-sm text-muted">
+          <span className="rounded-full border border-border bg-white/80 px-3 py-1.5">资讯栏目</span>
+          {article.updatedAt ? (
+            <span className="rounded-full border border-border bg-white/80 px-3 py-1.5">
+              更新于 {new Date(article.updatedAt).toLocaleDateString("zh-CN")}
+            </span>
+          ) : null}
+          {article.versionLabel ? (
+            <span className="rounded-full border border-border bg-white/80 px-3 py-1.5">版本 {article.versionLabel}</span>
+          ) : null}
+        </div>
+
+        {article.excerpt ? (
+          <blockquote className="mt-7 rounded-[26px] border border-[rgba(10,132,255,0.1)] bg-[linear-gradient(180deg,rgba(255,255,255,0.78),rgba(243,247,252,0.88))] px-5 py-5 text-[15px] leading-8 text-muted shadow-[0_24px_54px_-48px_rgba(10,132,255,0.55)] sm:px-7">
             {article.excerpt}
           </blockquote>
-        )}
-        <RichContent html={article.content} className="prose prose-neutral dark:prose-invert max-w-none" />
+        ) : null}
+
+        <div className="mt-8 rounded-[30px] border border-[rgba(15,23,42,0.08)] bg-[rgba(255,255,255,0.82)] px-5 py-7 shadow-[0_28px_60px_-52px_rgba(15,23,42,0.32)] backdrop-blur-[10px] sm:px-8 sm:py-9">
+          <RichContent html={article.content} className="prose prose-neutral dark:prose-invert max-w-none" />
+        </div>
+
         <ArticleShareActions title={article.title} shareUrl={shareEntryUrl} siteName={SHARE_SITE_NAME} />
-        {article.applicableScenarios && (
-          <section className="mt-8 pt-6 border-t border-border">
-            <h2 className="text-lg font-semibold text-primary mb-2">适用场景</h2>
-            <p className="text-muted">{article.applicableScenarios}</p>
+
+        {article.applicableScenarios ? (
+          <section className="mt-10 rounded-[28px] border border-border bg-[rgba(255,255,255,0.75)] px-5 py-6 shadow-[0_24px_54px_-50px_rgba(15,23,42,0.28)] sm:px-7">
+            <h2 className="mb-2 text-lg font-semibold text-primary">适用场景</h2>
+            <p className="leading-7 text-muted">{article.applicableScenarios}</p>
           </section>
-        )}
-        {article.versionLabel && <p className="mt-6 text-xs text-muted">版本：{article.versionLabel}</p>}
+        ) : null}
+      </div>
     </article>
   );
 }
-
