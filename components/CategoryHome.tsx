@@ -59,7 +59,7 @@ export async function CategoryHome({
 
   return (
     <div className="min-h-screen">
-      <div className={`mx-auto px-4 py-10 sm:px-6 sm:py-12 ${isEditorial ? "max-w-6xl" : "max-w-5xl"}`}>
+      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-12">
         <nav className={isEditorial ? "mb-8 text-sm text-muted" : "mb-6 text-sm text-muted"} aria-label="面包屑">
           <Link href="/" className="transition-colors hover:text-accent">
             首页
