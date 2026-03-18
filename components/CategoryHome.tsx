@@ -59,9 +59,13 @@ export async function CategoryHome({
   };
 
   return (
-    <div className="min-h-screen">
-      <div className={`mx-auto px-4 py-10 sm:px-6 sm:py-12 ${isEditorial ? "max-w-6xl" : "max-w-5xl"}`}>
-        <nav className={isEditorial ? "mb-8 text-sm text-muted" : "mb-6 text-sm text-muted"} aria-label="面包屑">
+    <div className={`min-h-screen ${isNewsEditorial ? "pt-6 sm:pt-8" : ""}`}>
+      <div
+        className={`mx-auto px-4 py-10 sm:px-6 sm:py-12 ${
+          isNewsEditorial ? "max-w-6xl pt-20 sm:pt-24" : isEditorial ? "max-w-6xl" : "max-w-5xl"
+        }`}
+      >
+        <nav className={isNewsEditorial ? "mb-10 text-sm text-muted" : isEditorial ? "mb-8 text-sm text-muted" : "mb-6 text-sm text-muted"} aria-label="面包屑">
           <Link href="/" className="transition-colors hover:text-accent">
             首页
           </Link>
@@ -78,8 +82,9 @@ export async function CategoryHome({
                 : "p-6 sm:p-8"
           }`}
         >
-          <div className={`flex flex-wrap items-start justify-between ${isNewsEditorial ? "gap-8" : isEditorial ? "gap-5" : "gap-4"}`}>
-            <div className={`flex items-start gap-4 ${isNewsEditorial ? "max-w-3xl sm:gap-5" : ""}`}>
+          <div className={`${isNewsEditorial ? "grid gap-8 lg:grid-cols-[minmax(0,1.25fr)_320px] lg:items-start" : `flex flex-wrap items-start justify-between ${isEditorial ? "gap-5" : "gap-4"}`}`}>
+            <div className={`${isNewsEditorial ? "min-w-0" : "flex items-start gap-4"}`}>
+              <div className={`flex items-start gap-4 ${isNewsEditorial ? "sm:gap-5" : ""}`}>
               {iconSrc ? (
                 <div
                   className={`flex shrink-0 items-center justify-center border border-border bg-surface text-accent ${
@@ -136,22 +141,42 @@ export async function CategoryHome({
                   </div>
                 ) : null}
               </div>
+              </div>
+
+              {isNewsEditorial && heroSrc ? (
+                <div className="mt-8 overflow-hidden rounded-[30px] border border-white/75 bg-[linear-gradient(135deg,rgba(245,246,248,0.98),rgba(255,255,255,0.9))] p-3 shadow-[0_24px_64px_-42px_rgba(15,23,42,0.34)]">
+                  <Image
+                    src={heroSrc}
+                    alt=""
+                    width={1600}
+                    height={640}
+                    className="showcase-image h-60 rounded-[24px] object-cover object-center p-0 sm:h-72 lg:h-[25rem]"
+                  />
+                </div>
+              ) : null}
             </div>
 
             {isNewsEditorial ? (
-              <div className="grid min-w-[220px] gap-3 sm:min-w-[260px]">
-                <div className="rounded-[28px] border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.84),rgba(250,250,251,0.96))] p-4 shadow-[0_24px_52px_-40px_rgba(15,23,42,0.3)]">
+              <div className="grid gap-4 lg:pt-14">
+                <div className="rounded-[28px] border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.84),rgba(250,250,251,0.96))] p-5 shadow-[0_24px_52px_-40px_rgba(15,23,42,0.3)]">
                   <div className="text-[11px] uppercase tracking-[0.2em] text-black/45">News Index</div>
-                  <div className="mt-3 grid grid-cols-2 gap-3">
-                    <div className="rounded-[20px] bg-black/[0.03] px-4 py-3">
-                      <div className="text-[1.5rem] font-semibold leading-none text-primary">{subcategories.length}</div>
-                      <div className="mt-1 text-xs text-black/55">资讯分栏</div>
+                  <div className="mt-5 space-y-3">
+                    <div className="rounded-[22px] bg-black/[0.03] px-4 py-4">
+                      <div className="text-[1.8rem] font-semibold leading-none text-primary">{subcategories.length}</div>
+                      <div className="mt-2 text-xs text-black/55">资讯分栏</div>
                     </div>
-                    <div className="rounded-[20px] bg-black/[0.03] px-4 py-3">
-                      <div className="text-[1.5rem] font-semibold leading-none text-primary">{totalLatest}</div>
-                      <div className="mt-1 text-xs text-black/55">精选条目</div>
+                    <div className="rounded-[22px] bg-black/[0.03] px-4 py-4">
+                      <div className="text-[1.8rem] font-semibold leading-none text-primary">{totalLatest}</div>
+                      <div className="mt-2 text-xs text-black/55">精选条目</div>
                     </div>
                   </div>
+                </div>
+
+                <div className="rounded-[28px] border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.78),rgba(249,249,250,0.94))] p-5 shadow-[0_24px_52px_-42px_rgba(15,23,42,0.28)]">
+                  <div className="text-[11px] uppercase tracking-[0.2em] text-black/45">Reading Mood</div>
+                  <p className="mt-4 text-sm leading-7 text-black/62">
+                    以更安静的留白、克制的层级和更清晰的信息分发，重新组织整木资讯首页。
+                  </p>
                 </div>
 
                 <Link
@@ -175,14 +200,12 @@ export async function CategoryHome({
             )}
           </div>
 
-          {heroSrc ? (
+          {!isNewsEditorial && heroSrc ? (
             <div
               className={`showcase-frame mt-6 overflow-hidden border border-border ${
-                isNewsEditorial
-                  ? "rounded-[30px] border-white/75 bg-[linear-gradient(135deg,rgba(245,246,248,0.98),rgba(255,255,255,0.9))] p-3"
-                  : isEditorial
-                    ? "rounded-[26px] bg-[linear-gradient(180deg,rgba(255,255,255,0.9),rgba(243,245,248,0.96))] p-2"
-                    : "rounded-2xl"
+                isEditorial
+                  ? "rounded-[26px] bg-[linear-gradient(180deg,rgba(255,255,255,0.9),rgba(243,245,248,0.96))] p-2"
+                  : "rounded-2xl"
               }`}
             >
               <Image
@@ -191,11 +214,9 @@ export async function CategoryHome({
                 width={1600}
                 height={640}
                 className={`showcase-image ${
-                  isNewsEditorial
-                    ? "h-52 rounded-[24px] object-cover object-center p-0 sm:h-64 lg:h-[21rem]"
-                    : isEditorial
-                      ? "h-44 rounded-[20px] object-cover object-center p-0 sm:h-52 md:h-64"
-                      : "h-36 sm:h-44 md:h-52"
+                  isEditorial
+                    ? "h-44 rounded-[20px] object-cover object-center p-0 sm:h-52 md:h-64"
+                    : "h-36 sm:h-44 md:h-52"
                 }`}
               />
             </div>

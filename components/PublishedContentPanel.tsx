@@ -39,10 +39,12 @@ export function PublishedContentPanel({
       >
         <div className={isNewsEditorial ? "flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between" : ""}>
           <div>
-        <h2 className="section-label mb-2 text-primary">{sectionTitle}</h2>
-        {sectionDesc ? (
-          <p className={`text-muted ${isNewsEditorial ? "mb-0 max-w-2xl text-sm leading-7 text-black/62" : isEditorial ? "mb-5 text-sm leading-7" : "mb-4 text-sm"}`}>{sectionDesc}</p>
-        ) : null}
+            <h2 className="section-label mb-2 text-primary">{sectionTitle}</h2>
+            {sectionDesc ? (
+              <p className={`text-muted ${isNewsEditorial ? "mb-0 max-w-2xl text-sm leading-7 text-black/62" : isEditorial ? "mb-5 text-sm leading-7" : "mb-4 text-sm"}`}>
+                {sectionDesc}
+              </p>
+            ) : null}
           </div>
           {isNewsEditorial ? (
             <div className="rounded-full border border-black/8 bg-white/78 px-4 py-2 text-xs uppercase tracking-[0.18em] text-black/46">
