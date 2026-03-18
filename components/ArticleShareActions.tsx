@@ -32,12 +32,8 @@ export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareA
 
     const image = new window.Image();
     image.decoding = "async";
-    image.onload = () => {
-      setQrReady(true);
-    };
-    image.onerror = () => {
-      setQrLoadFailed(true);
-    };
+    image.onload = () => setQrReady(true);
+    image.onerror = () => setQrLoadFailed(true);
     image.src = qrUrl;
   }
 
@@ -246,7 +242,7 @@ export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareA
       : null;
 
   return (
-    <div className="relative z-20 mt-8 flex justify-end">
+    <div className="relative z-20 mt-5 flex justify-end sm:mt-8">
       <button
         ref={triggerRef}
         type="button"
@@ -259,11 +255,11 @@ export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareA
         onMouseEnter={warmQrCode}
         onFocus={warmQrCode}
         onTouchStart={warmQrCode}
-        className="group inline-flex h-11 items-center gap-2 rounded-full border border-[rgba(15,23,42,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.94),rgba(245,247,250,0.98))] px-4 shadow-[0_10px_30px_rgba(15,23,42,0.08),inset_0_1px_0_rgba(255,255,255,0.96)] backdrop-blur transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(15,23,42,0.12),inset_0_1px_0_rgba(255,255,255,0.98)]"
+        className="group inline-flex h-10 items-center gap-2 rounded-full border border-[rgba(15,23,42,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.94),rgba(245,247,250,0.98))] px-3.5 shadow-[0_8px_22px_rgba(15,23,42,0.08),inset_0_1px_0_rgba(255,255,255,0.96)] backdrop-blur transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(15,23,42,0.12),inset_0_1px_0_rgba(255,255,255,0.98)] sm:h-11 sm:px-4"
       >
         <svg
           viewBox="0 0 24 24"
-          className="h-5 w-5 text-[#111827] transition-transform duration-200 group-hover:scale-[1.04]"
+          className="h-[18px] w-[18px] text-[#111827] transition-transform duration-200 group-hover:scale-[1.04] sm:h-5 sm:w-5"
           fill="none"
           stroke="currentColor"
           strokeWidth="1.9"
@@ -275,7 +271,7 @@ export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareA
           <path d="M8.5 8.5 12 5l3.5 3.5" />
           <path d="M5 13.5v3a2.5 2.5 0 0 0 2.5 2.5h9a2.5 2.5 0 0 0 2.5-2.5v-3" />
         </svg>
-        <span className="text-sm font-medium tracking-[0.08em] text-[#111827]">分享</span>
+        <span className="text-[13px] font-medium tracking-[0.06em] text-[#111827] sm:text-sm sm:tracking-[0.08em]">分享</span>
       </button>
 
       {desktopPopup}
