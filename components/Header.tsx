@@ -190,22 +190,14 @@ export function Header({
                   onMouseLeave={() => setHovered(null)}
                 >
                   {isMemberItem ? (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center">
                       {!me ? (
-                        <>
-                          <Link
-                            href="/membership/login"
-                            className="nav-pill inline-flex items-center rounded-full border border-[rgba(194,182,154,0.22)] bg-white/72 px-3.5 py-1.5 text-[13px] sm:text-sm font-medium text-primary shadow-[0_8px_20px_rgba(15,23,42,0.04),inset_0_1px_0_rgba(255,255,255,0.84)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[rgba(170,154,122,0.34)] hover:bg-white"
-                          >
-                            登录
-                          </Link>
-                          <Link
-                            href="/membership"
-                            className="nav-pill inline-flex items-center rounded-full border border-[rgba(194,182,154,0.28)] bg-[linear-gradient(180deg,rgba(255,252,246,0.99),rgba(246,240,231,0.95))] px-3.5 py-1.5 text-[13px] sm:text-sm font-medium text-primary shadow-[0_10px_24px_rgba(15,23,42,0.05),inset_0_1px_0_rgba(255,255,255,0.95)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[rgba(170,154,122,0.34)] hover:bg-[linear-gradient(180deg,rgba(255,253,248,1),rgba(250,245,237,0.98))]"
-                          >
-                            注册
-                          </Link>
-                        </>
+                        <Link
+                          href="/membership/login"
+                          className="nav-pill inline-flex items-center rounded-full border border-[rgba(194,182,154,0.24)] bg-[linear-gradient(180deg,rgba(255,252,246,0.99),rgba(246,240,231,0.95))] px-3.5 py-1.5 text-[13px] sm:text-sm font-medium text-primary shadow-[0_10px_24px_rgba(15,23,42,0.05),inset_0_1px_0_rgba(255,255,255,0.92)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[rgba(170,154,122,0.34)] hover:bg-[linear-gradient(180deg,rgba(255,253,248,1),rgba(250,245,237,0.98))]"
+                        >
+                          登录
+                        </Link>
                       ) : (
                         <Link
                           href={finalHref}
@@ -401,25 +393,6 @@ export function Header({
 
                     {expanded && (
                       <div className="mt-2.5 border-l border-border pl-3">
-                        {isMemberItem && !me ? (
-                          <div className="mb-2.5 flex gap-2 pr-2">
-                            <Link
-                              href="/membership/login"
-                              onClick={closeMobileMenu}
-                              className="flex-1 rounded-full border border-border bg-white px-3 py-2 text-center text-[13px] font-medium text-primary"
-                            >
-                              登录
-                            </Link>
-                            <Link
-                              href="/membership"
-                              onClick={closeMobileMenu}
-                              className="flex-1 rounded-full border border-[rgba(194,182,154,0.26)] bg-[linear-gradient(180deg,rgba(255,252,246,0.98),rgba(246,240,231,0.94))] px-3 py-2 text-center text-[13px] font-medium text-primary"
-                            >
-                              注册
-                            </Link>
-                          </div>
-                        ) : null}
-
                         {mobileSubItems.length > 0 && (
                           <ul className="space-y-1.5">
                             {mobileSubItems.map((sub) => (
