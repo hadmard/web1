@@ -15,6 +15,7 @@ type Props = {
     range?: string;
     sort?: string;
     page?: string;
+    advanced?: string;
   }>;
 };
 
@@ -72,12 +73,14 @@ export default async function NewsAllPage({ searchParams }: Props) {
   const sub = (params.sub ?? "").trim();
   const range = (["7d", "30d", "year"].includes(params.range ?? "") ? params.range : "") as RangeKey;
   const sort = (params.sort === "oldest" ? "oldest" : "latest") as SortKey;
+  const advanced = params.advanced === "1";
   const page = Math.max(1, parseInt(params.page ?? "1", 10) || 1);
   const skip = (page - 1) * PAGE_SIZE;
 
   const matchedSubSlug = SUB_OPTIONS.find((item) => item.value === sub)?.value?.replace("/news/", "") ?? null;
   const hasOnlySubcategoryFilter =
     Boolean(matchedSubSlug) &&
+    !advanced &&
     !q &&
     !(params.start ?? "").trim() &&
     !(params.end ?? "").trim() &&

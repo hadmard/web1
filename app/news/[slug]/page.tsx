@@ -170,7 +170,7 @@ export default async function ArticlePage({ params, searchParams }: Props) {
                 <p className="mt-1 text-xs text-[#8f7b5a]">当前栏目已发布内容</p>
               </div>
               <Link
-                href={`/news/all?sub=${encodeURIComponent(subHref)}`}
+                href={`/news/all?sub=${encodeURIComponent(subHref)}&advanced=1`}
                 className="inline-flex items-center justify-center rounded-full border border-[rgba(194,182,154,0.26)] bg-white/76 px-4 py-2.5 text-sm text-primary transition-colors hover:border-accent/45 hover:text-accent"
               >
                 高级筛选
