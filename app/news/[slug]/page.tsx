@@ -132,14 +132,14 @@ function getHeadlineClass(title: string) {
   const length = title.trim().length;
 
   if (length >= 34) {
-    return "max-w-[24ch] text-[1.72rem] leading-[1.34] tracking-[-0.008em] sm:max-w-[26ch] sm:text-[2.1rem]";
+    return "max-w-none text-[1.68rem] leading-[1.34] tracking-[-0.008em] [text-wrap:balance] sm:max-w-[26ch] sm:text-[2.1rem]";
   }
 
   if (length >= 24) {
-    return "max-w-[22ch] text-[1.82rem] leading-[1.31] tracking-[-0.01em] sm:max-w-[24ch] sm:text-[2.28rem]";
+    return "max-w-none text-[1.76rem] leading-[1.31] tracking-[-0.01em] [text-wrap:balance] sm:max-w-[24ch] sm:text-[2.28rem]";
   }
 
-  return "max-w-[20ch] text-[1.96rem] leading-[1.26] tracking-[-0.012em] sm:max-w-[22ch] sm:text-[2.6rem]";
+  return "max-w-none text-[1.88rem] leading-[1.26] tracking-[-0.012em] [text-wrap:balance] sm:max-w-[22ch] sm:text-[2.6rem]";
 }
 
 export default async function ArticlePage({ params, searchParams }: Props) {
