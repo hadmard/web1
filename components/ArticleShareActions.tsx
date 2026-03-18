@@ -56,6 +56,7 @@ export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareA
 
   useEffect(() => {
     if (!open) return;
+    if (window.innerWidth >= 768) return;
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -83,23 +84,18 @@ export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareA
   const desktopOverlay =
     mounted && open
       ? createPortal(
-          <div className="fixed inset-0 z-[220] hidden md:block">
-            <button
-              type="button"
-              aria-label="关闭分享弹层"
-              className="absolute inset-0 bg-black/18"
-              onClick={() => setOpen(false)}
-            />
+          <div className="pointer-events-none fixed inset-0 z-[220] hidden md:block">
+            <div className="absolute inset-0 bg-black/18" />
             <div className="absolute left-1/2 top-1/2 w-[min(92vw,360px)] -translate-x-1/2 -translate-y-1/2 rounded-[28px] border border-[rgba(15,23,42,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.99),rgba(245,247,250,0.99))] p-5 shadow-[0_32px_90px_rgba(15,23,42,0.28),inset_0_1px_0_rgba(255,255,255,0.98)] backdrop-blur">
               <button
                 type="button"
                 aria-label="关闭分享弹层"
                 onClick={() => setOpen(false)}
-                className="absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-full border border-[rgba(15,23,42,0.08)] bg-white text-[#374151] hover:bg-[#f3f4f6]"
+                className="pointer-events-auto absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-full border border-[rgba(15,23,42,0.08)] bg-white text-[#374151] hover:bg-[#f3f4f6]"
               >
                 ×
               </button>
-              <div className="rounded-[20px] bg-white p-3 shadow-[0_10px_30px_rgba(15,23,42,0.08)]">
+              <div className="pointer-events-auto rounded-[20px] bg-white p-3 shadow-[0_10px_30px_rgba(15,23,42,0.08)]">
                 {qrLoadFailed ? (
                   <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-[16px] border border-dashed border-[rgba(15,23,42,0.12)] px-4 py-5 text-center">
                     <p className="text-sm leading-6 text-[#4b5563]">二维码暂时生成失败，可先复制链接后发送到微信。</p>
