@@ -116,6 +116,7 @@ export function RichEditor({ value, onChange, minHeight = 260, placeholder = "�
   const [imgHeight, setImgHeight] = useState("");
   const [lockRatio, setLockRatio] = useState(true);
   const [ratio, setRatio] = useState(1);
+  const [selectedImagePos, setSelectedImagePos] = useState<number | null>(null);
 
   const DEFAULT_IMAGE_WIDTH = 420;
 
@@ -216,10 +217,14 @@ export function RichEditor({ value, onChange, minHeight = 260, placeholder = "�
   useEffect(() => {
     if (!editor) return;
     const syncImageState = () => {
-      if (!editor.isActive("image")) return;
+      if (!editor.isActive("image")) {
+        setSelectedImagePos(null);
+        return;
+      }
       const attrs = editor.getAttributes("image") as ImageAttrs;
       const w = Number(attrs.width || 0);
       const h = Number(attrs.height || 0);
+      setSelectedImagePos(editor.state.selection.from);
       setImgWidth(w > 0 ? String(Math.round(w)) : "");
       setImgHeight(h > 0 ? String(Math.round(h)) : "");
       if (w > 0 && h > 0) setRatio(w / h);
@@ -269,18 +274,28 @@ export function RichEditor({ value, onChange, minHeight = 260, placeholder = "�
     await insertImage(file);
   };
 
-  const applyImageSize = () => {
-    if (!editor || !isImageActive) return;
-    const nextWidth = Number(imgWidth || 0);
-    const nextHeight = Number(imgHeight || 0);
-    editor
+  const updateSelectedImage = (attrs: Partial<ImageAttrs>) => {
+    if (!editor) return false;
+    const targetPos = selectedImagePos ?? (editor.isActive("image") ? editor.state.selection.from : null);
+    if (targetPos === null) return false;
+
+    return editor
       .chain()
       .focus()
-      .updateAttributes("image", {
-        width: nextWidth > 0 ? nextWidth : null,
-        height: nextHeight > 0 ? nextHeight : null,
-      })
+      .setNodeSelection(targetPos)
+      .updateAttributes("image", attrs)
       .run();
+  };
+
+  const applyImageSize = () => {
+    if (!editor) return;
+    const nextWidth = Number(imgWidth || 0);
+    const nextHeight = Number(imgHeight || 0);
+
+    updateSelectedImage({
+      width: nextWidth > 0 ? nextWidth : null,
+      height: nextHeight > 0 ? nextHeight : null,
+    });
   };
 
   const onWidthChange = (v: string) => {
@@ -334,14 +349,14 @@ export function RichEditor({ value, onChange, minHeight = 260, placeholder = "�
   };
 
   const setPresetImageWidth = (nextWidth: number) => {
-    if (!editor || !editor.isActive("image")) return;
+    if (!editor) return;
     const attrs = editor.getAttributes("image") as ImageAttrs;
     const currentWidth = Number(attrs.width || 0);
     const currentHeight = Number(attrs.height || 0);
     const safeRatio = currentWidth > 0 && currentHeight > 0 ? currentWidth / currentHeight : ratio || 1;
     const width = Math.max(120, Math.round(nextWidth));
     const height = Math.max(80, Math.round(width / safeRatio));
-    editor.chain().focus().updateAttributes("image", { width, height }).run();
+    updateSelectedImage({ width, height });
     setImgWidth(String(width));
     setImgHeight(String(height));
     setRatio(width / height);
@@ -391,16 +406,40 @@ export function RichEditor({ value, onChange, minHeight = 260, placeholder = "�
       {isImageActive && (
         <div className="px-3 py-2 border-b border-border flex flex-wrap items-center gap-2 text-xs">
           <span className="text-muted">图片尺寸</span>
-          <input className="w-36 border border-border rounded px-2 py-1 bg-surface" value={imgWidth} onChange={(e) => onWidthChange(e.target.value)} placeholder="宽（默认420）" />
-          <input className="w-28 border border-border rounded px-2 py-1 bg-surface" value={imgHeight} onChange={(e) => onHeightChange(e.target.value)} placeholder="高" />
+          <input
+            className="w-36 border border-border rounded px-2 py-1 bg-surface"
+            value={imgWidth}
+            inputMode="numeric"
+            onChange={(e) => onWidthChange(e.target.value.replace(/[^\d]/g, ""))}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                applyImageSize();
+              }
+            }}
+            placeholder="宽（默认420）"
+          />
+          <input
+            className="w-28 border border-border rounded px-2 py-1 bg-surface"
+            value={imgHeight}
+            inputMode="numeric"
+            onChange={(e) => onHeightChange(e.target.value.replace(/[^\d]/g, ""))}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                applyImageSize();
+              }
+            }}
+            placeholder="高"
+          />
           <label className="inline-flex items-center gap-1 text-muted">
             <input type="checkbox" checked={lockRatio} onChange={(e) => setLockRatio(e.target.checked)} />
             同比例
           </label>
           <ToolButton label="应用尺寸" onClick={applyImageSize} />
-          <ToolButton label="图片居左" onClick={() => editor.chain().focus().updateAttributes("image", { align: "left" }).run()} />
-          <ToolButton label="图片居中" onClick={() => editor.chain().focus().updateAttributes("image", { align: "center" }).run()} />
-          <ToolButton label="图片居右" onClick={() => editor.chain().focus().updateAttributes("image", { align: "right" }).run()} />
+          <ToolButton label="图片居左" onClick={() => void updateSelectedImage({ align: "left" })} />
+          <ToolButton label="图片居中" onClick={() => void updateSelectedImage({ align: "center" })} />
+          <ToolButton label="图片居右" onClick={() => void updateSelectedImage({ align: "right" })} />
         </div>
       )}
 
