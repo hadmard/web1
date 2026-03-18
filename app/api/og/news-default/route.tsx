@@ -1,12 +1,11 @@
 import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
-export const alt = "整木网资讯分享封面";
-export const size = {
+
+const IMAGE_SIZE = {
   width: 1200,
   height: 630,
-};
-export const contentType = "image/png";
+} as const;
 
 export async function GET() {
   return new ImageResponse(
@@ -161,6 +160,6 @@ export async function GET() {
         </div>
       </div>
     ),
-    size,
+    IMAGE_SIZE,
   );
 }
