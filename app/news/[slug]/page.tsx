@@ -2,8 +2,6 @@ import Link from "next/link";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { ContentHeroImage } from "@/components/ContentHeroImage";
-import { prisma } from "@/lib/prisma";
-import { articleOrderByPinnedLatest } from "@/lib/articles";
 import { JsonLd } from "@/components/JsonLd";
 import { previewText } from "@/lib/text";
 import { RichContent } from "@/components/RichContent";
@@ -12,13 +10,13 @@ import { NewsUrlSync } from "./NewsUrlSync";
 import { buildPageMetadata } from "@/lib/seo";
 import { ArticleShareActions } from "@/components/ArticleShareActions";
 import { buildNewsPath, buildNewsShareEntryUrl, buildPublicNewsUrl } from "@/lib/share-config";
-import { resolveUploadedImageShareUrl, resolveUploadedImageUrl } from "@/lib/uploaded-image";
+import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
+import { DEFAULT_NEWS_SHARE_IMAGE, findNewsArticleBySegment, normalizeNewsSegment, resolveArticleShareImage } from "@/lib/news-sharing";
 
 export const revalidate = 300;
 export const dynamic = "force-dynamic";
 
 const SHARE_SITE_NAME = "中华整木网";
-const DEFAULT_NEWS_SHARE_IMAGE = "/api/og/news-default";
 const NEWS_SUBCATEGORY_META: Record<string, { title: string; description: string }> = {
   trends: {
     title: "行业趋势",
@@ -44,58 +42,6 @@ type Props = {
 };
 
 const NEWS_SUB_SLUGS = new Set(["trends", "enterprise", "tech", "events"]);
-
-function normalizeSegment(raw: string) {
-  let v = (raw || "").trim();
-  for (let i = 0; i < 2; i += 1) {
-    try {
-      const d = decodeURIComponent(v);
-      if (d === v) break;
-      v = d;
-    } catch {
-      break;
-    }
-  }
-  return v.trim();
-}
-
-async function findNewsArticleBySegment(segment: string) {
-  const s = normalizeSegment(segment);
-  return prisma.article.findFirst({
-    where: {
-      status: "approved",
-      OR: [{ categoryHref: { startsWith: "/news" } }, { subHref: { startsWith: "/news" } }],
-      AND: [
-        {
-          OR: [
-            { id: s },
-            { slug: s },
-            { title: s },
-            { slug: { contains: s } },
-            { title: { contains: s } },
-          ],
-        },
-      ],
-    },
-    orderBy: articleOrderByPinnedLatest,
-  });
-}
-
-function extractFirstContentImage(html: string | null | undefined) {
-  if (!html) return "";
-  const match = html.match(/<img[^>]+src=["']([^"']+)["']/i);
-  return match?.[1]?.trim() || "";
-}
-
-function resolveArticleShareImage(article: { coverImage?: string | null; content?: string | null }) {
-  const candidates = [
-    resolveUploadedImageShareUrl(article.coverImage),
-    resolveUploadedImageShareUrl(extractFirstContentImage(article.content)),
-    DEFAULT_NEWS_SHARE_IMAGE,
-  ];
-
-  return candidates.find((value) => Boolean(value && value.trim())) || DEFAULT_NEWS_SHARE_IMAGE;
-}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
@@ -151,7 +97,7 @@ export default async function ArticlePage({ params, searchParams }: Props) {
   const article = await findNewsArticleBySegment(slug);
   if (!article || article.status !== "approved") notFound();
 
-  const currentSegment = normalizeSegment(slug);
+  const currentSegment = normalizeNewsSegment(slug);
   if (currentSegment !== article.id) {
     const nextSearchParams = searchParams ? await searchParams : {};
     const shareVersion = getSearchParamValue(nextSearchParams.sharev);
