@@ -15,6 +15,7 @@ export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareA
   const [qrLoadFailed, setQrLoadFailed] = useState(false);
   const [mounted, setMounted] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const desktopDialogRef = useRef<HTMLDivElement | null>(null);
 
   const qrUrl = useMemo(() => {
     const data = encodeURIComponent(shareUrl);
@@ -34,7 +35,11 @@ export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareA
 
   useEffect(() => {
     function handlePointerDown(event: MouseEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (
+        !rootRef.current?.contains(target) &&
+        !desktopDialogRef.current?.contains(target)
+      ) {
         setOpen(false);
       }
     }
@@ -94,8 +99,8 @@ export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareA
     mounted && open
       ? createPortal(
           <div className="pointer-events-none fixed inset-0 z-[220] hidden md:block">
-            <div className="absolute inset-0 bg-black/18" />
             <div
+              ref={desktopDialogRef}
               className="absolute left-1/2 top-1/2 w-[min(92vw,360px)] -translate-x-1/2 -translate-y-1/2 rounded-[28px] border border-[rgba(15,23,42,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.99),rgba(245,247,250,0.99))] p-5 shadow-[0_32px_90px_rgba(15,23,42,0.28),inset_0_1px_0_rgba(255,255,255,0.98)] backdrop-blur"
               onWheel={handleDesktopWheel}
             >
