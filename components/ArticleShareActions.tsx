@@ -27,11 +27,13 @@ export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareA
   }, []);
 
   useEffect(() => {
+    if (!open) return;
+
     setQrLoadFailed(false);
     const image = new window.Image();
     image.src = qrUrl;
     image.onerror = () => setQrLoadFailed(true);
-  }, [qrUrl]);
+  }, [open, qrUrl]);
 
   useEffect(() => {
     function handlePointerDown(event: MouseEvent) {
@@ -57,8 +59,7 @@ export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareA
   }, []);
 
   useEffect(() => {
-    if (!open) return;
-    if (window.innerWidth >= 768) return;
+    if (!open || window.innerWidth >= 768) return;
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -70,6 +71,7 @@ export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareA
 
   useEffect(() => {
     if (!copied) return;
+
     const timer = window.setTimeout(() => setCopied(false), 1600);
     return () => window.clearTimeout(timer);
   }, [copied]);
@@ -106,7 +108,7 @@ export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareA
               <div className="rounded-[18px] bg-white p-2.5 shadow-[0_10px_24px_rgba(15,23,42,0.07)]">
                 {qrLoadFailed ? (
                   <div className="flex min-h-[210px] flex-col items-center justify-center gap-3 rounded-[14px] border border-dashed border-[rgba(15,23,42,0.12)] px-4 py-5 text-center">
-                    <p className="text-sm leading-6 text-[#4b5563]">二维码暂时生成失败，可先复制链接后发送到微信。</p>
+                    <p className="text-sm leading-6 text-[#4b5563]">二维码暂时加载失败，可以先复制链接发送到微信。</p>
                     <button
                       type="button"
                       onClick={handleCopyLink}
@@ -200,7 +202,7 @@ export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareA
 
             {qrLoadFailed ? (
               <div className="absolute bottom-12 left-1/2 w-[280px] -translate-x-1/2 rounded-[24px] bg-white/96 p-4 text-center shadow-[0_18px_36px_rgba(0,0,0,0.26)]">
-                <p className="text-sm leading-6 text-[#374151]">当前二维码服务不可用，先复制链接再分享到微信也可以。</p>
+                <p className="text-sm leading-6 text-[#374151]">当前二维码服务不可用，可以先复制分享链接再发送到微信。</p>
                 <button
                   type="button"
                   onClick={handleCopyLink}
