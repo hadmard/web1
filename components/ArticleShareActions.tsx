@@ -14,9 +14,7 @@ export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareA
   const [copied, setCopied] = useState(false);
   const [qrLoadFailed, setQrLoadFailed] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [desktopTop, setDesktopTop] = useState(120);
   const rootRef = useRef<HTMLDivElement | null>(null);
-  const desktopDialogRef = useRef<HTMLDivElement | null>(null);
 
   const qrUrl = useMemo(() => {
     const data = encodeURIComponent(shareUrl);
@@ -28,23 +26,6 @@ export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareA
   }, []);
 
   useEffect(() => {
-    if (!open || typeof window === "undefined" || window.innerWidth < 768) return;
-
-    const updateDesktopTop = () => {
-      setDesktopTop(window.scrollY + Math.max(120, window.innerHeight * 0.5 - 180));
-    };
-
-    updateDesktopTop();
-    window.addEventListener("scroll", updateDesktopTop, true);
-    window.addEventListener("resize", updateDesktopTop);
-
-    return () => {
-      window.removeEventListener("scroll", updateDesktopTop, true);
-      window.removeEventListener("resize", updateDesktopTop);
-    };
-  }, [open]);
-
-  useEffect(() => {
     setQrLoadFailed(false);
     const image = new window.Image();
     image.src = qrUrl;
@@ -53,11 +34,7 @@ export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareA
 
   useEffect(() => {
     function handlePointerDown(event: MouseEvent) {
-      const target = event.target as Node;
-      if (
-        !rootRef.current?.contains(target) &&
-        !desktopDialogRef.current?.contains(target)
-      ) {
+      if (!rootRef.current?.contains(event.target as Node)) {
         setOpen(false);
       }
     }
@@ -103,57 +80,6 @@ export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareA
       setCopied(false);
     }
   }
-
-  const desktopOverlay =
-    mounted && open
-      ? createPortal(
-          <div className="pointer-events-none absolute inset-x-0 top-0 z-[220] hidden md:block">
-            <div
-              ref={desktopDialogRef}
-              className="pointer-events-auto absolute left-1/2 w-[min(92vw,360px)] -translate-x-1/2 rounded-[28px] border border-[rgba(15,23,42,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.99),rgba(245,247,250,0.99))] p-5 shadow-[0_32px_90px_rgba(15,23,42,0.28),inset_0_1px_0_rgba(255,255,255,0.98)] backdrop-blur"
-              style={{ top: `${desktopTop}px` }}
-            >
-              <button
-                type="button"
-                aria-label="关闭分享弹层"
-                onClick={() => setOpen(false)}
-                className="pointer-events-auto absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-full border border-[rgba(15,23,42,0.08)] bg-white text-[#374151] hover:bg-[#f3f4f6]"
-              >
-                ×
-              </button>
-              <div className="pointer-events-auto rounded-[20px] bg-white p-3 shadow-[0_10px_30px_rgba(15,23,42,0.08)]">
-                {qrLoadFailed ? (
-                  <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-[16px] border border-dashed border-[rgba(15,23,42,0.12)] px-4 py-5 text-center">
-                    <p className="text-sm leading-6 text-[#4b5563]">二维码暂时生成失败，可先复制链接后发送到微信。</p>
-                    <button
-                      type="button"
-                      onClick={handleCopyLink}
-                      className="rounded-full bg-[#111827] px-4 py-2 text-sm font-medium text-white"
-                    >
-                      {copied ? "已复制链接" : "复制分享链接"}
-                    </button>
-                  </div>
-                ) : (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={qrUrl}
-                    alt={`${title} 分享二维码`}
-                    width={280}
-                    height={280}
-                    className="mx-auto h-auto w-full max-w-[280px] rounded-[16px]"
-                    loading="lazy"
-                    onError={() => setQrLoadFailed(true)}
-                  />
-                )}
-              </div>
-              <p className="mt-4 text-center text-sm tracking-[0.08em] text-[#4b5563]">
-                {qrLoadFailed ? "复制链接后可直接转发" : "请使用微信扫码分享"}
-              </p>
-            </div>
-          </div>,
-          document.body
-        )
-      : null;
 
   const mobileOverlay =
     mounted && open
@@ -238,7 +164,7 @@ export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareA
 
   return (
     <div ref={rootRef} className="relative z-20 mt-8 flex justify-end">
-      <div className="relative">
+      <div className="relative flex flex-col items-end">
         <button
           type="button"
           aria-label={`分享 ${siteName} 文章：${title}`}
@@ -262,9 +188,54 @@ export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareA
           </svg>
           <span className="text-sm font-medium tracking-[0.08em] text-[#111827]">分享</span>
         </button>
+
+        {open ? (
+          <div className="mt-4 hidden w-[min(92vw,360px)] rounded-[28px] border border-[rgba(15,23,42,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.99),rgba(245,247,250,0.99))] p-5 shadow-[0_24px_60px_rgba(15,23,42,0.18),inset_0_1px_0_rgba(255,255,255,0.98)] md:block">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <p className="text-sm font-medium text-[#111827]">微信扫码分享</p>
+              <button
+                type="button"
+                aria-label="关闭分享卡片"
+                onClick={() => setOpen(false)}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[rgba(15,23,42,0.08)] bg-white text-[#374151] hover:bg-[#f3f4f6]"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="rounded-[20px] bg-white p-3 shadow-[0_10px_30px_rgba(15,23,42,0.08)]">
+              {qrLoadFailed ? (
+                <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-[16px] border border-dashed border-[rgba(15,23,42,0.12)] px-4 py-5 text-center">
+                  <p className="text-sm leading-6 text-[#4b5563]">二维码暂时生成失败，可先复制链接后发送到微信。</p>
+                  <button
+                    type="button"
+                    onClick={handleCopyLink}
+                    className="rounded-full bg-[#111827] px-4 py-2 text-sm font-medium text-white"
+                  >
+                    {copied ? "已复制链接" : "复制分享链接"}
+                  </button>
+                </div>
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={qrUrl}
+                  alt={`${title} 分享二维码`}
+                  width={280}
+                  height={280}
+                  className="mx-auto h-auto w-full max-w-[280px] rounded-[16px]"
+                  loading="lazy"
+                  onError={() => setQrLoadFailed(true)}
+                />
+              )}
+            </div>
+
+            <p className="mt-4 text-center text-sm tracking-[0.08em] text-[#4b5563]">
+              {qrLoadFailed ? "复制链接后可直接转发" : "页面可继续滚动，二维码会随页面一起移动"}
+            </p>
+          </div>
+        ) : null}
       </div>
 
-      {desktopOverlay}
       {mobileOverlay}
     </div>
   );
