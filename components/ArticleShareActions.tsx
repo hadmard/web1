@@ -165,32 +165,8 @@ export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareA
   return (
     <div ref={rootRef} className="relative z-20 mt-8 flex justify-end">
       <div className="relative flex flex-col items-end">
-        <button
-          type="button"
-          aria-label={`分享 ${siteName} 文章：${title}`}
-          aria-expanded={open}
-          onClick={() => setOpen((value) => !value)}
-          className="group inline-flex h-11 items-center gap-2 rounded-full border border-[rgba(15,23,42,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.94),rgba(245,247,250,0.98))] px-4 shadow-[0_10px_30px_rgba(15,23,42,0.08),inset_0_1px_0_rgba(255,255,255,0.96)] backdrop-blur transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(15,23,42,0.12),inset_0_1px_0_rgba(255,255,255,0.98)]"
-        >
-          <svg
-            viewBox="0 0 24 24"
-            className="h-5 w-5 text-[#111827] transition-transform duration-200 group-hover:scale-[1.04]"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.9"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M12 16V5" />
-            <path d="M8.5 8.5 12 5l3.5 3.5" />
-            <path d="M5 13.5v3a2.5 2.5 0 0 0 2.5 2.5h9a2.5 2.5 0 0 0 2.5-2.5v-3" />
-          </svg>
-          <span className="text-sm font-medium tracking-[0.08em] text-[#111827]">分享</span>
-        </button>
-
         {open ? (
-          <div className="mt-4 hidden w-[min(88vw,312px)] rounded-[24px] border border-[rgba(15,23,42,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.99),rgba(245,247,250,0.99))] p-4 shadow-[0_20px_48px_rgba(15,23,42,0.15),inset_0_1px_0_rgba(255,255,255,0.98)] md:block">
+          <div className="mb-4 hidden w-[min(88vw,312px)] rounded-[24px] border border-[rgba(15,23,42,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.99),rgba(245,247,250,0.99))] p-4 shadow-[0_20px_48px_rgba(15,23,42,0.15),inset_0_1px_0_rgba(255,255,255,0.98)] md:block">
             <div className="mb-2.5 flex items-center justify-between gap-3">
               <p className="text-[13px] font-medium tracking-[0.08em] text-[#111827]">微信扫码分享</p>
               <button
@@ -228,12 +204,32 @@ export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareA
                 />
               )}
             </div>
-
-            <p className="mt-3 text-center text-xs tracking-[0.06em] text-[#6b7280]">
-              {qrLoadFailed ? "复制链接后可直接转发" : "页面可继续滚动，二维码会随页面一起移动"}
-            </p>
           </div>
         ) : null}
+
+        <button
+          type="button"
+          aria-label={`分享 ${siteName} 文章：${title}`}
+          aria-expanded={open}
+          onClick={() => setOpen((value) => !value)}
+          className="group inline-flex h-11 items-center gap-2 rounded-full border border-[rgba(15,23,42,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.94),rgba(245,247,250,0.98))] px-4 shadow-[0_10px_30px_rgba(15,23,42,0.08),inset_0_1px_0_rgba(255,255,255,0.96)] backdrop-blur transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(15,23,42,0.12),inset_0_1px_0_rgba(255,255,255,0.98)]"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            className="h-5 w-5 text-[#111827] transition-transform duration-200 group-hover:scale-[1.04]"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.9"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M12 16V5" />
+            <path d="M8.5 8.5 12 5l3.5 3.5" />
+            <path d="M5 13.5v3a2.5 2.5 0 0 0 2.5 2.5h9a2.5 2.5 0 0 0 2.5-2.5v-3" />
+          </svg>
+          <span className="text-sm font-medium tracking-[0.08em] text-[#111827]">分享</span>
+        </button>
       </div>
 
       {mobileOverlay}
