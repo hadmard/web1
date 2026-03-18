@@ -139,7 +139,7 @@ export default async function ArticlePage({ params, searchParams }: Props) {
       <JsonLd data={articleSchema} />
       <JsonLd data={breadcrumbSchema} />
 
-      <div className="mx-auto flex min-h-[calc(100dvh-11.5rem)] max-w-[860px] flex-col sm:min-h-0">
+      <div className="mx-auto max-w-[860px]">
         <nav className="mb-8 flex flex-wrap items-center gap-x-2 gap-y-2 text-sm text-muted" aria-label="面包屑">
           <Link href="/" className="hover:text-accent">首页</Link>
           <span>/</span>
@@ -182,10 +182,14 @@ export default async function ArticlePage({ params, searchParams }: Props) {
 
         <div className="mt-8 rounded-[24px] border border-border bg-surface-elevated px-5 py-7 sm:px-7 sm:py-8">
           <RichContent html={article.content} className="prose prose-neutral dark:prose-invert max-w-none" />
-        </div>
-
-        <div className="mt-auto pt-4 sm:pt-0">
-          <ArticleShareActions title={article.title} shareUrl={shareEntryUrl} siteName={SHARE_SITE_NAME} />
+          <div className="mt-6 border-t border-border/70 pt-4">
+            <ArticleShareActions
+              title={article.title}
+              shareUrl={shareEntryUrl}
+              siteName={SHARE_SITE_NAME}
+              className="mt-0"
+            />
+          </div>
         </div>
 
         {article.applicableScenarios ? (

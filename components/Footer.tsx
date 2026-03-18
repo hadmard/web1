@@ -45,7 +45,7 @@ export function Footer() {
           </div>
         </section>
 
-        <div className="mt-4 grid grid-cols-2 gap-4 sm:mt-6 sm:grid-cols-4 sm:gap-8">
+        <div className="mt-6 hidden sm:grid sm:grid-cols-4 sm:gap-8">
           <div>
             <ul className="space-y-2.5">
               {exploreLinks.map(({ href, label }) => (
@@ -82,14 +82,14 @@ export function Footer() {
             </ul>
           </div>
 
-          <div className="col-span-2 sm:col-span-1">
+          <div>
             <p className="text-sm leading-relaxed text-muted">
               整木行业知识基础设施，连接资讯、品牌、标准与会员共建。
             </p>
           </div>
         </div>
 
-        <div className="mt-6 flex flex-col gap-3 border-t border-border pt-4 text-center sm:mt-10 sm:grid sm:grid-cols-3 sm:items-center sm:pt-6">
+        <div className="mt-5 flex flex-col gap-3 border-t border-border pt-4 text-center sm:mt-10 sm:grid sm:grid-cols-3 sm:items-center sm:pt-6">
           <p className="text-sm text-primary/85 sm:text-left">整木网</p>
           <p className="text-xs text-muted">
             工信部ICP备案：

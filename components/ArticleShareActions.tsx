@@ -7,9 +7,10 @@ type ArticleShareActionsProps = {
   title: string;
   shareUrl: string;
   siteName: string;
+  className?: string;
 };
 
-export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareActionsProps) {
+export function ArticleShareActions({ title, shareUrl, siteName, className = "mt-3 sm:mt-8" }: ArticleShareActionsProps) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [qrLoadFailed, setQrLoadFailed] = useState(false);
@@ -242,7 +243,7 @@ export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareA
       : null;
 
   return (
-    <div className="relative z-20 mt-3 flex justify-end sm:mt-8">
+    <div className={`relative z-20 flex justify-end ${className}`}>
       <button
         ref={triggerRef}
         type="button"
