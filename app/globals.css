@@ -785,9 +785,9 @@ html[data-motion-tier="low"] .mouse-parallax {
 }
 .rich-editor-content img {
   display: block;
-  width: auto !important;
+  width: auto;
   max-width: 100%;
-  height: auto !important;
+  height: auto;
   margin: 1rem auto;
   border-radius: 18px;
   object-fit: contain;
@@ -898,7 +898,6 @@ html[data-motion-tier="low"] .mouse-parallax {
 
 @media (max-width: 640px) {
   .rich-editor-content img {
-    width: 100% !important;
     border-radius: 16px;
     margin: 0.9rem auto;
   }
