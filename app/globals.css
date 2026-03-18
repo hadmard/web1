@@ -783,6 +783,15 @@ html[data-motion-tier="low"] .mouse-parallax {
   margin: 0.6em 0;
   font-weight: 400;
 }
+.rich-editor-content img {
+  display: block;
+  width: auto !important;
+  max-width: 100%;
+  height: auto !important;
+  margin: 1rem auto;
+  border-radius: 18px;
+  object-fit: contain;
+}
 .rich-editor-content li,
 .rich-editor-content blockquote,
 .rich-editor-content td,
@@ -871,6 +880,32 @@ html[data-motion-tier="low"] .mouse-parallax {
 }
 .rich-editor-content li {
   margin: 0.25em 0;
+}
+.rich-editor-content blockquote {
+  margin: 1rem 0;
+  padding: 0.15rem 0 0.15rem 0.9rem;
+  border-left: 3px solid color-mix(in srgb, var(--color-accent) 38%, var(--color-border));
+  color: var(--color-muted);
+  font-style: normal;
+}
+.rich-editor-content blockquote p {
+  margin: 0;
+}
+.rich-editor-content blockquote p::before,
+.rich-editor-content blockquote p::after {
+  content: none !important;
+}
+
+@media (max-width: 640px) {
+  .rich-editor-content img {
+    width: 100% !important;
+    border-radius: 16px;
+    margin: 0.9rem auto;
+  }
+  .rich-editor-content blockquote {
+    padding-left: 0.7rem;
+    border-left-width: 2px;
+  }
 }
 
 .article-diff .diff-same {
