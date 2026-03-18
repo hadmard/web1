@@ -17,7 +17,7 @@ export const revalidate = 300;
 export const dynamic = "force-dynamic";
 
 const SHARE_SITE_NAME = "中华整木网";
-const DEFAULT_NEWS_SHARE_IMAGE = "/images/seedance2/picture_1.jpg";
+const DEFAULT_NEWS_SHARE_IMAGE = "/api/og/news-default";
 
 type Props = {
   params: Promise<{ slug: string }>;
