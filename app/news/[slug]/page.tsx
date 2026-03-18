@@ -180,7 +180,7 @@ export default async function ArticlePage({ params, searchParams }: Props) {
       <JsonLd data={breadcrumbSchema} />
 
       <div className="mx-auto max-w-[860px]">
-        <nav className="mb-7 flex flex-wrap items-center gap-x-2 gap-y-2 text-sm text-muted" aria-label="面包屑">
+        <nav className="mb-8 flex flex-wrap items-center gap-x-2 gap-y-2 text-sm text-muted" aria-label="面包屑">
           <Link href="/" className="hover:text-accent">首页</Link>
           <span>/</span>
           <Link href="/news" className="hover:text-accent">整木资讯</Link>
@@ -189,17 +189,17 @@ export default async function ArticlePage({ params, searchParams }: Props) {
         </nav>
 
         <header className="px-1 sm:px-0">
-          <h1 className="max-w-[18ch] font-serif text-[2.1rem] font-semibold leading-[1.22] tracking-tight text-primary sm:text-[3rem]">
+          <h1 className="max-w-[20ch] font-serif text-[1.88rem] font-semibold leading-[1.28] tracking-[-0.01em] text-primary sm:text-[2.45rem]">
             {article.title}
           </h1>
 
           {article.conceptSummary ? (
-            <p className="mt-4 max-w-2xl text-[15px] leading-7 text-muted sm:text-base">
+            <p className="mt-5 max-w-[42rem] text-[15px] leading-7 text-muted sm:text-base">
               {article.conceptSummary}
             </p>
           ) : null}
 
-          <div className="mt-5 flex flex-wrap items-center gap-3 text-sm text-muted">
+          <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted">
             {article.updatedAt ? <span>更新时间：{new Date(article.updatedAt).toLocaleDateString("zh-CN")}</span> : null}
             {article.versionLabel ? <span>版本：{article.versionLabel}</span> : null}
           </div>
