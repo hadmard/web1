@@ -9,20 +9,11 @@ type ArticleShareActionsProps = {
   siteName: string;
 };
 
-type DesktopPosition = {
-  top: number;
-  left: number;
-};
-
-const DESKTOP_CARD_WIDTH = 312;
-const DESKTOP_CARD_HEIGHT = 338;
-
 export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareActionsProps) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [qrLoadFailed, setQrLoadFailed] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [desktopPosition, setDesktopPosition] = useState<DesktopPosition>({ top: 120, left: 24 });
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const popupRef = useRef<HTMLDivElement | null>(null);
 
@@ -83,36 +74,6 @@ export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareA
     return () => window.clearTimeout(timer);
   }, [copied]);
 
-  useEffect(() => {
-    if (!open) return;
-    if (window.innerWidth < 768) return;
-
-    const updatePosition = () => {
-      const rect = triggerRef.current?.getBoundingClientRect();
-      if (!rect) return;
-
-      const gap = 14;
-      let left = rect.right - DESKTOP_CARD_WIDTH;
-      left = Math.max(16, Math.min(left, window.innerWidth - DESKTOP_CARD_WIDTH - 16));
-
-      let top = rect.top - DESKTOP_CARD_HEIGHT - gap;
-      if (top < 16) {
-        top = 16;
-      }
-
-      setDesktopPosition({ top, left });
-    };
-
-    updatePosition();
-    window.addEventListener("resize", updatePosition);
-    window.addEventListener("scroll", updatePosition, true);
-
-    return () => {
-      window.removeEventListener("resize", updatePosition);
-      window.removeEventListener("scroll", updatePosition, true);
-    };
-  }, [open]);
-
   async function handleCopyLink() {
     try {
       await navigator.clipboard.writeText(shareUrl);
@@ -122,56 +83,51 @@ export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareA
     }
   }
 
-  function handleDesktopWheel(event: React.WheelEvent<HTMLDivElement>) {
-    event.preventDefault();
-    window.scrollBy({ top: event.deltaY, behavior: "auto" });
-  }
-
   const desktopPopup =
     mounted && open
       ? createPortal(
-          <div
-            ref={popupRef}
-            className="fixed z-[260] hidden w-[312px] rounded-[24px] border border-[rgba(15,23,42,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.99),rgba(245,247,250,0.99))] p-4 shadow-[0_20px_48px_rgba(15,23,42,0.15),inset_0_1px_0_rgba(255,255,255,0.98)] md:block"
-            style={{ top: `${desktopPosition.top}px`, left: `${desktopPosition.left}px` }}
-            onWheel={handleDesktopWheel}
-          >
-            <div className="mb-2.5 flex items-center justify-between gap-3">
-              <p className="text-[13px] font-medium tracking-[0.08em] text-[#111827]">微信扫码分享</p>
-              <button
-                type="button"
-                aria-label="关闭分享卡片"
-                onClick={() => setOpen(false)}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[rgba(15,23,42,0.08)] bg-white text-[#374151] hover:bg-[#f3f4f6]"
-              >
-                ×
-              </button>
-            </div>
+          <div className="pointer-events-none fixed inset-0 z-[260] hidden md:block">
+            <div
+              ref={popupRef}
+              className="pointer-events-auto absolute left-1/2 top-1/2 w-[312px] -translate-x-1/2 -translate-y-1/2 rounded-[24px] border border-[rgba(15,23,42,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.99),rgba(245,247,250,0.99))] p-4 shadow-[0_20px_48px_rgba(15,23,42,0.15),inset_0_1px_0_rgba(255,255,255,0.98)]"
+            >
+              <div className="mb-2.5 flex items-center justify-between gap-3">
+                <p className="text-[13px] font-medium tracking-[0.08em] text-[#111827]">微信扫码分享</p>
+                <button
+                  type="button"
+                  aria-label="关闭分享卡片"
+                  onClick={() => setOpen(false)}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[rgba(15,23,42,0.08)] bg-white text-[#374151] hover:bg-[#f3f4f6]"
+                >
+                  ×
+                </button>
+              </div>
 
-            <div className="rounded-[18px] bg-white p-2.5 shadow-[0_10px_24px_rgba(15,23,42,0.07)]">
-              {qrLoadFailed ? (
-                <div className="flex min-h-[210px] flex-col items-center justify-center gap-3 rounded-[14px] border border-dashed border-[rgba(15,23,42,0.12)] px-4 py-5 text-center">
-                  <p className="text-sm leading-6 text-[#4b5563]">二维码暂时生成失败，可先复制链接后发送到微信。</p>
-                  <button
-                    type="button"
-                    onClick={handleCopyLink}
-                    className="rounded-full bg-[#111827] px-4 py-2 text-sm font-medium text-white"
-                  >
-                    {copied ? "已复制链接" : "复制分享链接"}
-                  </button>
-                </div>
-              ) : (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={qrUrl}
-                  alt={`${title} 分享二维码`}
-                  width={232}
-                  height={232}
-                  className="mx-auto h-auto w-full max-w-[232px] rounded-[14px]"
-                  loading="lazy"
-                  onError={() => setQrLoadFailed(true)}
-                />
-              )}
+              <div className="rounded-[18px] bg-white p-2.5 shadow-[0_10px_24px_rgba(15,23,42,0.07)]">
+                {qrLoadFailed ? (
+                  <div className="flex min-h-[210px] flex-col items-center justify-center gap-3 rounded-[14px] border border-dashed border-[rgba(15,23,42,0.12)] px-4 py-5 text-center">
+                    <p className="text-sm leading-6 text-[#4b5563]">二维码暂时生成失败，可先复制链接后发送到微信。</p>
+                    <button
+                      type="button"
+                      onClick={handleCopyLink}
+                      className="rounded-full bg-[#111827] px-4 py-2 text-sm font-medium text-white"
+                    >
+                      {copied ? "已复制链接" : "复制分享链接"}
+                    </button>
+                  </div>
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={qrUrl}
+                    alt={`${title} 分享二维码`}
+                    width={232}
+                    height={232}
+                    className="mx-auto h-auto w-full max-w-[232px] rounded-[14px]"
+                    loading="lazy"
+                    onError={() => setQrLoadFailed(true)}
+                  />
+                )}
+              </div>
             </div>
           </div>,
           document.body
