@@ -404,10 +404,17 @@ export function RichEditor({ value, onChange, minHeight = 260, placeholder = "�
       </div>
 
       {isImageActive && (
-        <div className="px-3 py-2 border-b border-border flex flex-wrap items-center gap-2 text-xs">
-          <span className="text-muted">图片尺寸</span>
+        <div className="border-b border-[rgba(194,182,154,0.36)] bg-[linear-gradient(180deg,rgba(255,252,246,0.98),rgba(246,240,231,0.92))] px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)]">
+          <div className="mb-2 flex items-center gap-2">
+            <span className="rounded-full border border-[rgba(170,154,122,0.32)] bg-white/78 px-2 py-0.5 text-[11px] font-medium tracking-[0.04em] text-[#7b6647]">
+              已选中图片
+            </span>
+            <span className="text-[11px] text-[#8d7a5a]">可调整尺寸与对齐</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <span className="text-[#8d7a5a]">图片尺寸</span>
           <input
-            className="w-36 border border-border rounded px-2 py-1 bg-surface"
+            className="w-36 rounded-lg border border-[rgba(194,182,154,0.34)] bg-white/92 px-2.5 py-1.5 shadow-[inset_0_1px_1px_rgba(15,23,42,0.03)]"
             value={imgWidth}
             inputMode="numeric"
             onChange={(e) => onWidthChange(e.target.value.replace(/[^\d]/g, ""))}
@@ -420,7 +427,7 @@ export function RichEditor({ value, onChange, minHeight = 260, placeholder = "�
             placeholder="宽（默认420）"
           />
           <input
-            className="w-28 border border-border rounded px-2 py-1 bg-surface"
+            className="w-28 rounded-lg border border-[rgba(194,182,154,0.34)] bg-white/92 px-2.5 py-1.5 shadow-[inset_0_1px_1px_rgba(15,23,42,0.03)]"
             value={imgHeight}
             inputMode="numeric"
             onChange={(e) => onHeightChange(e.target.value.replace(/[^\d]/g, ""))}
@@ -432,14 +439,15 @@ export function RichEditor({ value, onChange, minHeight = 260, placeholder = "�
             }}
             placeholder="高"
           />
-          <label className="inline-flex items-center gap-1 text-muted">
+          <label className="inline-flex items-center gap-1 text-[#8d7a5a]">
             <input type="checkbox" checked={lockRatio} onChange={(e) => setLockRatio(e.target.checked)} />
             同比例
           </label>
           <ToolButton label="应用尺寸" onClick={applyImageSize} />
-          <ToolButton label="图片居左" onClick={() => void updateSelectedImage({ align: "left" })} />
-          <ToolButton label="图片居中" onClick={() => void updateSelectedImage({ align: "center" })} />
-          <ToolButton label="图片居右" onClick={() => void updateSelectedImage({ align: "right" })} />
+          <ToolButton label="居左" onClick={() => void updateSelectedImage({ align: "left" })} />
+          <ToolButton label="居中" onClick={() => void updateSelectedImage({ align: "center" })} />
+          <ToolButton label="居右" onClick={() => void updateSelectedImage({ align: "right" })} />
+          </div>
         </div>
       )}
 
