@@ -78,8 +78,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         select: { slug: true, updatedAt: true },
       }),
       prisma.article.findMany({
-        where: { publishedAt: { not: null } },
-        select: { id: true, slug: true, updatedAt: true, publishedAt: true },
+        where: {
+          status: "approved",
+          publishedAt: { not: null },
+          OR: [{ categoryHref: { startsWith: "/news" } }, { subHref: { startsWith: "/news" } }],
+        },
+        select: { id: true, updatedAt: true, publishedAt: true },
       }),
       prisma.tag.findMany({ select: { type: true, slug: true, updatedAt: true } }),
     ]);

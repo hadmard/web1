@@ -13,7 +13,8 @@ export async function generateMetadata(): Promise<Metadata> {
   return buildCategoryMetadata(
     "/news",
     "整木资讯",
-    "整木资讯栏目，聚合行业趋势、企业动态、技术发展与行业活动信息。"
+    "整木资讯栏目，聚合行业趋势、企业动态、技术发展与行业活动信息。",
+    "/api/og/news-default"
   );
 }
 
