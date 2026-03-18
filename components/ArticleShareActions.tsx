@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 type ArticleShareActionsProps = {
@@ -25,7 +25,7 @@ export function ArticleShareActions({ title, shareUrl, siteName, className = "mt
     return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${data}`;
   }, [shareUrl]);
 
-  function warmQrCode() {
+  const warmQrCode = useCallback(() => {
     if (typeof window === "undefined" || qrWarmStartedRef.current) return;
 
     qrWarmStartedRef.current = true;
@@ -36,7 +36,7 @@ export function ArticleShareActions({ title, shareUrl, siteName, className = "mt
     image.onload = () => setQrReady(true);
     image.onerror = () => setQrLoadFailed(true);
     image.src = qrUrl;
-  }
+  }, [qrUrl]);
 
   useEffect(() => {
     setMounted(true);
@@ -47,13 +47,13 @@ export function ArticleShareActions({ title, shareUrl, siteName, className = "mt
     setQrReady(false);
     setQrLoadFailed(false);
     warmQrCode();
-  }, [qrUrl]);
+  }, [qrUrl, warmQrCode]);
 
   useEffect(() => {
     if (open) {
       warmQrCode();
     }
-  }, [open, qrUrl]);
+  }, [open, warmQrCode]);
 
   useEffect(() => {
     function handlePointerDown(event: MouseEvent) {
