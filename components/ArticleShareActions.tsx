@@ -190,9 +190,9 @@ export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareA
         </button>
 
         {open ? (
-          <div className="mt-4 hidden w-[min(92vw,360px)] rounded-[28px] border border-[rgba(15,23,42,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.99),rgba(245,247,250,0.99))] p-5 shadow-[0_24px_60px_rgba(15,23,42,0.18),inset_0_1px_0_rgba(255,255,255,0.98)] md:block">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <p className="text-sm font-medium text-[#111827]">微信扫码分享</p>
+          <div className="mt-4 hidden w-[min(88vw,312px)] rounded-[24px] border border-[rgba(15,23,42,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.99),rgba(245,247,250,0.99))] p-4 shadow-[0_20px_48px_rgba(15,23,42,0.15),inset_0_1px_0_rgba(255,255,255,0.98)] md:block">
+            <div className="mb-2.5 flex items-center justify-between gap-3">
+              <p className="text-[13px] font-medium tracking-[0.08em] text-[#111827]">微信扫码分享</p>
               <button
                 type="button"
                 aria-label="关闭分享卡片"
@@ -203,9 +203,9 @@ export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareA
               </button>
             </div>
 
-            <div className="rounded-[20px] bg-white p-3 shadow-[0_10px_30px_rgba(15,23,42,0.08)]">
+            <div className="rounded-[18px] bg-white p-2.5 shadow-[0_10px_24px_rgba(15,23,42,0.07)]">
               {qrLoadFailed ? (
-                <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-[16px] border border-dashed border-[rgba(15,23,42,0.12)] px-4 py-5 text-center">
+                <div className="flex min-h-[210px] flex-col items-center justify-center gap-3 rounded-[14px] border border-dashed border-[rgba(15,23,42,0.12)] px-4 py-5 text-center">
                   <p className="text-sm leading-6 text-[#4b5563]">二维码暂时生成失败，可先复制链接后发送到微信。</p>
                   <button
                     type="button"
@@ -220,16 +220,16 @@ export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareA
                 <img
                   src={qrUrl}
                   alt={`${title} 分享二维码`}
-                  width={280}
-                  height={280}
-                  className="mx-auto h-auto w-full max-w-[280px] rounded-[16px]"
+                  width={232}
+                  height={232}
+                  className="mx-auto h-auto w-full max-w-[232px] rounded-[14px]"
                   loading="lazy"
                   onError={() => setQrLoadFailed(true)}
                 />
               )}
             </div>
 
-            <p className="mt-4 text-center text-sm tracking-[0.08em] text-[#4b5563]">
+            <p className="mt-3 text-center text-xs tracking-[0.06em] text-[#6b7280]">
               {qrLoadFailed ? "复制链接后可直接转发" : "页面可继续滚动，二维码会随页面一起移动"}
             </p>
           </div>
