@@ -182,7 +182,7 @@ export default async function ArticlePage({ params, searchParams }: Props) {
 
         <div className="mt-8 rounded-[24px] border border-border bg-surface-elevated px-5 py-7 sm:px-7 sm:py-8">
           <RichContent html={article.content} className="prose prose-neutral dark:prose-invert max-w-none" />
-          <div className="mt-6 border-t border-border/70 pt-4">
+          <div className="mt-5 pt-1 sm:mt-6 sm:pt-2">
             <ArticleShareActions
               title={article.title}
               shareUrl={shareEntryUrl}

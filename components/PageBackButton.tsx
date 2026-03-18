@@ -42,16 +42,18 @@ export function PageBackButton() {
   };
 
   return (
-    <div className="sticky top-20 sm:top-24 z-40 max-w-6xl mx-auto px-4 sm:px-6 pt-3 sm:pt-4 pb-2 pointer-events-none">
+    <div className="sticky top-[4.65rem] sm:top-24 z-40 mx-auto max-w-6xl px-4 pb-2 pt-2.5 pointer-events-none sm:px-6 sm:pt-4">
       <button
         type="button"
         onClick={handleBack}
-        className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-border bg-surface-elevated/95 shadow-sm backdrop-blur px-3.5 py-2 text-sm text-primary transition-colors hover:border-accent/40 hover:text-accent"
+        className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-white/70 bg-[rgba(255,255,255,0.9)] px-3 py-1.5 text-[13px] font-medium text-primary shadow-[0_10px_28px_rgba(15,23,42,0.08)] backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:border-accent/25 hover:text-accent sm:px-3.5 sm:py-2 sm:text-sm"
       >
-        <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor" aria-hidden="true">
-          <path d="M11.7 4.3a1 1 0 0 1 0 1.4L8.4 9H16a1 1 0 1 1 0 2H8.4l3.3 3.3a1 1 0 1 1-1.4 1.4l-5-5a1 1 0 0 1 0-1.4l5-5a1 1 0 0 1 1.4 0Z" />
-        </svg>
-        <span>{"\u8fd4\u56de\u4e0a\u4e00\u5c42"}</span>
+        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[rgba(15,23,42,0.04)] text-primary/80 sm:h-8 sm:w-8">
+          <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor" aria-hidden="true">
+            <path d="M11.7 4.3a1 1 0 0 1 0 1.4L8.4 9H16a1 1 0 1 1 0 2H8.4l3.3 3.3a1 1 0 1 1-1.4 1.4l-5-5a1 1 0 0 1 0-1.4l5-5a1 1 0 0 1 1.4 0Z" />
+          </svg>
+        </span>
+        <span className="pr-0.5">{"\u8fd4\u56de\u4e0a\u4e00\u5c42"}</span>
       </button>
     </div>
   );
