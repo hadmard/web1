@@ -12,6 +12,8 @@ import { ArticleShareActions } from "@/components/ArticleShareActions";
 import { buildNewsPath, buildNewsShareEntryUrl, buildPublicNewsUrl } from "@/lib/share-config";
 import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
 import { DEFAULT_NEWS_SHARE_IMAGE, findNewsArticleBySegment, normalizeNewsSegment, resolveArticleShareImage } from "@/lib/news-sharing";
+import { prisma } from "@/lib/prisma";
+import { articleOrderByPinnedLatest } from "@/lib/articles";
 
 export const revalidate = 300;
 export const dynamic = "force-dynamic";
@@ -34,6 +36,13 @@ const NEWS_SUBCATEGORY_META: Record<string, { title: string; description: string
     title: "行业活动",
     description: "整木资讯行业活动栏目，聚合展会、峰会、论坛与行业重要事件。",
   },
+};
+
+const NEWS_SUBCATEGORY_HREFS: Record<string, string> = {
+  trends: "/news/trends",
+  enterprise: "/news/enterprise",
+  tech: "/news/tech",
+  events: "/news/events",
 };
 
 type Props = {
@@ -91,7 +100,111 @@ function getHeadlineClass(title: string) {
 export default async function ArticlePage({ params, searchParams }: Props) {
   const { slug } = await params;
   if (NEWS_SUB_SLUGS.has(slug)) {
-    redirect(`/news/all?sub=${encodeURIComponent(`/news/${slug}`)}`);
+    const subMeta = NEWS_SUBCATEGORY_META[slug];
+    const subHref = NEWS_SUBCATEGORY_HREFS[slug];
+    const siblingLinks = Object.entries(NEWS_SUBCATEGORY_META).map(([key, meta]) => ({
+      href: `/news/${key}`,
+      title: meta.title,
+      active: key === slug,
+    }));
+    const items = await prisma.article.findMany({
+      where: {
+        status: "approved",
+        OR: [{ subHref }, { categoryHref: subHref }],
+      },
+      orderBy: articleOrderByPinnedLatest,
+      take: 24,
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        excerpt: true,
+        publishedAt: true,
+        updatedAt: true,
+      },
+    });
+
+    return (
+      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-12">
+        <nav className="mb-8 flex flex-wrap items-center gap-x-2 gap-y-2 text-sm text-muted" aria-label="面包屑">
+          <Link href="/" className="hover:text-accent">首页</Link>
+          <span>/</span>
+          <Link href="/news" className="hover:text-accent">整木资讯</Link>
+          <span>/</span>
+          <span className="text-primary">{subMeta.title}</span>
+        </nav>
+
+        <section className="glass-panel overflow-hidden p-7 sm:p-9">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-3xl">
+              <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-[#8c7650]">News Channel</p>
+              <h1 className="mt-3 font-serif text-[2.2rem] font-semibold tracking-tight text-primary sm:text-[3rem]">
+                {subMeta.title}
+              </h1>
+              <p className="mt-4 text-sm leading-7 text-muted sm:text-[15px]">
+                {subMeta.description}
+              </p>
+            </div>
+
+            <div className="inline-flex w-fit items-center rounded-full border border-[rgba(194,182,154,0.26)] bg-[linear-gradient(180deg,rgba(255,252,246,0.98),rgba(246,240,231,0.94))] px-4 py-2 text-sm text-[#7d6846] shadow-[0_10px_24px_rgba(15,23,42,0.05),inset_0_1px_0_rgba(255,255,255,0.92)]">
+              共 {items.length} 篇资讯
+            </div>
+          </div>
+
+          <div className="mt-7 flex flex-wrap items-center gap-2.5">
+            {siblingLinks.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`rounded-full border px-3.5 py-1.5 text-sm transition-colors ${
+                  item.active
+                    ? "border-[rgba(180,154,107,0.42)] bg-[rgba(255,255,255,0.88)] text-[#8a734d] shadow-[0_8px_22px_rgba(180,154,107,0.12)]"
+                    : "border-border bg-white/70 text-muted hover:text-primary"
+                }`}
+              >
+                {item.title}
+              </Link>
+            ))}
+            <Link
+              href={`/news/all?sub=${encodeURIComponent(subHref)}`}
+              className="ml-auto inline-flex items-center rounded-full border border-border bg-white/72 px-4 py-2 text-sm text-primary transition-colors hover:border-accent/45 hover:text-accent"
+            >
+              高级筛选
+            </Link>
+          </div>
+        </section>
+
+        <section className="mt-8 rounded-[28px] border border-border bg-[rgba(255,255,255,0.82)] p-5 sm:p-6">
+          {items.length === 0 ? (
+            <p className="text-sm text-muted">当前栏目还没有已发布内容。</p>
+          ) : (
+            <ul className="grid gap-4">
+              {items.map((item) => (
+                <li key={item.id} className="rounded-[22px] border border-border bg-surface-elevated p-5 sm:p-6">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 text-xs uppercase tracking-[0.08em] text-muted">
+                      <span className="inline-block h-1.5 w-1.5 rounded-full bg-[rgba(180,154,107,0.86)]" />
+                      <span>{subMeta.title}</span>
+                    </div>
+                    <span className="text-xs text-muted">
+                      {(item.publishedAt ?? item.updatedAt).toLocaleDateString("zh-CN")}
+                    </span>
+                  </div>
+                  <Link href={buildNewsPath(item.id)} className="mt-3 block text-[1.1rem] font-medium leading-8 text-primary hover:text-accent">
+                    {item.title}
+                  </Link>
+                  {item.excerpt ? (
+                    <p className="mt-3 line-clamp-3 text-sm leading-7 text-muted">
+                      {item.excerpt}
+                    </p>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+    );
   }
 
   const article = await findNewsArticleBySegment(slug);

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { articleOrderByPinnedLatest, articleOrderByPinnedOldest } from "@/lib/articles";
 import { buildNewsPath } from "@/lib/share-config";
@@ -73,6 +74,20 @@ export default async function NewsAllPage({ searchParams }: Props) {
   const sort = (params.sort === "oldest" ? "oldest" : "latest") as SortKey;
   const page = Math.max(1, parseInt(params.page ?? "1", 10) || 1);
   const skip = (page - 1) * PAGE_SIZE;
+
+  const matchedSubSlug = SUB_OPTIONS.find((item) => item.value === sub)?.value?.replace("/news/", "") ?? null;
+  const hasOnlySubcategoryFilter =
+    Boolean(matchedSubSlug) &&
+    !q &&
+    !(params.start ?? "").trim() &&
+    !(params.end ?? "").trim() &&
+    !range &&
+    sort === "latest" &&
+    page === 1;
+
+  if (hasOnlySubcategoryFilter && matchedSubSlug) {
+    redirect(`/news/${matchedSubSlug}`);
+  }
 
   const explicitStart = parseDate(params.start);
   const explicitEnd = parseDate(params.end);

@@ -33,9 +33,6 @@ export function Header({
   const [readingProgress, setReadingProgress] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileExpanded, setMobileExpanded] = useState<string | null>(null);
-  const [memberGreeting, setMemberGreeting] = useState<string | null>(
-    initialMe ? `${initialMe.name}，你好` : null
-  );
   const [memberHref, setMemberHref] = useState<string>(
     initialMe && (initialMe.role === "SUPER_ADMIN" || initialMe.role === "ADMIN")
       ? "/membership/admin"
@@ -55,7 +52,6 @@ export function Header({
       });
       if (!res.ok) {
         setMe(null);
-        setMemberGreeting(null);
         setMemberHref("/membership");
         return;
       }
@@ -64,7 +60,6 @@ export function Header({
       const name = typeof meData.name === "string" && meData.name.trim() ? meData.name.trim() : account;
       const role = typeof meData.role === "string" ? meData.role : null;
       setMe({ name, account, role });
-      setMemberGreeting(`${name}，你好`);
       setMemberHref(role === "SUPER_ADMIN" || role === "ADMIN" ? "/membership/admin" : "/membership/content/publish?tab=articles");
     } catch {
       // ignore
@@ -150,7 +145,6 @@ export function Header({
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
     setMe(null);
-    setMemberGreeting(null);
     setMemberHref("/membership");
     closeMobileMenu();
     router.push("/membership");
@@ -183,9 +177,8 @@ export function Header({
                 : showBrandsFallback
                   ? [{ href, label: "更多详情" }]
                   : [];
-              const finalLabel = isMemberItem && memberGreeting ? memberGreeting : label;
+              const finalLabel = label;
               const finalHref = isMemberItem ? memberHref : href;
-              const avatarText = (me?.name || me?.account || "会").trim().slice(0, 1).toUpperCase();
 
               return (
                 <div
@@ -204,16 +197,7 @@ export function Header({
                         : "text-[var(--color-muted)] hover:text-[var(--color-primary)] hover:bg-[color-mix(in_srgb,var(--color-surface-elevated)_82%,transparent)]"
                     }`}
                   >
-                    {isMemberItem && me ? (
-                      <span className="inline-flex items-center gap-1.5">
-                        <span className="inline-flex h-[18px] w-[18px] items-center justify-center rounded-full bg-[rgba(201,189,161,0.24)] text-[10px] font-semibold text-primary/85 ring-1 ring-[rgba(194,182,154,0.22)]">
-                          {avatarText}
-                        </span>
-                        <span>{finalLabel}</span>
-                      </span>
-                    ) : (
-                      finalLabel
-                    )}
+                    {finalLabel}
                   </Link>
 
                   {isMemberItem && (
@@ -337,7 +321,7 @@ export function Header({
             <nav className="mt-3 space-y-2" aria-label="移动端主导航">
               {navItems.map(({ href, label, isMembership, external, subcategories }) => {
                 const isMemberItem = href === "/membership";
-                const finalLabel = isMemberItem && memberGreeting ? memberGreeting : label;
+                const finalLabel = label;
                 const finalHref = isMemberItem ? memberHref : href;
                 const hasSubcategories = Boolean(subcategories && subcategories.length > 0);
                 const showBrandsFallback = href === "/brands" && !hasSubcategories;
@@ -348,8 +332,6 @@ export function Header({
                     : [];
                 const hasMoreOptions = isMemberItem || mobileSubItems.length > 0;
                 const expanded = mobileExpanded === href;
-                const avatarText = (me?.name || me?.account || "会").trim().slice(0, 1).toUpperCase();
-
                 return (
                   <div key={href} className="rounded-xl border border-border bg-surface-elevated/65 p-2">
                     <div className="flex items-center gap-1.5">
@@ -365,11 +347,6 @@ export function Header({
                         }`}
                       >
                         <span className="inline-flex items-center gap-2 min-w-0">
-                          {isMemberItem && me && (
-                            <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[rgba(201,189,161,0.24)] text-[10px] font-semibold text-primary/85 ring-1 ring-[rgba(194,182,154,0.22)]">
-                              {avatarText}
-                            </span>
-                          )}
                           <span className="truncate">{finalLabel}</span>
                         </span>
                         <span className="text-[12px] opacity-70">进入</span>

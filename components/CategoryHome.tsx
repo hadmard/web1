@@ -53,7 +53,7 @@ export async function CategoryHome({
   const isNewsEditorial = isEditorial && basePath === "/news";
 
   const getSubHref = (href: string) => {
-    if (basePath === "/news") return `/news/all?sub=${encodeURIComponent(href)}`;
+    if (basePath === "/news") return href;
     return href;
   };
 
