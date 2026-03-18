@@ -23,6 +23,8 @@ const EXTENSION_MIME: Record<string, string> = {
   ".svg": "image/svg+xml",
 };
 
+const LEGACY_UPLOAD_HOSTS = new Set(["cnzhengmu.com", "www.cnzhengmu.com", "jiu.cnzhengmu.com"]);
+
 function sanitizeFolder(input: string) {
   const cleaned = input
     .split("/")
@@ -33,16 +35,63 @@ function sanitizeFolder(input: string) {
   return cleaned.length > 0 ? cleaned : ["misc"];
 }
 
-function toUploadDiskPath(src: string) {
+function normalizeUploadPathFromSrc(src: string) {
   const trimmed = src.trim();
-  if (!trimmed.startsWith("/uploads/")) return null;
-  const parts = trimmed
+  if (!trimmed) return "";
+  if (trimmed.startsWith("/uploads/")) return trimmed;
+
+  try {
+    const parsed = new URL(trimmed);
+    if (!LEGACY_UPLOAD_HOSTS.has(parsed.hostname.toLowerCase())) return "";
+    return parsed.pathname.startsWith("/uploads/") ? parsed.pathname : "";
+  } catch {
+    return "";
+  }
+}
+
+function toUploadDiskPath(src: string) {
+  const normalized = normalizeUploadPathFromSrc(src);
+  if (!normalized) return null;
+  const parts = normalized
     .replace(/^\/+/, "")
     .split("/")
     .map((segment) => segment.trim())
     .filter(Boolean);
   if (parts.length < 2 || parts[0] !== "uploads") return null;
   return path.join(process.cwd(), "public", ...parts);
+}
+
+async function fetchLegacyUpload(src: string) {
+  const uploadPath = normalizeUploadPathFromSrc(src);
+  if (!uploadPath) return null;
+
+  const candidates = [
+    `https://jiu.cnzhengmu.com${uploadPath}`,
+    `https://www.cnzhengmu.com${uploadPath}`,
+    `https://cnzhengmu.com${uploadPath}`,
+  ];
+
+  for (const candidate of candidates) {
+    try {
+      const response = await fetch(candidate, {
+        headers: { Accept: "image/*,*/*;q=0.8" },
+        cache: "force-cache",
+      });
+      if (!response.ok) continue;
+      const contentType = response.headers.get("content-type") || "application/octet-stream";
+      const body = await response.arrayBuffer();
+      return new NextResponse(body, {
+        headers: {
+          "Content-Type": contentType,
+          "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800",
+        },
+      });
+    } catch {
+      // try next candidate
+    }
+  }
+
+  return null;
 }
 
 export async function GET(request: Request) {
@@ -64,6 +113,8 @@ export async function GET(request: Request) {
       },
     });
   } catch {
+    const legacyResponse = await fetchLegacyUpload(src);
+    if (legacyResponse) return legacyResponse;
     return NextResponse.json({ error: "图片不存在" }, { status: 404 });
   }
 }
