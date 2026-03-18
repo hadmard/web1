@@ -3,16 +3,38 @@ import { PUBLIC_SITE_URL } from "@/lib/public-site-config";
 
 const FALLBACK_SITE_URL = PUBLIC_SITE_URL;
 
+function isPrivateHostname(hostname: string) {
+  const normalized = hostname.trim().toLowerCase();
+  if (!normalized) return true;
+  if (normalized === "localhost" || normalized === "127.0.0.1" || normalized === "::1") return true;
+  if (normalized.endsWith(".local")) return true;
+  if (/^10\./.test(normalized)) return true;
+  if (/^192\.168\./.test(normalized)) return true;
+  if (/^172\.(1[6-9]|2\d|3[0-1])\./.test(normalized)) return true;
+  return false;
+}
+
+function resolveConfiguredSiteUrl() {
+  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (!configured) return FALLBACK_SITE_URL;
+  try {
+    const parsed = new URL(configured);
+    if (isPrivateHostname(parsed.hostname)) {
+      return FALLBACK_SITE_URL;
+    }
+    return parsed.origin;
+  } catch {
+    return FALLBACK_SITE_URL;
+  }
+}
+
 export const SITE_NAME = "整木网";
 export const SITE_TITLE = `${SITE_NAME} | 整体木作行业知识共享平台`;
 export const SITE_DESCRIPTION =
   "整木网是整体木作行业知识共享平台，覆盖整木资讯、整木市场、整木词库、整木标准与整木评选。";
 
 export function getSiteUrl() {
-  if (process.env.NODE_ENV === "development") {
-    return process.env.NEXT_PUBLIC_SITE_URL?.trim() || FALLBACK_SITE_URL;
-  }
-  return FALLBACK_SITE_URL;
+  return resolveConfiguredSiteUrl();
 }
 
 export function absoluteUrl(path = "/") {
