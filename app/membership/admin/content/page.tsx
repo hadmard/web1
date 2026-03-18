@@ -44,6 +44,7 @@ import { uploadImageToServer } from "@/lib/client-image";
 import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
 import { buildGeoExcerpt, previewText } from "@/lib/text";
 import { suggestTagsForGeo } from "@/lib/tag-suggest";
+import { buildNewsPath } from "@/lib/share-config";
 import {
   createEmptyDocumentMetadata,
   parseDocumentMetadata,
@@ -196,18 +197,19 @@ function submitterLabel(user?: { name: string | null; email: string; role: strin
 function buildPreviewHref(
   categoryHref: string | null,
   subHref: string | null,
+  itemId: string | null,
   slug: string | null,
   fallbackTitle: string | null
 ) {
   const segment = (slug || fallbackTitle || "").trim();
-  if (!segment) return null;
+  if (!segment && !itemId) return null;
   const encoded = encodeURIComponent(segment);
   const tab = resolveTabKeyFromHref(categoryHref, subHref);
   if (tab === "brands") return `/brands/${encoded}`;
   if (tab === "terms") return `/dictionary/${encoded}`;
   if (tab === "standards") return `/standards/${encoded}`;
   if (tab === "awards") return `/awards/${encoded}`;
-  return `/news/${encoded}`;
+  return itemId ? buildNewsPath(itemId) : `/news/${encoded}`;
 }
 
 function buildAutoExcerpt(text: string) {
@@ -482,7 +484,7 @@ export default function AdminContentPage() {
     () =>
       items.map((item) => ({
         ...item,
-        previewHref: buildPreviewHref(item.categoryHref ?? null, item.subHref ?? null, item.slug ?? null, item.title),
+        previewHref: buildPreviewHref(item.categoryHref ?? null, item.subHref ?? null, item.id, item.slug ?? null, item.title),
       })),
     [items]
   );
@@ -590,6 +592,7 @@ export default function AdminContentPage() {
     const previewHref = buildPreviewHref(
       typeof data?.categoryHref === "string" ? data.categoryHref : selectedCategory.href,
       typeof data?.subHref === "string" ? data.subHref : subHref,
+      typeof data?.id === "string" ? data.id : null,
       typeof data?.slug === "string" ? data.slug : null,
       submittedTitle
     );

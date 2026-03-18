@@ -5,6 +5,7 @@ import { StructuredSearch } from "@/components/StructuredSearch";
 import { articleOrderByPinnedLatest } from "@/lib/articles";
 import { prisma } from "@/lib/prisma";
 import { buildNoIndexMetadata } from "@/lib/seo";
+import { buildNewsPath } from "@/lib/share-config";
 
 export const revalidate = 300;
 export const metadata: Metadata = buildNoIndexMetadata(
@@ -199,7 +200,7 @@ export default async function SearchPage({ searchParams }: Props) {
             <ul className="space-y-3">
               {news.map((item) => (
                 <li key={item.id} className="rounded-xl border border-border bg-surface-elevated p-3">
-                  <Link href={`/news/${item.slug || item.id}`} className="font-medium text-primary hover:text-accent">
+                  <Link href={buildNewsPath(item.id)} className="font-medium text-primary hover:text-accent">
                     {item.title}
                   </Link>
                   <p className="mt-1 text-sm text-muted">{excerpt(item.excerpt)}</p>

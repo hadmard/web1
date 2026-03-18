@@ -8,6 +8,7 @@ import { JsonLd } from "@/components/JsonLd";
 import { previewText } from "@/lib/text";
 import { RichContent } from "@/components/RichContent";
 import { NewsViewTracker } from "./NewsViewTracker";
+import { NewsUrlSync } from "./NewsUrlSync";
 import { buildPageMetadata } from "@/lib/seo";
 import { ArticleShareActions } from "@/components/ArticleShareActions";
 import { buildNewsPath, buildNewsShareEntryUrl, buildPublicNewsUrl } from "@/lib/share-config";
@@ -121,6 +122,7 @@ export default async function ArticlePage({ params, searchParams }: Props) {
 
   return (
     <article id="news-reading-article" className="max-w-3xl mx-auto px-4 py-10">
+      <NewsUrlSync canonicalPath={buildNewsPath(article.id)} />
       <NewsViewTracker slug={article.slug} />
       <JsonLd data={articleSchema} />
       <JsonLd data={breadcrumbSchema} />
