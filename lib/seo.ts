@@ -50,6 +50,7 @@ type PageMetadataOptions = {
   type?: "website" | "article";
   keywords?: string[];
   siteName?: string;
+  image?: string | null;
 };
 
 export function buildPageMetadata({
@@ -59,8 +60,10 @@ export function buildPageMetadata({
   type = "website",
   keywords,
   siteName = SITE_NAME,
+  image,
 }: PageMetadataOptions): Metadata {
   const url = absoluteUrl(path);
+  const imageUrl = image ? absoluteUrl(image) : undefined;
 
   return {
     title,
@@ -74,11 +77,13 @@ export function buildPageMetadata({
       siteName,
       locale: "zh_CN",
       type,
+      images: imageUrl ? [{ url: imageUrl }] : undefined,
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
+      images: imageUrl ? [imageUrl] : undefined,
     },
   };
 }

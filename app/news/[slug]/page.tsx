@@ -12,10 +12,12 @@ import { NewsUrlSync } from "./NewsUrlSync";
 import { buildPageMetadata } from "@/lib/seo";
 import { ArticleShareActions } from "@/components/ArticleShareActions";
 import { buildNewsPath, buildNewsShareEntryUrl, buildPublicNewsUrl } from "@/lib/share-config";
+import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
 export const revalidate = 300;
 export const dynamic = "force-dynamic";
 
 const SHARE_SITE_NAME = "中华整木网";
+const DEFAULT_NEWS_SHARE_IMAGE = "/images/seedance2/picture_1.jpg";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -60,18 +62,36 @@ async function findNewsArticleBySegment(segment: string) {
   });
 }
 
+function extractFirstContentImage(html: string | null | undefined) {
+  if (!html) return "";
+  const match = html.match(/<img[^>]+src=["']([^"']+)["']/i);
+  return match?.[1]?.trim() || "";
+}
+
+function resolveArticleShareImage(article: { coverImage?: string | null; content?: string | null }) {
+  const candidates = [
+    resolveUploadedImageUrl(article.coverImage),
+    resolveUploadedImageUrl(extractFirstContentImage(article.content)),
+    DEFAULT_NEWS_SHARE_IMAGE,
+  ];
+
+  return candidates.find((value) => Boolean(value && value.trim())) || DEFAULT_NEWS_SHARE_IMAGE;
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   if (NEWS_SUB_SLUGS.has(slug)) return { title: "整木资讯子栏目" };
   const article = await findNewsArticleBySegment(slug);
   if (!article || article.status !== "approved") return { title: "资讯" };
   const description = previewText(article.excerpt ?? article.content, 160);
+  const image = resolveArticleShareImage(article);
   return buildPageMetadata({
     title: article.title,
     description,
     path: buildNewsPath(article.id),
     type: "article",
     siteName: SHARE_SITE_NAME,
+    image,
   });
 }
 
@@ -99,6 +119,7 @@ export default async function ArticlePage({ params, searchParams }: Props) {
   const articleUrl = buildPublicNewsUrl(article.id);
   const shareEntryUrl = buildNewsShareEntryUrl(article.id);
   const publicBaseUrl = articleUrl.replace(/\/news\/.*$/, "");
+  const articleShareImage = resolveArticleShareImage(article);
 
   const articleSchema = {
     "@context": "https://schema.org",
@@ -108,6 +129,7 @@ export default async function ArticlePage({ params, searchParams }: Props) {
     datePublished: article.publishedAt ?? article.updatedAt,
     dateModified: article.updatedAt,
     url: articleUrl,
+    image: [articleShareImage.startsWith("http") ? articleShareImage : `${publicBaseUrl}${articleShareImage}`],
   };
 
   const breadcrumbSchema = {
