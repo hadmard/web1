@@ -15,6 +15,7 @@ export type NavItem = {
 
 type MeState = {
   name: string;
+  displayName?: string | null;
   account: string;
   role: string | null;
 };
@@ -58,8 +59,10 @@ export function Header({
       const meData = await res.json();
       const account = (typeof meData.account === "string" && meData.account.trim()) || "会员";
       const name = typeof meData.name === "string" && meData.name.trim() ? meData.name.trim() : account;
+      const displayName =
+        typeof meData.displayName === "string" && meData.displayName.trim() ? meData.displayName.trim() : name;
       const role = typeof meData.role === "string" ? meData.role : null;
-      setMe({ name, account, role });
+      setMe({ name, displayName, account, role });
       setMemberHref(role === "SUPER_ADMIN" || role === "ADMIN" ? "/membership/admin" : "/membership/content/publish?tab=articles");
     } catch {
       // ignore
@@ -151,7 +154,7 @@ export function Header({
     router.refresh();
   }
 
-  const displayName = (me?.name || me?.account || "会员").trim();
+  const displayName = (me?.displayName || me?.name || me?.account || "会员").trim();
   const avatarText = displayName.slice(0, 1).toUpperCase();
 
   return (
@@ -466,3 +469,4 @@ export function Header({
     </>
   );
 }
+

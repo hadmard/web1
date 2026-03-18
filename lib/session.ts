@@ -8,6 +8,7 @@ export type Session = {
   sub: string;
   account: string;
   name: string | null;
+  displayName: string;
   email: string;
   role: string | null;
   memberType: MemberType;
@@ -33,10 +34,15 @@ export async function getSession(): Promise<Session | null> {
 
   let dbMember:
     | {
-        id: string;
-        email: string;
-        name: string | null;
-        role: string | null;
+      id: string;
+      email: string;
+      name: string | null;
+      enterprise?: {
+        companyShortName: string | null;
+        companyName: string | null;
+        contactPerson: string | null;
+      } | null;
+      role: string | null;
         memberType: string;
         rankingWeight: number;
         memberTypeExpiresAt: Date | null;
@@ -58,6 +64,13 @@ export async function getSession(): Promise<Session | null> {
         id: true,
         email: true,
         name: true,
+        enterprise: {
+          select: {
+            companyShortName: true,
+            companyName: true,
+            contactPerson: true,
+          },
+        },
         role: true,
         memberType: true,
         rankingWeight: true,
@@ -80,6 +93,13 @@ export async function getSession(): Promise<Session | null> {
         id: true,
         email: true,
         name: true,
+        enterprise: {
+          select: {
+            companyShortName: true,
+            companyName: true,
+            contactPerson: true,
+          },
+        },
         role: true,
         memberType: true,
         rankingWeight: true,
@@ -109,10 +129,19 @@ export async function getSession(): Promise<Session | null> {
     canEditAllContent: dbMember.canEditAllContent ?? false,
   });
 
+  const displayName =
+    dbMember.enterprise?.companyShortName?.trim() ||
+    dbMember.enterprise?.companyName?.trim() ||
+    dbMember.name?.trim() ||
+    dbMember.enterprise?.contactPerson?.trim() ||
+    dbMember.email.split("@")[0]?.trim() ||
+    "会员";
+
   return {
     sub: payload.sub,
     account: dbMember.email,
     name: dbMember.name ?? null,
+    displayName,
     email: payload.email,
     role: dbMember.role ?? payload.role ?? null,
     memberType: asMemberType(effective.memberType),

@@ -134,43 +134,64 @@ export default async function ArticlePage({ params, searchParams }: Props) {
           <span className="text-primary">{subMeta.title}</span>
         </nav>
 
-        <section className="glass-panel overflow-hidden p-7 sm:p-9">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+        <section className="glass-panel relative overflow-hidden p-7 sm:p-9">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(212,194,158,0.18),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(207,221,236,0.18),transparent_30%)]" />
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(194,182,154,0.58),transparent)]" />
+
+          <div className="relative flex flex-col gap-7 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-3xl">
-              <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-[#8c7650]">News Channel</p>
-              <h1 className="mt-3 font-serif text-[2.2rem] font-semibold tracking-tight text-primary sm:text-[3rem]">
+              <div className="inline-flex items-center gap-2 rounded-full border border-[rgba(194,182,154,0.3)] bg-[rgba(255,252,246,0.82)] px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-[#8c7650] shadow-[inset_0_1px_0_rgba(255,255,255,0.92)]">
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-[rgba(180,154,107,0.9)]" />
+                <span>News Channel</span>
+              </div>
+              <h1 className="mt-5 font-serif text-[2.25rem] font-semibold tracking-[-0.02em] text-primary sm:text-[3.3rem]">
                 {subMeta.title}
               </h1>
-              <p className="mt-4 text-sm leading-7 text-muted sm:text-[15px]">
+              <p className="mt-4 max-w-[46rem] text-sm leading-7 text-muted sm:text-[15px]">
                 {subMeta.description}
               </p>
+              <div className="mt-5 flex flex-wrap items-center gap-2.5 text-xs text-[#8f7b5a]">
+                <span className="rounded-full border border-[rgba(194,182,154,0.28)] bg-white/72 px-3 py-1.5">
+                  整木资讯栏目
+                </span>
+                <span className="rounded-full border border-[rgba(194,182,154,0.28)] bg-white/72 px-3 py-1.5">
+                  持续更新
+                </span>
+                <span className="rounded-full border border-[rgba(194,182,154,0.28)] bg-white/72 px-3 py-1.5">
+                  聚焦行业一线变化
+                </span>
+              </div>
             </div>
 
-            <div className="inline-flex w-fit items-center rounded-full border border-[rgba(194,182,154,0.26)] bg-[linear-gradient(180deg,rgba(255,252,246,0.98),rgba(246,240,231,0.94))] px-4 py-2 text-sm text-[#7d6846] shadow-[0_10px_24px_rgba(15,23,42,0.05),inset_0_1px_0_rgba(255,255,255,0.92)]">
-              共 {items.length} 篇资讯
+            <div className="flex flex-wrap items-center gap-3 lg:max-w-[17rem] lg:justify-end">
+              <div className="min-w-[9.5rem] rounded-[24px] border border-[rgba(194,182,154,0.28)] bg-[linear-gradient(180deg,rgba(255,252,246,0.98),rgba(246,240,231,0.94))] px-4 py-3 text-[#7d6846] shadow-[0_18px_38px_rgba(15,23,42,0.06),inset_0_1px_0_rgba(255,255,255,0.94)]">
+                <p className="text-[11px] uppercase tracking-[0.12em] text-[#a18d6b]">资讯规模</p>
+                <p className="mt-1 text-2xl font-semibold text-primary">{items.length}</p>
+                <p className="mt-1 text-xs text-[#8f7b5a]">当前栏目已发布内容</p>
+              </div>
+              <Link
+                href={`/news/all?sub=${encodeURIComponent(subHref)}`}
+                className="inline-flex items-center justify-center rounded-full border border-[rgba(194,182,154,0.26)] bg-white/76 px-4 py-2.5 text-sm text-primary transition-colors hover:border-accent/45 hover:text-accent"
+              >
+                高级筛选
+              </Link>
             </div>
           </div>
 
-          <div className="mt-7 flex flex-wrap items-center gap-2.5">
+          <div className="relative mt-8 flex flex-wrap items-center gap-2.5 border-t border-[rgba(194,182,154,0.18)] pt-5">
             {siblingLinks.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
                 className={`rounded-full border px-3.5 py-1.5 text-sm transition-colors ${
                   item.active
-                    ? "border-[rgba(180,154,107,0.42)] bg-[rgba(255,255,255,0.88)] text-[#8a734d] shadow-[0_8px_22px_rgba(180,154,107,0.12)]"
-                    : "border-border bg-white/70 text-muted hover:text-primary"
+                    ? "border-[rgba(180,154,107,0.42)] bg-[linear-gradient(180deg,rgba(255,252,246,0.96),rgba(246,240,231,0.94))] text-[#8a734d] shadow-[0_10px_22px_rgba(180,154,107,0.12)]"
+                    : "border-border bg-white/72 text-muted hover:text-primary"
                 }`}
               >
                 {item.title}
               </Link>
             ))}
-            <Link
-              href={`/news/all?sub=${encodeURIComponent(subHref)}`}
-              className="ml-auto inline-flex items-center rounded-full border border-border bg-white/72 px-4 py-2 text-sm text-primary transition-colors hover:border-accent/45 hover:text-accent"
-            >
-              高级筛选
-            </Link>
           </div>
         </section>
 
