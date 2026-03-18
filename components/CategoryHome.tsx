@@ -50,6 +50,8 @@ export async function CategoryHome({
   const defaultSearchHref = basePath === "/awards" ? "/tags" : `${basePath}/all`;
   const finalSearchHref = searchHref ?? defaultSearchHref;
   const isEditorial = variant === "editorial";
+  const isNewsEditorial = isEditorial && basePath === "/news";
+  const totalLatest = Object.values(subcategoryLatest ?? {}).reduce((sum, entries) => sum + entries.length, 0);
 
   const getSubHref = (href: string) => {
     if (basePath === "/news") return `/news/all?sub=${encodeURIComponent(href)}`;
@@ -67,57 +69,120 @@ export async function CategoryHome({
           <span className="font-medium text-primary">{displayTitle}</span>
         </nav>
 
-        <section className={`glass-panel ${isEditorial ? "p-7 sm:p-9" : "p-6 sm:p-8"}`}>
-          <div className={`flex flex-wrap items-start justify-between ${isEditorial ? "gap-5" : "gap-4"}`}>
-            <div className="flex items-start gap-4">
+        <section
+          className={`glass-panel ${
+            isNewsEditorial
+              ? "overflow-visible rounded-[32px] border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(247,248,250,0.92))] p-6 shadow-[0_30px_80px_-46px_rgba(15,23,42,0.35)] sm:p-8 lg:p-10"
+              : isEditorial
+                ? "p-7 sm:p-9"
+                : "p-6 sm:p-8"
+          }`}
+        >
+          <div className={`flex flex-wrap items-start justify-between ${isNewsEditorial ? "gap-8" : isEditorial ? "gap-5" : "gap-4"}`}>
+            <div className={`flex items-start gap-4 ${isNewsEditorial ? "max-w-3xl sm:gap-5" : ""}`}>
               {iconSrc ? (
                 <div
                   className={`flex shrink-0 items-center justify-center border border-border bg-surface text-accent ${
-                    isEditorial
-                      ? "h-16 w-16 rounded-[22px] shadow-[0_16px_32px_-24px_rgba(15,23,42,0.35)] sm:h-[72px] sm:w-[72px]"
-                      : "h-14 w-14 rounded-2xl sm:h-16 sm:w-16"
+                    isNewsEditorial
+                      ? "h-16 w-16 rounded-[24px] border-white/80 bg-white/88 shadow-[0_18px_44px_-28px_rgba(15,23,42,0.28)] backdrop-blur sm:h-20 sm:w-20"
+                      : isEditorial
+                        ? "h-16 w-16 rounded-[22px] shadow-[0_16px_32px_-24px_rgba(15,23,42,0.35)] sm:h-[72px] sm:w-[72px]"
+                        : "h-14 w-14 rounded-2xl sm:h-16 sm:w-16"
                   }`}
                 >
-                  <Image src={iconSrc} alt="" width={42} height={42} className="h-10 w-10 sm:h-11 sm:w-11" />
+                  <Image
+                    src={iconSrc}
+                    alt=""
+                    width={42}
+                    height={42}
+                    className={isNewsEditorial ? "h-9 w-9 opacity-90 sm:h-10 sm:w-10" : "h-10 w-10 sm:h-11 sm:w-11"}
+                  />
                 </div>
               ) : null}
 
               <div className="min-w-0">
+                {isNewsEditorial ? (
+                  <span className="inline-flex rounded-full border border-black/8 bg-black/[0.03] px-3 py-1 text-[11px] font-medium uppercase tracking-[0.22em] text-black/55">
+                    Editorial Briefing
+                  </span>
+                ) : null}
                 <h1
                   className={`font-serif font-semibold tracking-tight text-primary ${
-                    isEditorial ? "text-[2rem] sm:text-[2.5rem]" : "text-3xl sm:text-4xl"
+                    isNewsEditorial
+                      ? "mt-4 text-[2.5rem] leading-none sm:text-[3.5rem]"
+                      : isEditorial
+                        ? "text-[2rem] sm:text-[2.5rem]"
+                        : "text-3xl sm:text-4xl"
                   }`}
                 >
                   {displayTitle}
                 </h1>
                 <p
                   className={`mt-2 text-muted ${
-                    isEditorial ? "max-w-2xl text-sm leading-7 sm:text-[15px]" : "text-sm sm:text-base"
+                    isNewsEditorial
+                      ? "mt-4 max-w-2xl text-sm leading-7 text-black/62 sm:text-base"
+                      : isEditorial
+                        ? "max-w-2xl text-sm leading-7 sm:text-[15px]"
+                        : "text-sm sm:text-base"
                   }`}
                 >
                   {displayDesc}
                 </p>
+                {isNewsEditorial ? (
+                  <div className="mt-6 flex flex-wrap gap-3 text-xs text-black/60 sm:text-sm">
+                    <span className="rounded-full border border-black/8 bg-white/82 px-4 py-2">行业趋势与企业动态</span>
+                    <span className="rounded-full border border-black/8 bg-white/82 px-4 py-2">技术发展与行业活动</span>
+                    <span className="rounded-full border border-black/8 bg-white/82 px-4 py-2">更轻、更静、更聚焦的浏览方式</span>
+                  </div>
+                ) : null}
               </div>
             </div>
 
-            <Link
-              href={finalSearchHref}
-              className={`interactive-lift inline-flex items-center border border-border bg-surface text-sm font-medium text-primary hover:border-accent/45 hover:text-accent ${
-                isEditorial
-                  ? "rounded-full px-5 py-2.5"
-                  : "rounded-lg px-4 py-2"
-              }`}
-            >
-              {isEditorial ? "搜索资讯" : "搜索"}
-            </Link>
+            {isNewsEditorial ? (
+              <div className="grid min-w-[220px] gap-3 sm:min-w-[260px]">
+                <div className="rounded-[28px] border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.84),rgba(250,250,251,0.96))] p-4 shadow-[0_24px_52px_-40px_rgba(15,23,42,0.3)]">
+                  <div className="text-[11px] uppercase tracking-[0.2em] text-black/45">News Index</div>
+                  <div className="mt-3 grid grid-cols-2 gap-3">
+                    <div className="rounded-[20px] bg-black/[0.03] px-4 py-3">
+                      <div className="text-[1.5rem] font-semibold leading-none text-primary">{subcategories.length}</div>
+                      <div className="mt-1 text-xs text-black/55">资讯分栏</div>
+                    </div>
+                    <div className="rounded-[20px] bg-black/[0.03] px-4 py-3">
+                      <div className="text-[1.5rem] font-semibold leading-none text-primary">{totalLatest}</div>
+                      <div className="mt-1 text-xs text-black/55">精选条目</div>
+                    </div>
+                  </div>
+                </div>
+
+                <Link
+                  href={finalSearchHref}
+                  className="interactive-lift inline-flex items-center justify-center rounded-full border border-black/10 bg-[#111214] px-5 py-3 text-sm font-medium text-white transition hover:border-black/20 hover:bg-black"
+                >
+                  搜索资讯
+                </Link>
+              </div>
+            ) : (
+              <Link
+                href={finalSearchHref}
+                className={`interactive-lift inline-flex items-center border border-border bg-surface text-sm font-medium text-primary hover:border-accent/45 hover:text-accent ${
+                  isEditorial
+                    ? "rounded-full px-5 py-2.5"
+                    : "rounded-lg px-4 py-2"
+                }`}
+              >
+                {isEditorial ? "搜索资讯" : "搜索"}
+              </Link>
+            )}
           </div>
 
           {heroSrc ? (
             <div
               className={`showcase-frame mt-6 overflow-hidden border border-border ${
-                isEditorial
-                  ? "rounded-[26px] bg-[linear-gradient(180deg,rgba(255,255,255,0.9),rgba(243,245,248,0.96))] p-2"
-                  : "rounded-2xl"
+                isNewsEditorial
+                  ? "rounded-[30px] border-white/75 bg-[linear-gradient(135deg,rgba(245,246,248,0.98),rgba(255,255,255,0.9))] p-3"
+                  : isEditorial
+                    ? "rounded-[26px] bg-[linear-gradient(180deg,rgba(255,255,255,0.9),rgba(243,245,248,0.96))] p-2"
+                    : "rounded-2xl"
               }`}
             >
               <Image
@@ -126,7 +191,11 @@ export async function CategoryHome({
                 width={1600}
                 height={640}
                 className={`showcase-image ${
-                  isEditorial ? "h-44 rounded-[20px] object-cover object-center p-0 sm:h-52 md:h-64" : "h-36 sm:h-44 md:h-52"
+                  isNewsEditorial
+                    ? "h-52 rounded-[24px] object-cover object-center p-0 sm:h-64 lg:h-[21rem]"
+                    : isEditorial
+                      ? "h-44 rounded-[20px] object-cover object-center p-0 sm:h-52 md:h-64"
+                      : "h-36 sm:h-44 md:h-52"
                 }`}
               />
             </div>
@@ -135,41 +204,62 @@ export async function CategoryHome({
           {!hideSubcategories && subcategories.length > 0 ? (
             <div
               className={`mt-6 border border-border bg-surface ${
-                isEditorial ? "rounded-[24px] p-5 sm:p-6" : "rounded-2xl p-4 sm:p-5"
+                isNewsEditorial
+                  ? "rounded-[28px] border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(247,248,250,0.92))] p-5 sm:p-7"
+                  : isEditorial
+                    ? "rounded-[24px] p-5 sm:p-6"
+                    : "rounded-2xl p-4 sm:p-5"
               }`}
             >
-              <div className="mb-4">
+              <div className={isNewsEditorial ? "mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between" : "mb-4"}>
+                <div>
                 <h2 className="section-label text-primary">资讯分栏</h2>
                 {isEditorial ? <p className="mt-2 text-sm text-muted">按主题快速进入资讯子栏目，减少层层查找。</p> : null}
+                </div>
+                {isNewsEditorial ? <div className="text-xs uppercase tracking-[0.18em] text-black/42">Curated Channels</div> : null}
               </div>
 
-              <div className={`grid ${isEditorial ? "gap-4 sm:grid-cols-2 xl:grid-cols-4" : "gap-3 sm:grid-cols-2"}`}>
+              <div className={`grid ${isNewsEditorial ? "gap-5 sm:grid-cols-2 xl:grid-cols-4" : isEditorial ? "gap-4 sm:grid-cols-2 xl:grid-cols-4" : "gap-3 sm:grid-cols-2"}`}>
                 {subcategories.map((sub) => {
                   const latest = (subcategoryLatest?.[sub.href] ?? []).slice(0, 3);
                   return (
                     <article
                       key={sub.href}
                       className={`border border-border bg-surface-elevated transition-colors hover:border-accent/45 ${
-                        isEditorial
-                          ? "rounded-[20px] p-4"
-                          : "rounded-xl p-3"
+                        isNewsEditorial
+                          ? "rounded-[24px] border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,249,251,0.92))] p-5 shadow-[0_24px_48px_-42px_rgba(15,23,42,0.32)] hover:border-black/15"
+                          : isEditorial
+                            ? "rounded-[20px] p-4"
+                            : "rounded-xl p-3"
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <Link href={getSubHref(sub.href)} className={`${isEditorial ? "text-base" : "text-sm"} font-semibold text-primary hover:text-accent`}>
+                        <Link href={getSubHref(sub.href)} className={`${isNewsEditorial ? "text-lg" : isEditorial ? "text-base" : "text-sm"} font-semibold text-primary hover:text-accent`}>
                           {sub.label}
                         </Link>
-                        <Link href={getSubHref(sub.href)} className="text-xs text-accent hover:underline">
+                        <Link
+                          href={getSubHref(sub.href)}
+                          className={`text-xs ${isNewsEditorial ? "rounded-full border border-black/8 px-3 py-1.5 text-black/58 hover:border-black/14 hover:text-primary" : "text-accent hover:underline"}`}
+                        >
                           进入栏目
                         </Link>
                       </div>
 
                       {latest.length > 0 ? (
-                        <ul className={`mt-3 ${isEditorial ? "space-y-2.5" : "space-y-1.5"}`}>
+                        <ul className={`mt-4 ${isNewsEditorial ? "space-y-3" : isEditorial ? "space-y-2.5" : "space-y-1.5"}`}>
                           {latest.map((item) => (
                             <li key={`${sub.href}-${item.href}`} className="flex min-w-0 items-start gap-2">
-                              <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-black/75" aria-hidden />
-                              <Link href={item.href} className={`text-primary hover:text-accent ${isEditorial ? "line-clamp-2 text-sm leading-6" : "line-clamp-1 text-xs"}`}>
+                              <span className={`shrink-0 rounded-full ${isNewsEditorial ? "mt-2 h-1.5 w-1.5 bg-black/65" : "mt-2 h-1.5 w-1.5 bg-black/75"}`} aria-hidden />
+                              <Link
+                                href={item.href}
+                                className={`text-primary hover:text-accent ${
+                                  isNewsEditorial
+                                    ? "line-clamp-2 text-sm leading-6 text-black/82"
+                                    : isEditorial
+                                      ? "line-clamp-2 text-sm leading-6"
+                                      : "line-clamp-1 text-xs"
+                                }`}
+                              >
                                 {item.title}
                               </Link>
                             </li>
