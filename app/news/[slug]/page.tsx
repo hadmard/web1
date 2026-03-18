@@ -18,6 +18,24 @@ export const dynamic = "force-dynamic";
 
 const SHARE_SITE_NAME = "中华整木网";
 const DEFAULT_NEWS_SHARE_IMAGE = "/api/og/news-default";
+const NEWS_SUBCATEGORY_META: Record<string, { title: string; description: string }> = {
+  trends: {
+    title: "行业趋势",
+    description: "整木资讯行业趋势栏目，聚合木作行业趋势观察与热点动态。",
+  },
+  enterprise: {
+    title: "企业动态",
+    description: "整木资讯企业动态栏目，聚合品牌新闻、企业动作与市场动态。",
+  },
+  tech: {
+    title: "技术发展",
+    description: "整木资讯技术发展栏目，聚合工艺升级、材料演进与技术创新内容。",
+  },
+  events: {
+    title: "行业活动",
+    description: "整木资讯行业活动栏目，聚合展会、峰会、论坛与行业重要事件。",
+  },
+};
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -80,7 +98,16 @@ function resolveArticleShareImage(article: { coverImage?: string | null; content
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  if (NEWS_SUB_SLUGS.has(slug)) return { title: "整木资讯子栏目" };
+  if (NEWS_SUB_SLUGS.has(slug)) {
+    const subMeta = NEWS_SUBCATEGORY_META[slug];
+    return buildPageMetadata({
+      title: subMeta?.title ?? "整木资讯子栏目",
+      description: subMeta?.description ?? "整木资讯子栏目",
+      path: `/news/${slug}`,
+      type: "website",
+      image: DEFAULT_NEWS_SHARE_IMAGE,
+    });
+  }
   const article = await findNewsArticleBySegment(slug);
   if (!article || article.status !== "approved") return { title: "资讯" };
   const description = previewText(article.excerpt ?? article.content, 160);
