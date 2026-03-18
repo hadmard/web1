@@ -22,9 +22,9 @@ const resourcesLinks = [{ href: "/membership", label: "会员系统" }];
 
 export function Footer() {
   return (
-    <footer className="mt-9 px-3 pb-6 sm:mt-20 sm:px-5 sm:pb-8">
-      <div className="glass-card mx-auto max-w-6xl px-4 py-8 sm:px-8 sm:py-12">
-        <section className="rounded-2xl border border-border bg-surface-elevated/80 p-3.5 sm:p-5">
+    <footer className="mt-5 px-3 pb-6 sm:mt-20 sm:px-5 sm:pb-8">
+      <div className="glass-card mx-auto max-w-6xl px-4 py-7 sm:px-8 sm:py-12">
+        <section className="rounded-2xl border border-border bg-surface-elevated/80 p-3 sm:p-5">
           <div className="mb-3 flex items-center justify-between gap-3">
             <p className="text-sm font-semibold text-primary">常用入口</p>
             <Link href="/membership" className="text-xs text-accent hover:underline">
@@ -36,7 +36,7 @@ export function Footer() {
               <Link
                 key={item.href}
                 href={item.href}
-                className="interactive-lift block rounded-xl border border-border bg-surface px-3 py-2.5 hover:border-accent/45 sm:py-3"
+                className="interactive-lift block rounded-xl border border-border bg-surface px-3 py-2 hover:border-accent/45 sm:py-3"
               >
                 <p className="text-sm font-medium text-primary">{item.label}</p>
                 <p className="mt-1 text-xs text-muted">{item.desc}</p>
@@ -45,7 +45,7 @@ export function Footer() {
           </div>
         </section>
 
-        <div className="mt-5 grid grid-cols-2 gap-5 sm:mt-6 sm:grid-cols-4 sm:gap-8">
+        <div className="mt-4 grid grid-cols-2 gap-4 sm:mt-6 sm:grid-cols-4 sm:gap-8">
           <div>
             <ul className="space-y-2.5">
               {exploreLinks.map(({ href, label }) => (
@@ -89,7 +89,7 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="mt-8 flex flex-col gap-3 border-t border-border pt-5 text-center sm:mt-10 sm:grid sm:grid-cols-3 sm:items-center sm:pt-6">
+        <div className="mt-6 flex flex-col gap-3 border-t border-border pt-4 text-center sm:mt-10 sm:grid sm:grid-cols-3 sm:items-center sm:pt-6">
           <p className="text-sm text-primary/85 sm:text-left">整木网</p>
           <p className="text-xs text-muted">
             工信部ICP备案：

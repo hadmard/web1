@@ -133,7 +133,7 @@ export default async function ArticlePage({ params, searchParams }: Props) {
   };
 
   return (
-    <article id="news-reading-article" className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
+    <article id="news-reading-article" className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-12">
       <NewsUrlSync canonicalPath={buildNewsPath(article.id)} />
       <NewsViewTracker slug={article.slug} />
       <JsonLd data={articleSchema} />

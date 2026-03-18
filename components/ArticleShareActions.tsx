@@ -242,7 +242,7 @@ export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareA
       : null;
 
   return (
-    <div className="relative z-20 mt-5 flex justify-end sm:mt-8">
+    <div className="relative z-20 mt-3 flex justify-end sm:mt-8">
       <button
         ref={triggerRef}
         type="button"
