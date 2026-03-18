@@ -14,6 +14,7 @@ export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareA
   const [copied, setCopied] = useState(false);
   const [qrLoadFailed, setQrLoadFailed] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [desktopTop, setDesktopTop] = useState(120);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const desktopDialogRef = useRef<HTMLDivElement | null>(null);
 
@@ -25,6 +26,23 @@ export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareA
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!open || typeof window === "undefined" || window.innerWidth < 768) return;
+
+    const updateDesktopTop = () => {
+      setDesktopTop(window.scrollY + Math.max(120, window.innerHeight * 0.5 - 180));
+    };
+
+    updateDesktopTop();
+    window.addEventListener("scroll", updateDesktopTop, true);
+    window.addEventListener("resize", updateDesktopTop);
+
+    return () => {
+      window.removeEventListener("scroll", updateDesktopTop, true);
+      window.removeEventListener("resize", updateDesktopTop);
+    };
+  }, [open]);
 
   useEffect(() => {
     setQrLoadFailed(false);
@@ -86,23 +104,14 @@ export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareA
     }
   }
 
-  function handleDesktopWheel(event: React.WheelEvent<HTMLDivElement>) {
-    if (window.innerWidth < 768) return;
-    event.preventDefault();
-    window.scrollBy({
-      top: event.deltaY,
-      behavior: "auto",
-    });
-  }
-
   const desktopOverlay =
     mounted && open
       ? createPortal(
-          <div className="pointer-events-none fixed inset-0 z-[220] hidden md:block">
+          <div className="pointer-events-none absolute inset-x-0 top-0 z-[220] hidden md:block">
             <div
               ref={desktopDialogRef}
-              className="absolute left-1/2 top-1/2 w-[min(92vw,360px)] -translate-x-1/2 -translate-y-1/2 rounded-[28px] border border-[rgba(15,23,42,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.99),rgba(245,247,250,0.99))] p-5 shadow-[0_32px_90px_rgba(15,23,42,0.28),inset_0_1px_0_rgba(255,255,255,0.98)] backdrop-blur"
-              onWheel={handleDesktopWheel}
+              className="pointer-events-auto absolute left-1/2 w-[min(92vw,360px)] -translate-x-1/2 rounded-[28px] border border-[rgba(15,23,42,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.99),rgba(245,247,250,0.99))] p-5 shadow-[0_32px_90px_rgba(15,23,42,0.28),inset_0_1px_0_rgba(255,255,255,0.98)] backdrop-blur"
+              style={{ top: `${desktopTop}px` }}
             >
               <button
                 type="button"
