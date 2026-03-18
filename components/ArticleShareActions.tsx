@@ -81,12 +81,24 @@ export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareA
     }
   }
 
+  function handleDesktopWheel(event: React.WheelEvent<HTMLDivElement>) {
+    if (window.innerWidth < 768) return;
+    event.preventDefault();
+    window.scrollBy({
+      top: event.deltaY,
+      behavior: "auto",
+    });
+  }
+
   const desktopOverlay =
     mounted && open
       ? createPortal(
           <div className="pointer-events-none fixed inset-0 z-[220] hidden md:block">
             <div className="absolute inset-0 bg-black/18" />
-            <div className="absolute left-1/2 top-1/2 w-[min(92vw,360px)] -translate-x-1/2 -translate-y-1/2 rounded-[28px] border border-[rgba(15,23,42,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.99),rgba(245,247,250,0.99))] p-5 shadow-[0_32px_90px_rgba(15,23,42,0.28),inset_0_1px_0_rgba(255,255,255,0.98)] backdrop-blur">
+            <div
+              className="absolute left-1/2 top-1/2 w-[min(92vw,360px)] -translate-x-1/2 -translate-y-1/2 rounded-[28px] border border-[rgba(15,23,42,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.99),rgba(245,247,250,0.99))] p-5 shadow-[0_32px_90px_rgba(15,23,42,0.28),inset_0_1px_0_rgba(255,255,255,0.98)] backdrop-blur"
+              onWheel={handleDesktopWheel}
+            >
               <button
                 type="button"
                 aria-label="关闭分享弹层"
