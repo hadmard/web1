@@ -85,13 +85,14 @@ export function PublishedContentPanel({
 
         <Link
           href={categoryHref}
-          className={`inline-block text-sm font-medium ${
+          className={`inline-flex w-fit items-center gap-2 rounded-full border border-[rgba(194,182,154,0.24)] bg-[linear-gradient(180deg,rgba(255,252,246,0.96),rgba(246,240,231,0.9))] px-3.5 py-1.5 text-[13px] font-medium text-[#7d6846] shadow-[0_10px_24px_rgba(15,23,42,0.04),inset_0_1px_0_rgba(255,255,255,0.9)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[rgba(170,154,122,0.34)] hover:text-[#6f5b3d] ${
             isEditorial
-              ? "mt-6 text-accent hover:underline"
-              : "mt-4 text-accent hover:underline"
+              ? "mt-6"
+              : "mt-4"
           }`}
         >
           查看更多
+          <span aria-hidden="true" className="text-[12px] text-[#b49a6b]">-&gt;</span>
         </Link>
       </article>
     </section>

@@ -224,7 +224,7 @@ export function Header({
                             <li>
                               <Link
                                 href="/membership/login"
-                                className="block rounded-lg px-2.5 py-1.5 text-[13px] text-primary/90 hover:bg-surface hover:text-accent transition-colors"
+                                className="block rounded-lg px-2.5 py-1.5 text-[13px] text-primary/90 transition-colors hover:bg-[rgba(250,245,237,0.82)] hover:text-[#8a734d]"
                               >
                                 登录
                               </Link>
@@ -234,7 +234,7 @@ export function Header({
                               <li>
                                 <Link
                                   href={me.role === "SUPER_ADMIN" || me.role === "ADMIN" ? "/membership/admin" : "/membership/content/publish?tab=articles"}
-                                  className="block rounded-lg px-2.5 py-1.5 text-[13px] text-primary/90 hover:bg-surface hover:text-accent transition-colors"
+                                  className="block rounded-lg px-2.5 py-1.5 text-[13px] text-primary/90 transition-colors hover:bg-[rgba(250,245,237,0.82)] hover:text-[#8a734d]"
                                 >
                                   进入会员中心
                                 </Link>
@@ -242,7 +242,7 @@ export function Header({
                               <li>
                                 <Link
                                   href="/membership/login"
-                                  className="block rounded-lg px-2.5 py-1.5 text-[13px] text-primary/90 hover:bg-surface hover:text-accent transition-colors"
+                                  className="block rounded-lg px-2.5 py-1.5 text-[13px] text-primary/90 transition-colors hover:bg-[rgba(250,245,237,0.82)] hover:text-[#8a734d]"
                                 >
                                   切换账号
                                 </Link>
@@ -251,7 +251,7 @@ export function Header({
                                 <button
                                   type="button"
                                   onClick={handleLogout}
-                                  className="w-full text-left rounded-lg px-2.5 py-1.5 text-[13px] text-primary/90 hover:bg-surface hover:text-accent transition-colors"
+                                  className="w-full rounded-lg px-2.5 py-1.5 text-left text-[13px] text-primary/90 transition-colors hover:bg-[rgba(250,245,237,0.82)] hover:text-[#8a734d]"
                                 >
                                   退出登录
                                 </button>
@@ -271,7 +271,7 @@ export function Header({
                             <li key={sub.href}>
                               <Link
                                 href={sub.href}
-                                className="block rounded-lg px-2.5 py-1.5 text-[13px] text-primary/90 hover:bg-surface hover:text-accent transition-colors"
+                                className="block rounded-lg px-2.5 py-1.5 text-[13px] text-primary/90 transition-colors hover:bg-[rgba(250,245,237,0.82)] hover:text-[#8a734d]"
                               >
                                 {sub.label}
                               </Link>
@@ -304,9 +304,9 @@ export function Header({
           </button>
 
           {pathname.startsWith("/news/") && pathname !== "/news/all" && (
-            <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-px bg-[rgba(201,191,168,0.22)]">
+            <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-[2px] rounded-full bg-[rgba(201,191,168,0.26)]">
               <div
-                className="h-full origin-left bg-[linear-gradient(90deg,rgba(156,134,92,0.82),rgba(191,171,135,0.72))] transition-transform duration-100 ease-linear"
+                className="h-full origin-left rounded-full bg-[linear-gradient(90deg,rgba(150,127,83,0.88),rgba(196,175,138,0.8))] transition-transform duration-100 ease-linear"
                 style={{ transform: `scaleX(${readingProgress})` }}
               />
             </div>
