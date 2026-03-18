@@ -42,7 +42,6 @@ export async function CategoryHome({
   const visualSettings = await getSiteVisualSettings();
   const category = categoryFromDb ?? getCategoryByHref(basePath);
   const displayTitle = title ?? category?.title ?? "";
-  const displayDesc = desc ?? category?.desc ?? "";
   const subcategories = category?.subcategories ?? [];
   const heroKey = CATEGORY_HERO_KEY_MAP[basePath];
   const heroSrc = heroKey ? visualSettings.backgrounds[heroKey] : undefined;
@@ -106,11 +105,6 @@ export async function CategoryHome({
               ) : null}
 
               <div className="min-w-0">
-                {isNewsEditorial ? (
-                  <span className="inline-flex rounded-full border border-black/8 bg-black/[0.03] px-3 py-1 text-[11px] font-medium uppercase tracking-[0.22em] text-black/55">
-                    Editorial Briefing
-                  </span>
-                ) : null}
                 <h1
                   className={`font-serif font-semibold tracking-tight text-primary ${
                     isNewsEditorial
@@ -122,17 +116,6 @@ export async function CategoryHome({
                 >
                   {displayTitle}
                 </h1>
-                <p
-                  className={`mt-2 text-muted ${
-                    isNewsEditorial
-                      ? "mt-4 max-w-2xl text-sm leading-7 text-black/62 sm:text-base"
-                      : isEditorial
-                        ? "max-w-2xl text-sm leading-7 sm:text-[15px]"
-                        : "text-sm sm:text-base"
-                  }`}
-                >
-                  {displayDesc}
-                </p>
                 {isNewsEditorial ? (
                   <div className="mt-6 flex flex-wrap gap-3 text-xs text-black/60 sm:text-sm">
                     <span className="rounded-full border border-black/8 bg-white/82 px-4 py-2">行业趋势与企业动态</span>
@@ -144,13 +127,13 @@ export async function CategoryHome({
               </div>
 
               {isNewsEditorial && heroSrc ? (
-                <div className="mt-8 overflow-hidden rounded-[30px] border border-white/75 bg-[linear-gradient(135deg,rgba(245,246,248,0.98),rgba(255,255,255,0.9))] p-3 shadow-[0_24px_64px_-42px_rgba(15,23,42,0.34)]">
+                <div className="mt-8 overflow-hidden rounded-[30px] border border-white/75 bg-[linear-gradient(135deg,rgba(245,246,248,0.98),rgba(255,255,255,0.9))] shadow-[0_24px_64px_-42px_rgba(15,23,42,0.34)]">
                   <Image
                     src={heroSrc}
                     alt=""
                     width={1600}
                     height={640}
-                    className="showcase-image h-60 rounded-[24px] object-cover object-center p-0 sm:h-72 lg:h-[25rem]"
+                    className="h-60 w-full object-cover object-center sm:h-72 lg:h-[25rem]"
                   />
                 </div>
               ) : null}
@@ -159,7 +142,6 @@ export async function CategoryHome({
             {isNewsEditorial ? (
               <div className="grid gap-4 lg:pt-14">
                 <div className="rounded-[28px] border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.84),rgba(250,250,251,0.96))] p-5 shadow-[0_24px_52px_-40px_rgba(15,23,42,0.3)]">
-                  <div className="text-[11px] uppercase tracking-[0.2em] text-black/45">News Index</div>
                   <div className="mt-5 space-y-3">
                     <div className="rounded-[22px] bg-black/[0.03] px-4 py-4">
                       <div className="text-[1.8rem] font-semibold leading-none text-primary">{subcategories.length}</div>
@@ -170,13 +152,6 @@ export async function CategoryHome({
                       <div className="mt-2 text-xs text-black/55">精选条目</div>
                     </div>
                   </div>
-                </div>
-
-                <div className="rounded-[28px] border border-black/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.78),rgba(249,249,250,0.94))] p-5 shadow-[0_24px_52px_-42px_rgba(15,23,42,0.28)]">
-                  <div className="text-[11px] uppercase tracking-[0.2em] text-black/45">Reading Mood</div>
-                  <p className="mt-4 text-sm leading-7 text-black/62">
-                    以更安静的留白、克制的层级和更清晰的信息分发，重新组织整木资讯首页。
-                  </p>
                 </div>
 
                 <Link
@@ -234,10 +209,8 @@ export async function CategoryHome({
             >
               <div className={isNewsEditorial ? "mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between" : "mb-4"}>
                 <div>
-                <h2 className="section-label text-primary">资讯分栏</h2>
-                {isEditorial ? <p className="mt-2 text-sm text-muted">按主题快速进入资讯子栏目，减少层层查找。</p> : null}
+                  <h2 className="section-label text-primary">资讯分栏</h2>
                 </div>
-                {isNewsEditorial ? <div className="text-xs uppercase tracking-[0.18em] text-black/42">Curated Channels</div> : null}
               </div>
 
               <div className={`grid ${isNewsEditorial ? "gap-5 sm:grid-cols-2 xl:grid-cols-4" : isEditorial ? "gap-4 sm:grid-cols-2 xl:grid-cols-4" : "gap-3 sm:grid-cols-2"}`}>
@@ -275,9 +248,9 @@ export async function CategoryHome({
                                 href={item.href}
                                 className={`text-primary hover:text-accent ${
                                   isNewsEditorial
-                                    ? "line-clamp-2 text-sm leading-6 text-black/82"
+                                    ? "line-clamp-1 text-sm leading-6 text-black/82"
                                     : isEditorial
-                                      ? "line-clamp-2 text-sm leading-6"
+                                      ? "line-clamp-1 text-sm leading-6"
                                       : "line-clamp-1 text-xs"
                                 }`}
                               >

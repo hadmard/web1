@@ -18,7 +18,7 @@ type PublishedContentPanelProps = {
 
 export function PublishedContentPanel({
   sectionTitle,
-  sectionDesc,
+  sectionDesc: _sectionDesc,
   items,
   categoryHref,
   variant = "default",
@@ -40,17 +40,7 @@ export function PublishedContentPanel({
         <div className={isNewsEditorial ? "flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between" : ""}>
           <div>
             <h2 className="section-label mb-2 text-primary">{sectionTitle}</h2>
-            {sectionDesc ? (
-              <p className={`text-muted ${isNewsEditorial ? "mb-0 max-w-2xl text-sm leading-7 text-black/62" : isEditorial ? "mb-5 text-sm leading-7" : "mb-4 text-sm"}`}>
-                {sectionDesc}
-              </p>
-            ) : null}
           </div>
-          {isNewsEditorial ? (
-            <div className="rounded-full border border-black/8 bg-white/78 px-4 py-2 text-xs uppercase tracking-[0.18em] text-black/46">
-              Latest Selection
-            </div>
-          ) : null}
         </div>
 
         {items.length === 0 ? (
@@ -73,7 +63,7 @@ export function PublishedContentPanel({
                     <span className={`shrink-0 rounded-full bg-black ${isNewsEditorial ? "mt-2 h-1.5 w-1.5 bg-black/68" : isEditorial ? "mt-2 h-1.5 w-1.5" : "mt-1.5 h-1.5 w-1.5"}`} aria-hidden />
                     <Link
                       href={item.href}
-                      className={`${isNewsEditorial ? "line-clamp-2 text-[1.02rem] leading-7 text-black/84" : isEditorial ? "line-clamp-2 text-[15px] leading-7" : "line-clamp-1 text-sm"} text-primary hover:text-accent`}
+                      className={`${isNewsEditorial ? "line-clamp-1 text-[1.02rem] leading-7 text-black/84" : isEditorial ? "line-clamp-1 text-[15px] leading-7" : "line-clamp-1 text-sm"} text-primary hover:text-accent`}
                     >
                       {item.title}
                     </Link>
