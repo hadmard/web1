@@ -50,14 +50,24 @@ export function resolvePermissionFlags(input: PermissionInput): PermissionFlags 
   }
 
   if (role === "ADMIN") {
+    const hasExplicitContentPermission =
+      input.canDeleteOwnContent === true ||
+      input.canDeleteMemberContent === true ||
+      input.canDeleteAllContent === true ||
+      input.canEditOwnContent === true ||
+      input.canEditMemberContent === true ||
+      input.canEditAllContent === true;
+
     return {
       canPublishWithoutReview: false,
       canManageMembers: input.canManageMembers === true,
-      canDeleteOwnContent: input.canDeleteOwnContent === true,
-      canDeleteMemberContent: input.canDeleteMemberContent === true,
+      // Backward compatibility: legacy ADMIN accounts created before granular
+      // permission flags existed should still be able to manage content.
+      canDeleteOwnContent: hasExplicitContentPermission ? input.canDeleteOwnContent === true : true,
+      canDeleteMemberContent: hasExplicitContentPermission ? input.canDeleteMemberContent === true : true,
       canDeleteAllContent: false,
-      canEditOwnContent: input.canEditOwnContent === true,
-      canEditMemberContent: input.canEditMemberContent === true,
+      canEditOwnContent: hasExplicitContentPermission ? input.canEditOwnContent === true : true,
+      canEditMemberContent: hasExplicitContentPermission ? input.canEditMemberContent === true : true,
       canEditAllContent: false,
     };
   }
