@@ -9,22 +9,12 @@ type ArticleShareActionsProps = {
   siteName: string;
 };
 
-type PopupPosition = {
-  top: number;
-  left: number;
-};
-
-const DESKTOP_CARD_WIDTH = 196;
-const DESKTOP_CARD_HEIGHT = 276;
-
 export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareActionsProps) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [qrLoadFailed, setQrLoadFailed] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [popupPosition, setPopupPosition] = useState<PopupPosition>({ top: 24, left: 24 });
   const rootRef = useRef<HTMLDivElement | null>(null);
-  const buttonRef = useRef<HTMLButtonElement | null>(null);
 
   const qrUrl = useMemo(() => {
     const data = encodeURIComponent(shareUrl);
@@ -81,38 +71,6 @@ export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareA
     return () => window.clearTimeout(timer);
   }, [copied]);
 
-  useEffect(() => {
-    if (!open) return;
-
-    const updatePopupPosition = () => {
-      const rect = buttonRef.current?.getBoundingClientRect();
-      if (!rect) return;
-
-      const gap = 14;
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
-
-      let left = rect.right - DESKTOP_CARD_WIDTH;
-      left = Math.max(16, Math.min(left, viewportWidth - DESKTOP_CARD_WIDTH - 16));
-
-      let top = rect.top - DESKTOP_CARD_HEIGHT - gap;
-      if (top < 16) {
-        top = Math.min(rect.bottom + gap, viewportHeight - DESKTOP_CARD_HEIGHT - 16);
-      }
-
-      setPopupPosition({ top, left });
-    };
-
-    updatePopupPosition();
-    window.addEventListener("resize", updatePopupPosition);
-    window.addEventListener("scroll", updatePopupPosition, true);
-
-    return () => {
-      window.removeEventListener("resize", updatePopupPosition);
-      window.removeEventListener("scroll", updatePopupPosition, true);
-    };
-  }, [open]);
-
   async function handleCopyLink() {
     try {
       await navigator.clipboard.writeText(shareUrl);
@@ -125,25 +83,30 @@ export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareA
   const desktopOverlay =
     mounted && open
       ? createPortal(
-          <div className="pointer-events-none fixed inset-0 z-[220] hidden md:block">
+          <div className="fixed inset-0 z-[220] hidden md:block">
             <button
               type="button"
               aria-label="关闭分享弹层"
-              className="pointer-events-auto absolute inset-0 bg-black/12"
+              className="absolute inset-0 bg-black/18"
               onClick={() => setOpen(false)}
             />
-            <div
-              className="pointer-events-auto absolute w-[196px] rounded-[26px] border border-[rgba(15,23,42,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(245,247,250,0.99))] p-3 shadow-[0_28px_80px_rgba(15,23,42,0.22),inset_0_1px_0_rgba(255,255,255,0.98)] backdrop-blur"
-              style={{ top: popupPosition.top, left: popupPosition.left }}
-            >
-              <div className="rounded-[18px] bg-white p-2 shadow-[0_8px_24px_rgba(15,23,42,0.06)]">
+            <div className="absolute left-1/2 top-1/2 w-[min(92vw,360px)] -translate-x-1/2 -translate-y-1/2 rounded-[28px] border border-[rgba(15,23,42,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.99),rgba(245,247,250,0.99))] p-5 shadow-[0_32px_90px_rgba(15,23,42,0.28),inset_0_1px_0_rgba(255,255,255,0.98)] backdrop-blur">
+              <button
+                type="button"
+                aria-label="关闭分享弹层"
+                onClick={() => setOpen(false)}
+                className="absolute right-4 top-4 inline-flex h-8 w-8 items-center justify-center rounded-full border border-[rgba(15,23,42,0.08)] bg-white text-[#374151] hover:bg-[#f3f4f6]"
+              >
+                ×
+              </button>
+              <div className="rounded-[20px] bg-white p-3 shadow-[0_10px_30px_rgba(15,23,42,0.08)]">
                 {qrLoadFailed ? (
-                  <div className="flex min-h-[168px] flex-col items-center justify-center gap-3 rounded-[14px] border border-dashed border-[rgba(15,23,42,0.12)] px-3 py-4 text-center">
-                    <p className="text-xs leading-5 text-[#4b5563]">二维码暂时生成失败，可先复制链接后发送到微信。</p>
+                  <div className="flex min-h-[240px] flex-col items-center justify-center gap-3 rounded-[16px] border border-dashed border-[rgba(15,23,42,0.12)] px-4 py-5 text-center">
+                    <p className="text-sm leading-6 text-[#4b5563]">二维码暂时生成失败，可先复制链接后发送到微信。</p>
                     <button
                       type="button"
                       onClick={handleCopyLink}
-                      className="rounded-full bg-[#111827] px-3 py-1.5 text-xs font-medium text-white"
+                      className="rounded-full bg-[#111827] px-4 py-2 text-sm font-medium text-white"
                     >
                       {copied ? "已复制链接" : "复制分享链接"}
                     </button>
@@ -153,16 +116,16 @@ export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareA
                   <img
                     src={qrUrl}
                     alt={`${title} 分享二维码`}
-                    width={220}
-                    height={220}
-                    className="h-auto w-full rounded-[14px]"
+                    width={280}
+                    height={280}
+                    className="mx-auto h-auto w-full max-w-[280px] rounded-[16px]"
                     loading="lazy"
                     onError={() => setQrLoadFailed(true)}
                   />
                 )}
               </div>
-              <p className="mt-2 text-center text-[11px] tracking-[0.12em] text-[#6b7280]">
-                {qrLoadFailed ? "复制链接后可直接转发" : "微信扫码即可分享"}
+              <p className="mt-4 text-center text-sm tracking-[0.08em] text-[#4b5563]">
+                {qrLoadFailed ? "复制链接后可直接转发" : "请使用微信扫码分享"}
               </p>
             </div>
           </div>,
@@ -255,7 +218,6 @@ export function ArticleShareActions({ title, shareUrl, siteName }: ArticleShareA
     <div ref={rootRef} className="relative z-20 mt-8 flex justify-end">
       <div className="relative">
         <button
-          ref={buttonRef}
           type="button"
           aria-label={`分享 ${siteName} 文章：${title}`}
           aria-expanded={open}
