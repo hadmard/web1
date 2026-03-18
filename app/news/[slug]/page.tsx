@@ -128,6 +128,20 @@ function getSearchParamValue(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
+function getHeadlineClass(title: string) {
+  const length = title.trim().length;
+
+  if (length >= 34) {
+    return "max-w-[24ch] text-[1.72rem] leading-[1.34] tracking-[-0.008em] sm:max-w-[26ch] sm:text-[2.1rem]";
+  }
+
+  if (length >= 24) {
+    return "max-w-[22ch] text-[1.82rem] leading-[1.31] tracking-[-0.01em] sm:max-w-[24ch] sm:text-[2.28rem]";
+  }
+
+  return "max-w-[20ch] text-[1.96rem] leading-[1.26] tracking-[-0.012em] sm:max-w-[22ch] sm:text-[2.6rem]";
+}
+
 export default async function ArticlePage({ params, searchParams }: Props) {
   const { slug } = await params;
   if (NEWS_SUB_SLUGS.has(slug)) {
@@ -189,7 +203,7 @@ export default async function ArticlePage({ params, searchParams }: Props) {
         </nav>
 
         <header className="px-1 sm:px-0">
-          <h1 className="max-w-[20ch] font-serif text-[1.88rem] font-semibold leading-[1.28] tracking-[-0.01em] text-primary sm:text-[2.45rem]">
+          <h1 className={`${getHeadlineClass(article.title)} font-serif font-semibold text-primary`}>
             {article.title}
           </h1>
 
