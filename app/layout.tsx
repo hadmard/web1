@@ -7,7 +7,7 @@ import { Header } from "@/components/Header";
 import { JsonLd } from "@/components/JsonLd";
 import { RouteHistoryManager } from "@/components/RouteHistoryManager";
 import { getCategories } from "@/lib/categories";
-import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, absoluteUrl, getSiteUrl } from "@/lib/seo";
+import { SHARE_SITE_NAME, SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, absoluteUrl, getSiteUrl } from "@/lib/seo";
 
 const baseUrl = getSiteUrl();
 
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
   title: {
     default: SITE_TITLE,
-    template: `%s | ${SITE_NAME}`,
+    template: `%s | ${SHARE_SITE_NAME}`,
   },
   description: SITE_DESCRIPTION,
   keywords: ["整木", "整木市场", "整木品牌", "整木选购", "整木词库", "整木标准", "整木资讯", "整木评选"],
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     type: "website",
     locale: "zh_CN",
     url: baseUrl,
-    siteName: SITE_NAME,
+    siteName: SHARE_SITE_NAME,
   },
   twitter: {
     card: "summary_large_image",

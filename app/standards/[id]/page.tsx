@@ -74,7 +74,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const metadata = parseDocumentMetadata(article.faqJson);
     const description = metadata.seoDescription || previewText(metadata.intro || (article.excerpt ?? article.content), 180);
     return buildPageMetadata({
-      title: metadata.seoTitle || `${article.title} | 整木网 · 整木标准`,
+      title: metadata.seoTitle || `${article.title} | 中华整木网 · 整木标准`,
       description,
       path: `/standards/${article.slug}`,
       type: "article",
@@ -85,7 +85,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!standard) return { title: "标准未找到" };
   const description = `${standard.code} ${standard.title}（${standard.year}）`;
   return buildPageMetadata({
-    title: `${standard.code} ${standard.title} | 整木网 · 整木标准`,
+    title: `${standard.code} ${standard.title} | 中华整木网 · 整木标准`,
     description,
     path: `/standards/${standard.id}`,
     type: "article",

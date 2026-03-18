@@ -31,9 +31,14 @@ function resolveConfiguredSiteUrl() {
 }
 
 export const SITE_NAME = "整木网";
+export const SHARE_SITE_NAME = "中华整木网";
 export const SITE_TITLE = `${SITE_NAME} | 整体木作行业知识共享平台`;
 export const SITE_DESCRIPTION =
   "整木网是整体木作行业知识共享平台，覆盖整木资讯、整木市场、整木词库、整木标准与整木评选。";
+
+export function normalizeShareTitle(title: string) {
+  return title.replace(/整木网/g, SHARE_SITE_NAME);
+}
 
 export function getSiteUrl() {
   return resolveConfiguredSiteUrl();
@@ -64,14 +69,15 @@ export function buildPageMetadata({
 }: PageMetadataOptions): Metadata {
   const url = absoluteUrl(path);
   const imageUrl = image ? absoluteUrl(image) : undefined;
+  const shareTitle = normalizeShareTitle(title);
 
   return {
-    title,
+    title: shareTitle,
     description,
     keywords,
     alternates: { canonical: url },
     openGraph: {
-      title,
+      title: shareTitle,
       description,
       url,
       siteName,
@@ -81,7 +87,7 @@ export function buildPageMetadata({
     },
     twitter: {
       card: "summary_large_image",
-      title,
+      title: shareTitle,
       description,
       images: imageUrl ? [imageUrl] : undefined,
     },
