@@ -57,7 +57,7 @@ export default function AdminEnterpriseVerificationPage() {
     const me = await meRes.json();
     setRole(me.role ?? null);
 
-    if (me.role !== "SUPER_ADMIN") {
+    if (me.role !== "SUPER_ADMIN" && me.role !== "ADMIN") {
       setLoading(false);
       return;
     }
@@ -102,14 +102,14 @@ export default function AdminEnterpriseVerificationPage() {
   }
 
   if (loading) return <p className="text-muted">加载中...</p>;
-  if (role !== "SUPER_ADMIN") return <p className="text-muted">仅主管理员可访问。</p>;
+  if (role !== "SUPER_ADMIN" && role !== "ADMIN") return <p className="text-muted">仅管理员可访问。</p>;
 
   return (
     <div className="max-w-6xl space-y-6">
       <header className="rounded-xl border border-border bg-surface-elevated p-5">
         <h1 className="font-serif text-2xl font-bold text-primary">企业认证审核</h1>
-        <p className="text-sm text-muted mt-1">待审核数量：{pendingCount}</p>
-        {message && <p className="text-sm text-accent mt-2">{message}</p>}
+        <p className="mt-1 text-sm text-muted">待审核数量：{pendingCount}</p>
+        {message ? <p className="mt-2 text-sm text-accent">{message}</p> : null}
       </header>
 
       <VerificationFilters statusFilter={statusFilter} onChange={setStatusFilter} />

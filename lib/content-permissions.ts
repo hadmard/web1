@@ -9,7 +9,7 @@ export function canReviewSubmissions(session: Session | null): boolean {
 }
 
 export function canChangeReviewStatus(session: Session | null): boolean {
-  return session?.role === "SUPER_ADMIN";
+  return session?.role === "SUPER_ADMIN" || session?.role === "ADMIN";
 }
 
 export function canDirectlyEditArticle(session: Session | null, article: OwnerInput): boolean {

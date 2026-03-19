@@ -67,7 +67,7 @@ const ROLE_CARDS = [
     tone: "border-slate-200 bg-slate-50 text-slate-700",
     bullets: [
       "只能提交内容、查看审核进度、提交修改申请。",
-      "不能免审发布，不能管理账号，也不能做最终审核。",
+      "不能免审发布，不能参与后台管理，也不能审核他人内容。",
     ],
   },
   {
@@ -75,8 +75,8 @@ const ROLE_CARDS = [
     title: "子管理员",
     tone: "border-amber-200 bg-amber-50 text-amber-800",
     bullets: [
-      "作为企业员工，可按授权维护会员内容和新增会员。",
-      "不能免审发布，不能拥有全局最高权限。",
+      "默认可免审发布，并可审核会员发布或修改的一切内容。",
+      "可按授权新增会员、编辑会员内容、删除会员内容，但不能修改系统设置或权限分配。",
     ],
   },
   {
@@ -84,8 +84,8 @@ const ROLE_CARDS = [
     title: "主管理员",
     tone: "border-emerald-200 bg-emerald-50 text-emerald-800",
     bullets: [
-      "作为企业负责人，保留最终审核、权限分配和企业认证审核。",
-      "拥有全局编辑、删除和系统设置权限。",
+      "拥有子管理员全部审核与内容能力。",
+      "额外保留权限分配、系统设置和全局最高权限。",
     ],
   },
 ];
@@ -122,14 +122,17 @@ function roleTone(role: string | null) {
 
 function fixedPermissionLabels(member: MemberRow) {
   if (member.role === "SUPER_ADMIN") {
-    return ["最终审核", "权限分配", "全局编辑", "全局删除", "企业认证审核", "系统设置"];
+    return ["全内容审核", "权限分配", "全局编辑", "全局删除", "系统设置"];
+  }
+
+  if (member.role === "ADMIN") {
+    return ["全内容审核", "免审发布"];
   }
 
   const labels: string[] = [];
   if (member.canPublishWithoutReview) labels.push("免审发布");
   if (member.canEditAllContent) labels.push("全局编辑");
   if (member.canDeleteAllContent) labels.push("全局删除");
-
   return labels;
 }
 
@@ -148,9 +151,7 @@ function Toggle({
       onClick={onClick}
       disabled={disabled}
       className={`inline-flex min-w-16 items-center justify-center rounded-full border px-3 py-1 text-xs font-medium transition ${
-        checked
-          ? "border-emerald-500 bg-emerald-500 text-white"
-          : "border-border bg-white text-muted"
+        checked ? "border-emerald-500 bg-emerald-500 text-white" : "border-border bg-white text-muted"
       } ${disabled ? "cursor-not-allowed opacity-60" : "hover:border-accent hover:text-accent"}`}
     >
       {checked ? "已开启" : "未开启"}
@@ -225,19 +226,14 @@ export default function AdminPermissionsPage() {
     }
 
     setMembers((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, ...data, account: data.account ?? data.email ?? item.account } : item
-      )
+      prev.map((item) => (item.id === id ? { ...item, ...data, account: data.account ?? data.email ?? item.account } : item))
     );
     setSavingKey(null);
     setMessage("权限已更新");
   }
 
   if (loading) return <p className="text-muted">加载中...</p>;
-
-  if (!isSuperAdmin) {
-    return <p className="text-muted">此页面仅主管理员可见。</p>;
-  }
+  if (!isSuperAdmin) return <p className="text-muted">此页面仅主管理员可见。</p>;
 
   return (
     <div className="max-w-6xl space-y-6">
@@ -249,7 +245,7 @@ export default function AdminPermissionsPage() {
             </div>
             <h1 className="font-serif text-2xl font-bold text-primary">权限授予</h1>
             <p className="max-w-3xl text-sm leading-6 text-muted">
-              这里不再展示难读的权限表，而是按角色和账号逐一说明。你可以直接看到每个账号属于哪一层、哪些能力是固定的、哪些能力是可授权的。
+              这里直接按角色和账号说明真实权限边界，确保页面展示与后端规则一致。
             </p>
           </div>
 
@@ -261,7 +257,7 @@ export default function AdminPermissionsPage() {
           </div>
         </div>
 
-        {message && <p className="mt-4 text-sm text-accent">{message}</p>}
+        {message ? <p className="mt-4 text-sm text-accent">{message}</p> : null}
       </header>
 
       <section className="grid gap-4 lg:grid-cols-3">
@@ -285,20 +281,20 @@ export default function AdminPermissionsPage() {
       <section className="rounded-2xl border border-border bg-surface-elevated p-5">
         <div className="grid gap-4 lg:grid-cols-[1.2fr_1fr]">
           <div className="rounded-xl border border-border bg-surface p-4">
-            <p className="text-sm font-semibold text-primary">授予原则</p>
+            <p className="text-sm font-semibold text-primary">授权原则</p>
             <div className="mt-3 space-y-2 text-sm leading-6 text-muted">
-              <p>1. 会员默认只走审核流，不能直接发布，也不能参与后台管理。</p>
-              <p>2. 子管理员只保留协作型权限，例如新增会员、编辑会员内容、删除会员内容。</p>
-              <p>3. 主管理员权限固定，不在这里做拆分，避免负责人权限被误改。</p>
+              <p>1. 会员默认走审核流，不能直接发布，也不能参与后台管理。</p>
+              <p>2. 子管理员默认可免审发布，并可审核会员发布或修改的一切内容。</p>
+              <p>3. 主管理员保留系统设置、权限分配和全局最高权限。</p>
             </div>
           </div>
 
           <div className="rounded-xl border border-dashed border-border bg-surface p-4">
             <p className="text-sm font-semibold text-primary">页面阅读方式</p>
             <div className="mt-3 space-y-2 text-sm leading-6 text-muted">
-              <p>1. 先看账号顶部的角色标签，确认这是会员、子管理员还是主管理员。</p>
-              <p>2. 再看“固定能力”，这里显示该角色天然拥有、不能在本页拆掉的权限。</p>
-              <p>3. 最后看“可授权能力”，只有子管理员会出现可切换开关。</p>
+              <p>1. 先看角色标签，确认是会员、子管理员还是主管理员。</p>
+              <p>2. 再看“固定能力”，这里显示该角色天然拥有、不会在本页拆掉的权限。</p>
+              <p>3. 最后看“可授权能力”，这里只有子管理员会出现可切换开关。</p>
             </div>
           </div>
         </div>
@@ -331,13 +327,13 @@ export default function AdminPermissionsPage() {
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-border bg-surface px-4 py-3 text-sm text-muted xl:min-w-[260px]">
+                <div className="rounded-xl border border-border bg-surface px-4 py-3 text-sm text-muted xl:min-w-[280px]">
                   {member.role === "SUPER_ADMIN" ? (
-                    <p>负责人账号，权限固定为最高级，不建议在此页做细分操作。</p>
+                    <p>这是主管理员账号，负责系统设置、权限分配和全局最高权限控制。</p>
                   ) : member.role === "ADMIN" ? (
-                    <p>这是企业员工账号，可按需要授予协作权限，但不会拥有免审发布和全局权限。</p>
+                    <p>这是子管理员账号，默认可免审发布，并可审核会员发布或修改的一切内容，但不能改系统设置或权限分配。</p>
                   ) : (
-                    <p>这是普通会员账号，只可投稿和跟进审核状态，本页不提供额外授权。</p>
+                    <p>这是普通会员账号，只能投稿、跟进审核和提交修改申请，本页不提供额外后台授权。</p>
                   )}
                 </div>
               </div>
@@ -369,9 +365,7 @@ export default function AdminPermissionsPage() {
                 <section className="rounded-xl border border-border bg-surface p-4">
                   <div className="flex items-center justify-between gap-3">
                     <h3 className="text-sm font-semibold text-primary">可授权能力</h3>
-                    <span className="text-xs text-muted">
-                      {editable ? "仅对子管理员开放" : "当前角色不可单独授予"}
-                    </span>
+                    <span className="text-xs text-muted">{editable ? "仅对子管理员开放" : "当前角色不可单独授予"}</span>
                   </div>
 
                   {editable ? (
@@ -389,7 +383,7 @@ export default function AdminPermissionsPage() {
                             </div>
 
                             <div className="flex items-center gap-3">
-                              {isSaving && <span className="text-xs text-muted">保存中...</span>}
+                              {isSaving ? <span className="text-xs text-muted">保存中...</span> : null}
                               <Toggle
                                 checked={member[permission.key]}
                                 disabled={isSaving}

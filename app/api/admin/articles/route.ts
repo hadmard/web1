@@ -54,7 +54,20 @@ export async function GET(request: NextRequest) {
       orderBy: [{ isPinned: "desc" }, { updatedAt: "desc" }],
       skip,
       take: limit,
-      include: {
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        excerpt: true,
+        content: true,
+        coverImage: true,
+        subHref: true,
+        categoryHref: true,
+        tagSlugs: true,
+        faqJson: true,
+        isPinned: true,
+        publishedAt: true,
+        status: true,
         authorMember: {
           select: {
             id: true,

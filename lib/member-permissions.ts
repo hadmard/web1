@@ -59,7 +59,7 @@ export function resolvePermissionFlags(input: PermissionInput): PermissionFlags 
       input.canEditAllContent === true;
 
     return {
-      canPublishWithoutReview: false,
+      canPublishWithoutReview: true,
       canManageMembers: input.canManageMembers === true,
       // Backward compatibility: legacy ADMIN accounts created before granular
       // permission flags existed should still be able to manage content.
@@ -78,12 +78,13 @@ export function resolvePermissionFlags(input: PermissionInput): PermissionFlags 
 export function resolveSubmissionStatus(options?: {
   reviewRequired?: boolean;
   role?: string | null;
+  canPublishWithoutReview?: boolean;
 }): ContentStatus {
   const role = normalizeMemberRole(options?.role);
-  const reviewRequired = options?.reviewRequired ?? true;
+  const canBypass = options?.canPublishWithoutReview ?? false;
 
   if (role === "SUPER_ADMIN") return "approved";
-  if (!reviewRequired && role === "ADMIN") return "approved";
+  if (role === "ADMIN" || canBypass) return "approved";
   return "pending";
 }
 

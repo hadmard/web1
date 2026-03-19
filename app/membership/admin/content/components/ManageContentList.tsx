@@ -7,6 +7,7 @@ type ArticleItem = {
   content: string;
   status: Status;
   isPinned?: boolean;
+  publishedAt?: string | null;
   previewHref?: string | null;
   authorMember?: {
     id: string;
@@ -25,9 +26,26 @@ const STATUS_TEXT: Record<Status, string> = {
 
 function submitterLabel(user?: { name: string | null; email: string; role: string | null } | null) {
   if (!user) return "未知账号";
-  const roleLabel =
-    user.role === "SUPER_ADMIN" ? "主管理员" : user.role === "ADMIN" ? "子管理员" : "会员";
+  const roleLabel = user.role === "SUPER_ADMIN" ? "主管理员" : user.role === "ADMIN" ? "子管理员" : "会员";
   return `${user.name?.trim() || user.email}（${roleLabel}）`;
+}
+
+function formatPublishedAt(value?: string | null) {
+  if (!value) return "未发布";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "未发布";
+
+  const parts = new Intl.DateTimeFormat("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(date);
+
+  const read = (type: Intl.DateTimeFormatPartTypes) => parts.find((item) => item.type === type)?.value ?? "";
+  return `${read("year")}-${read("month")}-${read("day")} ${read("hour")}:${read("minute")}`;
 }
 
 export function ManageContentList({
@@ -52,7 +70,7 @@ export function ManageContentList({
           {items.map((item) => (
             <li key={item.id} className="flex items-center justify-between border-b border-border pb-2">
               <div>
-                <p className="text-sm flex items-center gap-2">
+                <p className="flex items-center gap-2 text-sm">
                   {item.previewHref ? (
                     <a href={item.previewHref} target="_blank" rel="noreferrer" className="hover:text-accent hover:underline">
                       {item.title}
@@ -60,17 +78,23 @@ export function ManageContentList({
                   ) : (
                     <span>{item.title}</span>
                   )}
-                  {item.isPinned && <span className="text-[11px] rounded-full border border-accent/40 px-2 py-0.5 text-accent">置顶</span>}
+                  {item.isPinned ? (
+                    <span className="rounded-full border border-accent/40 px-2 py-0.5 text-[11px] text-accent">置顶</span>
+                  ) : null}
                 </p>
-                <p className="text-xs text-muted">{item.slug} · {STATUS_TEXT[item.status]}</p>
-                <p className="mt-1 text-xs text-muted">提交账号：{submitterLabel(item.authorMember ?? null)}</p>
+                <p className="text-xs text-muted">
+                  {item.slug} · {STATUS_TEXT[item.status]}
+                </p>
+                <p className="mt-1 text-xs text-muted">
+                  提交账号：{submitterLabel(item.authorMember ?? null)}　发布时间：{formatPublishedAt(item.publishedAt)}
+                </p>
               </div>
               <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={() => onEdit(item)}
                   disabled={!canEdit}
-                  className="text-xs px-2 py-1 rounded border border-border disabled:opacity-40"
+                  className="rounded border border-border px-2 py-1 text-xs disabled:opacity-40"
                 >
                   修改
                 </button>
@@ -78,7 +102,7 @@ export function ManageContentList({
                   type="button"
                   onClick={() => onDelete(item.id)}
                   disabled={!canDelete}
-                  className="text-xs px-2 py-1 rounded border border-red-500 text-red-600 disabled:opacity-40"
+                  className="rounded border border-red-500 px-2 py-1 text-xs text-red-600 disabled:opacity-40"
                 >
                   删除
                 </button>

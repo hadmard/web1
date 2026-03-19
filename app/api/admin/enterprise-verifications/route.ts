@@ -4,14 +4,14 @@ import { getSession } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
-function isSuperAdmin(role: string | null | undefined) {
-  return role === "SUPER_ADMIN";
+function isAdmin(role: string | null | undefined) {
+  return role === "SUPER_ADMIN" || role === "ADMIN";
 }
 
 export async function GET(request: NextRequest) {
   const session = await getSession();
-  if (!session || !isSuperAdmin(session.role)) {
-    return NextResponse.json({ error: "仅主管理员可访问" }, { status: 403 });
+  if (!session || !isAdmin(session.role)) {
+    return NextResponse.json({ error: "仅管理员可访问" }, { status: 403 });
   }
 
   const { searchParams } = new URL(request.url);
@@ -19,10 +19,7 @@ export async function GET(request: NextRequest) {
   const limitRaw = Number(searchParams.get("limit") ?? "50");
   const limit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(200, Math.floor(limitRaw))) : 50;
 
-  const where =
-    status && ["pending", "approved", "rejected"].includes(status)
-      ? { status }
-      : undefined;
+  const where = status && ["pending", "approved", "rejected"].includes(status) ? { status } : undefined;
 
   const items = await prisma.enterpriseVerification.findMany({
     where,

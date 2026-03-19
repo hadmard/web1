@@ -79,6 +79,7 @@ type ArticleItem = {
   tagSlugs?: string | null;
   faqJson?: string | null;
   isPinned?: boolean;
+  publishedAt?: string | null;
   status: Status;
   previewHref?: string | null;
   authorMember?: {
@@ -279,6 +280,7 @@ export default function AdminContentPage() {
   const selectedCategory = useMemo(() => MEMBER_PUBLISH_CATEGORY_OPTIONS.find((x) => x.href === selectedTabDef.href) ?? MEMBER_PUBLISH_CATEGORY_OPTIONS[0], [selectedTabDef.href]);
   const subOptions = selectedCategory.subs;
   const isSuperAdmin = session?.role === "SUPER_ADMIN";
+  const canReview = session?.role === "SUPER_ADMIN" || session?.role === "ADMIN";
 
   const canEdit = !!(session && (isSuperAdmin || session.canEditAllContent || session.canEditMemberContent || session.canEditOwnContent));
   const canDelete = !!(session && (isSuperAdmin || session.canDeleteAllContent || session.canDeleteMemberContent || session.canDeleteOwnContent));
@@ -431,8 +433,8 @@ export default function AdminContentPage() {
   useEffect(() => {
     if (!session) return;
     if (mode === "manage") void loadList();
-    if (mode === "review" && isSuperAdmin) void loadReview();
-  }, [session, mode, isSuperAdmin, loadList, loadReview]);
+    if (mode === "review" && canReview) void loadReview();
+  }, [session, mode, canReview, loadList, loadReview]);
 
   useEffect(() => {
     if (!message) return;

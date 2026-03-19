@@ -34,9 +34,6 @@ export async function PATCH(
   if (typeof body.reviewNote === "string") data.reviewNote = body.reviewNote.trim() || null;
 
   if (typeof body.status === "string" && ["draft", "pending", "approved", "rejected"].includes(body.status)) {
-    if (!isSuperAdmin(session)) {
-      return NextResponse.json({ error: "仅主管理员可执行审核状态变更" }, { status: 403 });
-    }
     data.status = body.status;
     data.reviewedAt = body.status === "approved" || body.status === "rejected" ? new Date() : null;
     data.reviewedById = session.sub;

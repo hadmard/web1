@@ -3,8 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { writeOperationLog } from "@/lib/operation-log";
 
-function isSuperAdmin(role: string | null | undefined) {
-  return role === "SUPER_ADMIN";
+function isAdmin(role: string | null | undefined) {
+  return role === "SUPER_ADMIN" || role === "ADMIN";
 }
 
 export async function PATCH(
@@ -12,8 +12,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getSession();
-  if (!session || !isSuperAdmin(session.role)) {
-    return NextResponse.json({ error: "仅主管理员可审核" }, { status: 403 });
+  if (!session || !isAdmin(session.role)) {
+    return NextResponse.json({ error: "仅管理员可审核" }, { status: 403 });
   }
 
   const { id } = await params;

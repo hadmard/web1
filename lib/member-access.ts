@@ -72,11 +72,10 @@ export function defaultContentStatusForSubmission(options?: {
   role?: string | null;
   canPublishWithoutReview?: boolean;
 }): ContentStatus {
-  const reviewRequired = options?.reviewRequired ?? true;
   const role = options?.role;
   const canBypass = options?.canPublishWithoutReview ?? false;
 
   if (role === "SUPER_ADMIN") return "approved";
-  if (role === "ADMIN" && (!reviewRequired || canBypass)) return "approved";
+  if (role === "ADMIN" || canBypass) return "approved";
   return "pending";
 }

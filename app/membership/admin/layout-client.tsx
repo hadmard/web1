@@ -51,7 +51,6 @@ const SIDEBAR: SidebarGroup[] = [
     id: "review",
     label: "审核中心",
     withAuditBadge: true,
-    superOnly: true,
     children: [
       ...CONTENT_TAB_DEFS.map((t) => ({
         href: `/membership/admin/content?mode=review&tab=${t.key}`,
@@ -155,7 +154,7 @@ export default function AdminLayoutClient({ children }: { children: React.ReactN
   }, []);
 
   useEffect(() => {
-    if (role !== "SUPER_ADMIN") {
+    if (role !== "SUPER_ADMIN" && role !== "ADMIN") {
       setPendingEnterpriseVerificationCount(0);
       return;
     }
