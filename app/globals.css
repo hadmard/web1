@@ -856,7 +856,7 @@ html[data-motion-tier="low"] .mouse-parallax {
   max-width: 100%;
   height: auto;
   margin: 1rem auto;
-  border-radius: 18px;
+  border-radius: 8px;
   object-fit: contain;
 }
 .rich-editor-content img.ProseMirror-selectednode {
@@ -971,7 +971,7 @@ html[data-motion-tier="low"] .mouse-parallax {
 
 @media (max-width: 640px) {
   .rich-editor-content img {
-    border-radius: 16px;
+    border-radius: 8px;
     margin: 0.9rem auto;
   }
   .rich-editor-content blockquote {

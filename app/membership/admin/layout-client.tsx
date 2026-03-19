@@ -281,14 +281,15 @@ export default function AdminLayoutClient({ children }: { children: React.ReactN
           if (group.superOnly && !isSuperAdmin) return null;
           const collapsed = !!collapseState[group.id];
           return (
-            <div key={group.id} className="mb-2.5 last:mb-0">
+            <div key={group.id} className="mb-3 last:mb-0">
               <button
                 type="button"
                 onClick={() => toggleGroup(group.id)}
-                className="w-full min-h-9 px-3 py-1.5 flex items-center justify-between rounded hover:bg-surface"
+                className="w-full min-h-11 rounded-[22px] border border-[rgba(200,188,164,0.16)] bg-[linear-gradient(180deg,rgba(255,253,249,0.98),rgba(250,246,239,0.92))] px-4 py-2.5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.84),0_10px_24px_rgba(176,154,116,0.06)] transition hover:border-[rgba(194,182,154,0.28)] hover:bg-[linear-gradient(180deg,rgba(255,253,249,1),rgba(252,248,241,0.96))]"
               >
-                <span className="text-sm font-semibold text-muted">{group.label}</span>
-                <span className="inline-flex items-center gap-2">
+                <span className="flex items-center justify-between gap-3">
+                  <span className="text-[15px] font-semibold tracking-[0.04em] text-[#4f4332]">{group.label}</span>
+                  <span className="inline-flex items-center gap-2">
                   {group.withAuditBadge && totalAuditCount > 0 && (
                     <span className="inline-flex items-center justify-center min-w-5 h-5 px-1 rounded-full bg-red-600 text-white text-[10px]">
                       {totalAuditCount}
@@ -304,11 +305,12 @@ export default function AdminLayoutClient({ children }: { children: React.ReactN
                       <path d="M5.5 7.5a1 1 0 0 1 1.4 0L10 10.6l3.1-3.1a1 1 0 0 1 1.4 1.4l-3.8 3.8a1 1 0 0 1-1.4 0L5.5 8.9a1 1 0 0 1 0-1.4Z" />
                     </svg>
                   </span>
+                  </span>
                 </span>
               </button>
 
               {!collapsed && (
-                <ul className="mt-1 space-y-0.5">
+                <ul className="mt-2.5 ml-5 space-y-1.5 border-l border-[rgba(194,182,154,0.24)] pl-3.5">
                   {group.children.map((child) => {
                     if (child.href === "/membership/admin/permissions" && !isSuperAdmin) return null;
                     const active = isLinkActive(child.href);
@@ -323,11 +325,13 @@ export default function AdminLayoutClient({ children }: { children: React.ReactN
                           href={child.href}
                           scroll={false}
                           onClick={() => setMobileSidebarOpen(false)}
-                          className={`rounded-lg pl-5 pr-3 py-2 text-sm font-medium transition-colors flex items-center justify-between ${
-                            active ? "bg-accent/15 text-accent" : "text-primary hover:bg-surface hover:text-accent"
+                          className={`rounded-xl px-3.5 py-2.5 text-[13px] transition-colors flex items-center justify-between ${
+                            active
+                              ? "bg-[linear-gradient(135deg,rgba(191,164,118,0.2),rgba(243,235,220,0.86))] text-[#715731] shadow-[inset_0_1px_0_rgba(255,255,255,0.74)]"
+                              : "text-[#66707b] hover:bg-[rgba(245,241,234,0.84)] hover:text-[#514535]"
                           }`}
                         >
-                          <span>{child.label}</span>
+                          <span className={active ? "font-medium" : "font-normal"}>{child.label}</span>
                           {group.withAuditBadge && childCount > 0 && (
                             <span className="inline-flex items-center gap-1">
                               <span className="w-2 h-2 rounded-full bg-red-500" />
@@ -361,7 +365,11 @@ export default function AdminLayoutClient({ children }: { children: React.ReactN
     <div className="min-h-[80vh] flex flex-col lg:flex-row">
       <aside className="hidden lg:block w-64 shrink-0 border-r border-border bg-surface-elevated/80">
         <div ref={sidebarScrollRef} className="sticky top-20 h-[calc(100vh-5rem)] overflow-y-auto py-6 pl-4 pr-2">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted mb-4 px-2">管理后台</p>
+          <div className="mb-6 rounded-[24px] border border-[rgba(203,191,170,0.18)] bg-[linear-gradient(180deg,rgba(255,253,249,0.96),rgba(249,244,236,0.9))] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.88),0_12px_30px_rgba(176,154,116,0.08)]">
+            <p className="text-[22px] font-semibold tracking-[0.08em] text-[#5a4932]">管理后台</p>
+            <p className="mt-1 text-[11px] tracking-[0.18em] text-[#a18a64]">ADMIN CONSOLE</p>
+            <div className="mt-3 h-px w-16 bg-[linear-gradient(90deg,rgba(180,154,107,0.76),rgba(180,154,107,0.08))]" />
+          </div>
           {sidebarNavigation}
         </div>
       </aside>
@@ -376,7 +384,11 @@ export default function AdminLayoutClient({ children }: { children: React.ReactN
           />
           <aside className="absolute left-2.5 right-auto top-16 h-[calc(100vh-5rem)] w-[86vw] max-w-xs glass-card p-4 overflow-y-auto">
             <div className="mb-4 flex items-center justify-between">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted">管理后台</p>
+              <div>
+                <p className="text-[19px] font-semibold tracking-[0.08em] text-[#5f4d33]">管理后台</p>
+                <p className="mt-1 text-[10px] tracking-[0.16em] text-[#a18a64]">ADMIN CONSOLE</p>
+                <div className="mt-2 h-px w-12 bg-[linear-gradient(90deg,rgba(180,154,107,0.68),rgba(180,154,107,0.08))]" />
+              </div>
               <button
                 type="button"
                 onClick={() => setMobileSidebarOpen(false)}
