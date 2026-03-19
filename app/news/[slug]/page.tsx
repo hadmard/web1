@@ -344,8 +344,8 @@ export default async function ArticlePage({ params, searchParams }: Props) {
             <ContentHeroImage
               src={article.coverImage}
               alt={article.title}
-              containerClassName="aspect-[16/10] rounded-[24px] border-0 bg-transparent p-0 sm:aspect-[16/9] sm:rounded-[26px]"
-              imageClassName="rounded-[24px] object-cover object-center sm:rounded-[26px]"
+              containerClassName="aspect-[16/9] rounded-[24px] border-0 bg-transparent p-0 sm:rounded-[26px]"
+              imageClassName="rounded-[24px] object-cover object-[center_42%] p-0 sm:rounded-[26px]"
             />
           </div>
         </div>
