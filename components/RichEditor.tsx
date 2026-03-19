@@ -27,6 +27,136 @@ type ImageAttrs = {
 
 type MenuMode = "text" | "image";
 
+function normalizePastedText(text: string) {
+  return text.replace(/\u00a0/g, " ").replace(/\s+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+function normalizePastedHref(href: string) {
+  const value = href.trim();
+  if (!value) return "";
+  if (/^(https?:|mailto:|tel:)/i.test(value)) return value;
+  if (/^\/\//.test(value)) return `https:${value}`;
+  return "";
+}
+
+function sanitizePastedHtml(rawHtml: string) {
+  if (typeof window === "undefined") return rawHtml;
+
+  const parser = new window.DOMParser();
+  const doc = parser.parseFromString(rawHtml, "text/html");
+
+  const cleanChildren = (parent: Node, target: Node) => {
+    Array.from(parent.childNodes).forEach((child) => {
+      const cleaned = cleanNode(child);
+      if (!cleaned) return;
+      if (Array.isArray(cleaned)) {
+        cleaned.forEach((node) => target.appendChild(node));
+        return;
+      }
+      target.appendChild(cleaned);
+    });
+  };
+
+  const cleanNode = (node: Node): Node | Node[] | null => {
+    if (node.nodeType === window.Node.TEXT_NODE) {
+      const text = normalizePastedText(node.textContent || "");
+      return text ? document.createTextNode(text) : null;
+    }
+
+    if (!(node instanceof HTMLElement)) return null;
+
+    const tag = node.tagName.toLowerCase();
+
+    if (["style", "script", "meta", "link", "svg", "iframe", "object", "embed", "form"].includes(tag)) {
+      return null;
+    }
+
+    if (tag === "img") {
+      return null;
+    }
+
+    if (["strong", "b"].includes(tag)) {
+      const strong = document.createElement("strong");
+      cleanChildren(node, strong);
+      return strong.childNodes.length ? strong : null;
+    }
+
+    if (["em", "i"].includes(tag)) {
+      const em = document.createElement("em");
+      cleanChildren(node, em);
+      return em.childNodes.length ? em : null;
+    }
+
+    if (tag === "u") {
+      const u = document.createElement("u");
+      cleanChildren(node, u);
+      return u.childNodes.length ? u : null;
+    }
+
+    if (tag === "br") {
+      return document.createElement("br");
+    }
+
+    if (tag === "a") {
+      const href = normalizePastedHref(node.getAttribute("href") || "");
+      const anchor = document.createElement(href ? "a" : "span");
+      if (href && anchor instanceof HTMLAnchorElement) {
+        anchor.href = href;
+        anchor.target = "_blank";
+        anchor.rel = "noopener noreferrer nofollow";
+      }
+      cleanChildren(node, anchor);
+      return anchor.textContent?.trim() ? anchor : null;
+    }
+
+    if (["h1", "h2", "h3", "blockquote", "ul", "ol", "li"].includes(tag)) {
+      const element = document.createElement(tag);
+      cleanChildren(node, element);
+      return element.textContent?.trim() || element.querySelector("br") ? element : null;
+    }
+
+    if (["p", "div", "section", "article", "header", "footer", "aside"].includes(tag)) {
+      const paragraph = document.createElement("p");
+      cleanChildren(node, paragraph);
+      return paragraph.textContent?.trim() || paragraph.querySelector("br") ? paragraph : null;
+    }
+
+    if (["table", "tbody", "thead", "tr"].includes(tag)) {
+      return Array.from(node.childNodes)
+        .map((child) => cleanNode(child))
+        .flatMap((child) => (Array.isArray(child) ? child : child ? [child] : []));
+    }
+
+    if (["td", "th"].includes(tag)) {
+      const paragraph = document.createElement("p");
+      cleanChildren(node, paragraph);
+      return paragraph.textContent?.trim() ? paragraph : null;
+    }
+
+    const fragment = document.createDocumentFragment();
+    cleanChildren(node, fragment);
+    return fragment.childNodes.length ? Array.from(fragment.childNodes) : null;
+  };
+
+  const container = document.createElement("div");
+  Array.from(doc.body.childNodes).forEach((child) => {
+    const cleaned = cleanNode(child);
+    if (!cleaned) return;
+    if (Array.isArray(cleaned)) {
+      cleaned.forEach((node) => container.appendChild(node));
+      return;
+    }
+    container.appendChild(cleaned);
+  });
+
+  const html = container.innerHTML
+    .replace(/<p>\s*<\/p>/g, "")
+    .replace(/(<br\s*\/?>\s*){3,}/g, "<br><br>")
+    .trim();
+
+  return html || "<p></p>";
+}
+
 const SpecialText = Mark.create({
   name: "specialText",
   addAttributes() {
@@ -108,6 +238,7 @@ function ToolButton({
 
 export function RichEditor({ value, onChange, minHeight = 260, placeholder = "请输入正文..." }: Props) {
   const imageInputRef = useRef<HTMLInputElement | null>(null);
+  const insertImageRef = useRef<((file: File) => Promise<void>) | null>(null);
   const [menu, setMenu] = useState<{ open: boolean; x: number; y: number; mode: MenuMode }>({
     open: false,
     x: 0,
@@ -146,16 +277,23 @@ export function RichEditor({ value, onChange, minHeight = 260, placeholder = "�
       attributes: {
         class: "rich-editor-content focus:outline-none",
       },
+      transformPastedHTML(html) {
+        return sanitizePastedHtml(html);
+      },
       handlePaste(view, event) {
         const clipboard = event.clipboardData;
         if (!clipboard) return false;
-        const hasImage = Array.from(clipboard.items).some((x) => x.type.startsWith("image/"));
-        if (hasImage) {
-          // Let React onPaste handle image insertion once, and block ProseMirror default paste.
+        const imageFile =
+          Array.from(clipboard.items)
+            .find((x) => x.type.startsWith("image/"))
+            ?.getAsFile() ?? null;
+        if (imageFile) {
           event.preventDefault();
+          window.setTimeout(() => {
+            void insertImageRef.current?.(imageFile);
+          }, 0);
           return true;
         }
-        // Keep default ProseMirror paste behavior for text to preserve paragraphs and line breaks.
         return false;
       },
       handleDOMEvents: {
@@ -268,14 +406,12 @@ export function RichEditor({ value, onChange, minHeight = 260, placeholder = "�
     [editor]
   );
 
-  const onPaste = async (e: React.ClipboardEvent) => {
-    const file = Array.from(e.clipboardData.items)
-      .find((x) => x.type.startsWith("image/"))
-      ?.getAsFile();
-    if (!file) return;
-    e.preventDefault();
-    await insertImage(file);
-  };
+  useEffect(() => {
+    insertImageRef.current = insertImage;
+    return () => {
+      insertImageRef.current = null;
+    };
+  }, [insertImage]);
 
   const updateSelectedImage = (attrs: Partial<ImageAttrs>) => {
     if (!editor) return false;
@@ -404,6 +540,7 @@ export function RichEditor({ value, onChange, minHeight = 260, placeholder = "�
         />
         <ToolButton label="上传图片" onClick={() => imageInputRef.current?.click()} />
         <span className="self-center text-[11px] text-muted">图片最大 {MAX_UPLOAD_IMAGE_MB}MB（超限可压缩）</span>
+        <span className="self-center text-[11px] text-[#8f7b59]">支持粘贴图片，文字会自动整理格式</span>
       </div>
 
       {isImageActive && (
@@ -491,7 +628,6 @@ export function RichEditor({ value, onChange, minHeight = 260, placeholder = "�
       <div
         className="px-4 py-4 bg-gradient-to-b from-surface to-surface-elevated overflow-y-auto"
         style={{ minHeight, maxHeight: "58vh" }}
-        onPaste={onPaste}
       >
         <EditorContent editor={editor} />
         {!value && placeholder ? <p className="text-xs text-muted mt-2">{placeholder}</p> : null}
