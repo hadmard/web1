@@ -132,7 +132,7 @@ export function ManageContentList({
                   >
                     {STATUS_TEXT[item.status]}
                   </span>
-                  {item.previewHref ? (
+                  {item.status === "approved" && item.previewHref ? (
                     <a
                       href={item.previewHref}
                       target="_blank"
