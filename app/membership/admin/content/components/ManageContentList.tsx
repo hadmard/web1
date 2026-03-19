@@ -25,9 +25,16 @@ const STATUS_TEXT: Record<Status, string> = {
   rejected: "已驳回",
 };
 
+const STATUS_CLASSNAME: Record<Status, string> = {
+  draft: "border-[rgba(148,163,184,0.35)] text-slate-600 bg-slate-50",
+  pending: "border-[rgba(245,158,11,0.35)] text-amber-700 bg-amber-50",
+  approved: "border-[rgba(34,197,94,0.35)] text-emerald-700 bg-emerald-50",
+  rejected: "border-[rgba(239,68,68,0.35)] text-red-600 bg-red-50",
+};
+
 function submitterLabel(user?: { name: string | null; email: string; role: string | null } | null) {
   if (!user) return "未知账号";
-  const roleLabel = user.role === "SUPER_ADMIN" ? "主管理员" : user.role === "ADMIN" ? "子管理员" : "会员";
+  const roleLabel = user?.role === "SUPER_ADMIN" ? "主管理员" : user?.role === "ADMIN" ? "子管理员" : "会员";
   return `${user.name?.trim() || user.email}（${roleLabel}）`;
 }
 
@@ -75,26 +82,28 @@ export function ManageContentList({
       ) : (
         <ul className="space-y-2">
           {items.map((item) => (
-            <li key={item.id} className="flex items-center justify-between border-b border-border pb-2">
-              <div>
+            <li key={item.id} className="flex items-start justify-between gap-4 border-b border-border pb-2">
+              <div className="min-w-0 flex-1">
                 <p className="flex items-center gap-2 text-sm">
                   {item.previewHref ? (
-                    <a href={item.previewHref} target="_blank" rel="noreferrer" className="hover:text-accent hover:underline">
+                    <a href={item.previewHref} target="_blank" rel="noreferrer" className="truncate hover:text-accent hover:underline">
                       {item.title}
                     </a>
                   ) : (
-                    <span>{item.title}</span>
+                    <span className="truncate">{item.title}</span>
                   )}
                   {item.isPinned ? (
                     <span className="rounded-full border border-accent/40 px-2 py-0.5 text-[11px] text-accent">置顶</span>
                   ) : null}
                 </p>
-                <p className="text-xs text-muted">
-                  {item.slug} 路 {STATUS_TEXT[item.status]}
-                </p>
                 <p className="mt-1 text-xs text-muted">{formatMeta(item)}</p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex shrink-0 items-center gap-2">
+                <span
+                  className={`inline-flex min-w-[68px] items-center justify-center rounded border px-2.5 py-1 text-xs ${STATUS_CLASSNAME[item.status]}`}
+                >
+                  {STATUS_TEXT[item.status]}
+                </span>
                 <button
                   type="button"
                   onClick={() => onEdit(item)}
