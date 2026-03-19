@@ -351,7 +351,7 @@ export default async function ArticlePage({ params, searchParams }: Props) {
         </div>
 
         {article.excerpt ? (
-          <blockquote className="mt-10 rounded-[24px] border border-[rgba(15,23,42,0.05)] border-l-[4px] border-l-[rgba(221,226,232,0.96)] bg-[rgba(255,255,255,0.94)] px-5 py-5 text-[15px] leading-8 text-muted shadow-[0_16px_36px_-34px_rgba(15,23,42,0.08)] sm:mt-8 sm:rounded-[26px] sm:px-7 sm:py-6 sm:shadow-[0_20px_42px_-36px_rgba(15,23,42,0.1)]">
+          <blockquote className="mt-10 border-l-[3px] border-l-[rgba(221,226,232,0.96)] pl-5 pr-1 text-[15px] leading-8 text-muted sm:mt-8 sm:pl-6">
             {article.excerpt}
           </blockquote>
         ) : null}
