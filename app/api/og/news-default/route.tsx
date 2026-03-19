@@ -18,7 +18,7 @@ export async function GET() {
           position: "relative",
           overflow: "hidden",
           background:
-            "radial-gradient(circle at top left, rgba(10,132,255,0.18), transparent 34%), radial-gradient(circle at bottom right, rgba(24,165,143,0.16), transparent 30%), linear-gradient(135deg, #f7f8fb 0%, #eef2f7 52%, #f8fafc 100%)",
+            "radial-gradient(circle at top left, rgba(180,154,107,0.18), transparent 34%), radial-gradient(circle at bottom right, rgba(143,155,116,0.16), transparent 30%), linear-gradient(135deg, #faf7f2 0%, #f3eee6 52%, #f8f5ef 100%)",
           color: "#111827",
           fontFamily: '"PingFang SC", "Microsoft YaHei", sans-serif',
         }}
@@ -88,7 +88,7 @@ export async function GET() {
                 width: 12,
                 height: 12,
                 borderRadius: 999,
-                background: "#0a84ff",
+                background: "#8a734d",
               }}
             />
             <div style={{ fontSize: 26, color: "#0f172a", fontWeight: 600 }}>整木资讯分享</div>
@@ -129,7 +129,7 @@ export async function GET() {
         >
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <div style={{ fontSize: 20, color: "#64748b", letterSpacing: "0.1em" }}>NEWS SHARE</div>
-            <div style={{ width: 64, height: 4, borderRadius: 999, background: "#0a84ff" }} />
+            <div style={{ width: 64, height: 4, borderRadius: 999, background: "#8a734d" }} />
           </div>
 
           <div
@@ -147,7 +147,7 @@ export async function GET() {
                 borderRadius: 999,
                 border: "1px solid rgba(148,163,184,0.24)",
                 background:
-                  "radial-gradient(circle at 35% 35%, rgba(10,132,255,0.18), transparent 46%), linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%)",
+                  "radial-gradient(circle at 35% 35%, rgba(180,154,107,0.18), transparent 46%), linear-gradient(180deg, #faf7f2 0%, #efe6d7 100%)",
               }}
             />
             <div style={{ fontSize: 30, fontWeight: 700, color: "#111827" }}>整木资讯</div>

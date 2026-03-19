@@ -216,7 +216,7 @@ export function ArticleShareActions({ title, shareUrl, siteName, className = "mt
                 <div className="flex h-[92px] w-[92px] items-center justify-center rounded-[24px] bg-white shadow-[0_18px_36px_rgba(0,0,0,0.26)]">
                   <div className="grid h-11 w-11 grid-cols-2 gap-1.5">
                     <span className="rounded-full bg-[#fb923c]" />
-                    <span className="rounded-full bg-[#60a5fa]" />
+                    <span className="rounded-full bg-[#b49a6b]" />
                     <span className="rounded-full bg-[#4ade80]" />
                     <span className="rounded-full bg-[#f472b6]" />
                   </div>
