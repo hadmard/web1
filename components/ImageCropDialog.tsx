@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { cropImageSourceToFile } from "@/lib/client-image";
 
 type ImageCropDialogProps = {
@@ -31,6 +32,7 @@ export function ImageCropDialog({
   outputWidth = 1600,
   outputHeight = 900,
 }: ImageCropDialogProps) {
+  const [mounted, setMounted] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [offsetX, setOffsetX] = useState(0);
   const [offsetY, setOffsetY] = useState(0);
@@ -40,8 +42,10 @@ export function ImageCropDialog({
 
   useEffect(() => {
     const previous = document.body.style.overflow;
+    setMounted(true);
     document.body.style.overflow = "hidden";
     return () => {
+      setMounted(false);
       document.body.style.overflow = previous;
     };
   }, []);
@@ -141,10 +145,12 @@ export function ImageCropDialog({
     setOffsetY(0);
   }
 
-  return (
-    <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-[2px]">
-      <div className="flex min-h-full items-center justify-center p-4 sm:p-6">
-        <div className="flex max-h-[calc(100vh-2rem)] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-white/15 bg-white shadow-2xl sm:max-h-[calc(100vh-3rem)]">
+  if (!mounted) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[320] bg-black/60 backdrop-blur-[2px]">
+      <div className="flex min-h-full items-start justify-center overflow-y-auto p-4 pt-6 sm:items-center sm:p-6">
+        <div className="flex w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-white/15 bg-white shadow-2xl sm:max-h-[calc(100vh-3rem)]">
           <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-border bg-white px-5 py-4">
             <div className="min-w-0">
               <h3 className="text-base font-semibold text-primary">{title}</h3>
@@ -195,7 +201,8 @@ export function ImageCropDialog({
               <div className="grid gap-4 rounded-xl border border-border bg-surface p-4 sm:grid-cols-[1fr_220px]">
                 <div className="space-y-3">
                   <p className="text-xs text-muted">
-                    按住图片可直接拖动位置；滚动鼠标滚轮可上下查看图片内容；按住 Ctrl 再滚轮可缩放；按住 Shift 再滚轮可左右微调。
+                    按住图片可直接拖动位置；滚动鼠标滚轮可上下查看图片内容；按住 Ctrl 再滚轮可缩放；按住 Shift
+                    再滚轮可左右微调。
                   </p>
                   <label className="block space-y-2 text-sm">
                     <span className="text-muted">上下查看</span>
@@ -245,6 +252,7 @@ export function ImageCropDialog({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
