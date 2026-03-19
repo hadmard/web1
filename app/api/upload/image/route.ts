@@ -1,5 +1,7 @@
 import { randomUUID } from "crypto";
+import dns from "dns/promises";
 import { access, mkdir, readFile, writeFile } from "fs/promises";
+import net from "net";
 import path from "path";
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
@@ -24,6 +26,7 @@ const EXTENSION_MIME: Record<string, string> = {
 };
 
 const LEGACY_UPLOAD_HOSTS = new Set(["cnzhengmu.com", "www.cnzhengmu.com", "jiu.cnzhengmu.com"]);
+const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
 
 function sanitizeFolder(input: string) {
   const cleaned = input
@@ -71,6 +74,32 @@ function sanitizeRemoteImageUrl(input: string) {
     return parsed;
   } catch {
     return null;
+  }
+}
+
+function isPrivateIpv4(host: string) {
+  if (net.isIP(host) !== 4) return false;
+  if (host.startsWith("10.") || host.startsWith("127.") || host.startsWith("192.168.")) return true;
+  const parts = host.split(".").map(Number);
+  return parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31;
+}
+
+function isPrivateIpv6(host: string) {
+  if (net.isIP(host) !== 6) return false;
+  const normalized = host.toLowerCase();
+  return normalized === "::1" || normalized.startsWith("fc") || normalized.startsWith("fd") || normalized.startsWith("fe80:");
+}
+
+async function isPublicRemoteHost(hostname: string) {
+  const host = hostname.trim().toLowerCase();
+  if (!host || LOCAL_HOSTS.has(host)) return false;
+  if (isPrivateIpv4(host) || isPrivateIpv6(host)) return false;
+
+  try {
+    const results = await dns.lookup(host, { all: true });
+    return results.every((entry) => !isPrivateIpv4(entry.address) && !isPrivateIpv6(entry.address));
+  } catch {
+    return false;
   }
 }
 
@@ -162,11 +191,16 @@ async function uploadRemoteImage(remoteUrlValue: string, folderRaw: string) {
     return NextResponse.json({ error: "远程图片地址无效" }, { status: 400 });
   }
 
+  if (!(await isPublicRemoteHost(remoteUrl.hostname))) {
+    return NextResponse.json({ error: "仅允许转存公网图片地址" }, { status: 400 });
+  }
+
   let response: Response;
   try {
     response = await fetch(remoteUrl, {
       headers: { Accept: "image/*,*/*;q=0.8" },
       cache: "no-store",
+      redirect: "error",
     });
   } catch {
     return NextResponse.json({ error: "远程图片下载失败" }, { status: 400 });
@@ -219,6 +253,9 @@ export async function POST(request: Request) {
   const folderRaw = typeof formData?.get("folder") === "string" ? String(formData?.get("folder")) : "misc";
 
   if (remoteUrl) {
+    if (session.role !== "SUPER_ADMIN" && session.role !== "ADMIN") {
+      return NextResponse.json({ error: "仅管理员可使用网页图片转存" }, { status: 403 });
+    }
     return uploadRemoteImage(remoteUrl, folderRaw);
   }
 

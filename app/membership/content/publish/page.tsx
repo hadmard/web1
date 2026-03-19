@@ -276,6 +276,7 @@ function PublishCenterPageInner() {
     [allowedCategories, selectedTabDef.href]
   );
   const subOptions = useMemo(() => selectedCategory?.subs ?? [], [selectedCategory]);
+  const canPasteImages = role === "SUPER_ADMIN" || role === "ADMIN";
 
   const filteredItems = useMemo(
     () => items.filter((item) => resolveTabKeyFromHref(item.categoryHref, item.subHref) === safeTab),
@@ -1102,7 +1103,7 @@ function PublishCenterPageInner() {
             safeTab !== "awards" && (
             <>
               <label className="block text-sm text-muted">正文</label>
-              <RichEditor value={content} onChange={setContent} minHeight={280} placeholder="" />
+              <RichEditor value={content} onChange={setContent} minHeight={280} placeholder="" allowClipboardImagePaste={canPasteImages} />
             </>
           )}
           {safeTab === "brands" && (
@@ -1275,7 +1276,7 @@ function PublishCenterPageInner() {
             ) : (
               <>
                 <label className="block text-sm text-muted">新正文</label>
-                <RichEditor value={editContent} onChange={setEditContent} minHeight={260} placeholder="" />
+                <RichEditor value={editContent} onChange={setEditContent} minHeight={260} placeholder="" allowClipboardImagePaste={canPasteImages} />
               </>
             )}
             <label className="block text-sm text-muted">修改说明</label>

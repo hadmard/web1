@@ -86,9 +86,7 @@ async function prepareImageFile(file: File, maxBytes: number) {
 
   const limitMb = (maxBytes / 1024 / 1024).toFixed(0);
   const fileMb = (file.size / 1024 / 1024).toFixed(2);
-  const shouldCompress = window.confirm(
-    `图片大小 ${fileMb}MB，超过上限 ${limitMb}MB。是否自动压缩到 ${limitMb}MB 以内？`
-  );
+  const shouldCompress = window.confirm(`图片大小 ${fileMb}MB，超过上限 ${limitMb}MB。是否自动压缩到 ${limitMb}MB 以内？`);
   if (!shouldCompress) {
     throw new Error(`已取消上传：图片超过 ${limitMb}MB。`);
   }

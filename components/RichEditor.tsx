@@ -8,7 +8,7 @@ import Image from "@tiptap/extension-image";
 import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";
 import { Mark } from "@tiptap/core";
-import { NodeSelection } from "@tiptap/pm/state";
+import { NodeSelection, TextSelection } from "@tiptap/pm/state";
 import { MAX_UPLOAD_IMAGE_MB, uploadImageToServer, uploadRemoteImageToServer } from "@/lib/client-image";
 
 type Props = {
@@ -16,6 +16,7 @@ type Props = {
   onChange: (html: string) => void;
   minHeight?: number;
   placeholder?: string;
+  allowClipboardImagePaste?: boolean;
 };
 
 type ImageAttrs = {
@@ -228,6 +229,11 @@ async function transferPastedRemoteImages(rawHtml: string) {
   return sanitizePastedHtml(rawHtml, imageMap);
 }
 
+function createSelectionAnchor(editor: NonNullable<ReturnType<typeof useEditor>>) {
+  const { from, to } = editor.state.selection;
+  return { from, to };
+}
+
 const SpecialText = Mark.create({
   name: "specialText",
   addAttributes() {
@@ -307,7 +313,13 @@ function ToolButton({
   );
 }
 
-export function RichEditor({ value, onChange, minHeight = 260, placeholder = "请输入正文..." }: Props) {
+export function RichEditor({
+  value,
+  onChange,
+  minHeight = 260,
+  placeholder = "请输入正文...",
+  allowClipboardImagePaste = false,
+}: Props) {
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const insertImageRef = useRef<((file: File) => Promise<void>) | null>(null);
   const insertPastedHtmlRef = useRef<((html: string) => Promise<void>) | null>(null);
@@ -360,14 +372,14 @@ export function RichEditor({ value, onChange, minHeight = 260, placeholder = "�
           Array.from(clipboard.items)
             .find((x) => x.type.startsWith("image/"))
             ?.getAsFile() ?? null;
-        if (imageFile) {
+        if (allowClipboardImagePaste && imageFile) {
           event.preventDefault();
           window.setTimeout(() => {
             void insertImageRef.current?.(imageFile);
           }, 0);
           return true;
         }
-        if (pastedHtml && /<img[\s>]/i.test(pastedHtml)) {
+        if (allowClipboardImagePaste && pastedHtml && /<img[\s>]/i.test(pastedHtml)) {
           event.preventDefault();
           window.setTimeout(() => {
             void insertPastedHtmlRef.current?.(pastedHtml);
@@ -496,10 +508,15 @@ export function RichEditor({ value, onChange, minHeight = 260, placeholder = "�
   useEffect(() => {
     insertPastedHtmlRef.current = async (html: string) => {
       if (!editor) return;
+      const anchor = createSelectionAnchor(editor);
       try {
         const normalizedHtml = await transferPastedRemoteImages(html);
+        const tr = editor.state.tr.setSelection(TextSelection.create(editor.state.doc, anchor.from, anchor.to));
+        editor.view.dispatch(tr);
         editor.chain().focus().insertContent(normalizedHtml).run();
       } catch {
+        const tr = editor.state.tr.setSelection(TextSelection.create(editor.state.doc, anchor.from, anchor.to));
+        editor.view.dispatch(tr);
         editor.chain().focus().insertContent(sanitizePastedHtml(html)).run();
       }
     };
@@ -635,7 +652,9 @@ export function RichEditor({ value, onChange, minHeight = 260, placeholder = "�
         />
         <ToolButton label="上传图片" onClick={() => imageInputRef.current?.click()} />
         <span className="self-center text-[11px] text-muted">图片最大 {MAX_UPLOAD_IMAGE_MB}MB（超限可压缩）</span>
-        <span className="self-center text-[11px] text-[#8f7b59]">支持粘贴图片，文字会自动整理格式</span>
+        <span className="self-center text-[11px] text-[#8f7b59]">
+          {allowClipboardImagePaste ? "支持粘贴图片，文字会自动整理格式" : "支持上传图片，文字会自动整理格式"}
+        </span>
       </div>
 
       {isImageActive && (

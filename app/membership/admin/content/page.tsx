@@ -1056,6 +1056,7 @@ export default function AdminContentPage() {
                   onChange={setContent}
                   minHeight={360}
                   placeholder={tab === "terms" ? "支持标题、列表、表格、引用、图片的词条正文编辑。" : "支持标题分级、表格、图片和条款结构的标准正文编辑。"}
+                  allowClipboardImagePaste
                 />
               </>
             )}
@@ -1067,7 +1068,7 @@ export default function AdminContentPage() {
             {tab !== "terms" && tab !== "brands" && tab !== "standards" && tab !== "industry-data" && tab !== "awards" && (
               <>
                 <label className="block text-sm text-muted">正文</label>
-                <RichEditor value={content} onChange={setContent} minHeight={300} placeholder="" />
+                <RichEditor value={content} onChange={setContent} minHeight={300} placeholder="" allowClipboardImagePaste />
               </>
             )}
             {tab === "brands" && (
@@ -1296,6 +1297,7 @@ export default function AdminContentPage() {
                   onChange={setEditContent}
                   minHeight={360}
                   placeholder={tab === "terms" ? "支持标题、列表、表格、引用、图片的词条正文编辑。" : "支持标题分级、表格、图片和条款结构的标准正文编辑。"}
+                  allowClipboardImagePaste
                 />
               </>
             ) : tab === "brands" ? (
@@ -1328,7 +1330,7 @@ export default function AdminContentPage() {
             ) : (
               <>
                 <label className="block text-sm text-muted">正文</label>
-                <RichEditor value={editContent} onChange={setEditContent} minHeight={320} placeholder="" />
+                <RichEditor value={editContent} onChange={setEditContent} minHeight={320} placeholder="" allowClipboardImagePaste />
               </>
             )}
             <div className="flex gap-2 flex-wrap">
