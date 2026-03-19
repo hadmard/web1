@@ -249,7 +249,6 @@ export default function AdminContentPage() {
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
   const [source, setSource] = useState("");
-  const [sourceUrl, setSourceUrl] = useState("");
   const [displayAuthor, setDisplayAuthor] = useState("");
   const [excerpt, setExcerpt] = useState("");
   const [content, setContent] = useState("");
@@ -270,7 +269,6 @@ export default function AdminContentPage() {
   const [editSlug, setEditSlug] = useState("");
   const [editTitle, setEditTitle] = useState("");
   const [editSource, setEditSource] = useState("");
-  const [editSourceUrl, setEditSourceUrl] = useState("");
   const [editDisplayAuthor, setEditDisplayAuthor] = useState("");
   const [editExcerpt, setEditExcerpt] = useState("");
   const [editContent, setEditContent] = useState("");
@@ -313,7 +311,6 @@ export default function AdminContentPage() {
     setIsPinned(false);
     setSlug("");
     setSource("");
-    setSourceUrl("");
     setDisplayAuthor("");
     setDocumentMeta(createEmptyDocumentMetadata());
   }, [tab]);
@@ -577,7 +574,6 @@ export default function AdminContentPage() {
         title: title.trim(),
         slug: slug.trim() || null,
         source: source.trim() || null,
-        sourceUrl: sourceUrl.trim() || null,
         displayAuthor: displayAuthor.trim() || null,
         excerpt: excerpt || null,
         content: composedContent,
@@ -621,7 +617,6 @@ export default function AdminContentPage() {
     setTitle("");
     setSlug("");
     setSource("");
-    setSourceUrl("");
     setDisplayAuthor("");
     setExcerpt("");
     setContent("");
@@ -642,7 +637,6 @@ export default function AdminContentPage() {
     setEditSlug(item.slug ?? "");
     setEditTitle(item.title);
     setEditSource(item.source ?? "");
-    setEditSourceUrl(item.sourceUrl ?? "");
     setEditDisplayAuthor(item.displayAuthor ?? "");
     setEditExcerpt(item.excerpt ?? "");
     setEditContent(item.content);
@@ -682,7 +676,6 @@ export default function AdminContentPage() {
     setEditSlug("");
     setEditTitle(item.patchTitle ?? item.article.title);
     setEditSource(item.article.source ?? "");
-    setEditSourceUrl(item.article.sourceUrl ?? "");
     setEditDisplayAuthor(item.article.displayAuthor ?? "");
     setEditExcerpt(item.patchExcerpt ?? item.article.excerpt ?? "");
     setEditContent(nextContent);
@@ -734,7 +727,6 @@ export default function AdminContentPage() {
         title: editTitle,
         slug: editSlug || undefined,
         source: editSource || null,
-        sourceUrl: editSourceUrl || null,
         displayAuthor: editDisplayAuthor || null,
         excerpt: editExcerpt || null,
         content: composedEditContent,
@@ -891,32 +883,42 @@ export default function AdminContentPage() {
               </>
             )}
             <label className="block text-sm text-muted">标题</label><input className="w-full border border-border rounded px-3 py-2 bg-surface" value={title} onChange={(e) => setTitle(e.target.value)} required />
-            <div className="rounded-2xl border border-border bg-surface p-4 space-y-3">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-medium text-primary">稿件信息</p>
-                  <p className="text-xs text-muted">参考主流资讯站写法，前台将展示“作者 / 来源”，来源可附原文链接。</p>
-                </div>
-              </div>
-              <div className="grid gap-3 md:grid-cols-3">
+            <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+              <div className="rounded-2xl border border-border bg-surface px-4 py-3">
+                <label className="mb-2 block text-sm font-medium text-primary">作者</label>
                 <input
-                  className="w-full border border-border rounded px-3 py-2 bg-surface-elevated"
+                  className="w-full border-0 bg-transparent px-0 py-0 text-[15px] text-primary placeholder:text-muted focus:outline-none"
                   value={displayAuthor}
                   onChange={(e) => setDisplayAuthor(e.target.value)}
-                  placeholder="作者，如：编辑部 / 张三"
+                  placeholder="如：编辑部 / 张三"
                 />
+              </div>
+              <div className="rounded-2xl border border-border bg-surface px-4 py-3">
+                <label className="mb-2 block text-sm font-medium text-primary">来源</label>
                 <input
-                  className="w-full border border-border rounded px-3 py-2 bg-surface-elevated"
+                  className="w-full border-0 bg-transparent px-0 py-0 text-[15px] text-primary placeholder:text-muted focus:outline-none"
                   value={source}
                   onChange={(e) => setSource(e.target.value)}
-                  placeholder="来源，如：整木网 / 品牌官方"
+                  placeholder="如：整木网 / 品牌官方"
                 />
-                <input
-                  className="w-full border border-border rounded px-3 py-2 bg-surface-elevated md:col-span-1"
-                  value={sourceUrl}
-                  onChange={(e) => setSourceUrl(e.target.value)}
-                  placeholder="来源链接（可选）"
-                />
+              </div>
+              <div className={`rounded-2xl border px-4 py-3 transition md:min-w-[168px] ${isPinned ? "border-[rgba(180,154,107,0.54)] bg-[linear-gradient(180deg,rgba(202,174,121,0.2),rgba(180,154,107,0.14))] shadow-[0_18px_34px_-24px_rgba(180,154,107,0.6)]" : "border-[rgba(180,154,107,0.28)] bg-[linear-gradient(180deg,rgba(255,251,245,0.96),rgba(247,240,229,0.92))] shadow-[0_14px_28px_-24px_rgba(180,154,107,0.34)]"}`}>
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-semibold text-[#7f6947]">置顶</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsPinned((value) => !value)}
+                    className={`inline-flex min-w-[86px] items-center justify-center rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                      isPinned
+                        ? "border-[rgba(180,154,107,0.6)] bg-[#b49a6b] text-white shadow-[0_10px_24px_-18px_rgba(180,154,107,0.8)]"
+                        : "border-[rgba(180,154,107,0.38)] bg-white/90 text-[#8a734d] hover:border-[rgba(180,154,107,0.55)] hover:bg-white"
+                    }`}
+                  >
+                    {isPinned ? "已置顶" : "设为置顶"}
+                  </button>
+                </div>
               </div>
             </div>
             {(tab === "terms" || tab === "standards") && (
@@ -1046,25 +1048,6 @@ export default function AdminContentPage() {
                 )}
               </>
             )}
-            <div className={`rounded-2xl border px-4 py-3 transition ${isPinned ? "border-[rgba(180,154,107,0.42)] bg-[linear-gradient(180deg,rgba(255,251,245,0.98),rgba(247,240,229,0.95))] shadow-[0_14px_28px_-24px_rgba(180,154,107,0.45)]" : "border-border bg-surface"}`}>
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-sm font-medium text-primary">置顶推荐</p>
-                  <p className="text-xs text-muted">首页与列表优先展示，仅管理员内容生效。</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsPinned((value) => !value)}
-                  className={`inline-flex min-w-[88px] items-center justify-center rounded-full border px-3 py-1.5 text-xs font-medium transition ${
-                    isPinned
-                      ? "border-[rgba(180,154,107,0.48)] bg-[rgba(180,154,107,0.14)] text-[#8a734d]"
-                      : "border-border bg-white text-muted hover:border-accent/30 hover:text-accent"
-                  }`}
-                >
-                  {isPinned ? "已置顶" : "设为置顶"}
-                </button>
-              </div>
-            </div>
             {(tab === "terms" || tab === "standards") && (
               <>
                 <label className="block text-sm text-muted">{tab === "terms" ? "词条正文" : "标准正文"}</label>
@@ -1138,30 +1121,42 @@ export default function AdminContentPage() {
           <h2 className="text-sm font-semibold mb-3">编辑内容</h2>
           <form onSubmit={(e) => { e.preventDefault(); void saveEdit(); }} className="space-y-3">
             <label className="block text-sm text-muted">标题</label><input className="w-full border border-border rounded px-3 py-2 bg-surface" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} required />
-            <div className="rounded-2xl border border-border bg-surface p-4 space-y-3">
-              <div>
-                <p className="text-sm font-medium text-primary">稿件信息</p>
-                <p className="text-xs text-muted">用于前台展示作者署名与内容来源，移动端会自动换行到标题下方。</p>
-              </div>
-              <div className="grid gap-3 md:grid-cols-3">
+            <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+              <div className="rounded-2xl border border-border bg-surface px-4 py-3">
+                <label className="mb-2 block text-sm font-medium text-primary">作者</label>
                 <input
-                  className="w-full border border-border rounded px-3 py-2 bg-surface-elevated"
+                  className="w-full border-0 bg-transparent px-0 py-0 text-[15px] text-primary placeholder:text-muted focus:outline-none"
                   value={editDisplayAuthor}
                   onChange={(e) => setEditDisplayAuthor(e.target.value)}
-                  placeholder="作者，如：编辑部 / 张三"
+                  placeholder="如：编辑部 / 张三"
                 />
+              </div>
+              <div className="rounded-2xl border border-border bg-surface px-4 py-3">
+                <label className="mb-2 block text-sm font-medium text-primary">来源</label>
                 <input
-                  className="w-full border border-border rounded px-3 py-2 bg-surface-elevated"
+                  className="w-full border-0 bg-transparent px-0 py-0 text-[15px] text-primary placeholder:text-muted focus:outline-none"
                   value={editSource}
                   onChange={(e) => setEditSource(e.target.value)}
-                  placeholder="来源，如：整木网 / 品牌官方"
+                  placeholder="如：整木网 / 品牌官方"
                 />
-                <input
-                  className="w-full border border-border rounded px-3 py-2 bg-surface-elevated"
-                  value={editSourceUrl}
-                  onChange={(e) => setEditSourceUrl(e.target.value)}
-                  placeholder="来源链接（可选）"
-                />
+              </div>
+              <div className={`rounded-2xl border px-4 py-3 transition md:min-w-[168px] ${editIsPinned ? "border-[rgba(180,154,107,0.54)] bg-[linear-gradient(180deg,rgba(202,174,121,0.2),rgba(180,154,107,0.14))] shadow-[0_18px_34px_-24px_rgba(180,154,107,0.6)]" : "border-[rgba(180,154,107,0.28)] bg-[linear-gradient(180deg,rgba(255,251,245,0.96),rgba(247,240,229,0.92))] shadow-[0_14px_28px_-24px_rgba(180,154,107,0.34)]"}`}>
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-semibold text-[#7f6947]">置顶</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditIsPinned((value) => !value)}
+                    className={`inline-flex min-w-[86px] items-center justify-center rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                      editIsPinned
+                        ? "border-[rgba(180,154,107,0.6)] bg-[#b49a6b] text-white shadow-[0_10px_24px_-18px_rgba(180,154,107,0.8)]"
+                        : "border-[rgba(180,154,107,0.38)] bg-white/90 text-[#8a734d] hover:border-[rgba(180,154,107,0.55)] hover:bg-white"
+                    }`}
+                  >
+                    {editIsPinned ? "已置顶" : "设为置顶"}
+                  </button>
+                </div>
               </div>
             </div>
             {(tab === "terms" || tab === "standards") && (
@@ -1293,25 +1288,6 @@ export default function AdminContentPage() {
                 )}
               </>
             )}
-            <div className={`rounded-2xl border px-4 py-3 transition ${editIsPinned ? "border-[rgba(180,154,107,0.42)] bg-[linear-gradient(180deg,rgba(255,251,245,0.98),rgba(247,240,229,0.95))] shadow-[0_14px_28px_-24px_rgba(180,154,107,0.45)]" : "border-border bg-surface"}`}>
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-sm font-medium text-primary">置顶推荐</p>
-                  <p className="text-xs text-muted">首页与列表优先展示，仅管理员内容生效。</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setEditIsPinned((value) => !value)}
-                  className={`inline-flex min-w-[88px] items-center justify-center rounded-full border px-3 py-1.5 text-xs font-medium transition ${
-                    editIsPinned
-                      ? "border-[rgba(180,154,107,0.48)] bg-[rgba(180,154,107,0.14)] text-[#8a734d]"
-                      : "border-border bg-white text-muted hover:border-accent/30 hover:text-accent"
-                  }`}
-                >
-                  {editIsPinned ? "已置顶" : "设为置顶"}
-                </button>
-              </div>
-            </div>
             {(tab === "terms" || tab === "standards") ? (
               <>
                 <label className="block text-sm text-muted">{tab === "terms" ? "词条正文" : "标准正文"}</label>

@@ -230,7 +230,6 @@ function PublishCenterPageInner() {
 
   const [title, setTitle] = useState("");
   const [source, setSource] = useState("");
-  const [sourceUrl, setSourceUrl] = useState("");
   const [displayAuthor, setDisplayAuthor] = useState("");
   const [excerpt, setExcerpt] = useState("");
   const [content, setContent] = useState("");
@@ -426,7 +425,6 @@ function PublishCenterPageInner() {
     setCoverImage("");
     replacePreviewUrl("publish", "");
     setSource("");
-    setSourceUrl("");
     setDisplayAuthor("");
     setConceptSummary("");
     setApplicableScenarios("");
@@ -529,7 +527,6 @@ function PublishCenterPageInner() {
       title: title.trim(),
       slug: slug.trim() || null,
       source: source.trim() || null,
-      sourceUrl: sourceUrl.trim() || null,
       displayAuthor: displayAuthor.trim() || null,
       excerpt: excerpt.trim() || null,
       content: composedContent,
@@ -923,31 +920,45 @@ function PublishCenterPageInner() {
 
           <label className="block text-sm text-muted">标题</label>
           <input className="w-full border border-border rounded px-3 py-2 bg-surface" value={title} onChange={(e) => setTitle(e.target.value)} required />
-          <div className="rounded-2xl border border-border bg-surface p-4 space-y-3">
-            <div>
-              <p className="text-sm font-medium text-primary">稿件信息</p>
-              <p className="text-xs text-muted">前台将展示作者署名与来源，来源链接可选，版式会自动适配手机端。</p>
-            </div>
-            <div className="grid gap-3 md:grid-cols-3">
+          <div className={`grid gap-3 ${(role === "SUPER_ADMIN" || role === "ADMIN") ? "md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]" : "md:grid-cols-2"}`}>
+            <div className="rounded-2xl border border-border bg-surface px-4 py-3">
+              <label className="mb-2 block text-sm font-medium text-primary">作者</label>
               <input
-                className="w-full border border-border rounded px-3 py-2 bg-surface-elevated"
+                className="w-full border-0 bg-transparent px-0 py-0 text-[15px] text-primary placeholder:text-muted focus:outline-none"
                 value={displayAuthor}
                 onChange={(e) => setDisplayAuthor(e.target.value)}
-                placeholder="作者，如：编辑部 / 张三"
-              />
-              <input
-                className="w-full border border-border rounded px-3 py-2 bg-surface-elevated"
-                value={source}
-                onChange={(e) => setSource(e.target.value)}
-                placeholder="来源，如：整木网 / 品牌官方"
-              />
-              <input
-                className="w-full border border-border rounded px-3 py-2 bg-surface-elevated"
-                value={sourceUrl}
-                onChange={(e) => setSourceUrl(e.target.value)}
-                placeholder="来源链接（可选）"
+                placeholder="如：编辑部 / 张三"
               />
             </div>
+            <div className="rounded-2xl border border-border bg-surface px-4 py-3">
+              <label className="mb-2 block text-sm font-medium text-primary">来源</label>
+              <input
+                className="w-full border-0 bg-transparent px-0 py-0 text-[15px] text-primary placeholder:text-muted focus:outline-none"
+                value={source}
+                onChange={(e) => setSource(e.target.value)}
+                placeholder="如：整木网 / 品牌官方"
+              />
+            </div>
+            {(role === "SUPER_ADMIN" || role === "ADMIN") && (
+              <div className={`rounded-2xl border px-4 py-3 transition md:min-w-[168px] ${isPinned ? "border-[rgba(180,154,107,0.54)] bg-[linear-gradient(180deg,rgba(202,174,121,0.2),rgba(180,154,107,0.14))] shadow-[0_18px_34px_-24px_rgba(180,154,107,0.6)]" : "border-[rgba(180,154,107,0.28)] bg-[linear-gradient(180deg,rgba(255,251,245,0.96),rgba(247,240,229,0.92))] shadow-[0_14px_28px_-24px_rgba(180,154,107,0.34)]"}`}>
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-semibold text-[#7f6947]">置顶</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsPinned((value) => !value)}
+                    className={`inline-flex min-w-[86px] items-center justify-center rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                      isPinned
+                        ? "border-[rgba(180,154,107,0.6)] bg-[#b49a6b] text-white shadow-[0_10px_24px_-18px_rgba(180,154,107,0.8)]"
+                        : "border-[rgba(180,154,107,0.38)] bg-white/90 text-[#8a734d] hover:border-[rgba(180,154,107,0.55)] hover:bg-white"
+                    }`}
+                  >
+                    {isPinned ? "已置顶" : "设为置顶"}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
           {(safeTab === "terms" || safeTab === "standards") && (
             <>
@@ -1083,27 +1094,6 @@ function PublishCenterPageInner() {
             </>
           )}
 
-          {(role === "SUPER_ADMIN" || role === "ADMIN") && (
-            <div className={`rounded-2xl border px-4 py-3 transition ${isPinned ? "border-[rgba(180,154,107,0.42)] bg-[linear-gradient(180deg,rgba(255,251,245,0.98),rgba(247,240,229,0.95))] shadow-[0_14px_28px_-24px_rgba(180,154,107,0.45)]" : "border-border bg-surface"}`}>
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-sm font-medium text-primary">置顶推荐</p>
-                  <p className="text-xs text-muted">首页与列表优先展示，仅管理员发布时生效。</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsPinned((value) => !value)}
-                  className={`inline-flex min-w-[88px] items-center justify-center rounded-full border px-3 py-1.5 text-xs font-medium transition ${
-                    isPinned
-                      ? "border-[rgba(180,154,107,0.48)] bg-[rgba(180,154,107,0.14)] text-[#8a734d]"
-                      : "border-border bg-white text-muted hover:border-accent/30 hover:text-accent"
-                  }`}
-                >
-                  {isPinned ? "已置顶" : "设为置顶"}
-                </button>
-              </div>
-            </div>
-          )}
 
           {safeTab !== "terms" &&
             safeTab !== "brands" &&
