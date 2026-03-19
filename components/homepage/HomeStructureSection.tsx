@@ -22,7 +22,7 @@ export function HomeStructureSection({ cards }: { cards: HomepageStructureCard[]
                 <div className="showcase-frame media-zoom-smooth mb-4 overflow-hidden rounded-xl border border-border">
                   <Image
                     src={card.image}
-                    alt=""
+                    alt={`${card.title} 栏目封面图`}
                     width={1200}
                     height={700}
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 560px"

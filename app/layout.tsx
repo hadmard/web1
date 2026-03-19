@@ -119,6 +119,14 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
 
   return (
     <html lang="zh-CN" className="scroll-smooth">
+      <head>
+        <link
+          rel="search"
+          type="application/opensearchdescription+xml"
+          title={SITE_NAME}
+          href={absoluteUrl("/opensearch.xml")}
+        />
+      </head>
       <body className="min-h-screen flex flex-col font-sans">
         <JsonLd data={{ "@context": "https://schema.org", "@graph": jsonLdGraph }} />
         <Header

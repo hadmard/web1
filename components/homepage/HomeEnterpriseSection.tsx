@@ -54,7 +54,7 @@ export function HomeEnterpriseSection({
                 {hasEnterpriseImage ? (
                   <Image
                     src={enterpriseImage}
-                    alt=""
+                    alt="企业入口栏目封面图"
                     width={1600}
                     height={900}
                     sizes="(max-width: 1024px) 100vw, 760px"

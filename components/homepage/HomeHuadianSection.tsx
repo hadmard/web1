@@ -27,7 +27,7 @@ export function HomeHuadianSection({
             {hasImage ? (
               <Image
                 src={image}
-                alt=""
+                alt={`华点榜 ${year} 年度推荐封面图`}
                 width={1600}
                 height={900}
                 sizes="(max-width: 1024px) 100vw, 1152px"

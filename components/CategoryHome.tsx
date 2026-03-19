@@ -85,7 +85,7 @@ export async function CategoryHome({
                 >
                   <Image
                     src={iconSrc}
-                    alt=""
+                    alt={`${displayTitle} 栏目图标`}
                     width={42}
                     height={42}
                     className="h-10 w-10 sm:h-11 sm:w-11"
@@ -137,7 +137,7 @@ export async function CategoryHome({
                 <div className="overflow-hidden rounded-[26px] border border-border bg-[linear-gradient(180deg,rgba(255,255,255,0.9),rgba(243,245,248,0.96))]">
                   <Image
                     src={heroSrc}
-                    alt=""
+                    alt={`${displayTitle} 栏目封面图`}
                     width={1600}
                     height={640}
                     className="h-64 w-full object-cover object-center sm:h-72 lg:h-[25rem]"
@@ -163,7 +163,7 @@ export async function CategoryHome({
               >
                 <Image
                   src={heroSrc}
-                  alt=""
+                  alt={`${displayTitle} 栏目封面图`}
                   width={1600}
                   height={640}
                   className={`showcase-image ${
