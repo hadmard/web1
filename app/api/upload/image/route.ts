@@ -61,6 +61,44 @@ function toUploadDiskPath(src: string) {
   return path.join(process.cwd(), "public", ...parts);
 }
 
+function sanitizeRemoteImageUrl(input: string) {
+  const value = input.trim();
+  if (!value) return null;
+
+  try {
+    const parsed = new URL(value);
+    if (!["http:", "https:"].includes(parsed.protocol)) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function resolveExtensionFromUrl(remoteUrl: URL, mimeType: string) {
+  const byMime = MIME_EXTENSIONS[mimeType.toLowerCase()];
+  if (byMime) return byMime;
+  const ext = path.extname(remoteUrl.pathname || "").toLowerCase();
+  return ext || ".png";
+}
+
+async function writeUploadedImage(bytes: Uint8Array, folderRaw: string, ext: string) {
+  const folderSegments = sanitizeFolder(folderRaw);
+  const safeExt = ext.startsWith(".") ? ext : `.${ext}`;
+  const fileName = `${Date.now()}-${randomUUID().slice(0, 8)}${safeExt}`;
+  const relativeDir = path.posix.join("uploads", ...folderSegments);
+  const outputDir = path.join(process.cwd(), "public", ...relativeDir.split("/"));
+  const outputPath = path.join(outputDir, fileName);
+  const publicUrl = `/${relativeDir}/${fileName}`;
+
+  await mkdir(outputDir, { recursive: true });
+  await writeFile(outputPath, bytes);
+
+  return {
+    url: publicUrl,
+    servedUrl: resolveUploadedImageUrl(publicUrl),
+  };
+}
+
 async function fetchLegacyUpload(src: string, method: "GET" | "HEAD") {
   const uploadPath = normalizeUploadPathFromSrc(src);
   if (!uploadPath) return null;
@@ -118,6 +156,45 @@ async function buildImageResponse(src: string, method: "GET" | "HEAD") {
   }
 }
 
+async function uploadRemoteImage(remoteUrlValue: string, folderRaw: string) {
+  const remoteUrl = sanitizeRemoteImageUrl(remoteUrlValue);
+  if (!remoteUrl) {
+    return NextResponse.json({ error: "远程图片地址无效" }, { status: 400 });
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(remoteUrl, {
+      headers: { Accept: "image/*,*/*;q=0.8" },
+      cache: "no-store",
+    });
+  } catch {
+    return NextResponse.json({ error: "远程图片下载失败" }, { status: 400 });
+  }
+
+  if (!response.ok) {
+    return NextResponse.json({ error: "远程图片下载失败" }, { status: 400 });
+  }
+
+  const contentType = (response.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
+  if (!contentType.startsWith("image/")) {
+    return NextResponse.json({ error: "远程地址不是图片" }, { status: 400 });
+  }
+
+  const contentLength = Number(response.headers.get("content-length") || 0);
+  if (contentLength > MAX_SERVER_IMAGE_BYTES) {
+    return NextResponse.json({ error: "远程图片文件过大" }, { status: 400 });
+  }
+
+  const bytes = Buffer.from(await response.arrayBuffer());
+  if (bytes.byteLength > MAX_SERVER_IMAGE_BYTES) {
+    return NextResponse.json({ error: "远程图片文件过大" }, { status: 400 });
+  }
+
+  const payload = await writeUploadedImage(bytes, folderRaw, resolveExtensionFromUrl(remoteUrl, contentType));
+  return NextResponse.json(payload);
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const src = url.searchParams.get("src") ?? "";
@@ -138,7 +215,12 @@ export async function POST(request: Request) {
 
   const formData = await request.formData().catch(() => null);
   const file = formData?.get("file");
+  const remoteUrl = typeof formData?.get("remoteUrl") === "string" ? String(formData?.get("remoteUrl")) : "";
   const folderRaw = typeof formData?.get("folder") === "string" ? String(formData?.get("folder")) : "misc";
+
+  if (remoteUrl) {
+    return uploadRemoteImage(remoteUrl, folderRaw);
+  }
 
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "请提供图片文件" }, { status: 400 });
@@ -152,23 +234,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "图片文件过大" }, { status: 400 });
   }
 
-  const folderSegments = sanitizeFolder(folderRaw);
-  const ext =
-    MIME_EXTENSIONS[file.type.toLowerCase()] ||
-    path.extname(file.name || "").toLowerCase() ||
-    ".png";
-  const fileName = `${Date.now()}-${randomUUID().slice(0, 8)}${ext}`;
-
-  const relativeDir = path.posix.join("uploads", ...folderSegments);
-  const outputDir = path.join(process.cwd(), "public", ...relativeDir.split("/"));
-  const outputPath = path.join(outputDir, fileName);
-  const publicUrl = `/${relativeDir}/${fileName}`;
-
-  await mkdir(outputDir, { recursive: true });
-  await writeFile(outputPath, Buffer.from(await file.arrayBuffer()));
-
-  return NextResponse.json({
-    url: publicUrl,
-    servedUrl: resolveUploadedImageUrl(publicUrl),
-  });
+  const ext = MIME_EXTENSIONS[file.type.toLowerCase()] || path.extname(file.name || "").toLowerCase() || ".png";
+  const payload = await writeUploadedImage(Buffer.from(await file.arrayBuffer()), folderRaw, ext);
+  return NextResponse.json(payload);
 }

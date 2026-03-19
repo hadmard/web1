@@ -9,7 +9,7 @@ import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";
 import { Mark } from "@tiptap/core";
 import { NodeSelection } from "@tiptap/pm/state";
-import { MAX_UPLOAD_IMAGE_MB, uploadImageToServer } from "@/lib/client-image";
+import { MAX_UPLOAD_IMAGE_MB, uploadImageToServer, uploadRemoteImageToServer } from "@/lib/client-image";
 
 type Props = {
   value: string;
@@ -39,7 +39,33 @@ function normalizePastedHref(href: string) {
   return "";
 }
 
-function sanitizePastedHtml(rawHtml: string) {
+function extractClipboardSourceUrl(rawHtml: string) {
+  const sourceMatch = rawHtml.match(/SourceURL:(https?:\/\/[^\s]+)/i);
+  if (sourceMatch?.[1]) return sourceMatch[1];
+  const baseMatch = rawHtml.match(/<base[^>]+href=["']([^"']+)["']/i);
+  return baseMatch?.[1] ?? "";
+}
+
+function normalizePastedImageSrc(src: string, rawHtml: string) {
+  const value = src.trim();
+  if (!value) return "";
+  const baseUrl = extractClipboardSourceUrl(rawHtml);
+
+  try {
+    if (/^\/\//.test(value)) {
+      return `https:${value}`;
+    }
+    if (baseUrl) {
+      return new URL(value, baseUrl).toString();
+    }
+    const parsed = new URL(value);
+    return ["http:", "https:"].includes(parsed.protocol) ? parsed.toString() : "";
+  } catch {
+    return "";
+  }
+}
+
+function sanitizePastedHtml(rawHtml: string, imageMap?: Map<string, string>) {
   if (typeof window === "undefined") return rawHtml;
 
   const parser = new window.DOMParser();
@@ -72,6 +98,12 @@ function sanitizePastedHtml(rawHtml: string) {
     }
 
     if (tag === "img") {
+      const nextSrc = imageMap?.get(node.getAttribute("src") || "") ?? "";
+      if (nextSrc) {
+        const image = document.createElement("img");
+        image.setAttribute("src", nextSrc);
+        return image;
+      }
       return null;
     }
 
@@ -171,6 +203,31 @@ function sanitizePastedHtml(rawHtml: string) {
   return html || "<p></p>";
 }
 
+async function transferPastedRemoteImages(rawHtml: string) {
+  if (typeof window === "undefined") return sanitizePastedHtml(rawHtml);
+
+  const parser = new window.DOMParser();
+  const doc = parser.parseFromString(rawHtml, "text/html");
+  const imageMap = new Map<string, string>();
+
+  const sources = Array.from(doc.querySelectorAll("img"))
+    .map((img) => img.getAttribute("src") || "")
+    .map((src) => ({ original: src, normalized: normalizePastedImageSrc(src, rawHtml) }))
+    .filter((item) => item.normalized);
+
+  for (const item of sources) {
+    if (imageMap.has(item.original)) continue;
+    try {
+      const uploadedUrl = await uploadRemoteImageToServer(item.normalized, { folder: "content/editor-inline" });
+      imageMap.set(item.original, uploadedUrl);
+    } catch {
+      imageMap.set(item.original, "");
+    }
+  }
+
+  return sanitizePastedHtml(rawHtml, imageMap);
+}
+
 const SpecialText = Mark.create({
   name: "specialText",
   addAttributes() {
@@ -253,6 +310,7 @@ function ToolButton({
 export function RichEditor({ value, onChange, minHeight = 260, placeholder = "è¯·è¾“å…¥æ­£æ–‡..." }: Props) {
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const insertImageRef = useRef<((file: File) => Promise<void>) | null>(null);
+  const insertPastedHtmlRef = useRef<((html: string) => Promise<void>) | null>(null);
   const [menu, setMenu] = useState<{ open: boolean; x: number; y: number; mode: MenuMode }>({
     open: false,
     x: 0,
@@ -297,6 +355,7 @@ export function RichEditor({ value, onChange, minHeight = 260, placeholder = "è¯
       handlePaste(view, event) {
         const clipboard = event.clipboardData;
         if (!clipboard) return false;
+        const pastedHtml = clipboard.getData("text/html");
         const imageFile =
           Array.from(clipboard.items)
             .find((x) => x.type.startsWith("image/"))
@@ -305,6 +364,13 @@ export function RichEditor({ value, onChange, minHeight = 260, placeholder = "è¯
           event.preventDefault();
           window.setTimeout(() => {
             void insertImageRef.current?.(imageFile);
+          }, 0);
+          return true;
+        }
+        if (pastedHtml && /<img[\s>]/i.test(pastedHtml)) {
+          event.preventDefault();
+          window.setTimeout(() => {
+            void insertPastedHtmlRef.current?.(pastedHtml);
           }, 0);
           return true;
         }
@@ -426,6 +492,21 @@ export function RichEditor({ value, onChange, minHeight = 260, placeholder = "è¯
       insertImageRef.current = null;
     };
   }, [insertImage]);
+
+  useEffect(() => {
+    insertPastedHtmlRef.current = async (html: string) => {
+      if (!editor) return;
+      try {
+        const normalizedHtml = await transferPastedRemoteImages(html);
+        editor.chain().focus().insertContent(normalizedHtml).run();
+      } catch {
+        editor.chain().focus().insertContent(sanitizePastedHtml(html)).run();
+      }
+    };
+    return () => {
+      insertPastedHtmlRef.current = null;
+    };
+  }, [editor]);
 
   const updateSelectedImage = (attrs: Partial<ImageAttrs>) => {
     if (!editor) return false;

@@ -134,6 +134,30 @@ export async function uploadImageToServer(
   return typeof data.servedUrl === "string" ? data.servedUrl : resolveUploadedImageUrl(data.url);
 }
 
+export async function uploadRemoteImageToServer(
+  remoteUrl: string,
+  options?: {
+    folder?: string;
+  }
+): Promise<string> {
+  const formData = new FormData();
+  formData.set("remoteUrl", remoteUrl);
+  if (options?.folder) formData.set("folder", options.folder);
+
+  const res = await fetch("/api/upload/image", {
+    method: "POST",
+    credentials: "include",
+    body: formData,
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || typeof data.url !== "string") {
+    throw new Error(data.error ?? "远程图片转存失败");
+  }
+
+  return typeof data.servedUrl === "string" ? data.servedUrl : resolveUploadedImageUrl(data.url);
+}
+
 export type CropSelection = {
   zoom: number;
   offsetX: number;
