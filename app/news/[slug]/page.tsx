@@ -308,8 +308,8 @@ export default async function ArticlePage({ params, searchParams }: Props) {
           <Link href="/" className="hover:text-accent">首页</Link>
           <span>/</span>
           <Link href="/news" className="hover:text-accent">整木资讯</Link>
-          <span className="hidden sm:inline">/</span>
-          <span className="hidden max-w-[36rem] truncate text-primary/72 sm:inline">{article.title}</span>
+          <span>/</span>
+          <span className="max-w-full truncate text-primary/72 sm:max-w-[36rem]">{article.title}</span>
         </nav>
 
         <header className="px-1 sm:px-0">
