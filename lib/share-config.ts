@@ -11,7 +11,7 @@ export function buildPublicNewsUrl(segment: string) {
 }
 
 export function buildNewsShareEntryUrl(segment: string) {
-  const url = new URL(buildPublicNewsUrl(segment));
+  const url = new URL(`${PUBLIC_SITE_URL}/share/news/${encodeURIComponent(segment)}`);
   url.searchParams.set("sharev", SHARE_CACHE_VERSION);
   return url.toString();
 }

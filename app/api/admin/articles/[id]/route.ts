@@ -80,6 +80,9 @@ export async function PATCH(
     subHref,
     categoryHref,
     publishedAt,
+    source,
+    sourceUrl,
+    displayAuthor,
     conceptSummary,
     applicableScenarios,
     versionLabel,
@@ -105,6 +108,9 @@ export async function PATCH(
     }
   }
   if (typeof excerpt === "string") data.excerpt = excerpt.trim() || null;
+  if (typeof source === "string") data.source = source.trim() || null;
+  if (typeof sourceUrl === "string") data.sourceUrl = sourceUrl.trim() || null;
+  if (typeof displayAuthor === "string") data.displayAuthor = displayAuthor.trim() || null;
   if (typeof content === "string") data.content = content;
   if (typeof coverImage === "string") data.coverImage = coverImage.trim() || null;
   if (typeof subHref === "string") data.subHref = subHref.trim() || null;
@@ -165,6 +171,9 @@ export async function PATCH(
       id: true,
       slug: true,
       title: true,
+      source: true,
+      sourceUrl: true,
+      displayAuthor: true,
       categoryHref: true,
       subHref: true,
       authorMemberId: true,

@@ -235,6 +235,7 @@ export default async function ArticlePage({ params, searchParams }: Props) {
     "@type": "Article",
     headline: article.title,
     description: previewText(article.excerpt ?? article.content, 200),
+    author: article.displayAuthor ? [{ "@type": "Person", name: article.displayAuthor }] : undefined,
     datePublished: article.publishedAt ?? article.updatedAt,
     dateModified: article.updatedAt,
     url: articleUrl,
@@ -279,7 +280,18 @@ export default async function ArticlePage({ params, searchParams }: Props) {
           ) : null}
 
           <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted">
-            {article.updatedAt ? <span>更新时间：{new Date(article.updatedAt).toLocaleDateString("zh-CN")}</span> : null}
+            <span>发布时间：{new Date(article.publishedAt ?? article.updatedAt).toLocaleDateString("zh-CN")}</span>
+            {article.displayAuthor ? <span>作者：{article.displayAuthor}</span> : null}
+            {article.source ? (
+              article.sourceUrl ? (
+                <a href={article.sourceUrl} target="_blank" rel="noreferrer" className="transition-colors hover:text-accent">
+                  来源：{article.source}
+                </a>
+              ) : (
+                <span>来源：{article.source}</span>
+              )
+            ) : null}
+            {article.updatedAt ? <span>更新：{new Date(article.updatedAt).toLocaleDateString("zh-CN")}</span> : null}
             {article.versionLabel ? <span>版本：{article.versionLabel}</span> : null}
           </div>
         </header>
