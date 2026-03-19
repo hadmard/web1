@@ -18,21 +18,33 @@ export function normalizeNewsSegment(raw: string) {
   return value.trim();
 }
 
+function buildNewsSegmentCandidates(segment: string) {
+  const normalized = normalizeNewsSegment(segment).replace(/\.html$/i, "").trim();
+  const parts = normalized
+    .split(/[-_/]+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  return Array.from(new Set([normalized, ...parts].filter(Boolean)));
+}
+
 export async function findNewsArticleBySegment(segment: string) {
-  const normalized = normalizeNewsSegment(segment);
+  const candidates = buildNewsSegmentCandidates(segment);
+  if (candidates.length === 0) return null;
+
   return prisma.article.findFirst({
     where: {
       status: "approved",
       OR: [{ categoryHref: { startsWith: "/news" } }, { subHref: { startsWith: "/news" } }],
       AND: [
         {
-          OR: [
-            { id: normalized },
-            { slug: normalized },
-            { title: normalized },
-            { slug: { contains: normalized } },
-            { title: { contains: normalized } },
-          ],
+          OR: candidates.flatMap((candidate) => [
+            { id: candidate },
+            { slug: candidate },
+            { title: candidate },
+            { slug: { contains: candidate } },
+            { title: { contains: candidate } },
+          ]),
         },
       ],
     },

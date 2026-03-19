@@ -24,11 +24,6 @@ const nextConfig = {
         permanent: false,
       },
       {
-        source: "/companynews/:slug.html",
-        destination: "https://jiu.cnzhengmu.com/companynews/:slug.html",
-        permanent: false,
-      },
-      {
         source: "/platform/:path*",
         destination: "https://jiu.cnzhengmu.com/platform/:path*",
         permanent: false,
