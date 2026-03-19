@@ -56,10 +56,13 @@ function formatPublishedAt(value?: string | null) {
   return `${read("year")}-${read("month")}-${read("day")} ${read("hour")}:${read("minute")}`;
 }
 
-function formatMeta(item: ArticleItem) {
-  return `提交账号：${submitterLabel(item.authorMember ?? null)}  发布时间：${formatPublishedAt(item.publishedAt)}${
-    item.status === "approved" ? `  阅读量：${item.viewCount ?? 0}` : ""
-  }`;
+function MetaItem({ label, value }: { label: string; value: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+      <span className="text-[11px] uppercase tracking-[0.08em] text-[#8f7b59]">{label}</span>
+      <span>{value}</span>
+    </span>
+  );
 }
 
 export function ManageContentList({
@@ -96,7 +99,11 @@ export function ManageContentList({
                     <span className="rounded-full border border-accent/40 px-2 py-0.5 text-[11px] text-accent">置顶</span>
                   ) : null}
                 </p>
-                <p className="mt-1 text-xs text-muted">{formatMeta(item)}</p>
+                <div className="mt-1 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-muted">
+                  <MetaItem label="账号" value={submitterLabel(item.authorMember ?? null)} />
+                  <MetaItem label="发布时间" value={formatPublishedAt(item.publishedAt)} />
+                  {item.status === "approved" ? <MetaItem label="阅读量" value={String(item.viewCount ?? 0)} /> : null}
+                </div>
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <span
