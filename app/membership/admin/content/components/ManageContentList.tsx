@@ -8,6 +8,7 @@ type ArticleItem = {
   status: Status;
   isPinned?: boolean;
   publishedAt?: string | null;
+  viewCount?: number;
   previewHref?: string | null;
   authorMember?: {
     id: string;
@@ -48,6 +49,12 @@ function formatPublishedAt(value?: string | null) {
   return `${read("year")}-${read("month")}-${read("day")} ${read("hour")}:${read("minute")}`;
 }
 
+function formatMeta(item: ArticleItem) {
+  return `提交账号：${submitterLabel(item.authorMember ?? null)}  发布时间：${formatPublishedAt(item.publishedAt)}${
+    item.status === "approved" ? `  阅读量：${item.viewCount ?? 0}` : ""
+  }`;
+}
+
 export function ManageContentList({
   items,
   canEdit,
@@ -83,11 +90,9 @@ export function ManageContentList({
                   ) : null}
                 </p>
                 <p className="text-xs text-muted">
-                  {item.slug} · {STATUS_TEXT[item.status]}
+                  {item.slug} 路 {STATUS_TEXT[item.status]}
                 </p>
-                <p className="mt-1 text-xs text-muted">
-                  提交账号：{submitterLabel(item.authorMember ?? null)}　发布时间：{formatPublishedAt(item.publishedAt)}
-                </p>
+                <p className="mt-1 text-xs text-muted">{formatMeta(item)}</p>
               </div>
               <div className="flex gap-2">
                 <button

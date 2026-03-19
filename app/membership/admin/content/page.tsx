@@ -83,6 +83,7 @@ type ArticleItem = {
   faqJson?: string | null;
   isPinned?: boolean;
   publishedAt?: string | null;
+  viewCount?: number;
   status: Status;
   previewHref?: string | null;
   authorMember?: {

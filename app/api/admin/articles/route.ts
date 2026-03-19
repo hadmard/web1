@@ -70,6 +70,7 @@ export async function GET(request: NextRequest) {
         faqJson: true,
         isPinned: true,
         publishedAt: true,
+        viewCount: true,
         status: true,
         authorMember: {
           select: {

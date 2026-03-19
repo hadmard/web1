@@ -30,6 +30,11 @@ const SCROLL_STORAGE_KEY = "admin_sidebar_scroll_top_v1";
 
 const SIDEBAR: SidebarGroup[] = [
   {
+    id: "stats",
+    label: "数据统计",
+    children: [{ href: "/membership/admin/stats", label: "运营看板" }],
+  },
+  {
     id: "publish",
     label: "内容发布",
     children: CONTENT_TAB_DEFS.map((t) => ({
@@ -78,6 +83,7 @@ const SIDEBAR: SidebarGroup[] = [
 
 function defaultCollapseState(): CollapseState {
   return {
+    stats: false,
     publish: false,
     manage: false,
     review: false,
@@ -251,6 +257,7 @@ export default function AdminLayoutClient({ children }: { children: React.ReactN
     if (href === "/membership/admin/accounts") return pathname === "/membership/admin/accounts";
     if (href === "/membership/admin/permissions") return pathname === "/membership/admin/permissions";
     if (href === "/membership/admin/settings") return pathname === "/membership/admin/settings";
+    if (href === "/membership/admin/stats") return pathname === "/membership/admin/stats";
     if (href === "/membership/admin/enterprise-verifications") return pathname === "/membership/admin/enterprise-verifications";
 
     if (!href.startsWith("/membership/admin/content")) return pathname === href;
