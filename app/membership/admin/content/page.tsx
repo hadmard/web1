@@ -230,6 +230,14 @@ function timeValue(value?: string | null) {
   return Number.isNaN(ms) ? 0 : ms;
 }
 
+function scrollToManagedItem(itemId: string, behavior: ScrollBehavior = "smooth") {
+  const element = document.getElementById(`manage-article-${itemId}`);
+  if (!element) return false;
+  const top = window.scrollY + element.getBoundingClientRect().top - 170;
+  window.scrollTo({ top: Math.max(0, top), behavior });
+  return true;
+}
+
 export default function AdminContentPage() {
   const router = useRouter();
   const pathname = usePathname();
@@ -243,6 +251,8 @@ export default function AdminContentPage() {
   const [message, setMessage] = useState("");
   const messageRef = useRef<HTMLDivElement | null>(null);
   const editFormRef = useRef<HTMLElement | null>(null);
+  const manageReturnScrollRef = useRef<number | null>(null);
+  const manageReturnItemIdRef = useRef<string | null>(null);
   const publishCoverPreviewRef = useRef<HTMLDivElement | null>(null);
   const editCoverPreviewRef = useRef<HTMLDivElement | null>(null);
   const publishObjectUrlRef = useRef<string | null>(null);
@@ -516,19 +526,24 @@ export default function AdminContentPage() {
 
     let cancelled = false;
     let timeoutId: number | null = null;
+    let attempts = 0;
 
     const run = () => {
       if (cancelled) return;
-      const element = document.getElementById(`manage-article-${highlightedItemId}`);
-      if (element) {
-        element.scrollIntoView({ behavior: "smooth", block: "center" });
+      attempts += 1;
+      const found = scrollToManagedItem(highlightedItemId, attempts === 1 ? "auto" : "smooth");
+      if (found) {
         timeoutId = window.setTimeout(() => setHighlightedItemId(null), 2200);
         return;
       }
-      timeoutId = window.setTimeout(run, 120);
+      if (attempts >= 12) {
+        setHighlightedItemId(null);
+        return;
+      }
+      timeoutId = window.setTimeout(run, 140);
     };
 
-    window.requestAnimationFrame(run);
+    timeoutId = window.setTimeout(() => window.requestAnimationFrame(run), 180);
 
     return () => {
       cancelled = true;
@@ -687,6 +702,10 @@ export default function AdminContentPage() {
   }
 
   function openEdit(item: ArticleItem) {
+    if (mode === "manage") {
+      manageReturnScrollRef.current = window.scrollY;
+      manageReturnItemIdRef.current = item.id;
+    }
     setEditingId(item.id);
     setEditingChangeId(null);
     setEditSlug(item.slug ?? "");
@@ -818,8 +837,20 @@ export default function AdminContentPage() {
     if (mode === "review") {
       await loadReview();
     } else {
-      setHighlightedItemId(savedEditingId);
       await loadList();
+      const returnItemId = manageReturnItemIdRef.current ?? savedEditingId;
+      const returnScrollTop = manageReturnScrollRef.current;
+      setHighlightedItemId(returnItemId);
+      if (typeof returnScrollTop === "number") {
+        window.setTimeout(() => {
+          window.scrollTo({ top: Math.max(0, returnScrollTop), behavior: "auto" });
+        }, 80);
+      }
+      window.setTimeout(() => {
+        scrollToManagedItem(returnItemId);
+      }, 320);
+      manageReturnItemIdRef.current = null;
+      manageReturnScrollRef.current = null;
     }
   }
 

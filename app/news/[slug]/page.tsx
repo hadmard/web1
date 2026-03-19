@@ -264,8 +264,8 @@ export default async function ArticlePage({ params, searchParams }: Props) {
           <Link href="/" className="hover:text-accent">首页</Link>
           <span>/</span>
           <Link href="/news" className="hover:text-accent">整木资讯</Link>
-          <span>/</span>
-          <span className="line-clamp-1 text-primary">{article.title}</span>
+          <span className="hidden sm:inline">/</span>
+          <span className="hidden max-w-[36rem] truncate text-primary/72 sm:inline">{article.title}</span>
         </nav>
 
         <header className="px-1 sm:px-0">
@@ -296,22 +296,24 @@ export default async function ArticlePage({ params, searchParams }: Props) {
           </div>
         </header>
 
-        <div className="mt-8">
-          <ContentHeroImage
-            src={article.coverImage}
-            alt={article.title}
-            containerClassName="aspect-[16/10] rounded-[24px] border border-border bg-surface-elevated p-2 sm:aspect-[16/9]"
-            imageClassName="rounded-[18px] object-cover object-center p-0"
-          />
+        <div className="mt-8 sm:mt-9">
+          <div className="overflow-hidden rounded-[30px] border border-[rgba(194,182,154,0.2)] bg-[linear-gradient(180deg,rgba(255,254,251,0.98),rgba(248,244,238,0.92))] shadow-[0_30px_60px_-42px_rgba(15,23,42,0.22)]">
+            <ContentHeroImage
+              src={article.coverImage}
+              alt={article.title}
+              containerClassName="aspect-[16/10] rounded-[30px] border-0 bg-transparent p-0 sm:aspect-[16/9]"
+              imageClassName="rounded-[30px] object-cover object-center"
+            />
+          </div>
         </div>
 
         {article.excerpt ? (
-          <blockquote className="mt-7 rounded-r-2xl border-l-[3px] border-accent/80 bg-surface px-5 py-4 text-[15px] leading-8 text-muted sm:px-6">
+          <blockquote className="mt-5 rounded-[26px] border border-[rgba(194,182,154,0.18)] bg-[linear-gradient(180deg,rgba(255,253,249,0.94),rgba(249,245,238,0.9))] px-6 py-5 text-[15px] leading-8 text-muted shadow-[0_18px_42px_-36px_rgba(15,23,42,0.16)] sm:px-7">
             {article.excerpt}
           </blockquote>
         ) : null}
 
-        <div className="mt-8 rounded-[24px] border border-border bg-surface-elevated px-5 py-7 sm:px-7 sm:py-8">
+        <div className="mt-8 rounded-[26px] border border-[rgba(194,182,154,0.22)] bg-[linear-gradient(180deg,rgba(255,253,249,0.98),rgba(248,244,237,0.95))] px-6 py-8 shadow-[0_24px_48px_-40px_rgba(15,23,42,0.2)] sm:px-8 sm:py-9">
           <RichContent html={article.content} className="prose prose-neutral dark:prose-invert max-w-none" />
           <div className="mt-5 pt-1 sm:mt-6 sm:pt-2">
             <ArticleShareActions

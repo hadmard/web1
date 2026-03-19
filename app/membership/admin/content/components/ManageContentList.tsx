@@ -132,6 +132,16 @@ export function ManageContentList({
                   >
                     {STATUS_TEXT[item.status]}
                   </span>
+                  {item.previewHref ? (
+                    <a
+                      href={item.previewHref}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-full border border-[rgba(194,182,154,0.3)] px-3 py-1.5 text-xs text-primary transition hover:bg-[rgba(247,243,235,0.7)]"
+                    >
+                      查看
+                    </a>
+                  ) : null}
                   <button
                     type="button"
                     onClick={() => onEdit(item)}
