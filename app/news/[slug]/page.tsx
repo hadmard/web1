@@ -96,14 +96,14 @@ function getHeadlineClass(title: string) {
   const length = title.trim().length;
 
   if (length >= 34) {
-    return "max-w-none text-[1.68rem] leading-[1.34] tracking-[-0.008em] [text-wrap:balance] sm:max-w-[26ch] sm:text-[2.1rem]";
+    return "max-w-none text-[2.1rem] leading-[1.22] tracking-[-0.016em] [text-wrap:balance] sm:max-w-[26ch] sm:text-[2.1rem]";
   }
 
   if (length >= 24) {
-    return "max-w-none text-[1.76rem] leading-[1.31] tracking-[-0.01em] [text-wrap:balance] sm:max-w-[24ch] sm:text-[2.28rem]";
+    return "max-w-none text-[2.22rem] leading-[1.2] tracking-[-0.018em] [text-wrap:balance] sm:max-w-[24ch] sm:text-[2.28rem]";
   }
 
-  return "max-w-none text-[1.88rem] leading-[1.26] tracking-[-0.012em] [text-wrap:balance] sm:max-w-[22ch] sm:text-[2.6rem]";
+  return "max-w-none text-[2.36rem] leading-[1.16] tracking-[-0.02em] [text-wrap:balance] sm:max-w-[22ch] sm:text-[2.6rem]";
 }
 
 function resolveNewsSectionLabel(subHref?: string | null, categoryHref?: string | null) {
@@ -297,23 +297,23 @@ export default async function ArticlePage({ params, searchParams }: Props) {
   };
 
   return (
-    <article id="news-reading-article" className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-12">
+    <article id="news-reading-article" className="mx-auto max-w-6xl px-4 pb-6 pt-2 sm:px-6 sm:py-12">
       <NewsUrlSync canonicalPath={buildNewsPath(article.id)} />
       <NewsViewTracker slug={article.slug} />
       <JsonLd data={articleSchema} />
       <JsonLd data={breadcrumbSchema} />
 
       <div className="mx-auto max-w-[860px]">
-        <nav className="mb-8 flex flex-wrap items-center gap-x-2 gap-y-2 text-sm text-muted" aria-label="面包屑">
+        <nav className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-2 px-1 text-[15px] text-primary/52 sm:mb-6 sm:px-0 sm:text-[15px] sm:text-primary/52" aria-label="面包屑">
           <Link href="/" className="hover:text-accent">首页</Link>
           <span>/</span>
           <Link href="/news" className="hover:text-accent">整木资讯</Link>
           <span>/</span>
-          <span className="max-w-full truncate text-primary/72 sm:max-w-[36rem]">{article.title}</span>
+          <span className="max-w-full truncate font-medium text-primary/78 sm:max-w-[36rem]">{article.title}</span>
         </nav>
 
         <header className="px-1 sm:px-0">
-          <h1 className={`${getHeadlineClass(article.title)} font-serif font-semibold text-primary`}>
+          <h1 className={`${getHeadlineClass(article.title)} max-w-[10.5em] font-serif font-semibold text-primary sm:max-w-none`}>
             {article.title}
           </h1>
 
@@ -323,7 +323,7 @@ export default async function ArticlePage({ params, searchParams }: Props) {
             </p>
           ) : null}
 
-          <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted">
+          <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 px-0.5 text-[14px] text-primary/50 sm:mt-5 sm:px-0 sm:text-[14px] sm:text-primary/50">
             <span>发布时间：{new Date(article.publishedAt ?? article.updatedAt).toLocaleDateString("zh-CN")}</span>
             {article.displayAuthor ? <span>作者：{article.displayAuthor}</span> : null}
             {article.source ? (
@@ -335,29 +335,28 @@ export default async function ArticlePage({ params, searchParams }: Props) {
                 <span>来源：{article.source}</span>
               )
             ) : null}
-            {article.updatedAt ? <span>更新：{new Date(article.updatedAt).toLocaleDateString("zh-CN")}</span> : null}
             {article.versionLabel ? <span>版本：{article.versionLabel}</span> : null}
           </div>
         </header>
 
-        <div className="mt-8 sm:mt-9">
-          <div className="overflow-hidden rounded-[30px] border border-[rgba(194,182,154,0.2)] bg-[linear-gradient(180deg,rgba(255,254,251,0.98),rgba(248,244,238,0.92))] shadow-[0_30px_60px_-42px_rgba(15,23,42,0.22)]">
+        <div className="mt-9">
+          <div className="overflow-hidden rounded-[28px] border border-[rgba(15,23,42,0.08)] bg-[rgba(255,255,255,0.94)] p-3 shadow-[0_24px_52px_-40px_rgba(15,23,42,0.16)] sm:rounded-[30px] sm:p-4 sm:shadow-[0_28px_58px_-42px_rgba(15,23,42,0.16)]">
             <ContentHeroImage
               src={article.coverImage}
               alt={article.title}
-              containerClassName="aspect-[16/10] rounded-[30px] border-0 bg-transparent p-0 sm:aspect-[16/9]"
-              imageClassName="rounded-[30px] object-cover object-center"
+              containerClassName="aspect-[16/10] rounded-[24px] border-0 bg-transparent p-0 sm:aspect-[16/9] sm:rounded-[26px]"
+              imageClassName="rounded-[24px] object-cover object-center sm:rounded-[26px]"
             />
           </div>
         </div>
 
         {article.excerpt ? (
-          <blockquote className="mt-5 rounded-[26px] border border-[rgba(194,182,154,0.18)] bg-[linear-gradient(180deg,rgba(255,253,249,0.94),rgba(249,245,238,0.9))] px-6 py-5 text-[15px] leading-8 text-muted shadow-[0_18px_42px_-36px_rgba(15,23,42,0.16)] sm:px-7">
+          <blockquote className="mt-10 rounded-[24px] border border-[rgba(15,23,42,0.05)] border-l-[4px] border-l-[rgba(221,226,232,0.96)] bg-[rgba(255,255,255,0.94)] px-5 py-5 text-[15px] leading-8 text-muted shadow-[0_16px_36px_-34px_rgba(15,23,42,0.08)] sm:mt-8 sm:rounded-[26px] sm:px-7 sm:py-6 sm:shadow-[0_20px_42px_-36px_rgba(15,23,42,0.1)]">
             {article.excerpt}
           </blockquote>
         ) : null}
 
-        <div className="mt-8 rounded-[26px] border border-[rgba(194,182,154,0.22)] bg-[linear-gradient(180deg,rgba(255,253,249,0.98),rgba(248,244,237,0.95))] px-6 py-8 shadow-[0_24px_48px_-40px_rgba(15,23,42,0.2)] sm:px-8 sm:py-9">
+        <div className="mt-8 rounded-[24px] border border-[rgba(15,23,42,0.06)] bg-[rgba(255,255,255,0.94)] px-5 py-7 shadow-[0_22px_44px_-38px_rgba(15,23,42,0.12)] sm:rounded-[26px] sm:px-8 sm:py-9 sm:shadow-[0_24px_48px_-40px_rgba(15,23,42,0.12)]">
           <RichContent html={article.content} className="prose prose-neutral dark:prose-invert max-w-none" />
           <div className="mt-5 pt-1 sm:mt-6 sm:pt-2">
             <ArticleShareActions
