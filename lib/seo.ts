@@ -56,6 +56,7 @@ type PageMetadataOptions = {
   keywords?: string[];
   siteName?: string;
   image?: string | null;
+  imageAlt?: string;
 };
 
 export function buildPageMetadata({
@@ -66,6 +67,7 @@ export function buildPageMetadata({
   keywords,
   siteName = SITE_NAME,
   image,
+  imageAlt,
 }: PageMetadataOptions): Metadata {
   const url = absoluteUrl(path);
   const imageUrl = image ? absoluteUrl(image) : undefined;
@@ -83,7 +85,7 @@ export function buildPageMetadata({
       siteName,
       locale: "zh_CN",
       type,
-      images: imageUrl ? [{ url: imageUrl }] : undefined,
+      images: imageUrl ? [{ url: imageUrl, alt: imageAlt ?? shareTitle }] : undefined,
     },
     twitter: {
       card: "summary_large_image",

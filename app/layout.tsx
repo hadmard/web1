@@ -22,6 +22,7 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
+  applicationName: SITE_NAME,
   title: {
     default: SITE_TITLE,
     template: `%s | ${SHARE_SITE_NAME}`,
@@ -42,6 +43,7 @@ export const metadata: Metadata = {
     description: SITE_DESCRIPTION,
   },
   alternates: { canonical: absoluteUrl("/") },
+  manifest: "/manifest.webmanifest",
   icons: {
     icon: "/icon.png?v=20260316",
     shortcut: "/icon.png?v=20260316",
@@ -66,6 +68,10 @@ const jsonLdGraph = [
     "@id": `${baseUrl}/#organization`,
     name: SITE_NAME,
     url: baseUrl,
+    logo: {
+      "@type": "ImageObject",
+      url: absoluteUrl("/icon.png?v=20260316"),
+    },
     inLanguage: "zh-CN",
     description: "整体木作行业知识共享平台。",
   },

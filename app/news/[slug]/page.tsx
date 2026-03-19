@@ -45,6 +45,14 @@ const NEWS_SUBCATEGORY_HREFS: Record<string, string> = {
   events: "/news/events",
 };
 
+const NEWS_SECTION_LABELS: Record<string, string> = {
+  "/news/trends": "行业趋势",
+  "/news/enterprise": "企业动态",
+  "/news/tech": "技术发展",
+  "/news/events": "行业活动",
+  "/news": "整木资讯",
+};
+
 type Props = {
   params: Promise<{ slug: string }>;
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -76,6 +84,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     type: "article",
     siteName: SHARE_SITE_NAME,
     image,
+    imageAlt: article.title,
   });
 }
 
@@ -95,6 +104,24 @@ function getHeadlineClass(title: string) {
   }
 
   return "max-w-none text-[1.88rem] leading-[1.26] tracking-[-0.012em] [text-wrap:balance] sm:max-w-[22ch] sm:text-[2.6rem]";
+}
+
+function resolveNewsSectionLabel(subHref?: string | null, categoryHref?: string | null) {
+  const href = (subHref || categoryHref || "").trim();
+  return NEWS_SECTION_LABELS[href] ?? "整木资讯";
+}
+
+function parseKeywordList(tagSlugs?: string | null, title?: string | null) {
+  const base = (tagSlugs || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  if (title?.trim()) {
+    base.unshift(title.trim());
+  }
+
+  return Array.from(new Set(base)).slice(0, 12);
 }
 
 export default async function ArticlePage({ params, searchParams }: Props) {
@@ -229,17 +256,34 @@ export default async function ArticlePage({ params, searchParams }: Props) {
   const shareEntryUrl = buildNewsShareEntryUrl(article.id);
   const publicBaseUrl = articleUrl.replace(/\/news\/.*$/, "");
   const articleShareImage = resolveArticleShareImage(article);
+  const articleSection = resolveNewsSectionLabel(article.subHref, article.categoryHref);
+  const keywords = parseKeywordList(article.tagSlugs, article.title);
 
   const articleSchema = {
     "@context": "https://schema.org",
     "@type": "Article",
+    "@id": `${articleUrl}#article`,
     headline: article.title,
     description: previewText(article.excerpt ?? article.content, 200),
     author: article.displayAuthor ? [{ "@type": "Person", name: article.displayAuthor }] : undefined,
     datePublished: article.publishedAt ?? article.updatedAt,
     dateModified: article.updatedAt,
+    inLanguage: "zh-CN",
     url: articleUrl,
-    image: [articleShareImage.startsWith("http") ? articleShareImage : `${publicBaseUrl}${articleShareImage}`],
+    mainEntityOfPage: articleUrl,
+    publisher: { "@id": `${publicBaseUrl}/#organization` },
+    articleSection,
+    keywords: keywords.length > 0 ? keywords.join(", ") : undefined,
+    thumbnailUrl: articleShareImage.startsWith("http") ? articleShareImage : `${publicBaseUrl}${articleShareImage}`,
+    isAccessibleForFree: true,
+    image: [
+      {
+        "@type": "ImageObject",
+        url: articleShareImage.startsWith("http") ? articleShareImage : `${publicBaseUrl}${articleShareImage}`,
+        caption: article.title,
+        representativeOfPage: true,
+      },
+    ],
   };
 
   const breadcrumbSchema = {
