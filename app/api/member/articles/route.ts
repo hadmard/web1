@@ -17,15 +17,33 @@ export async function GET(request: NextRequest) {
   const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
   const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") ?? "20", 10)));
   const skip = (page - 1) * limit;
+  const q = searchParams.get("q")?.trim();
+
+  const where: any = { authorMemberId: session.sub };
+  if (q) {
+    where.AND = [
+      {
+        OR: [
+          { title: { contains: q, mode: "insensitive" } },
+          { slug: { contains: q, mode: "insensitive" } },
+          { excerpt: { contains: q, mode: "insensitive" } },
+          { content: { contains: q, mode: "insensitive" } },
+          { source: { contains: q, mode: "insensitive" } },
+          { displayAuthor: { contains: q, mode: "insensitive" } },
+          { tagSlugs: { contains: q, mode: "insensitive" } },
+        ],
+      },
+    ];
+  }
 
   const [items, total] = await Promise.all([
     prisma.article.findMany({
-      where: { authorMemberId: session.sub },
+      where,
       orderBy: [{ isPinned: "desc" }, { createdAt: "desc" }],
       skip,
       take: limit,
     }),
-    prisma.article.count({ where: { authorMemberId: session.sub } }),
+    prisma.article.count({ where }),
   ]);
 
   return NextResponse.json({ items, total, page, limit });

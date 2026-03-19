@@ -80,12 +80,14 @@ export function ManageContentList({
   canDelete,
   onEdit,
   onDelete,
+  highlightedItemId,
 }: {
   items: ArticleItem[];
   canEdit: boolean;
   canDelete: boolean;
   onEdit: (item: ArticleItem) => void;
   onDelete: (id: string) => void;
+  highlightedItemId?: string | null;
 }) {
   return (
     <section className="rounded-xl border border-border bg-surface-elevated p-5">
@@ -93,52 +95,63 @@ export function ManageContentList({
         <p className="text-sm text-muted">暂无内容</p>
       ) : (
         <ul className="space-y-2">
-          {items.map((item) => (
-            <li key={item.id} className="flex items-start justify-between gap-4 border-b border-border pb-3">
-              <div className="min-w-0 flex-1">
-                <p className="flex items-center gap-2 text-[15px] font-medium text-primary">
-                  {item.previewHref ? (
-                    <a href={item.previewHref} target="_blank" rel="noreferrer" className="truncate hover:text-accent hover:underline">
-                      {item.title}
-                    </a>
-                  ) : (
-                    <span className="truncate">{item.title}</span>
-                  )}
-                  {item.isPinned ? (
-                    <span className="rounded-full border border-accent/40 px-2 py-0.5 text-[11px] font-medium text-accent">置顶</span>
-                  ) : null}
-                </p>
-                <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-2.5 text-xs text-muted">
-                  <MetaItem label="提交账号" value={submitterLabel(item.authorMember ?? null)} />
-                  <MetaItem label="发布时间" value={formatPublishedAt(item.publishedAt)} />
-                  {item.status === "approved" ? <ViewCountBadge value={item.viewCount ?? 0} /> : null}
+          {items.map((item) => {
+            const highlighted = highlightedItemId === item.id;
+            return (
+              <li
+                key={item.id}
+                id={`manage-article-${item.id}`}
+                className={`flex items-start justify-between gap-4 rounded-[18px] border-b border-border pb-3 transition ${
+                  highlighted
+                    ? "bg-[rgba(201,166,92,0.08)] px-3 py-3 ring-1 ring-[rgba(191,156,91,0.26)] shadow-[0_10px_24px_rgba(185,156,96,0.12)]"
+                    : ""
+                }`}
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="flex items-center gap-2 text-[15px] font-medium text-primary">
+                    {item.previewHref ? (
+                      <a href={item.previewHref} target="_blank" rel="noreferrer" className="truncate hover:text-accent hover:underline">
+                        {item.title}
+                      </a>
+                    ) : (
+                      <span className="truncate">{item.title}</span>
+                    )}
+                    {item.isPinned ? (
+                      <span className="rounded-full border border-accent/40 px-2 py-0.5 text-[11px] font-medium text-accent">置顶</span>
+                    ) : null}
+                  </p>
+                  <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-2.5 text-xs text-muted">
+                    <MetaItem label="提交账号" value={submitterLabel(item.authorMember ?? null)} />
+                    <MetaItem label="发布时间" value={formatPublishedAt(item.publishedAt)} />
+                    {item.status === "approved" ? <ViewCountBadge value={item.viewCount ?? 0} /> : null}
+                  </div>
                 </div>
-              </div>
-              <div className="flex shrink-0 items-center gap-2">
-                <span
-                  className={`inline-flex min-w-[72px] items-center justify-center rounded-full border px-3 py-1.5 text-xs font-medium ${STATUS_CLASSNAME[item.status]}`}
-                >
-                  {STATUS_TEXT[item.status]}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => onEdit(item)}
-                  disabled={!canEdit}
-                  className="rounded-full border border-border px-3 py-1.5 text-xs text-primary transition hover:border-[rgba(194,182,154,0.3)] hover:bg-[rgba(247,243,235,0.7)] disabled:opacity-40"
-                >
-                  修改
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onDelete(item.id)}
-                  disabled={!canDelete}
-                  className="rounded-full border border-red-500 px-3 py-1.5 text-xs text-red-600 transition hover:bg-red-50 disabled:opacity-40"
-                >
-                  删除
-                </button>
-              </div>
-            </li>
-          ))}
+                <div className="flex shrink-0 items-center gap-2">
+                  <span
+                    className={`inline-flex min-w-[72px] items-center justify-center rounded-full border px-3 py-1.5 text-xs font-medium ${STATUS_CLASSNAME[item.status]}`}
+                  >
+                    {STATUS_TEXT[item.status]}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => onEdit(item)}
+                    disabled={!canEdit}
+                    className="rounded-full border border-border px-3 py-1.5 text-xs text-primary transition hover:border-[rgba(194,182,154,0.3)] hover:bg-[rgba(247,243,235,0.7)] disabled:opacity-40"
+                  >
+                    修改
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onDelete(item.id)}
+                    disabled={!canDelete}
+                    className="rounded-full border border-red-500 px-3 py-1.5 text-xs text-red-600 transition hover:bg-red-50 disabled:opacity-40"
+                  >
+                    删除
+                  </button>
+                </div>
+              </li>
+            );
+          })}
         </ul>
       )}
     </section>

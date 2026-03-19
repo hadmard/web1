@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { CONTENT_TAB_DEFS, MEMBER_PUBLISH_CATEGORY_OPTIONS, resolveTabKeyFromHref, type ContentTabKey } from "@/lib/content-taxonomy";
 import { ManageContentList } from "@/app/membership/admin/content/components/ManageContentList";
 import { ReviewPanels } from "@/app/membership/admin/content/components/ReviewPanels";
@@ -224,10 +224,19 @@ function buildAutoExcerpt(text: string) {
   return previewText(text, 120);
 }
 
+function timeValue(value?: string | null) {
+  if (!value) return 0;
+  const ms = new Date(value).getTime();
+  return Number.isNaN(ms) ? 0 : ms;
+}
+
 export default function AdminContentPage() {
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const mode = parseMode(searchParams.get("mode"));
   const tab = parseTab(searchParams.get("tab"));
+  const searchQuery = searchParams.get("q")?.trim() ?? "";
 
   const [session, setSession] = useState<SessionInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -285,6 +294,8 @@ export default function AdminContentPage() {
   const [editIsPinned, setEditIsPinned] = useState(false);
   const [editDocumentMeta, setEditDocumentMeta] = useState<DocumentMetadata>(createEmptyDocumentMetadata());
   const [reviewAction, setReviewAction] = useState<Status | null>(null);
+  const [highlightedItemId, setHighlightedItemId] = useState<string | null>(null);
+  const [manageSearchDraft, setManageSearchDraft] = useState(searchQuery);
 
 
   const selectedTabDef = useMemo(() => CONTENT_TAB_DEFS.find((x) => x.key === tab) ?? CONTENT_TAB_DEFS[0], [tab]);
@@ -425,10 +436,11 @@ export default function AdminContentPage() {
 
   const loadList = useCallback(async () => {
     const sp = new URLSearchParams({ limit: "100", categoryHref: selectedCategory.href });
+    if (searchQuery) sp.set("q", searchQuery);
     const res = await fetch(`/api/admin/articles?${sp.toString()}`, { credentials: "include", cache: "no-store" });
     const data = await res.json().catch(() => ({}));
     setItems(Array.isArray(data.items) ? data.items : []);
-  }, [selectedCategory.href]);
+  }, [searchQuery, selectedCategory.href]);
 
   const loadReview = useCallback(async () => {
     const sp = new URLSearchParams({ status: "pending", limit: "200", categoryHref: selectedCategory.href });
@@ -495,12 +507,54 @@ export default function AdminContentPage() {
     });
   }, [editingId]);
 
+  useEffect(() => {
+    setManageSearchDraft(searchQuery);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    if (!highlightedItemId || mode !== "manage") return;
+
+    let cancelled = false;
+    let timeoutId: number | null = null;
+
+    const run = () => {
+      if (cancelled) return;
+      const element = document.getElementById(`manage-article-${highlightedItemId}`);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "center" });
+        timeoutId = window.setTimeout(() => setHighlightedItemId(null), 2200);
+        return;
+      }
+      timeoutId = window.setTimeout(run, 120);
+    };
+
+    window.requestAnimationFrame(run);
+
+    return () => {
+      cancelled = true;
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
+    };
+  }, [highlightedItemId, items, mode]);
+
   const manageItems = useMemo(
     () =>
-      items.map((item) => ({
-        ...item,
-        previewHref: buildPreviewHref(item.categoryHref ?? null, item.subHref ?? null, item.id, item.slug ?? null, item.title),
-      })),
+      [...items]
+        .sort((a, b) => {
+          if ((a.isPinned === true) !== (b.isPinned === true)) return a.isPinned === true ? -1 : 1;
+
+          const aPublished = a.status === "approved";
+          const bPublished = b.status === "approved";
+          if (aPublished && bPublished) {
+            return timeValue(b.publishedAt) - timeValue(a.publishedAt);
+          }
+          if (aPublished !== bPublished) return aPublished ? -1 : 1;
+
+          return timeValue(b.publishedAt) - timeValue(a.publishedAt);
+        })
+        .map((item) => ({
+          ...item,
+          previewHref: buildPreviewHref(item.categoryHref ?? null, item.subHref ?? null, item.id, item.slug ?? null, item.title),
+        })),
     [items]
   );
 
@@ -711,6 +765,7 @@ export default function AdminContentPage() {
 
   async function saveEdit(nextStatus?: Status) {
     if (!editingId) return;
+    const savedEditingId = editingId;
     setReviewAction(nextStatus ?? null);
     const composedEditContent =
       tab === "brands"
@@ -756,11 +811,16 @@ export default function AdminContentPage() {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) { setMessage(data.error ?? "保存失败"); setReviewAction(null); return; }
-    setItems((prev) => prev.map((item) => (item.id === editingId ? { ...item, ...data } : item)));
-    setPendingItems((prev) => prev.map((item) => (item.id === editingId ? { ...item, ...data } : item)));
+    setItems((prev) => prev.map((item) => (item.id === savedEditingId ? { ...item, ...data } : item)));
+    setPendingItems((prev) => prev.map((item) => (item.id === savedEditingId ? { ...item, ...data } : item)));
     setMessage(nextStatus ? "已修改并审核。" : "已保存修改。");
     setEditingId(null); setEditingChangeId(null); setReviewAction(null);
-    if (mode === "review") await loadReview(); else await loadList();
+    if (mode === "review") {
+      await loadReview();
+    } else {
+      setHighlightedItemId(savedEditingId);
+      await loadList();
+    }
   }
 
   async function removeItem(id: string) {
@@ -825,6 +885,24 @@ export default function AdminContentPage() {
     setEditTagSlugs(tags.join(","));
     suppressMessageScrollRef.current = true;
     setMessage(tags.length > 0 ? `已按标题、摘要、正文和栏目语义提取 ${tags.length} 个行业关键词。` : "未识别到明显行业关键词，请手动补充。");
+  }
+
+  function applyManageSearch(event?: FormEvent) {
+    event?.preventDefault();
+    const next = manageSearchDraft.trim();
+    const nextParams = new URLSearchParams(searchParams.toString());
+    if (next) nextParams.set("q", next);
+    else nextParams.delete("q");
+    const nextUrl = nextParams.toString() ? `${pathname}?${nextParams.toString()}` : pathname;
+    router.replace(nextUrl, { scroll: false });
+  }
+
+  function clearManageSearch() {
+    setManageSearchDraft("");
+    const nextParams = new URLSearchParams(searchParams.toString());
+    nextParams.delete("q");
+    const nextUrl = nextParams.toString() ? `${pathname}?${nextParams.toString()}` : pathname;
+    router.replace(nextUrl, { scroll: false });
   }
 
   if (loading) return <p className="text-muted">加载中...</p>;
@@ -1096,13 +1174,42 @@ export default function AdminContentPage() {
       )}
 
       {mode === "manage" && (
-        <ManageContentList
-          items={manageItems}
-          canEdit={canEdit}
-          canDelete={canDelete}
-          onEdit={openEdit}
-          onDelete={(id) => void removeItem(id)}
-        />
+        <section className="space-y-4">
+          <form
+            onSubmit={applyManageSearch}
+            className="flex flex-col gap-3 rounded-[22px] border border-border bg-[linear-gradient(180deg,rgba(255,253,249,0.98),rgba(248,243,236,0.94))] p-4 shadow-[0_12px_28px_-22px_rgba(15,23,42,0.18)] md:flex-row md:items-center"
+          >
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-primary">搜索内容</p>
+              <p className="mt-1 text-xs text-muted">可按标题、摘要、正文、来源、作者、关键词快速查找已发布或已存在的内容。</p>
+            </div>
+            <div className="flex min-w-0 flex-1 gap-2">
+              <input
+                className="h-11 min-w-0 flex-1 rounded-2xl border border-[rgba(194,182,154,0.28)] bg-white/90 px-4 text-sm text-primary placeholder:text-muted focus:border-[rgba(180,154,107,0.45)] focus:outline-none focus:ring-2 focus:ring-[rgba(180,154,107,0.18)]"
+                value={manageSearchDraft}
+                onChange={(e) => setManageSearchDraft(e.target.value)}
+                placeholder="输入标题、来源、作者、关键词"
+              />
+              <button type="submit" className="rounded-2xl bg-accent px-4 py-2 text-sm font-medium text-white">
+                搜索
+              </button>
+              {(searchQuery || manageSearchDraft) && (
+                <button type="button" onClick={clearManageSearch} className="rounded-2xl border border-border px-4 py-2 text-sm text-primary hover:bg-surface">
+                  清除
+                </button>
+              )}
+            </div>
+          </form>
+
+          <ManageContentList
+            items={manageItems}
+            canEdit={canEdit}
+            canDelete={canDelete}
+            onEdit={openEdit}
+            onDelete={(id) => void removeItem(id)}
+            highlightedItemId={highlightedItemId}
+          />
+        </section>
       )}
 
       {mode === "review" && (

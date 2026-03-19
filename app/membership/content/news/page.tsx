@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
@@ -33,6 +33,7 @@ export default function MembershipContentNewsPage() {
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [memberType, setMemberType] = useState<string>("personal");
   const [items, setItems] = useState<ArticleItem[]>([]);
+  const [search, setSearch] = useState("");
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
   const [content, setContent] = useState("");
@@ -40,7 +41,7 @@ export default function MembershipContentNewsPage() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function load() {
+  async function load(query = "") {
     const meRes = await fetch("/api/auth/me", { credentials: "include" });
     if (!meRes.ok) {
       setAuthed(false);
@@ -48,10 +49,12 @@ export default function MembershipContentNewsPage() {
     }
     setAuthed(true);
 
-    const listRes = await fetch("/api/member/articles?limit=20", { credentials: "include" });
-
     const me = await meRes.json();
     setMemberType(me.memberType ?? "personal");
+
+    const listSp = new URLSearchParams({ limit: "20" });
+    if (query.trim()) listSp.set("q", query.trim());
+    const listRes = await fetch(`/api/member/articles?${listSp.toString()}`, { credentials: "include" });
 
     if (listRes.ok) {
       const data = await listRes.json();
@@ -60,7 +63,7 @@ export default function MembershipContentNewsPage() {
   }
 
   useEffect(() => {
-    load();
+    void load();
   }, []);
 
   async function submit(e: FormEvent) {
@@ -95,8 +98,18 @@ export default function MembershipContentNewsPage() {
     setTitle("");
     setSlug("");
     setContent("");
-    await load();
+    await load(search);
     setLoading(false);
+  }
+
+  function submitSearch(e: FormEvent) {
+    e.preventDefault();
+    void load(search);
+  }
+
+  function clearSearch() {
+    setSearch("");
+    void load("");
   }
 
   const canPublish = memberType === "enterprise_basic" || memberType === "enterprise_advanced";
@@ -105,7 +118,9 @@ export default function MembershipContentNewsPage() {
     return (
       <div className="max-w-4xl mx-auto px-4 py-12">
         <p className="text-sm text-muted mb-3">请先登录后再发布资讯内容。</p>
-        <Link href="/membership/login" className="text-sm text-accent hover:underline">前往登录</Link>
+        <Link href="/membership/login" className="text-sm text-accent hover:underline">
+          前往登录
+        </Link>
       </div>
     );
   }
@@ -113,27 +128,31 @@ export default function MembershipContentNewsPage() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-12">
       <nav className="mb-6 text-sm text-muted" aria-label="面包屑">
-        <Link href="/" className="hover:text-accent">首页</Link>
+        <Link href="/" className="hover:text-accent">
+          首页
+        </Link>
         <span className="mx-2">/</span>
-        <Link href="/membership" className="hover:text-accent">会员系统</Link>
+        <Link href="/membership" className="hover:text-accent">
+          会员系统
+        </Link>
         <span className="mx-2">/</span>
         <span className="text-primary">资讯发布</span>
       </nav>
 
-      <h1 className="font-serif text-2xl font-bold text-primary mb-2">资讯发布</h1>
-      <p className="text-sm text-muted mb-6">企业会员提交内容后默认待审核，审核通过后同步到主站栏目。</p>
+      <h1 className="mb-2 font-serif text-2xl font-bold text-primary">资讯发布</h1>
+      <p className="mb-6 text-sm text-muted">企业会员提交内容后默认待审核，审核通过后同步到主站栏目。</p>
 
       {message && <p className="mb-4 text-sm text-accent">{message}</p>}
 
       {!canPublish ? (
         <div className="rounded-lg border border-border p-4 text-sm text-muted">个人会员不具备企业资讯发布权限。</div>
       ) : (
-        <form onSubmit={submit} className="rounded-lg border border-border p-4 bg-surface-elevated space-y-3 mb-8">
+        <form onSubmit={submit} className="mb-8 space-y-3 rounded-lg border border-border bg-surface-elevated p-4">
           <label className="block text-sm text-muted">标题</label>
-          <input className="w-full border border-border rounded px-3 py-2 bg-surface" value={title} onChange={(e) => setTitle(e.target.value)} required />
+          <input className="w-full rounded border border-border bg-surface px-3 py-2" value={title} onChange={(e) => setTitle(e.target.value)} required />
 
           <label className="block text-sm text-muted">Slug（可选）</label>
-          <input className="w-full border border-border rounded px-3 py-2 bg-surface" value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="不填将根据标题自动生成" />
+          <input className="w-full rounded border border-border bg-surface px-3 py-2" value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="不填将根据标题自动生成" />
 
           <label className="block text-sm text-muted">所属子栏目</label>
           <div className="flex flex-wrap gap-2 rounded-lg border border-border bg-surface p-2">
@@ -144,7 +163,7 @@ export default function MembershipContentNewsPage() {
                   key={option.href}
                   type="button"
                   onClick={() => setSubHref(option.href)}
-                  className={`px-3 py-1.5 rounded-md text-sm transition ${active ? "bg-accent text-white" : "bg-surface-elevated text-primary border border-border hover:bg-surface"}`}
+                  className={`rounded-md px-3 py-1.5 text-sm transition ${active ? "bg-accent text-white" : "border border-border bg-surface-elevated text-primary hover:bg-surface"}`}
                 >
                   {option.label}
                 </button>
@@ -153,23 +172,48 @@ export default function MembershipContentNewsPage() {
           </div>
 
           <label className="block text-sm text-muted">正文</label>
-          <textarea className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[140px]" value={content} onChange={(e) => setContent(e.target.value)} required />
+          <textarea className="min-h-[140px] w-full rounded border border-border bg-surface px-3 py-2" value={content} onChange={(e) => setContent(e.target.value)} required />
 
-          <button disabled={loading} className="px-4 py-2 rounded bg-accent text-white text-sm disabled:opacity-50">
+          <button disabled={loading} className="rounded bg-accent px-4 py-2 text-sm text-white disabled:opacity-50">
             {loading ? "提交中..." : "提交审核"}
           </button>
         </form>
       )}
 
       <div className="rounded-lg border border-border p-4">
-        <h2 className="font-medium text-primary mb-3">我的资讯</h2>
+        <h2 className="mb-3 font-medium text-primary">我的资讯</h2>
+        <form
+          onSubmit={submitSearch}
+          className="mb-4 flex flex-col gap-3 rounded-[20px] border border-border bg-[linear-gradient(180deg,rgba(255,253,249,0.98),rgba(248,243,236,0.94))] p-4 md:flex-row md:items-center"
+        >
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-primary">搜索我的资讯</p>
+            <p className="mt-1 text-xs text-muted">支持按标题、摘要、正文、来源、作者、关键词查找。</p>
+          </div>
+          <div className="flex min-w-0 flex-1 gap-2">
+            <input
+              className="h-11 min-w-0 flex-1 rounded-2xl border border-[rgba(194,182,154,0.28)] bg-white/90 px-4 text-sm text-primary placeholder:text-muted focus:border-[rgba(180,154,107,0.45)] focus:outline-none focus:ring-2 focus:ring-[rgba(180,154,107,0.18)]"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="输入标题、作者、来源、关键词"
+            />
+            <button type="submit" className="rounded-2xl bg-accent px-4 py-2 text-sm font-medium text-white">
+              搜索
+            </button>
+            {search && (
+              <button type="button" onClick={clearSearch} className="rounded-2xl border border-border px-4 py-2 text-sm text-primary hover:bg-surface">
+                清除
+              </button>
+            )}
+          </div>
+        </form>
         {items.length === 0 ? (
           <p className="text-sm text-muted">暂无记录</p>
         ) : (
           <ul className="space-y-2">
             {items.map((item) => (
-              <li key={item.id} className="flex items-center justify-between text-sm border-b border-border pb-2">
-                <span className="text-primary truncate">{item.title}</span>
+              <li key={item.id} className="flex items-center justify-between border-b border-border pb-2 text-sm">
+                <span className="truncate text-primary">{item.title}</span>
                 <span className="text-muted">{STATUS_TEXT[item.status]}</span>
               </li>
             ))}

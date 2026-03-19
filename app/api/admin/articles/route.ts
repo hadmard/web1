@@ -40,6 +40,7 @@ export async function GET(request: NextRequest) {
 
   const status = searchParams.get("status");
   const categoryHref = searchParams.get("categoryHref");
+  const q = searchParams.get("q")?.trim();
   const where: any = {};
   if (status && ["draft", "pending", "approved", "rejected"].includes(status)) {
     where.status = status;
@@ -47,11 +48,27 @@ export async function GET(request: NextRequest) {
   if (categoryHref && typeof categoryHref === "string") {
     where.OR = [{ categoryHref: { startsWith: categoryHref } }, { subHref: { startsWith: categoryHref } }];
   }
+  if (q) {
+    where.AND = [
+      ...(Array.isArray(where.AND) ? where.AND : []),
+      {
+        OR: [
+          { title: { contains: q, mode: "insensitive" } },
+          { slug: { contains: q, mode: "insensitive" } },
+          { excerpt: { contains: q, mode: "insensitive" } },
+          { content: { contains: q, mode: "insensitive" } },
+          { source: { contains: q, mode: "insensitive" } },
+          { displayAuthor: { contains: q, mode: "insensitive" } },
+          { tagSlugs: { contains: q, mode: "insensitive" } },
+        ],
+      },
+    ];
+  }
 
   const [items, total] = await Promise.all([
     prisma.article.findMany({
       where,
-      orderBy: [{ isPinned: "desc" }, { updatedAt: "desc" }],
+      orderBy: [{ isPinned: "desc" }, { publishedAt: "desc" }, { updatedAt: "desc" }],
       skip,
       take: limit,
       select: {
