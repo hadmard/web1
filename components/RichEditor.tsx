@@ -28,7 +28,7 @@ type ImageAttrs = {
 type MenuMode = "text" | "image";
 
 function normalizePastedText(text: string) {
-  return text.replace(/\u00a0/g, " ").replace(/\s+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+  return text.replace(/\u00a0/g, " ").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n");
 }
 
 function normalizePastedHref(href: string) {
@@ -115,7 +115,21 @@ function sanitizePastedHtml(rawHtml: string) {
       return element.textContent?.trim() || element.querySelector("br") ? element : null;
     }
 
-    if (["p", "div", "section", "article", "header", "footer", "aside"].includes(tag)) {
+    if (tag === "p") {
+      const paragraph = document.createElement("p");
+      cleanChildren(node, paragraph);
+      return paragraph.textContent?.trim() || paragraph.querySelector("br") ? paragraph : null;
+    }
+
+    if (["div", "section", "article", "header", "footer", "aside"].includes(tag)) {
+      const hasBlockChildren = Array.from(node.children).some((child) =>
+        ["h1", "h2", "h3", "blockquote", "ul", "ol", "li", "p", "div", "section", "article"].includes(child.tagName.toLowerCase())
+      );
+      if (hasBlockChildren) {
+        return Array.from(node.childNodes)
+          .map((child) => cleanNode(child))
+          .flatMap((child) => (Array.isArray(child) ? child : child ? [child] : []));
+      }
       const paragraph = document.createElement("p");
       cleanChildren(node, paragraph);
       return paragraph.textContent?.trim() || paragraph.querySelector("br") ? paragraph : null;
