@@ -27,6 +27,9 @@ export default async function LegacyInfoPage({ params }: Props) {
     permanentRedirect(buildNewsPath(article.id));
   }
 
-  if (!mappedTitle) notFound();
-  permanentRedirect(`/search?q=${encodeURIComponent(mappedTitle)}`);
+  if (mappedTitle) {
+    permanentRedirect(`/search?q=${encodeURIComponent(mappedTitle)}`);
+  }
+
+  permanentRedirect("/news");
 }
