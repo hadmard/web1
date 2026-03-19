@@ -13,7 +13,6 @@ const MIME_EXTENSIONS: Record<string, string> = {
   "image/png": ".png",
   "image/webp": ".webp",
   "image/gif": ".gif",
-  "image/svg+xml": ".svg",
 };
 
 const EXTENSION_MIME: Record<string, string> = {
@@ -22,7 +21,6 @@ const EXTENSION_MIME: Record<string, string> = {
   ".png": "image/png",
   ".webp": "image/webp",
   ".gif": "image/gif",
-  ".svg": "image/svg+xml",
 };
 
 const LEGACY_UPLOAD_HOSTS = new Set(["cnzhengmu.com", "www.cnzhengmu.com", "jiu.cnzhengmu.com"]);
@@ -215,6 +213,10 @@ async function uploadRemoteImage(remoteUrlValue: string, folderRaw: string) {
     return NextResponse.json({ error: "远程地址不是图片" }, { status: 400 });
   }
 
+  if (contentType === "image/svg+xml") {
+    return NextResponse.json({ error: "SVG image transfer is not supported" }, { status: 400 });
+  }
+
   const contentLength = Number(response.headers.get("content-length") || 0);
   if (contentLength > MAX_SERVER_IMAGE_BYTES) {
     return NextResponse.json({ error: "远程图片文件过大" }, { status: 400 });
@@ -265,6 +267,10 @@ export async function POST(request: Request) {
 
   if (!file.type.startsWith("image/")) {
     return NextResponse.json({ error: "仅支持图片文件" }, { status: 400 });
+  }
+
+  if (file.type.toLowerCase() === "image/svg+xml") {
+    return NextResponse.json({ error: "SVG upload is not supported" }, { status: 400 });
   }
 
   if (file.size > MAX_SERVER_IMAGE_BYTES) {

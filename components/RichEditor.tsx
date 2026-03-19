@@ -66,6 +66,39 @@ function normalizePastedImageSrc(src: string, rawHtml: string) {
   }
 }
 
+function extractSrcFromSrcset(srcset: string) {
+  return srcset
+    .split(",")
+    .map((item) => item.trim().split(/\s+/)[0] || "")
+    .find(Boolean) || "";
+}
+
+function extractBackgroundImageUrl(style: string) {
+  const match = style.match(/background-image\s*:\s*url\((['"]?)(.*?)\1\)/i);
+  return match?.[2]?.trim() || "";
+}
+
+function getPastedImageOriginalSrc(node: HTMLElement) {
+  const candidates = [
+    node.getAttribute("src") || "",
+    node.getAttribute("data-src") || "",
+    node.getAttribute("data-original") || "",
+    node.getAttribute("data-actualsrc") || "",
+    node.getAttribute("data-lazy-src") || "",
+    node.getAttribute("data-url") || "",
+    extractSrcFromSrcset(node.getAttribute("srcset") || ""),
+    extractSrcFromSrcset(node.getAttribute("data-srcset") || ""),
+    extractBackgroundImageUrl(node.getAttribute("style") || ""),
+  ];
+
+  return candidates.find((value) => value.trim()) || "";
+}
+
+function getNormalizedPastedImageSrc(node: HTMLElement, rawHtml: string) {
+  const original = getPastedImageOriginalSrc(node);
+  return original ? normalizePastedImageSrc(original, rawHtml) : "";
+}
+
 function sanitizePastedHtml(rawHtml: string, imageMap?: Map<string, string>) {
   if (typeof window === "undefined") return rawHtml;
 
@@ -99,7 +132,8 @@ function sanitizePastedHtml(rawHtml: string, imageMap?: Map<string, string>) {
     }
 
     if (tag === "img") {
-      const nextSrc = imageMap?.get(node.getAttribute("src") || "") ?? "";
+      const originalSrc = getPastedImageOriginalSrc(node);
+      const nextSrc = imageMap?.get(originalSrc) ?? "";
       if (nextSrc) {
         const image = document.createElement("img");
         image.setAttribute("src", nextSrc);
@@ -204,17 +238,22 @@ function sanitizePastedHtml(rawHtml: string, imageMap?: Map<string, string>) {
   return html || "<p></p>";
 }
 
-async function transferPastedRemoteImages(rawHtml: string) {
-  if (typeof window === "undefined") return sanitizePastedHtml(rawHtml);
+async function transferPastedRemoteImages(rawHtml: string): Promise<{ html: string; failedCount: number; totalCount: number }> {
+  if (typeof window === "undefined") {
+    return { html: sanitizePastedHtml(rawHtml), failedCount: 0, totalCount: 0 };
+  }
 
   const parser = new window.DOMParser();
   const doc = parser.parseFromString(rawHtml, "text/html");
   const imageMap = new Map<string, string>();
+  let failedCount = 0;
 
   const sources = Array.from(doc.querySelectorAll("img"))
-    .map((img) => img.getAttribute("src") || "")
-    .map((src) => ({ original: src, normalized: normalizePastedImageSrc(src, rawHtml) }))
-    .filter((item) => item.normalized);
+    .map((img) => {
+      const original = getPastedImageOriginalSrc(img);
+      return { original, normalized: getNormalizedPastedImageSrc(img, rawHtml) };
+    })
+    .filter((item) => item.original && item.normalized);
 
   for (const item of sources) {
     if (imageMap.has(item.original)) continue;
@@ -223,10 +262,15 @@ async function transferPastedRemoteImages(rawHtml: string) {
       imageMap.set(item.original, uploadedUrl);
     } catch {
       imageMap.set(item.original, "");
+      failedCount += 1;
     }
   }
 
-  return sanitizePastedHtml(rawHtml, imageMap);
+  return {
+    html: sanitizePastedHtml(rawHtml, imageMap),
+    failedCount,
+    totalCount: sources.length,
+  };
 }
 
 function createSelectionAnchor(editor: NonNullable<ReturnType<typeof useEditor>>) {
@@ -510,14 +554,22 @@ export function RichEditor({
       if (!editor) return;
       const anchor = createSelectionAnchor(editor);
       try {
-        const normalizedHtml = await transferPastedRemoteImages(html);
+        const result = await transferPastedRemoteImages(html);
         const tr = editor.state.tr.setSelection(TextSelection.create(editor.state.doc, anchor.from, anchor.to));
         editor.view.dispatch(tr);
-        editor.chain().focus().insertContent(normalizedHtml).run();
+        editor.chain().focus().insertContent(result.html).run();
+        if (result.failedCount > 0) {
+          window.alert(
+            result.failedCount === result.totalCount
+              ? "本次粘贴里的网页图片没有成功转存，当前只保留了文字内容。你可以改用“上传图片”补图。"
+              : `本次粘贴有 ${result.failedCount} 张网页图片转存失败，已保留文字和成功导入的图片。`
+          );
+        }
       } catch {
         const tr = editor.state.tr.setSelection(TextSelection.create(editor.state.doc, anchor.from, anchor.to));
         editor.view.dispatch(tr);
         editor.chain().focus().insertContent(sanitizePastedHtml(html)).run();
+        window.alert("网页内容已粘贴，但图片转存失败，当前只保留了文字内容。你可以改用“上传图片”补图。");
       }
     };
     return () => {
