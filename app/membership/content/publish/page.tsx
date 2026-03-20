@@ -340,6 +340,15 @@ function PublishCenterPageInner() {
     () => subOptions.find((item) => item.href === subHref) ?? null,
     [subOptions, subHref]
   );
+  const enabledSubcategoryCount = useMemo(() => subOptions.filter((item) => item.enabled).length, [subOptions]);
+  const selectedCategoryQuotaLabel = useMemo(
+    () => (selectedCategoryAccess ? formatQuota(selectedCategoryAccess.annualLimit, selectedCategoryAccess.remainingCount) : "未开通"),
+    [selectedCategoryAccess]
+  );
+  const selectedSubcategoryQuotaLabel = useMemo(
+    () => (activeSubAccess ? formatQuota(activeSubAccess.annualLimit, activeSubAccess.remainingCount) : "未选择"),
+    [activeSubAccess]
+  );
   const canPasteImages = role === "SUPER_ADMIN" || role === "ADMIN";
 
   const filteredItems = useMemo(
@@ -892,25 +901,47 @@ function PublishCenterPageInner() {
         <span className="text-primary">内容发布中心</span>
       </nav>
 
-      <h1 className="font-serif text-2xl font-bold text-primary mb-2">内容发布中心</h1>
-      <InlinePageBackLink href="/membership" label="返回会员系统" />
-      <p className="text-sm text-muted mb-2">
-        当前身份：{role === "SUPER_ADMIN" ? "主管理员" : role === "ADMIN" ? "子管理员" : "会员"} /{" "}
-        {memberType === "enterprise_advanced" ? "企业高级会员" : memberType === "enterprise_basic" ? "企业基础会员" : "个人会员"}
-      </p>
-      <p className="text-sm text-muted mb-6">左侧按七大类分别发布，不同类别显示不同组成字段。</p>
-      {memberAccess.year ? (
-        <p className="text-xs text-muted mb-6">当前按 {memberAccess.year} 年授权执行，已开放栏目可直接投稿，未开通栏目会保持可见但锁定。</p>
-      ) : null}
-      <div className="mb-6">
-        <Link href="/membership/content/verification" className="apple-inline-link">
-          去提交企业认证资料
-        </Link>
-      </div>
+      <section className="mb-6 overflow-hidden rounded-[30px] border border-border bg-surface-elevated shadow-[0_24px_60px_rgba(15,23,42,0.08)]">
+        <div className="border-b border-border/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(244,239,230,0.9))] px-6 py-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <h1 className="font-serif text-3xl font-semibold tracking-tight text-primary">内容发布中心</h1>
+              <p className="mt-3 text-sm text-muted">
+                当前身份：{role === "SUPER_ADMIN" ? "主管理员" : role === "ADMIN" ? "子管理员" : "会员"} /{" "}
+                {memberType === "enterprise_advanced" ? "企业VIP会员" : memberType === "enterprise_basic" ? "企业基础会员" : "个人会员"}
+              </p>
+              <p className="mt-2 text-sm text-muted">栏目保持全量可见，未开通栏目会锁定；已开通栏目按 {memberAccess.year} 年授权执行。</p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <InlinePageBackLink href="/membership" label="返回会员系统" />
+              <Link href="/membership/content/verification" className="apple-inline-link">
+                去提交企业认证资料
+              </Link>
+            </div>
+          </div>
+        </div>
+        <div className="grid gap-3 px-6 py-5 md:grid-cols-3">
+          <article className="rounded-2xl border border-border bg-white/80 px-4 py-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-muted">当前栏目</p>
+            <p className="mt-2 text-lg font-semibold text-primary">{selectedTabDef.label}</p>
+            <p className="mt-2 text-sm text-muted">{selectedCategoryQuotaLabel}</p>
+          </article>
+          <article className="rounded-2xl border border-border bg-white/80 px-4 py-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-muted">当前子栏目</p>
+            <p className="mt-2 text-lg font-semibold text-primary">{activeSubAccess?.label ?? "待选择"}</p>
+            <p className="mt-2 text-sm text-muted">{selectedSubcategoryQuotaLabel}</p>
+          </article>
+          <article className="rounded-2xl border border-border bg-white/80 px-4 py-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-muted">栏目状态</p>
+            <p className="mt-2 text-lg font-semibold text-primary">{enabledSubcategoryCount} 个已开通子栏目</p>
+            <p className="mt-2 text-sm text-muted">个体授权可以把基础会员额度单独提升到高于默认值。</p>
+          </article>
+        </div>
+      </section>
 
       <div className="grid lg:grid-cols-[220px_1fr] gap-4 mb-8">
-        <aside className="rounded-xl border border-border bg-surface-elevated p-4">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted mb-3">发布栏目</p>
+        <aside className="rounded-[28px] border border-border bg-surface-elevated p-4 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-muted">发布栏目</p>
           <ul className="space-y-1">
             {allCategoryAccess.map((cat) => {
               const catTab = tabFromHref(cat.href);
@@ -920,8 +951,10 @@ function PublishCenterPageInner() {
                   {cat.enabled ? (
                     <Link
                       href={`/membership/content/publish?tab=${catTab}`}
-                      className={`block rounded-lg px-3 py-2 text-sm font-medium ${
-                        active ? "bg-accent/15 text-accent" : "text-primary hover:bg-surface hover:text-accent"
+                      className={`block rounded-2xl px-3 py-3 text-sm font-medium transition ${
+                        active
+                          ? "border border-accent/25 bg-[linear-gradient(135deg,rgba(186,158,108,0.18),rgba(255,255,255,0.92))] text-accent shadow-[0_10px_26px_rgba(138,115,77,0.10)]"
+                          : "border border-transparent text-primary hover:border-border hover:bg-surface hover:text-accent"
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2">
@@ -930,7 +963,7 @@ function PublishCenterPageInner() {
                       </div>
                     </Link>
                   ) : (
-                    <div className="rounded-lg border border-dashed border-border px-3 py-2 text-sm text-muted/80">
+                    <div className="rounded-2xl border border-dashed border-border px-3 py-3 text-sm text-muted/80">
                       <div className="flex items-center justify-between gap-2">
                         <span>{cat.label}</span>
                         <span className="text-[11px]">未开通</span>
@@ -941,10 +974,44 @@ function PublishCenterPageInner() {
               );
             })}
           </ul>
-          <div className="mt-4 pt-3 border-t border-border text-xs text-muted">当前：{selectedTabDef.label}</div>
+          <div className="mt-4 rounded-2xl border border-border bg-surface px-3 py-3 text-xs text-muted">
+            当前栏目：<span className="text-primary">{selectedTabDef.label}</span>
+          </div>
         </aside>
 
-        <form onSubmit={submit} className="rounded-xl border border-border bg-surface-elevated p-5 space-y-3">
+        <div className="space-y-4">
+      <section className="rounded-[28px] border border-border bg-surface-elevated p-5 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-sm font-medium text-primary">我的投稿记录（{selectedTabDef.label}）</h2>
+          <span className="rounded-full border border-border bg-surface px-3 py-1 text-xs text-muted">{filteredItems.length} 条记录</span>
+        </div>
+        {filteredItems.length === 0 ? (
+          <p className="text-sm text-muted">当前栏目暂无投稿记录。</p>
+        ) : (
+          <ul className="space-y-3">
+            {filteredItems.map((item) => (
+              <li key={item.id} className="border-b border-border pb-2">
+                <div className="flex items-center justify-between gap-4 text-sm">
+                  <span className="truncate text-primary">{item.title}</span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {item.isPinned && (
+                      <span className="text-[11px] rounded-full border border-accent/40 px-2 py-0.5 text-accent">置顶</span>
+                    )}
+                    <span className="text-xs text-muted">{STATUS_TEXT[item.status]}</span>
+                  </div>
+                </div>
+                <div className="mt-2">
+                  <button type="button" onClick={() => openEditRequest(item)} className="text-xs px-2 py-1 rounded border border-border hover:bg-surface">
+                    提交修改申请
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+        <form onSubmit={submit} className="rounded-[28px] border border-border bg-surface-elevated p-5 shadow-[0_16px_40px_rgba(15,23,42,0.06)] space-y-4">
           {!selectedCategoryAccess && (
             <div className="rounded-xl border border-dashed border-border bg-surface p-4 text-sm text-muted">
               当前账号还没有开通任何发布栏目，请联系管理员分配子栏目和年度数量。
@@ -1225,34 +1292,7 @@ function PublishCenterPageInner() {
           </button>
         </form>
       </div>
-
-      <section className="rounded-xl border border-border bg-surface-elevated p-5">
-        <h2 className="text-sm font-medium text-primary mb-3">我的投稿记录（{selectedTabDef.label}）</h2>
-        {filteredItems.length === 0 ? (
-          <p className="text-sm text-muted">当前栏目暂无投稿记录。</p>
-        ) : (
-          <ul className="space-y-3">
-            {filteredItems.map((item) => (
-              <li key={item.id} className="border-b border-border pb-2">
-                <div className="flex items-center justify-between gap-4 text-sm">
-                  <span className="truncate text-primary">{item.title}</span>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {item.isPinned && (
-                      <span className="text-[11px] rounded-full border border-accent/40 px-2 py-0.5 text-accent">置顶</span>
-                    )}
-                    <span className="text-xs text-muted">{STATUS_TEXT[item.status]}</span>
-                  </div>
-                </div>
-                <div className="mt-2">
-                  <button type="button" onClick={() => openEditRequest(item)} className="text-xs px-2 py-1 rounded border border-border hover:bg-surface">
-                    提交修改申请
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      </div>
 
       {editingId && (
         <section ref={editFormRef} className="mt-6 rounded-xl border border-border bg-surface-elevated p-5">
