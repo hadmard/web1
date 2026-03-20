@@ -1,10 +1,11 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { InlinePageBackLink } from "@/components/InlinePageBackLink";
 
 type SiteSettings = {
+  template: "brand_showcase" | "professional_service" | "simple_elegant";
   heroTitle: string;
   heroSubtitle: string;
   contactLabel: string;
@@ -32,6 +33,7 @@ type SiteSettings = {
 };
 
 const EMPTY_SETTINGS: SiteSettings = {
+  template: "brand_showcase",
   heroTitle: "",
   heroSubtitle: "",
   contactLabel: "联系我们",
@@ -57,6 +59,12 @@ const EMPTY_SETTINGS: SiteSettings = {
     syncEnabled: false,
   },
 };
+
+const TEMPLATE_OPTIONS: Array<{ value: SiteSettings["template"]; label: string; desc: string }> = [
+  { value: "brand_showcase", label: "品牌展示型", desc: "适合整木品牌、高定企业和工厂型企业，强调品牌、案例与材质感。" },
+  { value: "professional_service", label: "专业服务型", desc: "适合设计机构、顾问公司、配套服务商，强调能力结构与服务流程。" },
+  { value: "simple_elegant", label: "简约基础型", desc: "适合新入驻会员或资料较少的企业，简洁克制但不显廉价。" },
+];
 
 export default function MembershipSitePage() {
   const [authed, setAuthed] = useState<boolean | null>(null);
@@ -143,9 +151,29 @@ export default function MembershipSitePage() {
 
       <header className="rounded-3xl border border-border bg-surface-elevated p-6">
         <h1 className="font-serif text-3xl font-semibold text-primary">会员站管理</h1>
-        <p className="mt-3 text-sm text-muted">配置企业会员站首页标题、展示模块、SEO 信息与同步开关。</p>
+        <p className="mt-3 text-sm text-muted">配置企业站模板、首屏内容、展示模块、SEO 信息与同步能力。</p>
         {message ? <p className="mt-3 text-sm text-accent">{message}</p> : null}
       </header>
+
+      <section className="rounded-3xl border border-border bg-surface-elevated p-6 space-y-4">
+        <h2 className="text-lg font-semibold text-primary">模板选择</h2>
+        <div className="grid gap-3 md:grid-cols-3">
+          {TEMPLATE_OPTIONS.map((option) => {
+            const active = settings.template === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setSettings((prev) => ({ ...prev, template: option.value }))}
+                className={`rounded-2xl border p-4 text-left transition ${active ? "border-accent bg-[rgba(175,143,88,0.08)] shadow-sm" : "border-border bg-surface hover:border-accent/30"}`}
+              >
+                <p className="text-sm font-medium text-primary">{option.label}</p>
+                <p className="mt-2 text-xs leading-6 text-muted">{option.desc}</p>
+              </button>
+            );
+          })}
+        </div>
+      </section>
 
       <section className="rounded-3xl border border-border bg-surface-elevated p-6 space-y-4">
         <h2 className="text-lg font-semibold text-primary">首页展示</h2>

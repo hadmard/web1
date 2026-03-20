@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 
 export type MemberSiteSettings = {
+  template: "brand_showcase" | "professional_service" | "simple_elegant";
   heroTitle: string;
   heroSubtitle: string;
   contactLabel: string;
@@ -28,6 +29,7 @@ export type MemberSiteSettings = {
 };
 
 const DEFAULT_MEMBER_SITE_SETTINGS: MemberSiteSettings = {
+  template: "brand_showcase",
   heroTitle: "",
   heroSubtitle: "",
   contactLabel: "联系我们",
@@ -76,6 +78,10 @@ export function normalizeMemberSiteSettings(value: unknown): MemberSiteSettings 
   const sync = source.sync && typeof source.sync === "object" ? (source.sync as Record<string, unknown>) : {};
 
   return {
+    template:
+      source.template === "professional_service" || source.template === "simple_elegant"
+        ? source.template
+        : DEFAULT_MEMBER_SITE_SETTINGS.template,
     heroTitle: asString(source.heroTitle),
     heroSubtitle: asString(source.heroSubtitle),
     contactLabel: asString(source.contactLabel, DEFAULT_MEMBER_SITE_SETTINGS.contactLabel),
