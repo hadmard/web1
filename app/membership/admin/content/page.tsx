@@ -1012,10 +1012,10 @@ export default function AdminContentPage() {
                   placeholder="如：整木网 / 品牌官方"
                 />
               </div>
-              <div className={`rounded-2xl border px-4 py-3 transition md:min-w-[168px] ${isPinned ? "border-[rgba(180,154,107,0.54)] bg-[linear-gradient(180deg,rgba(202,174,121,0.2),rgba(180,154,107,0.14))] shadow-[0_18px_34px_-24px_rgba(180,154,107,0.6)]" : "border-[rgba(180,154,107,0.28)] bg-[linear-gradient(180deg,rgba(255,251,245,0.96),rgba(247,240,229,0.92))] shadow-[0_14px_28px_-24px_rgba(180,154,107,0.34)]"}`}>
+              <div className={`rounded-2xl border px-4 py-3 transition md:min-w-[168px] ${isPinned ? "border-[rgba(180,154,107,0.54)] bg-[linear-gradient(180deg,rgba(202,174,121,0.2),rgba(180,154,107,0.14))] shadow-[0_18px_34px_-24px_rgba(180,154,107,0.6)]" : "border-border bg-[linear-gradient(180deg,rgba(255,253,249,0.98),rgba(248,243,236,0.94))] shadow-[0_14px_28px_-24px_rgba(15,23,42,0.16)]"}`}>
                 <div className="flex items-center justify-between gap-4">
                   <div>
-                    <p className="text-sm font-semibold text-[#7f6947]">置顶</p>
+                    <p className="text-sm font-semibold text-primary">置顶</p>
                   </div>
                   <button
                     type="button"
@@ -1023,7 +1023,7 @@ export default function AdminContentPage() {
                     className={`inline-flex min-w-[86px] items-center justify-center rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
                       isPinned
                         ? "border-[rgba(180,154,107,0.6)] bg-[#b49a6b] text-white shadow-[0_10px_24px_-18px_rgba(180,154,107,0.8)]"
-                        : "border-[rgba(180,154,107,0.38)] bg-white/90 text-[#8a734d] hover:border-[rgba(180,154,107,0.55)] hover:bg-white"
+                        : "border-border bg-white/90 text-primary hover:border-[rgba(180,154,107,0.45)] hover:bg-white"
                     }`}
                   >
                     {isPinned ? "已置顶" : "设为置顶"}
@@ -1280,10 +1280,10 @@ export default function AdminContentPage() {
                   placeholder="如：整木网 / 品牌官方"
                 />
               </div>
-              <div className={`rounded-2xl border px-4 py-3 transition md:min-w-[168px] ${editIsPinned ? "border-[rgba(180,154,107,0.54)] bg-[linear-gradient(180deg,rgba(202,174,121,0.2),rgba(180,154,107,0.14))] shadow-[0_18px_34px_-24px_rgba(180,154,107,0.6)]" : "border-[rgba(180,154,107,0.28)] bg-[linear-gradient(180deg,rgba(255,251,245,0.96),rgba(247,240,229,0.92))] shadow-[0_14px_28px_-24px_rgba(180,154,107,0.34)]"}`}>
+              <div className={`rounded-2xl border px-4 py-3 transition md:min-w-[168px] ${editIsPinned ? "border-[rgba(180,154,107,0.54)] bg-[linear-gradient(180deg,rgba(202,174,121,0.2),rgba(180,154,107,0.14))] shadow-[0_18px_34px_-24px_rgba(180,154,107,0.6)]" : "border-border bg-[linear-gradient(180deg,rgba(255,253,249,0.98),rgba(248,243,236,0.94))] shadow-[0_14px_28px_-24px_rgba(15,23,42,0.16)]"}`}>
                 <div className="flex items-center justify-between gap-4">
                   <div>
-                    <p className="text-sm font-semibold text-[#7f6947]">置顶</p>
+                    <p className="text-sm font-semibold text-primary">置顶</p>
                   </div>
                   <button
                     type="button"
@@ -1291,7 +1291,7 @@ export default function AdminContentPage() {
                     className={`inline-flex min-w-[86px] items-center justify-center rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
                       editIsPinned
                         ? "border-[rgba(180,154,107,0.6)] bg-[#b49a6b] text-white shadow-[0_10px_24px_-18px_rgba(180,154,107,0.8)]"
-                        : "border-[rgba(180,154,107,0.38)] bg-white/90 text-[#8a734d] hover:border-[rgba(180,154,107,0.55)] hover:bg-white"
+                        : "border-border bg-white/90 text-primary hover:border-[rgba(180,154,107,0.45)] hover:bg-white"
                     }`}
                   >
                     {editIsPinned ? "已置顶" : "设为置顶"}

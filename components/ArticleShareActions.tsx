@@ -111,7 +111,7 @@ export function ArticleShareActions({ title, shareUrl, siteName, className = "mt
           <div className="pointer-events-none fixed inset-0 z-[260] hidden md:block">
             <div
               ref={popupRef}
-              className="pointer-events-auto absolute left-1/2 top-1/2 w-[312px] -translate-x-1/2 -translate-y-1/2 rounded-[24px] border border-[rgba(15,23,42,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.99),rgba(245,247,250,0.99))] p-4 shadow-[0_20px_48px_rgba(15,23,42,0.15),inset_0_1px_0_rgba(255,255,255,0.98)]"
+              className="pointer-events-auto absolute left-1/2 top-1/2 w-[312px] -translate-x-1/2 -translate-y-1/2 rounded-[24px] border border-border bg-[linear-gradient(180deg,rgba(255,253,249,0.99),rgba(247,242,234,0.98))] p-4 shadow-[0_20px_48px_rgba(15,23,42,0.12),inset_0_1px_0_rgba(255,255,255,0.98)]"
             >
               <div className="mb-2.5 flex items-center justify-between gap-3">
                 <p className="text-[13px] font-medium tracking-[0.08em] text-[#111827]">微信扫码分享</p>
@@ -119,7 +119,7 @@ export function ArticleShareActions({ title, shareUrl, siteName, className = "mt
                   type="button"
                   aria-label="关闭分享卡片"
                   onClick={() => setOpen(false)}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[rgba(15,23,42,0.08)] bg-white text-[#374151] hover:bg-[#f3f4f6]"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border bg-white text-primary/70 hover:bg-surface"
                 >
                   ×
                 </button>
@@ -127,19 +127,19 @@ export function ArticleShareActions({ title, shareUrl, siteName, className = "mt
 
               <div className="rounded-[18px] bg-white p-2.5 shadow-[0_10px_24px_rgba(15,23,42,0.07)]">
                 {qrLoadFailed ? (
-                  <div className="flex min-h-[210px] flex-col items-center justify-center gap-3 rounded-[14px] border border-dashed border-[rgba(15,23,42,0.12)] px-4 py-5 text-center">
+                  <div className="flex min-h-[210px] flex-col items-center justify-center gap-3 rounded-[14px] border border-dashed border-border px-4 py-5 text-center">
                     <p className="text-sm leading-6 text-[#4b5563]">二维码暂时加载失败，可以先复制链接发送到微信。</p>
                     <button
                       type="button"
                       onClick={handleCopyLink}
-                      className="rounded-full bg-[#111827] px-4 py-2 text-sm font-medium text-white"
+                      className="btn-primary px-4 py-2 text-sm font-medium"
                     >
                       {copied ? "已复制链接" : "复制分享链接"}
                     </button>
                   </div>
                 ) : (
                   <div className="relative min-h-[232px]">
-                    {!qrReady ? <div className="absolute inset-0 animate-pulse rounded-[14px] bg-[#f3f4f6]" /> : null}
+                    {!qrReady ? <div className="absolute inset-0 animate-pulse rounded-[14px] bg-surface" /> : null}
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={qrUrl}
@@ -193,11 +193,11 @@ export function ArticleShareActions({ title, shareUrl, siteName, className = "mt
 
             <div className="pointer-events-none absolute left-1/2 top-[148px] flex -translate-x-1/2 items-center gap-3 text-white">
               <p className="text-[1.55rem] font-semibold tracking-[0.08em]">点击右上角</p>
-              <div className="flex h-[52px] w-[52px] items-center justify-center rounded-full bg-white/92 shadow-[0_10px_28px_rgba(255,255,255,0.16)]">
+              <div className="flex h-[52px] w-[52px] items-center justify-center rounded-full bg-[rgba(255,251,245,0.96)] shadow-[0_10px_28px_rgba(255,255,255,0.16)]">
                 <div className="flex items-center gap-[5px]">
-                  <span className="h-[6px] w-[6px] rounded-full bg-[#3f3f46]" />
-                  <span className="h-[6px] w-[6px] rounded-full bg-[#3f3f46]" />
-                  <span className="h-[6px] w-[6px] rounded-full bg-[#3f3f46]" />
+                  <span className="h-[6px] w-[6px] rounded-full bg-[rgba(95,78,52,0.86)]" />
+                  <span className="h-[6px] w-[6px] rounded-full bg-[rgba(95,78,52,0.86)]" />
+                  <span className="h-[6px] w-[6px] rounded-full bg-[rgba(95,78,52,0.86)]" />
                 </div>
               </div>
             </div>
@@ -205,7 +205,7 @@ export function ArticleShareActions({ title, shareUrl, siteName, className = "mt
             <div className="pointer-events-none absolute left-1/2 top-[260px] flex w-[270px] -translate-x-1/2 items-start justify-between">
               <div className="flex w-[118px] flex-col items-center">
                 <div className="flex h-[92px] w-[92px] items-center justify-center rounded-[24px] bg-white shadow-[0_18px_36px_rgba(0,0,0,0.26)]">
-                  <svg viewBox="0 0 24 24" className="h-10 w-10 text-[#4ade80]" fill="currentColor" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" className="h-10 w-10 text-[rgba(143,155,116,0.9)]" fill="currentColor" aria-hidden="true">
                     <path d="M10.6 5.2c-2.6 0-4.9 1-6.4 2.8a1 1 0 0 0 .12 1.44l.92.78a1 1 0 0 0 1.4-.12 5.56 5.56 0 0 1 4-1.8v2.67a1 1 0 0 0 1.72.7l4.7-4.62a1 1 0 0 0 0-1.42l-4.7-4.62a1 1 0 0 0-1.72.7v2.5Z" />
                   </svg>
                 </div>
@@ -215,10 +215,10 @@ export function ArticleShareActions({ title, shareUrl, siteName, className = "mt
               <div className="flex w-[118px] flex-col items-center">
                 <div className="flex h-[92px] w-[92px] items-center justify-center rounded-[24px] bg-white shadow-[0_18px_36px_rgba(0,0,0,0.26)]">
                   <div className="grid h-11 w-11 grid-cols-2 gap-1.5">
-                    <span className="rounded-full bg-[#fb923c]" />
-                    <span className="rounded-full bg-[#b49a6b]" />
-                    <span className="rounded-full bg-[#4ade80]" />
-                    <span className="rounded-full bg-[#f472b6]" />
+                    <span className="rounded-full bg-[rgba(196,174,129,0.92)]" />
+                    <span className="rounded-full bg-[rgba(180,154,107,0.92)]" />
+                    <span className="rounded-full bg-[rgba(143,155,116,0.88)]" />
+                    <span className="rounded-full bg-[rgba(96,101,109,0.72)]" />
                   </div>
                 </div>
                 <p className="mt-4 text-center text-[15px] font-medium text-white">分享到朋友圈</p>
@@ -231,7 +231,7 @@ export function ArticleShareActions({ title, shareUrl, siteName, className = "mt
                 <button
                   type="button"
                   onClick={handleCopyLink}
-                  className="mt-3 rounded-full bg-[#111827] px-4 py-2 text-sm font-medium text-white"
+                  className="btn-primary mt-3 px-4 py-2 text-sm font-medium"
                 >
                   {copied ? "已复制分享链接" : "复制分享链接"}
                 </button>
@@ -256,11 +256,11 @@ export function ArticleShareActions({ title, shareUrl, siteName, className = "mt
         onMouseEnter={warmQrCode}
         onFocus={warmQrCode}
         onTouchStart={warmQrCode}
-        className="group inline-flex h-10 items-center gap-2 rounded-full border border-[rgba(15,23,42,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.94),rgba(245,247,250,0.98))] px-3.5 shadow-[0_8px_22px_rgba(15,23,42,0.08),inset_0_1px_0_rgba(255,255,255,0.96)] backdrop-blur transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(15,23,42,0.12),inset_0_1px_0_rgba(255,255,255,0.98)] sm:h-11 sm:px-4"
+        className="group inline-flex h-10 items-center gap-2 rounded-full border border-[rgba(194,182,154,0.24)] bg-[linear-gradient(180deg,rgba(255,252,246,0.98),rgba(246,240,231,0.94))] px-3.5 shadow-[0_10px_24px_rgba(15,23,42,0.05),inset_0_1px_0_rgba(255,255,255,0.94)] backdrop-blur transition-all duration-200 hover:-translate-y-0.5 hover:border-[rgba(170,154,122,0.34)] hover:shadow-[0_16px_36px_rgba(15,23,42,0.1),inset_0_1px_0_rgba(255,255,255,0.98)] sm:h-11 sm:px-4"
       >
         <svg
           viewBox="0 0 24 24"
-          className="h-[18px] w-[18px] text-[#111827] transition-transform duration-200 group-hover:scale-[1.04] sm:h-5 sm:w-5"
+          className="h-[18px] w-[18px] text-primary transition-transform duration-200 group-hover:scale-[1.04] sm:h-5 sm:w-5"
           fill="none"
           stroke="currentColor"
           strokeWidth="1.9"

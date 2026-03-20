@@ -258,7 +258,7 @@ export default async function NewsAllPage({ searchParams }: Props) {
           <input type="hidden" name="sort" value={sort} />
           <input type="hidden" name="sub" value={sub} />
           <div className="flex gap-2 md:col-span-4">
-            <button className="rounded-full bg-[#111827] px-5 py-2.5 text-sm text-white">筛选</button>
+            <button className="btn-primary px-5 py-2.5 text-sm">筛选</button>
             <Link href="/news/all" className="rounded-full border border-border px-5 py-2.5 text-sm text-primary hover:bg-surface">重置</Link>
           </div>
         </form>

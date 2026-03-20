@@ -14,9 +14,9 @@ const positions: Array<[number, number, number]> = [
 
 const sizes = [3, 4, 5, 6];
 const accentColors = [
-  "rgba(184, 134, 11, 0.4)",
-  "rgba(15, 118, 110, 0.35)",
-  "rgba(91, 33, 182, 0.3)",
+  "rgba(180, 154, 107, 0.34)",
+  "rgba(196, 174, 129, 0.28)",
+  "rgba(143, 155, 116, 0.24)",
 ];
 
 export function ParticleBackground() {

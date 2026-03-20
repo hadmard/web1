@@ -27,7 +27,7 @@ export function HomeHeroSection({ heroBackground }: { heroBackground: string }) 
 
       <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
         <div data-reveal="zoom-soft" className="hidden text-center sm:block">
-          <h1 className="hero-title-stack font-serif text-[2.6rem] sm:text-6xl lg:text-7xl font-semibold tracking-[0.08em] text-[#223548] drop-shadow-[0_10px_24px_rgba(255,255,255,0.45)]">
+          <h1 className="hero-title-stack font-serif text-[2.6rem] sm:text-6xl lg:text-7xl font-semibold tracking-[0.08em] text-primary drop-shadow-[0_10px_24px_rgba(255,255,255,0.45)]">
             <span className="hero-title-line hero-title-line--primary">整木网</span>
             <span className="hero-title-line hero-title-line--secondary text-[0.22em] font-sans tracking-[0.34em] uppercase">
               Industry Intelligence Platform

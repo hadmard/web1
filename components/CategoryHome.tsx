@@ -147,7 +147,7 @@ export async function CategoryHome({
                 <div className="flex justify-end">
                   <Link
                     href={finalSearchHref}
-                    className="interactive-lift inline-flex items-center justify-center rounded-full bg-[#111214] px-5 py-3 text-sm font-medium text-white transition hover:bg-black"
+                    className="btn-primary interactive-lift inline-flex items-center justify-center px-5 py-3 text-sm font-medium"
                   >
                     搜索资讯
                   </Link>

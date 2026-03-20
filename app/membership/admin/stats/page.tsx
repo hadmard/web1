@@ -123,7 +123,7 @@ export default function AdminStatsPage() {
   return (
     <div className="space-y-6">
       <section className="rounded-[28px] border border-border bg-[radial-gradient(circle_at_top_left,rgba(198,170,118,0.18),transparent_42%),linear-gradient(180deg,rgba(255,253,249,0.98),rgba(248,243,236,0.96))] p-6 shadow-[0_28px_60px_-36px_rgba(15,23,42,0.32)]">
-        <p className="text-xs uppercase tracking-[0.2em] text-[#8f7b59]">数据统计</p>
+        <p className="text-xs uppercase tracking-[0.2em] text-accent">数据统计</p>
         <h1 className="mt-3 text-3xl font-semibold tracking-[0.02em] text-primary">整木网后台运营看板</h1>
         <p className="mt-3 max-w-3xl text-sm leading-7 text-muted">
           这页按你网站当前的真实数据来统计，重点看内容产出、审核积压、会员增长和用户互动，方便管理员每天快速判断站点运行情况。
@@ -151,9 +151,9 @@ export default function AdminStatsPage() {
                 <p className="text-center text-xs text-muted">{item.day}</p>
                 <div className="mt-4 flex h-36 items-end justify-center gap-1.5">
                   {[
-                    { key: "published", value: item.publishedArticles, color: "bg-[#b99763]" },
-                    { key: "members", value: item.newMembers, color: "bg-[#557c6d]" },
-                    { key: "questions", value: item.newQuestions, color: "bg-[#7e6aa8]" },
+                    { key: "published", value: item.publishedArticles, color: "bg-[rgba(180,154,107,0.92)]" },
+                    { key: "members", value: item.newMembers, color: "bg-[rgba(143,155,116,0.9)]" },
+                    { key: "questions", value: item.newQuestions, color: "bg-[rgba(96,101,109,0.78)]" },
                   ].map((bar) => (
                     <div key={bar.key} className="flex w-4 flex-col items-center justify-end">
                       <div
@@ -173,9 +173,9 @@ export default function AdminStatsPage() {
             ))}
           </div>
           <div className="mt-4 flex flex-wrap gap-3 text-xs text-muted">
-            <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-[#b99763]" />内容发布</span>
-            <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-[#557c6d]" />新增会员</span>
-            <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-[#7e6aa8]" />用户提问</span>
+            <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-[rgba(180,154,107,0.92)]" />内容发布</span>
+            <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-[rgba(143,155,116,0.9)]" />新增会员</span>
+            <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-[rgba(96,101,109,0.78)]" />用户提问</span>
           </div>
         </article>
 
@@ -220,7 +220,7 @@ export default function AdminStatsPage() {
                     <strong className="text-lg font-semibold text-primary">{item.count}</strong>
                   </div>
                   <div className="mt-3 h-2.5 rounded-full bg-[rgba(194,182,154,0.22)]">
-                    <div className="h-full rounded-full bg-[linear-gradient(90deg,#cab07a,#8f6f43)]" style={{ width }} />
+                    <div className="h-full rounded-full bg-[linear-gradient(90deg,rgba(196,174,129,0.95),rgba(138,115,77,0.96))]" style={{ width }} />
                   </div>
                 </div>
               );
@@ -239,7 +239,7 @@ export default function AdminStatsPage() {
                 <div key={item.id} className="rounded-2xl border border-border bg-[rgba(255,252,247,0.76)] px-4 py-3">
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0">
-                      <p className="text-xs uppercase tracking-[0.16em] text-[#8f7b59]">TOP {index + 1}</p>
+                      <p className="text-xs uppercase tracking-[0.16em] text-accent">TOP {index + 1}</p>
                       <p className="mt-2 line-clamp-2 text-sm font-medium leading-6 text-primary">{item.title}</p>
                       <p className="mt-2 text-xs text-muted">发布时间：{formatDateTime(item.publishedAt)}</p>
                     </div>
