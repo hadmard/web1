@@ -806,7 +806,7 @@ function PublishCenterPageInner() {
     return (
       <div className="max-w-5xl mx-auto px-4 py-12">
         <p className="text-sm text-muted mb-3">请先登录后再使用内容发布中心。</p>
-        <Link href="/membership/login" className="text-sm text-accent hover:underline">前往登录</Link>
+        <Link href="/membership/login" className="apple-inline-link">前往登录</Link>
       </div>
     );
   }
@@ -828,7 +828,7 @@ function PublishCenterPageInner() {
       </p>
       <p className="text-sm text-muted mb-6">左侧按七大类分别发布，不同类别显示不同组成字段。</p>
       <div className="mb-6">
-        <Link href="/membership/content/verification" className="text-sm text-accent hover:underline">
+        <Link href="/membership/content/verification" className="apple-inline-link">
           去提交企业认证资料
         </Link>
       </div>

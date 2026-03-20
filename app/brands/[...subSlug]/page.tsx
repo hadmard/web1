@@ -178,7 +178,7 @@ export default async function BrandDetailPage({ params }: Props) {
           </div>
 
           <div className="mt-6">
-            <Link href="/brands/all" className="text-sm text-accent hover:underline">查看整木市场总览</Link>
+            <Link href="/brands/all" className="apple-inline-link">查看整木市场总览</Link>
           </div>
         </section>
       </div>

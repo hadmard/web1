@@ -306,6 +306,41 @@
     0 16px 30px -26px rgba(15, 23, 42, 0.22),
     inset 0 1px 0 rgba(255, 255, 255, 0.92);
 }
+
+.apple-inline-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 1.9rem;
+  border-radius: 9999px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 86%, white 14%);
+  background: color-mix(in srgb, var(--color-surface-elevated) 90%, white 10%);
+  color: color-mix(in srgb, var(--color-primary) 76%, var(--color-accent) 24%);
+  padding: 0.3rem 0.8rem;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  box-shadow:
+    0 10px 24px -22px rgba(15, 23, 42, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  transition:
+    transform var(--motion-base) var(--ease-standard),
+    border-color var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    background-color var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-base) var(--ease-standard);
+}
+
+.apple-inline-link:hover {
+  transform: translate3d(0, -1px, 0);
+  border-color: color-mix(in srgb, var(--color-accent) 20%, var(--color-border));
+  background: color-mix(in srgb, var(--color-surface-elevated) 84%, var(--color-surface) 16%);
+  color: var(--color-primary);
+  box-shadow:
+    0 14px 28px -22px rgba(15, 23, 42, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.94);
+}
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .gpu-layer, .gpu-layer-hover { will-change: auto; }

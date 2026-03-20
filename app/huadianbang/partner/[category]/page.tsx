@@ -40,7 +40,7 @@ export default async function HuadianPartnerCategoryPage({ params }: Props) {
               <h3 className="text-base font-semibold text-primary">{x.name}</h3>
               <p className="mt-1 text-sm text-muted">服务区域：{x.serviceRegions}</p>
               <p className="mt-2 text-sm text-muted line-clamp-2">{x.reason}</p>
-              <Link href={`/huadianbang/partner/${category}/${x.slug}`} className="mt-2 inline-block text-sm text-accent hover:underline">
+              <Link href={`/huadianbang/partner/${category}/${x.slug}`} className="apple-inline-link mt-3">
                 查看详情页
               </Link>
             </article>

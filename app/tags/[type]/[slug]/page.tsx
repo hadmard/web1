@@ -68,7 +68,7 @@ export default async function TagSlugPage({ params }: Props) {
             <li key={a.id}>
               <Link
                 href={buildNewsPath(a.id)}
-                className="text-primary font-medium hover:text-accent hover:underline"
+                className="text-primary font-medium transition-colors hover:text-accent"
               >
                 {a.title}
               </Link>

@@ -118,7 +118,7 @@ export default function MembershipContentNewsPage() {
     return (
       <div className="max-w-4xl mx-auto px-4 py-12">
         <p className="text-sm text-muted mb-3">请先登录后再发布资讯内容。</p>
-        <Link href="/membership/login" className="text-sm text-accent hover:underline">
+        <Link href="/membership/login" className="apple-inline-link">
           前往登录
         </Link>
       </div>

@@ -238,7 +238,7 @@ export default function MemberVerificationPage() {
     return (
       <div className="max-w-5xl mx-auto px-4 py-12">
         <p className="text-sm text-muted mb-3">请先登录后再提交企业认证。</p>
-        <Link href="/membership/login" className="text-sm text-accent hover:underline">
+        <Link href="/membership/login" className="apple-inline-link">
           前往登录
         </Link>
       </div>
@@ -267,7 +267,7 @@ export default function MemberVerificationPage() {
         {(latest?.approvedEnterpriseId || enterpriseId) && (
           <Link
             href={`/enterprise/${latest?.approvedEnterpriseId ?? enterpriseId}`}
-            className="inline-flex text-sm text-accent hover:underline"
+            className="apple-inline-link"
           >
             查看自动生成的企业详情页
           </Link>

@@ -293,7 +293,7 @@ export default function AdminAccountsPage() {
                   <td className="py-2 pr-4">
                     <div className="flex gap-3">
                       <button
-                        className="text-xs text-accent hover:underline"
+                        className="apple-inline-link"
                         type="button"
                         onClick={() => {
                           const password = prompt("输入新密码（留空取消）");

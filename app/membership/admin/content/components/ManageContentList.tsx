@@ -110,7 +110,7 @@ export function ManageContentList({
                 <div className="min-w-0 flex-1">
                   <p className="flex items-center gap-2 text-[15px] font-medium text-primary">
                     {item.previewHref ? (
-                      <a href={item.previewHref} target="_blank" rel="noreferrer" className="truncate hover:text-accent hover:underline">
+                      <a href={item.previewHref} target="_blank" rel="noreferrer" className="truncate transition-colors hover:text-accent">
                         {item.title}
                       </a>
                     ) : (

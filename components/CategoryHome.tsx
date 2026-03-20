@@ -210,7 +210,7 @@ export async function CategoryHome({
                         </Link>
                         <Link
                           href={getSubHref(sub.href)}
-                          className={`text-xs ${isNewsEditorial ? "text-accent hover:underline" : "text-accent hover:underline"}`}
+                          className="apple-inline-link shrink-0"
                         >
                           进入栏目
                         </Link>

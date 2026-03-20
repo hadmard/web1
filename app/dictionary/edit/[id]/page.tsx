@@ -169,7 +169,7 @@ export default function DictionaryEditPage() {
     return (
       <div className="max-w-5xl mx-auto px-4 py-10">
         <p className="text-sm text-muted mb-3">请先登录后再修改词条。</p>
-        <Link href="/membership/login" className="text-sm text-accent hover:underline">
+        <Link href="/membership/login" className="apple-inline-link">
           前往登录
         </Link>
       </div>

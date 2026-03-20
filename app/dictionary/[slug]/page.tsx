@@ -271,7 +271,7 @@ export default async function TermPage({ params }: Props) {
               <section className="rounded-3xl border border-border bg-surface-elevated p-6">
                 <div className="flex items-center justify-between gap-3">
                   <h2 className="text-lg font-semibold text-primary">相关词条</h2>
-                  <Link href="/dictionary/all" className="text-sm text-accent hover:underline">查看全部</Link>
+                  <Link href="/dictionary/all" className="apple-inline-link">查看全部</Link>
                 </div>
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   {relatedItems.map((item) => (

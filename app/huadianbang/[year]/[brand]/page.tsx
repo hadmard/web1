@@ -79,8 +79,8 @@ export default async function HuadianAnnualBrandDetailPage({ params }: Props) {
       <section className="mt-8 glass-panel p-6">
         <h2 className="text-lg font-semibold text-primary">关联资源</h2>
         <div className="mt-3 flex flex-wrap gap-3">
-          <Link href={item.enterpriseHref} className="text-sm text-accent hover:underline">企业主页</Link>
-          <Link href={item.standardsHref} className="text-sm text-accent hover:underline">关联标准</Link>
+          <Link href={item.enterpriseHref} className="apple-inline-link">企业主页</Link>
+          <Link href={item.standardsHref} className="apple-inline-link">关联标准</Link>
         </div>
       </section>
 

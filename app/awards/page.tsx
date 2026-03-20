@@ -81,10 +81,10 @@ export default async function AwardsPage({ searchParams }: Props) {
           <h2 className="text-lg font-semibold text-primary">华点榜信用系统</h2>
           <p className="mt-2 text-sm text-muted">{HUADIAN_DEFINITION}</p>
           <div className="mt-4 flex flex-wrap gap-3">
-            <Link href="/huadianbang" className="text-sm text-accent hover:underline">进入华点榜</Link>
-            <Link href={`/huadianbang/${huadianYear}`} className="text-sm text-accent hover:underline">查看本年度榜单</Link>
-            <Link href="/huadianbang/feature" className="text-sm text-accent hover:underline">查看特色奖项</Link>
-            <Link href="/huadianbang/partner" className="text-sm text-accent hover:underline">查看配套商推荐</Link>
+            <Link href="/huadianbang" className="apple-inline-link">进入华点榜</Link>
+            <Link href={`/huadianbang/${huadianYear}`} className="apple-inline-link">查看本年度榜单</Link>
+            <Link href="/huadianbang/feature" className="apple-inline-link">查看特色奖项</Link>
+            <Link href="/huadianbang/partner" className="apple-inline-link">查看配套商推荐</Link>
           </div>
         </article>
       </section>
@@ -106,7 +106,7 @@ export default async function AwardsPage({ searchParams }: Props) {
               <p className="text-base font-medium text-primary">评选中心正在准备内容</p>
               <p className="mt-2 text-sm text-muted">你可以先查看华点榜年度榜单，或通过会员系统提交评选资料。</p>
               <div className="mt-4 flex items-center justify-center gap-3">
-                <Link href={`/huadianbang/${huadianYear}`} className="text-sm text-accent hover:underline">
+                <Link href={`/huadianbang/${huadianYear}`} className="apple-inline-link">
                   查看年度榜单
                 </Link>
                 <Link href="/membership" className="text-sm text-muted hover:text-accent">

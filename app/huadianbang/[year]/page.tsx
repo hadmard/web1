@@ -64,7 +64,7 @@ export default async function HuadianAnnualPage({ params }: Props) {
               <h3 className="text-base font-semibold text-primary">{x.name}</h3>
               <p className="mt-1 text-sm text-muted">{x.category}</p>
               <p className="mt-2 text-sm text-muted line-clamp-2">{x.reason}</p>
-              <Link href={`/huadianbang/${annual.year}/${x.slug}`} className="mt-2 inline-block text-sm text-accent hover:underline">
+              <Link href={`/huadianbang/${annual.year}/${x.slug}`} className="apple-inline-link mt-3">
                 进入品牌详情页
               </Link>
             </article>
@@ -85,7 +85,7 @@ export default async function HuadianAnnualPage({ params }: Props) {
                 所在区域：{w.region} · 主营方向：{w.focus} · 获奖类型：{w.awardType}
               </p>
               <p className="mt-2 text-sm text-muted leading-7">{w.reason}</p>
-              <a href={w.homepage} className="mt-2 inline-block text-sm text-accent hover:underline">
+              <a href={w.homepage} className="apple-inline-link mt-3">
                 企业主页链接
               </a>
             </article>

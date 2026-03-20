@@ -155,7 +155,7 @@ export default function MembershipProfilePage() {
     return (
       <div className="max-w-3xl mx-auto px-4 py-12">
         <p className="text-sm text-muted mb-3">请先登录后管理企业资料。</p>
-        <Link href="/membership/login" className="text-sm text-accent hover:underline">前往登录</Link>
+        <Link href="/membership/login" className="apple-inline-link">前往登录</Link>
       </div>
     );
   }

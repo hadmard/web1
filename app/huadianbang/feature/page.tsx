@@ -27,7 +27,7 @@ export default function HuadianFeaturePage() {
             <article key={item.slug} className="rounded-xl border border-border bg-surface-elevated p-4">
               <h3 className="text-base font-semibold text-primary">{item.name}</h3>
               <p className="mt-2 text-sm text-muted">{item.definition}</p>
-              <Link href={`/huadianbang/feature/${item.slug}`} className="mt-2 inline-block text-sm text-accent hover:underline">
+              <Link href={`/huadianbang/feature/${item.slug}`} className="apple-inline-link mt-3">
                 查看奖项页面
               </Link>
             </article>

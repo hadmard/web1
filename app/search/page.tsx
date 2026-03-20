@@ -190,7 +190,7 @@ export default async function SearchPage({ searchParams }: Props) {
         <article className="glass-panel p-5">
           <div className="mb-3 flex items-center justify-between gap-3">
             <h2 className="text-lg font-semibold text-primary">{T.news}</h2>
-            <Link href={`/news/all?q=${encodedKeyword}`} className="text-sm text-accent hover:underline">
+            <Link href={`/news/all?q=${encodedKeyword}`} className="apple-inline-link">
               {T.viewAll}
             </Link>
           </div>
@@ -217,7 +217,7 @@ export default async function SearchPage({ searchParams }: Props) {
         <article className="glass-panel p-5">
           <div className="mb-3 flex items-center justify-between gap-3">
             <h2 className="text-lg font-semibold text-primary">{T.standards}</h2>
-            <Link href={`/standards/all?q=${encodedKeyword}`} className="text-sm text-accent hover:underline">
+            <Link href={`/standards/all?q=${encodedKeyword}`} className="apple-inline-link">
               {T.viewAll}
             </Link>
           </div>
@@ -244,7 +244,7 @@ export default async function SearchPage({ searchParams }: Props) {
         <article className="glass-panel p-5">
           <div className="mb-3 flex items-center justify-between gap-3">
             <h2 className="text-lg font-semibold text-primary">{T.dictionary}</h2>
-            <Link href={`/dictionary/all?q=${encodedKeyword}`} className="text-sm text-accent hover:underline">
+            <Link href={`/dictionary/all?q=${encodedKeyword}`} className="apple-inline-link">
               {T.viewAll}
             </Link>
           </div>
@@ -271,7 +271,7 @@ export default async function SearchPage({ searchParams }: Props) {
         <article className="glass-panel p-5">
           <div className="mb-3 flex items-center justify-between gap-3">
             <h2 className="text-lg font-semibold text-primary">{T.brands}</h2>
-            <Link href={`/brands/all?q=${encodedKeyword}`} className="text-sm text-accent hover:underline">
+            <Link href={`/brands/all?q=${encodedKeyword}`} className="apple-inline-link">
               {T.viewAll}
             </Link>
           </div>
@@ -298,7 +298,7 @@ export default async function SearchPage({ searchParams }: Props) {
         <article className="glass-panel p-5 lg:col-span-2">
           <div className="mb-3 flex items-center justify-between gap-3">
             <h2 className="text-lg font-semibold text-primary">{T.awards}</h2>
-            <Link href={`/awards?q=${encodedKeyword}`} className="text-sm text-accent hover:underline">
+            <Link href={`/awards?q=${encodedKeyword}`} className="apple-inline-link">
               {T.viewAll}
             </Link>
           </div>

@@ -142,7 +142,7 @@ export default async function DictionaryAllPage({ searchParams }: Props) {
               <p className="mt-2 text-sm text-muted line-clamp-3">{x.excerpt || "暂无摘要，点击进入查看完整释义。"}</p>
               <p className="mt-3 text-xs text-muted">更新于 {x.updatedAt.toLocaleDateString("zh-CN")}</p>
               <div className="mt-3 flex items-center gap-2">
-                <Link href={`/dictionary/${x.slug}`} className="text-xs text-accent hover:underline">
+                <Link href={`/dictionary/${x.slug}`} className="apple-inline-link">
                   查看词条
                 </Link>
                 <Link

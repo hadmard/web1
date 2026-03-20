@@ -125,7 +125,7 @@ export function VerificationCard({
       )}
 
       {item.status === "approved" && item.approvedEnterpriseId && (
-        <Link href={`/enterprise/${item.approvedEnterpriseId}`} className="inline-flex text-sm text-accent hover:underline">
+        <Link href={`/enterprise/${item.approvedEnterpriseId}`} className="apple-inline-link">
           查看生成后的企业详情页
         </Link>
       )}
