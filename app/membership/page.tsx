@@ -3,7 +3,11 @@ import Image from "next/image";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { getSiteVisualSettings } from "@/lib/site-visual-settings";
-import { PUBLIC_CONTACT_ITEMS } from "@/lib/public-site-config";
+import {
+  PUBLIC_BUSINESS_CONTACT_EMAIL,
+  PUBLIC_CONTACT_PHONE,
+  PUBLIC_MEMBER_CONTACT_EMAIL,
+} from "@/lib/public-site-config";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -92,11 +96,47 @@ export default async function MembershipPage() {
 
           <article className="glass-panel p-5">
             <h2 className="font-serif text-lg font-semibold text-primary">联系方式</h2>
-            <ul className="mt-3 space-y-2 text-sm text-muted">
-              {PUBLIC_CONTACT_ITEMS.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
+            <p className="mt-3 text-sm text-muted">优先建议电话或邮件联系，沟通后可提供企业微信二维码或进一步对接方式。</p>
+            <div className="mt-4 grid gap-4 lg:grid-cols-[1.15fr,0.85fr]">
+              <div className="grid gap-3">
+                <a
+                  href={`tel:${PUBLIC_CONTACT_PHONE}`}
+                  className="rounded-2xl border border-border bg-white/85 px-4 py-4 transition hover:border-accent/30 hover:shadow-[0_12px_28px_rgba(15,23,42,0.08)]"
+                >
+                  <p className="text-xs uppercase tracking-[0.18em] text-muted">联系电话</p>
+                  <p className="mt-2 text-base font-semibold text-primary">{PUBLIC_CONTACT_PHONE}</p>
+                  <p className="mt-2 text-xs text-muted">工作日 09:00-18:00，可直接拨打</p>
+                </a>
+                <a
+                  href={`mailto:${PUBLIC_MEMBER_CONTACT_EMAIL}`}
+                  className="rounded-2xl border border-border bg-white/85 px-4 py-4 transition hover:border-accent/30 hover:shadow-[0_12px_28px_rgba(15,23,42,0.08)]"
+                >
+                  <p className="text-xs uppercase tracking-[0.18em] text-muted">会员咨询</p>
+                  <p className="mt-2 text-base font-semibold text-primary break-all">{PUBLIC_MEMBER_CONTACT_EMAIL}</p>
+                  <p className="mt-2 text-xs text-muted">适合会员注册、认证、升级咨询</p>
+                </a>
+                <div className="rounded-2xl border border-dashed border-border bg-surface px-4 py-4 text-sm text-muted">
+                  <p className="font-medium text-primary">商务合作</p>
+                  <p className="mt-2 break-all">{PUBLIC_BUSINESS_CONTACT_EMAIL}</p>
+                  <p className="mt-1 text-xs text-muted">企业微信无法扫码时，可直接邮件联系获取进一步对接方式。</p>
+                </div>
+              </div>
+
+              <div className="rounded-[28px] border border-border bg-white/90 p-4 shadow-[0_14px_30px_rgba(15,23,42,0.06)]">
+                <p className="text-xs uppercase tracking-[0.18em] text-muted">企业微信咨询</p>
+                <p className="mt-2 text-sm text-primary">扫码添加企业微信，获取会员升级、企业认证与合作咨询支持。</p>
+                <div className="mt-4 overflow-hidden rounded-3xl border border-border bg-white">
+                  <Image
+                    src="/wechat-qr.jpg.jpg"
+                    alt="企业微信咨询二维码"
+                    width={950}
+                    height={1327}
+                    className="h-auto w-full object-contain"
+                  />
+                </div>
+                <p className="mt-3 text-xs text-muted">若扫码失败，可优先电话联系：{PUBLIC_CONTACT_PHONE}</p>
+              </div>
+            </div>
           </article>
         </div>
       </section>

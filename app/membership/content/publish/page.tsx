@@ -67,6 +67,7 @@ import {
   type DocumentMetadata,
 } from "@/lib/document-metadata";
 import { InlinePageBackLink } from "@/components/InlinePageBackLink";
+import { PUBLIC_CONTACT_PHONE } from "@/lib/public-site-config";
 
 type MemberType = "enterprise_basic" | "enterprise_advanced" | "personal";
 type Status = "draft" | "pending" | "approved" | "rejected";
@@ -1003,11 +1004,6 @@ function PublishCenterPageInner() {
               <Link href={verificationActionHref} className="apple-inline-link">
                 {verificationActionLabel}
               </Link>
-              {enterpriseHref ? (
-                <Link href={enterpriseHref} className="apple-inline-link">
-                  打开企业详情页
-                </Link>
-              ) : null}
               {memberType !== "personal" ? (
                 <Link href="/membership/content/site" className="apple-inline-link">
                   管理会员站
@@ -1044,12 +1040,21 @@ function PublishCenterPageInner() {
               <p className="mt-2 text-sm text-muted">
                 VIP 会员可获得更完整的企业站配置、SEO 设置、推荐能力与更高内容运营上限。已认证企业可在现有基础上直接升级，不影响企业详情页展示。
               </p>
+              <div className="mt-3 flex flex-wrap gap-2 text-sm text-muted">
+                <span className="rounded-full border border-[rgba(180,154,107,0.22)] bg-white/80 px-3 py-1">企业站增强</span>
+                <span className="rounded-full border border-[rgba(180,154,107,0.22)] bg-white/80 px-3 py-1">SEO 设置</span>
+                <span className="rounded-full border border-[rgba(180,154,107,0.22)] bg-white/80 px-3 py-1">推荐位能力</span>
+                <span className="rounded-full border border-[rgba(180,154,107,0.22)] bg-white/80 px-3 py-1">更高扩展权限</span>
+              </div>
             </div>
-            <div className="flex flex-wrap gap-2 text-sm text-muted">
-              <span className="rounded-full border border-[rgba(180,154,107,0.22)] bg-white/80 px-3 py-1">企业站增强</span>
-              <span className="rounded-full border border-[rgba(180,154,107,0.22)] bg-white/80 px-3 py-1">SEO 设置</span>
-              <span className="rounded-full border border-[rgba(180,154,107,0.22)] bg-white/80 px-3 py-1">推荐位能力</span>
-              <span className="rounded-full border border-[rgba(180,154,107,0.22)] bg-white/80 px-3 py-1">更高扩展权限</span>
+            <div className="flex min-w-[240px] flex-col items-start gap-2">
+              <Link
+                href={`tel:${PUBLIC_CONTACT_PHONE}`}
+                className="rounded-xl bg-accent px-4 py-2.5 text-sm font-medium text-white shadow-[0_14px_28px_rgba(180,154,107,0.25)] transition hover:brightness-105"
+              >
+                联系管理员升级VIP
+              </Link>
+              <p className="text-xs text-muted">升级由平台管理员处理，可直接电话联系：{PUBLIC_CONTACT_PHONE}</p>
             </div>
           </div>
         </section>
