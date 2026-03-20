@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { VerificationCard } from "@/app/membership/admin/enterprise-verifications/components/VerificationCard";
 import { VerificationFilters } from "@/app/membership/admin/enterprise-verifications/components/VerificationFilters";
+import { InlinePageBackLink } from "@/components/InlinePageBackLink";
 
 type Status = "pending" | "approved" | "rejected";
 
@@ -106,6 +107,7 @@ export default function AdminEnterpriseVerificationPage() {
 
   return (
     <div className="max-w-6xl space-y-6">
+      <InlinePageBackLink href="/membership/admin" label="返回后台首页" />
       <header className="rounded-xl border border-border bg-surface-elevated p-5">
         <h1 className="font-serif text-2xl font-bold text-primary">企业认证审核</h1>
         <p className="mt-1 text-sm text-muted">待审核数量：{pendingCount}</p>

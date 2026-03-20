@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { NEWS_SUBCATEGORY_OPTIONS } from "@/lib/content-taxonomy";
+import { InlinePageBackLink } from "@/components/InlinePageBackLink";
 
 type ArticleItem = {
   id: string;
@@ -142,6 +143,7 @@ export default function MembershipContentNewsPage() {
       <h1 className="mb-2 font-serif text-2xl font-bold text-primary">资讯发布</h1>
       <p className="mb-6 text-sm text-muted">企业会员提交内容后默认待审核，审核通过后同步到主站栏目。</p>
 
+      <InlinePageBackLink href="/membership" label="返回会员系统" />
       {message && <p className="mb-4 text-sm text-accent">{message}</p>}
 
       {!canPublish ? (

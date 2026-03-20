@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { InlinePageBackLink } from "@/components/InlinePageBackLink";
 
 type Item = {
   id: string;
@@ -192,6 +193,7 @@ export default function DictionaryEditPage() {
         <span className="text-primary">提出修改</span>
       </nav>
 
+      <InlinePageBackLink href={`/dictionary/${item.slug}`} label="返回词条" />
       <header className="rounded-xl border border-border bg-surface-elevated p-5">
         <h1 className="font-serif text-2xl font-bold text-primary">词条修改</h1>
         <p className="text-sm text-muted mt-2">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { InlinePageBackLink } from "@/components/InlinePageBackLink";
 
 type MemberRow = {
   id: string;
@@ -237,6 +238,7 @@ export default function AdminPermissionsPage() {
 
   return (
     <div className="max-w-6xl space-y-6">
+      <InlinePageBackLink href="/membership/admin" label="返回后台首页" />
       <header className="rounded-2xl border border-border bg-surface-elevated p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-2">

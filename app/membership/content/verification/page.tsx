@@ -5,6 +5,7 @@ import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { MAX_UPLOAD_IMAGE_MB, uploadImageToServer } from "@/lib/client-image";
 import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
+import { InlinePageBackLink } from "@/components/InlinePageBackLink";
 
 type VerifyStatus = "pending" | "approved" | "rejected";
 
@@ -255,6 +256,7 @@ export default function MemberVerificationPage() {
         <span className="text-primary">企业认证</span>
       </nav>
 
+      <InlinePageBackLink href="/membership" label="返回会员系统" />
       <header className="rounded-xl border border-border bg-surface-elevated p-5 space-y-2">
         <h1 className="font-serif text-2xl font-bold text-primary">企业认证申请</h1>
         <p className="text-sm text-muted">提交资料后由主管理员审核，通过后自动生成企业详情展示页。</p>

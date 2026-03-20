@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { InlinePageBackLink } from "@/components/InlinePageBackLink";
 
 type Row = {
   id: string;
@@ -91,6 +92,7 @@ export default function MembershipContentStatusPage() {
 
       <h1 className="mb-4 font-serif text-2xl font-bold text-primary">内容审核状态</h1>
 
+      <InlinePageBackLink href="/membership" label="返回会员系统" />
       <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {(["draft", "pending", "approved", "rejected"] as const).map((k) => (
           <div key={k} className="rounded-lg border border-border bg-surface-elevated p-3">

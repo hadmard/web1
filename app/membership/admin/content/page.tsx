@@ -51,6 +51,7 @@ import {
   stringifyDocumentMetadata,
   type DocumentMetadata,
 } from "@/lib/document-metadata";
+import { InlinePageBackLink } from "@/components/InlinePageBackLink";
 
 type Status = "draft" | "pending" | "approved" | "rejected";
 type Mode = "publish" | "manage" | "review";
@@ -941,6 +942,7 @@ export default function AdminContentPage() {
 
   return (
     <div className="max-w-6xl space-y-6">
+      <InlinePageBackLink href="/membership/admin" label="返回后台首页" />
       <header className="rounded-xl border border-border bg-surface-elevated p-5">
         <h1 className="font-serif text-2xl font-bold text-primary">{mode === "publish" ? "内容发布" : mode === "manage" ? "内容管理" : "审核中心"} · {selectedTabDef.label}</h1>
         {message && (

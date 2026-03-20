@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { InlinePageBackLink } from "@/components/InlinePageBackLink";
 
 type MemberType = "enterprise_basic" | "personal" | "enterprise_advanced";
 
@@ -175,6 +176,7 @@ export default function MembershipProfilePage() {
         当前会员类型：{memberType === "enterprise_advanced" ? "企业高级会员" : memberType === "enterprise_basic" ? "企业基础会员" : "个人会员"}
       </p>
 
+      <InlinePageBackLink href="/membership" label="返回会员系统" />
       {message && <p className="mb-4 text-sm text-accent">{message}</p>}
 
       {noPermission ? (

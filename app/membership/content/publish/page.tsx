@@ -66,6 +66,7 @@ import {
   stringifyDocumentMetadata,
   type DocumentMetadata,
 } from "@/lib/document-metadata";
+import { InlinePageBackLink } from "@/components/InlinePageBackLink";
 
 type MemberType = "enterprise_basic" | "enterprise_advanced" | "personal";
 type Status = "draft" | "pending" | "approved" | "rejected";
@@ -822,6 +823,7 @@ function PublishCenterPageInner() {
       </nav>
 
       <h1 className="font-serif text-2xl font-bold text-primary mb-2">内容发布中心</h1>
+      <InlinePageBackLink href="/membership" label="返回会员系统" />
       <p className="text-sm text-muted mb-2">
         当前身份：{role === "SUPER_ADMIN" ? "主管理员" : role === "ADMIN" ? "子管理员" : "会员"} /{" "}
         {memberType === "enterprise_advanced" ? "企业高级会员" : memberType === "enterprise_basic" ? "企业基础会员" : "个人会员"}

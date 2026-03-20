@@ -16,6 +16,31 @@ function resolveParentHref(pathname: string) {
   return `/${segments.slice(0, -1).join("/")}`;
 }
 
+function shouldShowBackButton(pathname: string) {
+  if (pathname === "/") return false;
+
+  const detailRoutePatterns = [
+    /^\/news\/[^/]+$/,
+    /^\/dictionary\/[^/]+$/,
+    /^\/standards\/[^/]+$/,
+    /^\/awards\/[^/]+$/,
+    /^\/data\/[^/]+$/,
+    /^\/gallery\/[^/]+$/,
+    /^\/enterprise\/[^/]+$/,
+    /^\/brands\/[^/]+$/,
+    /^\/tags\/[^/]+\/[^/]+$/,
+    /^\/huadianbang\/\d{4}$/,
+    /^\/huadianbang\/\d{4}\/[^/]+$/,
+    /^\/huadianbang\/feature\/[^/]+$/,
+    /^\/huadianbang\/partner\/[^/]+$/,
+    /^\/huadianbang\/partner\/[^/]+\/[^/]+$/,
+    /^\/info\/[^/]+$/,
+    /^\/companynews\/[^/]+$/,
+  ];
+
+  return detailRoutePatterns.some((pattern) => pattern.test(pathname));
+}
+
 export function PageBackButton() {
   const router = useRouter();
   const pathname = usePathname();
@@ -25,7 +50,7 @@ export function PageBackButton() {
 
   const fallbackHref = useMemo(() => resolveParentHref(pathname), [pathname]);
 
-  if (pathname === "/") return null;
+  if (!shouldShowBackButton(pathname)) return null;
 
   const handleBack = () => {
     const history = readRouteHistory();
