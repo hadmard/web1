@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
+import { getEffectiveMemberAccessForMember } from "@/lib/member-access-resolver";
 
 export const dynamic = "force-dynamic";
 
@@ -8,6 +9,9 @@ export async function GET() {
   if (!session) {
     return NextResponse.json({ error: "未登录" }, { status: 401 });
   }
+
+  const memberAccess = await getEffectiveMemberAccessForMember(session.sub, session.memberType);
+  const membershipRule = memberAccess.membershipRule;
 
   return NextResponse.json({
     id: session.sub,
@@ -27,5 +31,8 @@ export async function GET() {
     canEditOwnContent: session.canEditOwnContent,
     canEditMemberContent: session.canEditMemberContent,
     canEditAllContent: session.canEditAllContent,
+    memberTypeLabel: membershipRule.label,
+    membershipRule,
+    memberAccess,
   });
 }

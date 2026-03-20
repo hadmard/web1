@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { getMembershipRule, getMembershipRuleSync } from "@/lib/membership-rules";
 
 export type MemberType = "enterprise_basic" | "personal" | "enterprise_advanced";
 export type ContentStatus = "draft" | "pending" | "approved" | "rejected";
@@ -44,27 +45,51 @@ export async function ensureEffectiveMemberType(member: MemberLike): Promise<{
 }
 
 export function canSubmitStandardFeedback(memberType: MemberType): boolean {
-  return memberType === "personal" || memberType === "enterprise_advanced";
+  return getMembershipRuleSync(memberType).canSubmitStandardFeedback;
 }
 
 export function canLinkStandards(memberType: MemberType): boolean {
-  return memberType === "enterprise_advanced";
+  return getMembershipRuleSync(memberType).canLinkStandards;
 }
 
 export function canLinkTerms(memberType: MemberType): boolean {
-  return memberType === "enterprise_advanced";
+  return getMembershipRuleSync(memberType).canLinkTerms;
 }
 
 export function canUploadUnlimited(memberType: MemberType): boolean {
-  return memberType === "enterprise_advanced";
+  return getMembershipRuleSync(memberType).galleryUploadLimit == null;
 }
 
 export function canDownloadStandard(memberType: MemberType, enabled: boolean): boolean {
-  return memberType === "personal" && enabled;
+  return enabled && getMembershipRuleSync(memberType).canDownloadStandard;
 }
 
 export function canDownloadReport(memberType: MemberType, enabled: boolean): boolean {
-  return memberType === "personal" && enabled;
+  return enabled && getMembershipRuleSync(memberType).canDownloadReport;
+}
+
+export async function canSubmitStandardFeedbackAsync(memberType: MemberType): Promise<boolean> {
+  return (await getMembershipRule(memberType)).canSubmitStandardFeedback;
+}
+
+export async function canLinkStandardsAsync(memberType: MemberType): Promise<boolean> {
+  return (await getMembershipRule(memberType)).canLinkStandards;
+}
+
+export async function canLinkTermsAsync(memberType: MemberType): Promise<boolean> {
+  return (await getMembershipRule(memberType)).canLinkTerms;
+}
+
+export async function canUploadUnlimitedAsync(memberType: MemberType): Promise<boolean> {
+  return (await getMembershipRule(memberType)).galleryUploadLimit == null;
+}
+
+export async function canDownloadStandardAsync(memberType: MemberType, enabled: boolean): Promise<boolean> {
+  return enabled && (await getMembershipRule(memberType)).canDownloadStandard;
+}
+
+export async function canDownloadReportAsync(memberType: MemberType, enabled: boolean): Promise<boolean> {
+  return enabled && (await getMembershipRule(memberType)).canDownloadReport;
 }
 
 export function defaultContentStatusForSubmission(options?: {

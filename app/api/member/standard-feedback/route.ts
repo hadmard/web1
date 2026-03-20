@@ -1,7 +1,7 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
-import { canSubmitStandardFeedback } from "@/lib/member-access";
+import { getEffectiveMemberAccessForMember } from "@/lib/member-access-resolver";
 
 export async function GET(request: NextRequest) {
   const session = await getSession();
@@ -28,8 +28,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "未登录" }, { status: 401 });
+  const memberAccess = await getEffectiveMemberAccessForMember(session.sub, session.memberType);
 
-  if (!canSubmitStandardFeedback(session.memberType)) {
+  if (!memberAccess.features.standardFeedback) {
     return NextResponse.json({ error: "当前会员类型不支持标准反馈" }, { status: 403 });
   }
 

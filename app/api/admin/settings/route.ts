@@ -4,6 +4,7 @@ import { APP_SETTING_KEYS } from "@/lib/app-settings";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { DEFAULT_SITE_VISUAL_SETTINGS, normalizeSiteVisualSettings } from "@/lib/site-visual-config";
+import { getDefaultMembershipRules, normalizeMembershipRules } from "@/lib/membership-rules";
 
 function parseBool(raw: string | null | undefined, fallback: boolean) {
   if (raw == null) return fallback;
@@ -33,6 +34,7 @@ export async function GET() {
             APP_SETTING_KEYS.MEMBER_DOWNLOAD_STANDARD_ENABLED,
             APP_SETTING_KEYS.MEMBER_DOWNLOAD_REPORT_ENABLED,
             APP_SETTING_KEYS.SITE_VISUAL_SETTINGS,
+            APP_SETTING_KEYS.MEMBERSHIP_RULES,
           ],
         },
       },
@@ -45,6 +47,15 @@ export async function GET() {
       contentReviewRequired: parseBool(map.get(APP_SETTING_KEYS.CONTENT_REVIEW_REQUIRED), true),
       memberDownloadStandardEnabled: parseBool(map.get(APP_SETTING_KEYS.MEMBER_DOWNLOAD_STANDARD_ENABLED), true),
       memberDownloadReportEnabled: parseBool(map.get(APP_SETTING_KEYS.MEMBER_DOWNLOAD_REPORT_ENABLED), true),
+      membershipRules: (() => {
+        const raw = map.get(APP_SETTING_KEYS.MEMBERSHIP_RULES);
+        if (!raw) return getDefaultMembershipRules();
+        try {
+          return normalizeMembershipRules(JSON.parse(raw));
+        } catch {
+          return getDefaultMembershipRules();
+        }
+      })(),
       siteVisualSettings: (() => {
         const raw = map.get(APP_SETTING_KEYS.SITE_VISUAL_SETTINGS);
         if (!raw) return DEFAULT_SITE_VISUAL_SETTINGS;
@@ -107,6 +118,13 @@ export async function POST(request: NextRequest) {
       updates.push({
         key: APP_SETTING_KEYS.SITE_VISUAL_SETTINGS,
         value: JSON.stringify(normalizeSiteVisualSettings(body.siteVisualSettings)),
+      });
+    }
+
+    if (body.membershipRules && typeof body.membershipRules === "object") {
+      updates.push({
+        key: APP_SETTING_KEYS.MEMBERSHIP_RULES,
+        value: JSON.stringify(normalizeMembershipRules(body.membershipRules)),
       });
     }
 

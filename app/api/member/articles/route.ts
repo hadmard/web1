@@ -1,14 +1,18 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
-import { canLinkStandards, canLinkTerms, defaultContentStatusForSubmission } from "@/lib/member-access";
+import { defaultContentStatusForSubmission } from "@/lib/member-access";
 import { writeOperationLog } from "@/lib/operation-log";
-import { MEMBER_ALLOWED_CATEGORY_HREFS, PERSONAL_ALLOWED_CATEGORY_HREFS } from "@/lib/content-taxonomy";
+import { MEMBER_ALLOWED_CATEGORY_HREFS, MEMBER_PUBLISH_CATEGORY_OPTIONS } from "@/lib/content-taxonomy";
 import { resolveTagSlugs } from "@/lib/tag-suggest";
 import { generateUniqueArticleSlug } from "@/lib/slug";
 import { isContentReviewRequired } from "@/lib/app-settings";
+import {
+  findEffectiveCategoryAccess,
+  findEffectiveSubcategoryAccess,
+  getEffectiveMemberAccessForMember,
+} from "@/lib/member-access-resolver";
 
-const BASIC_MEMBER_NEWS_LIMIT = 20;
 export async function GET(request: NextRequest) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "未登录" }, { status: 401 });
@@ -52,6 +56,8 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "未登录" }, { status: 401 });
+  const memberAccess = await getEffectiveMemberAccessForMember(session.sub, session.memberType);
+  const membershipRule = memberAccess.membershipRule;
 
   const reviewRequired = await isContentReviewRequired();
   const submissionStatus = defaultContentStatusForSubmission({
@@ -87,15 +93,40 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "栏目非法或不支持投稿" }, { status: 400 });
   }
 
-  if (session.memberType === "personal" && !PERSONAL_ALLOWED_CATEGORY_HREFS.has(categoryHrefTrim)) {
-    return NextResponse.json({ error: "个人会员仅支持词库/标准/数据类投稿" }, { status: 403 });
+  const categoryAccess = findEffectiveCategoryAccess(memberAccess, categoryHrefTrim);
+  if (!categoryAccess?.enabled) {
+    return NextResponse.json({ error: `${membershipRule.label}当前未开通该栏目投稿权限` }, { status: 403 });
   }
 
-  if (session.memberType === "enterprise_basic") {
-    const count = await prisma.article.count({ where: { authorMemberId: session.sub } });
-    if (count >= BASIC_MEMBER_NEWS_LIMIT) {
-      return NextResponse.json({ error: "企业基础会员发布数量已达上限" }, { status: 400 });
+  const categoryDef = MEMBER_PUBLISH_CATEGORY_OPTIONS.find((item) => item.href === categoryHrefTrim);
+  const rawSubHref = typeof subHref === "string" ? subHref.trim() : "";
+  const normalizedSubHref = rawSubHref || null;
+
+  if (categoryDef && categoryDef.href !== "/brands" && categoryDef.subs.length > 0) {
+    if (!normalizedSubHref) {
+      return NextResponse.json({ error: "请选择子栏目" }, { status: 400 });
     }
+
+    const subcategoryExists = categoryDef.subs.some((item) => item.href === normalizedSubHref);
+    if (!subcategoryExists) {
+      return NextResponse.json({ error: "子栏目非法或不支持投稿" }, { status: 400 });
+    }
+
+    const subcategoryAccess = findEffectiveSubcategoryAccess(memberAccess, categoryHrefTrim, normalizedSubHref);
+    if (!subcategoryAccess?.enabled) {
+      return NextResponse.json({ error: `${membershipRule.label}当前未开通该子栏目投稿权限` }, { status: 403 });
+    }
+
+    if (subcategoryAccess.annualLimit != null && subcategoryAccess.usedCount >= subcategoryAccess.annualLimit) {
+      return NextResponse.json(
+        { error: `当前子栏目年度发布额度已用完（${subcategoryAccess.annualLimit}篇）` },
+        { status: 400 }
+      );
+    }
+  }
+
+  if (categoryAccess.annualLimit != null && categoryAccess.usedCount >= categoryAccess.annualLimit) {
+    return NextResponse.json({ error: `当前栏目年度发布额度已用完（${categoryAccess.annualLimit}篇）` }, { status: 400 });
   }
 
   if (!title || typeof title !== "string") {
@@ -123,14 +154,14 @@ export async function POST(request: NextRequest) {
       excerpt: typeof excerpt === "string" ? excerpt.trim() || null : null,
       content: typeof content === "string" ? content : "",
       coverImage: typeof coverImage === "string" ? coverImage.trim() || null : null,
-      subHref: typeof subHref === "string" ? subHref.trim() || null : null,
+      subHref: normalizedSubHref,
       categoryHref: categoryHrefTrim,
       relatedTermSlugs:
-        canLinkTerms(session.memberType) && typeof relatedTermSlugs === "string"
+        membershipRule.canLinkTerms && typeof relatedTermSlugs === "string"
           ? relatedTermSlugs.trim() || null
           : null,
       relatedStandardIds:
-        canLinkStandards(session.memberType) && typeof relatedStandardIds === "string"
+        membershipRule.canLinkStandards && typeof relatedStandardIds === "string"
           ? relatedStandardIds.trim() || null
           : null,
       relatedBrandIds: typeof relatedBrandIds === "string" ? relatedBrandIds.trim() || null : null,

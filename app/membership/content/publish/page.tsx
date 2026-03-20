@@ -71,6 +71,33 @@ import { InlinePageBackLink } from "@/components/InlinePageBackLink";
 type MemberType = "enterprise_basic" | "enterprise_advanced" | "personal";
 type Status = "draft" | "pending" | "approved" | "rejected";
 type TermSection = { id: string; heading: string; body: string };
+type MembershipRule = {
+  label: string;
+  siteLabel: string;
+  publishCategoryHrefs: string[];
+  newsPublishLimit: number | null;
+};
+type AccessSubcategory = {
+  href: string;
+  label: string;
+  enabled: boolean;
+  annualLimit: number | null;
+  usedCount: number;
+  remainingCount: number | null;
+};
+type AccessCategory = {
+  href: string;
+  label: string;
+  enabled: boolean;
+  annualLimit: number | null;
+  usedCount: number;
+  remainingCount: number | null;
+  subcategories: AccessSubcategory[];
+};
+type MemberAccess = {
+  year: number;
+  categories: AccessCategory[];
+};
 const BRAND_REGION_OPTIONS = ["全国", "华东", "华中", "华南", "西南", "西北", "华北", "东北"] as const;
 type SubmitPreview = { title: string; href: string | null; status: Status };
 
@@ -164,13 +191,32 @@ function parseTermContentSections(html: string): TermSection[] {
   return createDefaultTermSections();
 }
 
-function getAllowedCategories(memberType: MemberType): CategoryOption[] {
-  if (memberType === "personal") {
-    return MEMBER_PUBLISH_CATEGORY_OPTIONS.filter(
-      (x) => x.href === "/dictionary" || x.href === "/standards"
-    );
-  }
-  return MEMBER_PUBLISH_CATEGORY_OPTIONS;
+function getDefaultMemberAccess(): MemberAccess {
+  return {
+    year: new Date().getFullYear(),
+    categories: MEMBER_PUBLISH_CATEGORY_OPTIONS.map((category) => ({
+      href: category.href,
+      label: category.label,
+      enabled: true,
+      annualLimit: null,
+      usedCount: 0,
+      remainingCount: null,
+      subcategories: category.subs.map((sub) => ({
+        href: sub.href,
+        label: sub.label,
+        enabled: true,
+        annualLimit: null,
+        usedCount: 0,
+        remainingCount: null,
+      })),
+    })),
+  };
+}
+
+function formatQuota(limit: number | null, remainingCount: number | null) {
+  if (limit == null) return "不限";
+  const remain = remainingCount == null ? limit : remainingCount;
+  return `剩余 ${remain}/${limit}`;
 }
 
 function tabFromHref(href: string): ContentTabKey {
@@ -215,6 +261,8 @@ function PublishCenterPageInner() {
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [role, setRole] = useState<string | null>(null);
   const [memberType, setMemberType] = useState<MemberType>("personal");
+  const [membershipRule, setMembershipRule] = useState<MembershipRule | null>(null);
+  const [memberAccess, setMemberAccess] = useState<MemberAccess>(getDefaultMemberAccess());
   const [items, setItems] = useState<Row[]>([]);
   const [message, setMessage] = useState("");
   const messageRef = useRef<HTMLDivElement | null>(null);
@@ -268,15 +316,30 @@ function PublishCenterPageInner() {
   const [editReason, setEditReason] = useState("");
   const [editDocumentMeta, setEditDocumentMeta] = useState<DocumentMetadata>(createEmptyDocumentMetadata());
 
-  const allowedCategories = useMemo(() => getAllowedCategories(memberType), [memberType]);
-  const allowedTabs = useMemo(() => allowedCategories.map((x) => tabFromHref(x.href)), [allowedCategories]);
+  const allCategoryAccess = useMemo(
+    () => (memberAccess.categories.length > 0 ? memberAccess.categories : getDefaultMemberAccess().categories),
+    [memberAccess]
+  );
+  const enabledCategoryAccess = useMemo(
+    () => allCategoryAccess.filter((category) => category.enabled),
+    [allCategoryAccess]
+  );
+  const allowedTabs = useMemo(() => enabledCategoryAccess.map((x) => tabFromHref(x.href)), [enabledCategoryAccess]);
   const safeTab = useMemo(() => (allowedTabs.includes(tab) ? tab : allowedTabs[0] ?? "articles"), [tab, allowedTabs]);
   const selectedTabDef = useMemo(() => CONTENT_TAB_DEFS.find((x) => x.key === safeTab) ?? CONTENT_TAB_DEFS[0], [safeTab]);
-  const selectedCategory = useMemo(
-    () => allowedCategories.find((x) => x.href === selectedTabDef.href) ?? allowedCategories[0],
-    [allowedCategories, selectedTabDef.href]
+  const selectedCategoryAccess = useMemo(
+    () => enabledCategoryAccess.find((x) => x.href === selectedTabDef.href) ?? enabledCategoryAccess[0] ?? null,
+    [enabledCategoryAccess, selectedTabDef.href]
   );
-  const subOptions = useMemo(() => selectedCategory?.subs ?? [], [selectedCategory]);
+  const selectedCategory = useMemo(
+    () => MEMBER_PUBLISH_CATEGORY_OPTIONS.find((x) => x.href === selectedCategoryAccess?.href) ?? null,
+    [selectedCategoryAccess]
+  );
+  const subOptions = useMemo(() => selectedCategoryAccess?.subcategories ?? [], [selectedCategoryAccess]);
+  const activeSubAccess = useMemo(
+    () => subOptions.find((item) => item.href === subHref) ?? null,
+    [subOptions, subHref]
+  );
   const canPasteImages = role === "SUPER_ADMIN" || role === "ADMIN";
 
   const filteredItems = useMemo(
@@ -302,6 +365,8 @@ function PublishCenterPageInner() {
     setRole(me.role ?? null);
     const t = (me.memberType ?? "personal") as MemberType;
     setMemberType(t);
+    setMembershipRule(me.membershipRule ?? null);
+    setMemberAccess(me.memberAccess ?? getDefaultMemberAccess());
 
     const listRes = await fetch("/api/member/articles?limit=100", { credentials: "include", cache: "no-store" });
     if (listRes.ok) {
@@ -320,8 +385,9 @@ function PublishCenterPageInner() {
   }, [allowedTabs, tab, replaceTab]);
 
   useEffect(() => {
-    if (subOptions.length > 0 && !subOptions.some((s) => s.href === subHref)) {
-      setSubHref(subOptions[0].href);
+    const enabledSubOptions = subOptions.filter((item) => item.enabled);
+    if (enabledSubOptions.length > 0 && !enabledSubOptions.some((s) => s.href === subHref)) {
+      setSubHref(enabledSubOptions[0].href);
     }
   }, [subOptions, subHref]);
 
@@ -509,7 +575,11 @@ function PublishCenterPageInner() {
 
   async function submit(e: FormEvent) {
     e.preventDefault();
-    if (loading || !selectedCategory) return;
+    if (loading || !selectedCategory || !selectedCategoryAccess?.enabled) return;
+    if (safeTab !== "brands" && subOptions.length > 0 && !activeSubAccess?.enabled) {
+      setMessage("当前子栏目未开通投稿权限，请联系管理员授权。");
+      return;
+    }
     setLoading(true);
     setMessage("");
     setLastSubmitted(null);
@@ -829,6 +899,9 @@ function PublishCenterPageInner() {
         {memberType === "enterprise_advanced" ? "企业高级会员" : memberType === "enterprise_basic" ? "企业基础会员" : "个人会员"}
       </p>
       <p className="text-sm text-muted mb-6">左侧按七大类分别发布，不同类别显示不同组成字段。</p>
+      {memberAccess.year ? (
+        <p className="text-xs text-muted mb-6">当前按 {memberAccess.year} 年授权执行，已开放栏目可直接投稿，未开通栏目会保持可见但锁定。</p>
+      ) : null}
       <div className="mb-6">
         <Link href="/membership/content/verification" className="apple-inline-link">
           去提交企业认证资料
@@ -839,19 +912,31 @@ function PublishCenterPageInner() {
         <aside className="rounded-xl border border-border bg-surface-elevated p-4">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted mb-3">发布栏目</p>
           <ul className="space-y-1">
-            {allowedCategories.map((cat) => {
+            {allCategoryAccess.map((cat) => {
               const catTab = tabFromHref(cat.href);
               const active = catTab === safeTab;
               return (
                 <li key={cat.href}>
-                  <Link
-                    href={`/membership/content/publish?tab=${catTab}`}
-                    className={`block rounded-lg px-3 py-2 text-sm font-medium ${
-                      active ? "bg-accent/15 text-accent" : "text-primary hover:bg-surface hover:text-accent"
-                    }`}
-                  >
-                    {cat.label}
-                  </Link>
+                  {cat.enabled ? (
+                    <Link
+                      href={`/membership/content/publish?tab=${catTab}`}
+                      className={`block rounded-lg px-3 py-2 text-sm font-medium ${
+                        active ? "bg-accent/15 text-accent" : "text-primary hover:bg-surface hover:text-accent"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span>{cat.label}</span>
+                        <span className="text-[11px] text-muted">{formatQuota(cat.annualLimit, cat.remainingCount)}</span>
+                      </div>
+                    </Link>
+                  ) : (
+                    <div className="rounded-lg border border-dashed border-border px-3 py-2 text-sm text-muted/80">
+                      <div className="flex items-center justify-between gap-2">
+                        <span>{cat.label}</span>
+                        <span className="text-[11px]">未开通</span>
+                      </div>
+                    </div>
+                  )}
                 </li>
               );
             })}
@@ -860,6 +945,11 @@ function PublishCenterPageInner() {
         </aside>
 
         <form onSubmit={submit} className="rounded-xl border border-border bg-surface-elevated p-5 space-y-3">
+          {!selectedCategoryAccess && (
+            <div className="rounded-xl border border-dashed border-border bg-surface p-4 text-sm text-muted">
+              当前账号还没有开通任何发布栏目，请联系管理员分配子栏目和年度数量。
+            </div>
+          )}
           {message && (
             <div ref={messageRef} className="scroll-mt-24 space-y-1">
               <p className="text-sm text-accent">{message}</p>
@@ -889,14 +979,27 @@ function PublishCenterPageInner() {
               <div className="flex flex-wrap gap-2 rounded-lg border border-border bg-surface p-2">
                 {subOptions.map((s) => {
                   const active = subHref === s.href;
+                  const disabled = !s.enabled;
                   return (
                     <button
                       key={s.href}
                       type="button"
-                      onClick={() => setSubHref(s.href)}
-                      className={`px-3 py-1.5 rounded-md text-sm transition ${active ? "bg-accent text-white" : "bg-surface-elevated text-primary border border-border hover:bg-surface"}`}
+                      onClick={() => {
+                        if (!disabled) setSubHref(s.href);
+                      }}
+                      disabled={disabled}
+                      className={`px-3 py-1.5 rounded-md text-sm transition ${
+                        disabled
+                          ? "cursor-not-allowed border border-dashed border-border text-muted/70 bg-surface"
+                          : active
+                            ? "bg-accent text-white"
+                            : "bg-surface-elevated text-primary border border-border hover:bg-surface"
+                      }`}
                     >
-                      {s.label}
+                      <span>{s.label}</span>
+                      <span className={`ml-2 text-[11px] ${disabled || !active ? "opacity-80" : "text-white/80"}`}>
+                        {disabled ? "未开通" : formatQuota(s.annualLimit, s.remainingCount)}
+                      </span>
                     </button>
                   );
                 })}

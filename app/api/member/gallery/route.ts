@@ -1,12 +1,12 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
-import { canUploadUnlimited, defaultContentStatusForSubmission } from "@/lib/member-access";
+import { defaultContentStatusForSubmission } from "@/lib/member-access";
 import { writeOperationLog } from "@/lib/operation-log";
 import { isContentReviewRequired } from "@/lib/app-settings";
 import { normalizeGalleryCategory } from "@/lib/gallery-taxonomy";
+import { getEffectiveMemberAccessForMember } from "@/lib/member-access-resolver";
 
-const BASIC_MEMBER_GALLERY_LIMIT = 50;
 const TITLE_MAX = 24;
 const ALT_MAX = 100;
 const TAGS_MAX = 80;
@@ -36,15 +36,20 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "未登录" }, { status: 401 });
+  const memberAccess = await getEffectiveMemberAccessForMember(session.sub, session.memberType);
+  const membershipRule = memberAccess.membershipRule;
 
-  if (session.memberType === "personal") {
-    return NextResponse.json({ error: "个人会员不支持企业图库上传" }, { status: 403 });
+  if (!memberAccess.features.galleryUpload) {
+    return NextResponse.json({ error: `${membershipRule.label}当前不支持企业图库上传` }, { status: 403 });
   }
 
-  if (!canUploadUnlimited(session.memberType)) {
+  if (membershipRule.galleryUploadLimit != null) {
     const count = await prisma.galleryImage.count({ where: { authorMemberId: session.sub } });
-    if (count >= BASIC_MEMBER_GALLERY_LIMIT) {
-      return NextResponse.json({ error: "企业基础会员图片数量已达上限" }, { status: 400 });
+    if (count >= membershipRule.galleryUploadLimit) {
+      return NextResponse.json(
+        { error: `${membershipRule.label}图片数量已达上限（${membershipRule.galleryUploadLimit}张）` },
+        { status: 400 }
+      );
     }
   }
 

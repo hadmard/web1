@@ -40,6 +40,7 @@ export default async function MembershipPage() {
 
           <div className="mt-7 flex flex-wrap justify-center gap-3">
             <Link href="/membership/login" className="interactive-lift rounded-xl bg-[var(--color-accent)] text-white px-5 py-2.5 text-sm font-medium">会员登录</Link>
+            <Link href="/membership/register" className="interactive-lift rounded-xl border border-border bg-surface px-5 py-2.5 text-sm font-medium text-primary">会员注册</Link>
             <Link href="/membership/profile" className="interactive-lift rounded-xl border border-border bg-surface px-5 py-2.5 text-sm font-medium text-primary">企业资料管理</Link>
             <Link href="/membership/content/verification" className="interactive-lift rounded-xl border border-border bg-surface px-5 py-2.5 text-sm font-medium text-primary">企业认证申请</Link>
           </div>

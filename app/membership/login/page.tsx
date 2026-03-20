@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -100,6 +101,13 @@ export default function LoginPage() {
         </button>
 
       </form>
+
+      <p className="mt-5 text-sm text-muted">
+        还没有账号？
+        <Link href="/membership/register" className="ml-2 text-accent hover:underline">
+          去注册
+        </Link>
+      </p>
     </div>
   );
 }

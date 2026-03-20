@@ -13,6 +13,22 @@ type ArticleItem = {
   createdAt: string;
 };
 
+type AccessSubcategory = {
+  href: string;
+  label: string;
+  enabled: boolean;
+  annualLimit: number | null;
+  remainingCount: number | null;
+};
+
+type AccessCategory = {
+  href: string;
+  enabled: boolean;
+  annualLimit: number | null;
+  remainingCount: number | null;
+  subcategories: AccessSubcategory[];
+};
+
 const STATUS_TEXT: Record<ArticleItem["status"], string> = {
   draft: "草稿",
   pending: "待审核",
@@ -33,6 +49,9 @@ function makeSlug(input: string) {
 export default function MembershipContentNewsPage() {
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [memberType, setMemberType] = useState<string>("personal");
+  const [canPublish, setCanPublish] = useState(false);
+  const [newsCategoryAccess, setNewsCategoryAccess] = useState<AccessCategory | null>(null);
+  const [memberTypeLabel, setMemberTypeLabel] = useState("个人会员");
   const [items, setItems] = useState<ArticleItem[]>([]);
   const [search, setSearch] = useState("");
   const [title, setTitle] = useState("");
@@ -41,6 +60,15 @@ export default function MembershipContentNewsPage() {
   const [subHref, setSubHref] = useState("/news/trends");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const newsPublishLimit = newsCategoryAccess?.annualLimit ?? null;
+  const newsSubcategoryOptions =
+    newsCategoryAccess?.subcategories ??
+    NEWS_SUBCATEGORY_OPTIONS.map((option) => ({
+      ...option,
+      enabled: true,
+      annualLimit: null,
+      remainingCount: null,
+    }));
 
   async function load(query = "") {
     const meRes = await fetch("/api/auth/me", { credentials: "include" });
@@ -52,6 +80,12 @@ export default function MembershipContentNewsPage() {
 
     const me = await meRes.json();
     setMemberType(me.memberType ?? "personal");
+    const categoryAccess = Array.isArray(me.memberAccess?.categories)
+      ? me.memberAccess.categories.find((item: AccessCategory) => item.href === "/news") ?? null
+      : null;
+    setNewsCategoryAccess(categoryAccess);
+    setCanPublish(Boolean(categoryAccess?.enabled));
+    setMemberTypeLabel(typeof me.memberTypeLabel === "string" ? me.memberTypeLabel : "个人会员");
 
     const listSp = new URLSearchParams({ limit: "20" });
     if (query.trim()) listSp.set("q", query.trim());
@@ -67,8 +101,19 @@ export default function MembershipContentNewsPage() {
     void load();
   }, []);
 
+  useEffect(() => {
+    const enabledSub = newsCategoryAccess?.subcategories.find((item) => item.enabled);
+    if (enabledSub && !newsCategoryAccess?.subcategories.some((item) => item.href === subHref && item.enabled)) {
+      setSubHref(enabledSub.href);
+    }
+  }, [newsCategoryAccess, subHref]);
+
   async function submit(e: FormEvent) {
     e.preventDefault();
+    if (!newsSubcategoryOptions.some((item) => item.href === subHref && item.enabled)) {
+      setMessage("当前子栏目未开通投稿权限，请联系管理员授权。");
+      return;
+    }
     setLoading(true);
     setMessage("");
 
@@ -113,8 +158,6 @@ export default function MembershipContentNewsPage() {
     void load("");
   }
 
-  const canPublish = memberType === "enterprise_basic" || memberType === "enterprise_advanced";
-
   if (authed === false) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-12">
@@ -147,9 +190,14 @@ export default function MembershipContentNewsPage() {
       {message && <p className="mb-4 text-sm text-accent">{message}</p>}
 
       {!canPublish ? (
-        <div className="rounded-lg border border-border p-4 text-sm text-muted">个人会员不具备企业资讯发布权限。</div>
+        <div className="rounded-lg border border-border p-4 text-sm text-muted">{memberTypeLabel}当前不具备整木资讯发布权限。</div>
       ) : (
         <form onSubmit={submit} className="mb-8 space-y-3 rounded-lg border border-border bg-surface-elevated p-4">
+          {newsCategoryAccess?.annualLimit != null && (
+            <p className="rounded-lg border border-border bg-surface px-3 py-2 text-xs text-muted">
+              当前账号资讯发布上限：{newsPublishLimit} 篇
+            </p>
+          )}
           <label className="block text-sm text-muted">标题</label>
           <input className="w-full rounded border border-border bg-surface px-3 py-2" value={title} onChange={(e) => setTitle(e.target.value)} required />
 
@@ -158,16 +206,33 @@ export default function MembershipContentNewsPage() {
 
           <label className="block text-sm text-muted">所属子栏目</label>
           <div className="flex flex-wrap gap-2 rounded-lg border border-border bg-surface p-2">
-            {NEWS_SUBCATEGORY_OPTIONS.map((option) => {
+            {newsSubcategoryOptions.map((option) => {
               const active = subHref === option.href;
+              const disabled = !option.enabled;
               return (
                 <button
                   key={option.href}
                   type="button"
-                  onClick={() => setSubHref(option.href)}
-                  className={`rounded-md px-3 py-1.5 text-sm transition ${active ? "bg-accent text-white" : "border border-border bg-surface-elevated text-primary hover:bg-surface"}`}
+                  onClick={() => {
+                    if (!disabled) setSubHref(option.href);
+                  }}
+                  disabled={disabled}
+                  className={`rounded-md px-3 py-1.5 text-sm transition ${
+                    disabled
+                      ? "cursor-not-allowed border border-dashed border-border bg-surface text-muted/70"
+                      : active
+                        ? "bg-accent text-white"
+                        : "border border-border bg-surface-elevated text-primary hover:bg-surface"
+                  }`}
                 >
-                  {option.label}
+                  <span>{option.label}</span>
+                  <span className="ml-2 text-[11px] opacity-80">
+                    {disabled
+                      ? "未开通"
+                      : option.annualLimit == null
+                        ? "不限"
+                        : `剩余 ${option.remainingCount ?? 0}/${option.annualLimit}`}
+                  </span>
                 </button>
               );
             })}
