@@ -161,6 +161,12 @@ NEXT_PUBLIC_CONTACT_PHONE="400-123-4567"
 npm install
 ```
 
+锁定依赖安装：
+
+```bash
+npm ci
+```
+
 开发模式：
 
 ```bash
@@ -194,6 +200,18 @@ npm run db:ensure-admin
 
 - [http://localhost:3000](http://localhost:3000)
 
+### 可选：通过本地代理下载依赖
+
+如果本地访问 GitHub、npm registry 或其他依赖源较慢，可将常见下载工具指向本机代理：
+
+```bash
+git config --global http.proxy http://127.0.0.1:7897
+git config --global https.proxy http://127.0.0.1:7897
+
+npm config set proxy http://127.0.0.1:7897 --global
+npm config set https-proxy http://127.0.0.1:7897 --global
+```
+
 ## 10. 初始化建议顺序
 
 如果你是首次在本地拉起这个仓库，建议按下面顺序：
@@ -206,6 +224,38 @@ npm run db:ensure-admin
 6. 按需执行 `npm run db:seed`
 7. 执行 `npm run db:ensure-admin`
 8. 启动 `npm run dev`
+
+### Windows 本地验证通过的一组环境
+
+下面这组环境已在本仓库实际跑通，可作为本地对齐参考：
+
+- Node.js `20.20.1`
+- npm `10.8.2`
+- PostgreSQL `17.4`
+- Prisma `5.22.0`
+
+对应的本地开发连接示例：
+
+```bash
+DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:5432/web1?schema=public"
+NEXT_PUBLIC_SITE_URL="http://127.0.0.1:3000"
+```
+
+数据库初始化完成后，可用以下默认管理员账号登录：
+
+- 账号：`yfcccc`
+- 密码：`admin`
+
+首次落地时，一条可直接执行的最小链路是：
+
+```bash
+npm ci
+npm run db:generate
+npm run db:push
+npm run db:seed
+npm run db:ensure-admin
+npm run dev
+```
 
 ## 11. 相关文档与记录
 
