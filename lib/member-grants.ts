@@ -26,6 +26,8 @@ export type CategoryGrant = {
 
 export type MemberGrantSettings = {
   year: number;
+  activeFrom: string | null;
+  activeUntil: string | null;
   features: Record<GrantFeatureKey, GrantOverride<boolean>>;
   categories: Record<string, CategoryGrant>;
 };
@@ -44,6 +46,22 @@ function normalizeNullableNumber(value: unknown): GrantOverride<number> {
   const parsed = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(parsed)) return null;
   return parsed < 0 ? 0 : parsed;
+}
+
+function formatDateOnly(date: Date) {
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function normalizeDateOnly(value: unknown) {
+  if (typeof value !== "string" || !value.trim()) return null;
+  const text = value.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return null;
+  const date = new Date(`${text}T00:00:00.000Z`);
+  if (Number.isNaN(date.getTime())) return null;
+  return formatDateOnly(date);
 }
 
 function defaultCategories() {
@@ -70,6 +88,8 @@ function defaultCategories() {
 export function getDefaultMemberGrantSettings(year = new Date().getFullYear()): MemberGrantSettings {
   return {
     year,
+    activeFrom: `${year}-01-01`,
+    activeUntil: `${year}-12-31`,
     features: {
       enterpriseSite: null,
       seo: null,
@@ -128,11 +148,21 @@ export function normalizeMemberGrantSettings(value: unknown): MemberGrantSetting
     };
   }
 
+  const normalizedYear =
+    typeof source.year === "number" && Number.isFinite(source.year)
+      ? Math.max(2024, Math.floor(source.year))
+      : fallback.year;
+  const activeFrom = normalizeDateOnly(source.activeFrom) ?? `${normalizedYear}-01-01`;
+  const activeUntil = normalizeDateOnly(source.activeUntil) ?? `${normalizedYear}-12-31`;
+  const orderedRange =
+    new Date(`${activeFrom}T00:00:00.000Z`).getTime() <= new Date(`${activeUntil}T00:00:00.000Z`).getTime()
+      ? { activeFrom, activeUntil }
+      : { activeFrom: activeUntil, activeUntil: activeFrom };
+
   return {
-    year:
-      typeof source.year === "number" && Number.isFinite(source.year)
-        ? Math.max(2024, Math.floor(source.year))
-        : fallback.year,
+    year: normalizedYear,
+    activeFrom: orderedRange.activeFrom,
+    activeUntil: orderedRange.activeUntil,
     features: {
       enterpriseSite: normalizeNullableBool(featureSource.enterpriseSite),
       seo: normalizeNullableBool(featureSource.seo),

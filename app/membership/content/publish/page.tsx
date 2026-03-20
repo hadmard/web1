@@ -100,6 +100,18 @@ type MemberAccess = {
 };
 const BRAND_REGION_OPTIONS = ["全国", "华东", "华中", "华南", "西南", "西北", "华北", "东北"] as const;
 type SubmitPreview = { title: string; href: string | null; status: Status };
+type VerifyStatus = "pending" | "approved" | "rejected";
+type VerificationSummary = {
+  status: VerifyStatus;
+  reviewNote?: string | null;
+  approvedEnterpriseId?: string | null;
+} | null;
+type EnterpriseSummary = {
+  id: string;
+  companyName?: string | null;
+  companyShortName?: string | null;
+  verificationStatus?: string | null;
+} | null;
 
 type Row = {
   id: string;
@@ -219,6 +231,17 @@ function formatQuota(limit: number | null, remainingCount: number | null) {
   return `剩余 ${remain}/${limit}`;
 }
 
+function formatRecordTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("zh-CN", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
 function tabFromHref(href: string): ContentTabKey {
   const hit = CONTENT_TAB_DEFS.find((x) => x.href === href);
   return hit?.key ?? "articles";
@@ -276,6 +299,9 @@ function PublishCenterPageInner() {
   const [lastSubmitted, setLastSubmitted] = useState<SubmitPreview | null>(null);
   const [pendingPreviewScroll, setPendingPreviewScroll] = useState<"publish" | "edit" | null>(null);
   const [cropTarget, setCropTarget] = useState<"publish" | "edit" | null>(null);
+  const [latestVerification, setLatestVerification] = useState<VerificationSummary>(null);
+  const [enterprise, setEnterprise] = useState<EnterpriseSummary>(null);
+  const [showAllRecords, setShowAllRecords] = useState(false);
 
   const [title, setTitle] = useState("");
   const [source, setSource] = useState("");
@@ -355,6 +381,27 @@ function PublishCenterPageInner() {
     () => items.filter((item) => resolveTabKeyFromHref(item.categoryHref, item.subHref) === safeTab),
     [items, safeTab]
   );
+  const sortedFilteredItems = useMemo(
+    () =>
+      [...filteredItems]
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+    [filteredItems]
+  );
+  const visibleFilteredItems = useMemo(
+    () => (showAllRecords ? sortedFilteredItems : sortedFilteredItems.slice(0, 5)),
+    [showAllRecords, sortedFilteredItems]
+  );
+  const filteredStatusSummary = useMemo(
+    () =>
+      filteredItems.reduce(
+        (acc, item) => {
+          acc[item.status] += 1;
+          return acc;
+        },
+        { draft: 0, pending: 0, approved: 0, rejected: 0 } as Record<Status, number>
+      ),
+    [filteredItems]
+  );
 
   const replaceTab = useCallback((nextTab: ContentTabKey) => {
     const sp = new URLSearchParams(searchParams.toString());
@@ -377,10 +424,20 @@ function PublishCenterPageInner() {
     setMembershipRule(me.membershipRule ?? null);
     setMemberAccess(me.memberAccess ?? getDefaultMemberAccess());
 
-    const listRes = await fetch("/api/member/articles?limit=100", { credentials: "include", cache: "no-store" });
+    const [listRes, verificationRes] = await Promise.all([
+      fetch("/api/member/articles?limit=100", { credentials: "include", cache: "no-store" }),
+      fetch("/api/member/enterprise-verification", { credentials: "include", cache: "no-store" }),
+    ]);
+
     if (listRes.ok) {
       const data = await listRes.json();
       setItems(Array.isArray(data.items) ? data.items : []);
+    }
+
+    if (verificationRes.ok) {
+      const data = await verificationRes.json();
+      setLatestVerification((data.latest ?? null) as VerificationSummary);
+      setEnterprise((data.enterprise ?? null) as EnterpriseSummary);
     }
   }, []);
 
@@ -399,6 +456,10 @@ function PublishCenterPageInner() {
       setSubHref(enabledSubOptions[0].href);
     }
   }, [subOptions, subHref]);
+
+  useEffect(() => {
+    setShowAllRecords(false);
+  }, [safeTab]);
 
   useEffect(() => {
     if (!message) return;
@@ -891,6 +952,30 @@ function PublishCenterPageInner() {
     );
   }
 
+  const enterpriseHref = enterprise?.id || latestVerification?.approvedEnterpriseId ? `/enterprise/${enterprise?.id ?? latestVerification?.approvedEnterpriseId}` : null;
+  const verificationActionHref =
+    latestVerification?.status === "pending"
+      ? "/membership/content/verification"
+      : latestVerification?.status === "rejected"
+        ? "/membership/content/verification"
+        : enterpriseHref ?? "/membership/content/verification";
+  const verificationActionLabel =
+    latestVerification?.status === "pending"
+      ? "查看认证进度"
+      : latestVerification?.status === "rejected"
+        ? "重新提交认证资料"
+        : enterpriseHref
+          ? "查看企业主页"
+          : "去提交企业认证资料";
+  const verificationStatusText =
+    latestVerification?.status === "approved"
+      ? "企业认证已通过，企业详情页已生成。"
+      : latestVerification?.status === "pending"
+        ? "企业认证资料已提交，当前正在审核中。"
+        : latestVerification?.status === "rejected"
+          ? "企业认证曾被驳回，可按审核意见补充后重新提交。"
+          : "完成企业认证后可获得企业详情展示页，并同步企业资料。";
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-12">
       <nav className="mb-6 text-sm text-muted" aria-label="面包屑">
@@ -911,12 +996,23 @@ function PublishCenterPageInner() {
                 {memberType === "enterprise_advanced" ? "企业VIP会员" : memberType === "enterprise_basic" ? "企业基础会员" : "个人会员"}
               </p>
               <p className="mt-2 text-sm text-muted">栏目保持全量可见，未开通栏目会锁定；已开通栏目按 {memberAccess.year} 年授权执行。</p>
+              <p className="mt-2 text-sm text-muted">{verificationStatusText}</p>
             </div>
             <div className="flex flex-wrap gap-3">
               <InlinePageBackLink href="/membership" label="返回会员系统" />
-              <Link href="/membership/content/verification" className="apple-inline-link">
-                去提交企业认证资料
+              <Link href={verificationActionHref} className="apple-inline-link">
+                {verificationActionLabel}
               </Link>
+              {enterpriseHref ? (
+                <Link href={enterpriseHref} className="apple-inline-link">
+                  打开企业详情页
+                </Link>
+              ) : null}
+              {memberType !== "personal" ? (
+                <Link href="/membership/content/site" className="apple-inline-link">
+                  管理会员站
+                </Link>
+              ) : null}
             </div>
           </div>
         </div>
@@ -938,6 +1034,26 @@ function PublishCenterPageInner() {
           </article>
         </div>
       </section>
+
+      {memberType === "enterprise_basic" ? (
+        <section className="mb-6 rounded-[28px] border border-[rgba(180,154,107,0.22)] bg-[linear-gradient(135deg,rgba(255,249,239,0.98),rgba(247,238,222,0.88))] p-5 shadow-[0_18px_46px_rgba(180,154,107,0.12)]">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">企业基础会员</p>
+              <h2 className="mt-2 text-xl font-semibold text-primary">升级到企业VIP，获得更完整的企业展示与运营能力</h2>
+              <p className="mt-2 text-sm text-muted">
+                VIP 会员可获得更完整的企业站配置、SEO 设置、推荐能力与更高内容运营上限。已认证企业可在现有基础上直接升级，不影响企业详情页展示。
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2 text-sm text-muted">
+              <span className="rounded-full border border-[rgba(180,154,107,0.22)] bg-white/80 px-3 py-1">企业站增强</span>
+              <span className="rounded-full border border-[rgba(180,154,107,0.22)] bg-white/80 px-3 py-1">SEO 设置</span>
+              <span className="rounded-full border border-[rgba(180,154,107,0.22)] bg-white/80 px-3 py-1">推荐位能力</span>
+              <span className="rounded-full border border-[rgba(180,154,107,0.22)] bg-white/80 px-3 py-1">更高扩展权限</span>
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       <div className="grid lg:grid-cols-[220px_1fr] gap-4 mb-8">
         <aside className="rounded-[28px] border border-border bg-surface-elevated p-4 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
@@ -980,37 +1096,6 @@ function PublishCenterPageInner() {
         </aside>
 
         <div className="space-y-4">
-      <section className="rounded-[28px] border border-border bg-surface-elevated p-5 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-sm font-medium text-primary">我的投稿记录（{selectedTabDef.label}）</h2>
-          <span className="rounded-full border border-border bg-surface px-3 py-1 text-xs text-muted">{filteredItems.length} 条记录</span>
-        </div>
-        {filteredItems.length === 0 ? (
-          <p className="text-sm text-muted">当前栏目暂无投稿记录。</p>
-        ) : (
-          <ul className="space-y-3">
-            {filteredItems.map((item) => (
-              <li key={item.id} className="border-b border-border pb-2">
-                <div className="flex items-center justify-between gap-4 text-sm">
-                  <span className="truncate text-primary">{item.title}</span>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {item.isPinned && (
-                      <span className="text-[11px] rounded-full border border-accent/40 px-2 py-0.5 text-accent">置顶</span>
-                    )}
-                    <span className="text-xs text-muted">{STATUS_TEXT[item.status]}</span>
-                  </div>
-                </div>
-                <div className="mt-2">
-                  <button type="button" onClick={() => openEditRequest(item)} className="text-xs px-2 py-1 rounded border border-border hover:bg-surface">
-                    提交修改申请
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
         <form onSubmit={submit} className="rounded-[28px] border border-border bg-surface-elevated p-5 shadow-[0_16px_40px_rgba(15,23,42,0.06)] space-y-4">
           {!selectedCategoryAccess && (
             <div className="rounded-xl border border-dashed border-border bg-surface p-4 text-sm text-muted">
@@ -1291,6 +1376,67 @@ function PublishCenterPageInner() {
             {loading ? "提交中..." : "提交审核"}
           </button>
         </form>
+
+      <section className="rounded-[28px] border border-border bg-surface-elevated p-5 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <h2 className="text-sm font-medium text-primary">投稿概览（{selectedTabDef.label}）</h2>
+            <p className="mt-2 text-sm text-muted">
+              当前栏目共 {filteredItems.length} 条记录，默认先展示最近 5 条；你可以在这里展开查看全部，不需要离开投稿页。
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2 text-xs text-muted">
+            <span className="rounded-full border border-border bg-surface px-3 py-1">待审核 {filteredStatusSummary.pending}</span>
+            <span className="rounded-full border border-border bg-surface px-3 py-1">已通过 {filteredStatusSummary.approved}</span>
+            <span className="rounded-full border border-border bg-surface px-3 py-1">草稿 {filteredStatusSummary.draft}</span>
+            <span className="rounded-full border border-border bg-surface px-3 py-1">已驳回 {filteredStatusSummary.rejected}</span>
+          </div>
+        </div>
+        {filteredItems.length === 0 ? (
+          <p className="mt-4 text-sm text-muted">当前栏目暂无投稿记录。</p>
+        ) : (
+          <div className="mt-4 space-y-3">
+            {visibleFilteredItems.map((item) => (
+              <article key={item.id} className="rounded-2xl border border-border bg-surface px-4 py-4">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="truncate text-sm font-medium text-primary">{item.title}</p>
+                      {item.isPinned && (
+                        <span className="text-[11px] rounded-full border border-accent/40 px-2 py-0.5 text-accent">置顶</span>
+                      )}
+                    </div>
+                    <p className="mt-2 text-xs text-muted">
+                      {STATUS_TEXT[item.status]} · {formatRecordTime(item.createdAt)}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-full border border-border bg-white/80 px-3 py-1 text-xs text-muted">{STATUS_TEXT[item.status]}</span>
+                    <button
+                      type="button"
+                      onClick={() => openEditRequest(item)}
+                      className="rounded-lg border border-border px-3 py-1.5 text-xs text-primary transition hover:bg-surface"
+                    >
+                      提交修改申请
+                    </button>
+                  </div>
+                </div>
+              </article>
+            ))}
+            {filteredItems.length > 5 ? (
+              <div className="flex justify-center pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowAllRecords((value) => !value)}
+                  className="rounded-full border border-border bg-white/85 px-4 py-2 text-xs text-primary transition hover:bg-surface"
+                >
+                  {showAllRecords ? "收起列表" : `查看全部 ${filteredItems.length} 条记录`}
+                </button>
+              </div>
+            ) : null}
+          </div>
+        )}
+      </section>
       </div>
       </div>
 

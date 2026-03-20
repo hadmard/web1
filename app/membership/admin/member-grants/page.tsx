@@ -15,6 +15,8 @@ type MemberSummary = {
 
 type GrantSettings = {
   year: number;
+  activeFrom: string | null;
+  activeUntil: string | null;
   features: Record<string, boolean | null>;
   categories: Record<
     string,
@@ -51,6 +53,8 @@ export default function AdminMemberGrantsPage() {
   const [message, setMessage] = useState("");
   const [grants, setGrants] = useState<GrantSettings | null>(null);
   const [defaultRule, setDefaultRule] = useState<Rule | null>(null);
+  const [savedSnapshot, setSavedSnapshot] = useState("");
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -75,17 +79,23 @@ export default function AdminMemberGrantsPage() {
         setMessage(data.error ?? "读取授权失败");
         return;
       }
-      setGrants(data.grants ?? null);
+      const nextGrants = data.grants ?? null;
+      setGrants(nextGrants);
       setDefaultRule(data.defaultRule ?? null);
+      setSavedSnapshot(nextGrants ? JSON.stringify(nextGrants) : "");
+      setLastSavedAt(null);
+      setMessage("");
     })();
   }, [selectedId]);
 
   const selectedMember = useMemo(() => members.find((item) => item.id === selectedId) ?? null, [members, selectedId]);
+  const grantSnapshot = useMemo(() => (grants ? JSON.stringify(grants) : ""), [grants]);
+  const hasUnsavedChanges = Boolean(grants) && grantSnapshot !== savedSnapshot;
 
   async function save() {
     if (!selectedId || !grants) return;
     setSaving(true);
-    setMessage("");
+    setMessage("正在保存会员授权...");
     const res = await fetch(`/api/admin/member-grants/${selectedId}`, {
       method: "PATCH",
       credentials: "include",
@@ -98,7 +108,10 @@ export default function AdminMemberGrantsPage() {
       setSaving(false);
       return;
     }
-    setGrants(data.grants ?? grants);
+    const nextGrants = data.grants ?? grants;
+    setGrants(nextGrants);
+    setSavedSnapshot(JSON.stringify(nextGrants));
+    setLastSavedAt(new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
     setMessage("会员个体授权已保存");
     setSaving(false);
   }
@@ -114,7 +127,18 @@ export default function AdminMemberGrantsPage() {
         <p className="mt-2 text-sm text-muted">
           用于覆盖会员等级默认权益，可细化到栏目、子栏目和年度数量。适合媒体客户、合作机构和特殊企业账号。
         </p>
-        {message ? <p className="mt-3 text-sm text-accent">{message}</p> : null}
+        <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
+          {message ? (
+            <p className={`rounded-full px-3 py-1 ${message.includes("失败") ? "bg-[rgba(220,38,38,0.08)] text-red-600" : "bg-accent/10 text-accent"}`}>
+              {message}
+            </p>
+          ) : null}
+          {hasUnsavedChanges ? (
+            <p className="rounded-full bg-[rgba(180,154,107,0.12)] px-3 py-1 text-primary">当前有未保存改动</p>
+          ) : lastSavedAt ? (
+            <p className="rounded-full bg-[rgba(15,23,42,0.06)] px-3 py-1 text-muted">最近保存于 {lastSavedAt}</p>
+          ) : null}
+        </div>
       </header>
 
       <section className="grid gap-4 xl:grid-cols-[320px,1fr]">
@@ -148,20 +172,44 @@ export default function AdminMemberGrantsPage() {
           {grants ? (
             <>
               <article className="rounded-2xl border border-border bg-surface-elevated p-5">
-                <label className="block text-sm max-w-[220px]">
-                  <span className="text-primary">授权年度</span>
-                  <input
-                    type="number"
-                    min={2024}
-                    className="mt-1 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
-                    value={grants.year}
-                    onChange={(e) =>
-                      setGrants((prev) =>
-                        prev ? { ...prev, year: Number(e.target.value) || new Date().getFullYear() } : prev
-                      )
-                    }
-                  />
-                </label>
+                <div className="grid gap-4 md:grid-cols-[220px_220px_1fr]">
+                  <label className="block text-sm">
+                    <span className="text-primary">授权开始日期</span>
+                    <input
+                      type="date"
+                      className="mt-1 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                      value={grants.activeFrom ?? ""}
+                      onChange={(e) =>
+                        setGrants((prev) =>
+                          prev
+                            ? {
+                                ...prev,
+                                activeFrom: e.target.value || null,
+                                year: e.target.value ? Number(e.target.value.slice(0, 4)) : prev.year,
+                              }
+                            : prev
+                        )
+                      }
+                    />
+                  </label>
+                  <label className="block text-sm">
+                    <span className="text-primary">授权结束日期</span>
+                    <input
+                      type="date"
+                      className="mt-1 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
+                      value={grants.activeUntil ?? ""}
+                      onChange={(e) =>
+                        setGrants((prev) =>
+                          prev ? { ...prev, activeUntil: e.target.value || null } : prev
+                        )
+                      }
+                    />
+                  </label>
+                  <div className="rounded-xl border border-border bg-surface px-4 py-3 text-sm text-muted">
+                    <p>当前统计年度：{grants.year}</p>
+                    <p className="mt-1">个体授权会在所选日期区间内生效，到期后自动回落到会员等级默认权益。</p>
+                  </div>
+                </div>
               </article>
 
               <article className="rounded-2xl border border-border bg-surface-elevated p-5">
@@ -184,6 +232,9 @@ export default function AdminMemberGrantsPage() {
 
               <article className="rounded-2xl border border-border bg-surface-elevated p-5">
                 <h2 className="text-lg font-semibold text-primary">栏目与子栏目授权</h2>
+                <p className="mt-2 text-sm text-muted">
+                  子栏目年额度不会自动覆盖栏目年额度。若要让某个子栏目实际可发更多内容，请同步把对应栏目年额度提升到不低于子栏目额度。
+                </p>
                 <div className="mt-4 space-y-4">
                   {MEMBER_PUBLISH_CATEGORY_OPTIONS.map((category) => {
                     const categoryGrant = grants.categories[category.href];
@@ -303,14 +354,20 @@ export default function AdminMemberGrantsPage() {
                 </div>
               </article>
 
-              <div className="flex justify-end">
+              <div className="sticky bottom-4 z-10 flex justify-end">
                 <button
                   type="button"
                   onClick={() => void save()}
-                  disabled={saving}
-                  className="rounded-xl bg-accent px-5 py-2.5 text-sm font-medium text-white disabled:opacity-50"
+                  disabled={saving || !hasUnsavedChanges}
+                  className={`rounded-xl px-5 py-2.5 text-sm font-medium text-white transition ${
+                    saving
+                      ? "bg-accent shadow-[0_16px_36px_rgba(180,154,107,0.28)]"
+                      : hasUnsavedChanges
+                        ? "bg-accent shadow-[0_16px_36px_rgba(180,154,107,0.28)] hover:brightness-105"
+                        : "bg-muted/60"
+                  } disabled:cursor-not-allowed disabled:opacity-100`}
                 >
-                  {saving ? "保存中..." : "保存会员授权"}
+                  {saving ? "正在保存..." : hasUnsavedChanges ? "保存会员授权" : "已保存"}
                 </button>
               </div>
             </>

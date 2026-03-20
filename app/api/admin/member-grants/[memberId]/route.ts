@@ -72,7 +72,12 @@ export async function PATCH(
     action: "member_grant_settings_update",
     targetType: "member_grants",
     targetId: memberId,
-    detail: JSON.stringify({ year: grants.year, memberType: member.memberType }),
+    detail: JSON.stringify({
+      year: grants.year,
+      activeFrom: grants.activeFrom,
+      activeUntil: grants.activeUntil,
+      memberType: member.memberType,
+    }),
   });
 
   return NextResponse.json({ ok: true, grants });

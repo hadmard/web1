@@ -99,13 +99,20 @@ function resolveRemainingCount(limit: number | null, usedCount: number) {
   return Math.max(0, limit - usedCount);
 }
 
+function isGrantActive(grants: MemberGrantSettings, at: Date) {
+  const start = new Date(`${grants.activeFrom ?? `${grants.year}-01-01`}T00:00:00.000Z`);
+  const end = new Date(`${grants.activeUntil ?? `${grants.year}-12-31`}T23:59:59.999Z`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return false;
+  return at >= start && at <= end;
+}
+
 function resolveFeatureValue(
   defaultValue: boolean,
   grants: MemberGrantSettings,
   key: GrantFeatureKey,
-  year: number
+  active: boolean
 ) {
-  if (grants.year !== year) return defaultValue;
+  if (!active) return defaultValue;
   const override = grants.features[key];
   return typeof override === "boolean" ? override : defaultValue;
 }
@@ -118,22 +125,23 @@ export function buildEffectiveMemberAccessFromSources(
   year: number
 ): EffectiveMemberAccess {
   const defaultFeatures = getDefaultFeatureAccess(membershipRule);
+  const grantActive = isGrantActive(grants, new Date());
 
   const categories = MEMBER_PUBLISH_CATEGORY_OPTIONS.map((category) => {
     const defaultCategoryEnabled = membershipRule.publishCategoryHrefs.includes(category.href);
     const defaultCategoryLimit = getDefaultCategoryLimit(membershipRule, category.href);
     const categoryGrant = grants.categories[category.href];
-    const categoryEnabledOverride = grants.year === year ? categoryGrant?.enabled : null;
-    const categoryLimitOverride = grants.year === year ? categoryGrant?.annualLimit : null;
+    const categoryEnabledOverride = grantActive ? categoryGrant?.enabled : null;
+    const categoryLimitOverride = grantActive ? categoryGrant?.annualLimit : null;
 
     const subcategories = category.subs.map((sub) => {
       const subGrant = categoryGrant?.subcategories[sub.href];
       const defaultSubEnabled = defaultCategoryEnabled;
       const enabled =
-        typeof (grants.year === year ? subGrant?.enabled : null) === "boolean"
+        typeof (grantActive ? subGrant?.enabled : null) === "boolean"
           ? Boolean(subGrant?.enabled)
           : defaultSubEnabled;
-      const annualLimit = (grants.year === year ? subGrant?.annualLimit : null) ?? null;
+      const annualLimit = (grantActive ? subGrant?.annualLimit : null) ?? null;
       const usedCount = usageMaps.subcategoryCounts.get(`${category.href}::${sub.href}`) ?? 0;
       return {
         href: sub.href,
@@ -169,19 +177,19 @@ export function buildEffectiveMemberAccessFromSources(
     memberType,
     membershipRule,
     features: {
-      enterpriseSite: resolveFeatureValue(defaultFeatures.enterpriseSite, grants, "enterpriseSite", year),
-      seo: resolveFeatureValue(defaultFeatures.seo, grants, "seo", year),
-      recommendContent: resolveFeatureValue(defaultFeatures.recommendContent, grants, "recommendContent", year),
-      galleryUpload: resolveFeatureValue(defaultFeatures.galleryUpload, grants, "galleryUpload", year),
-      standardFeedback: resolveFeatureValue(defaultFeatures.standardFeedback, grants, "standardFeedback", year),
+      enterpriseSite: resolveFeatureValue(defaultFeatures.enterpriseSite, grants, "enterpriseSite", grantActive),
+      seo: resolveFeatureValue(defaultFeatures.seo, grants, "seo", grantActive),
+      recommendContent: resolveFeatureValue(defaultFeatures.recommendContent, grants, "recommendContent", grantActive),
+      galleryUpload: resolveFeatureValue(defaultFeatures.galleryUpload, grants, "galleryUpload", grantActive),
+      standardFeedback: resolveFeatureValue(defaultFeatures.standardFeedback, grants, "standardFeedback", grantActive),
       dictionaryContribution: resolveFeatureValue(
         defaultFeatures.dictionaryContribution,
         grants,
         "dictionaryContribution",
-        year
+        grantActive
       ),
-      standardCoBuild: resolveFeatureValue(defaultFeatures.standardCoBuild, grants, "standardCoBuild", year),
-      subAccounts: resolveFeatureValue(defaultFeatures.subAccounts, grants, "subAccounts", year),
+      standardCoBuild: resolveFeatureValue(defaultFeatures.standardCoBuild, grants, "standardCoBuild", grantActive),
+      subAccounts: resolveFeatureValue(defaultFeatures.subAccounts, grants, "subAccounts", grantActive),
     },
     categories,
   };
