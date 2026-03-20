@@ -1,6 +1,7 @@
 import { notFound, permanentRedirect } from "next/navigation";
 import { findNewsArticleBySegment, normalizeNewsSegment } from "@/lib/news-sharing";
 import { buildNewsPath } from "@/lib/share-config";
+import { LEGACY_SITE_URL } from "@/lib/public-site-config";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -13,6 +14,10 @@ const LEGACY_INFO_TITLE_MAP: Record<string, string> = {
 function normalizeLegacyInfoSlug(slug: string) {
   const normalized = normalizeNewsSegment(slug);
   return normalized.replace(/\.html$/i, "").trim();
+}
+
+function buildLegacyInfoFallbackPath(slug: string) {
+  return `${LEGACY_SITE_URL}/info/${encodeURIComponent(slug)}.html`;
 }
 
 export default async function LegacyInfoPage({ params }: Props) {
@@ -31,5 +36,5 @@ export default async function LegacyInfoPage({ params }: Props) {
     permanentRedirect(`/search?q=${encodeURIComponent(mappedTitle)}`);
   }
 
-  permanentRedirect("/news");
+  permanentRedirect(buildLegacyInfoFallbackPath(legacySlug));
 }
