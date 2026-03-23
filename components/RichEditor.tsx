@@ -78,20 +78,32 @@ function extractBackgroundImageUrl(style: string) {
   return match?.[2]?.trim() || "";
 }
 
+function isPlaceholderImageSource(value: string) {
+  const trimmed = value.trim().toLowerCase();
+  if (!trimmed) return true;
+  if (trimmed.startsWith("data:image/")) return true;
+  return (
+    trimmed.includes("placeholder") ||
+    trimmed.includes("spacer") ||
+    trimmed.includes("blank") ||
+    trimmed.includes("transparent")
+  );
+}
+
 function getPastedImageOriginalSrc(node: HTMLElement) {
   const candidates = [
-    node.getAttribute("src") || "",
     node.getAttribute("data-src") || "",
     node.getAttribute("data-original") || "",
     node.getAttribute("data-actualsrc") || "",
     node.getAttribute("data-lazy-src") || "",
     node.getAttribute("data-url") || "",
-    extractSrcFromSrcset(node.getAttribute("srcset") || ""),
     extractSrcFromSrcset(node.getAttribute("data-srcset") || ""),
+    extractSrcFromSrcset(node.getAttribute("srcset") || ""),
     extractBackgroundImageUrl(node.getAttribute("style") || ""),
-  ];
+    node.getAttribute("src") || "",
+  ].map((value) => value.trim()).filter(Boolean);
 
-  return candidates.find((value) => value.trim()) || "";
+  return candidates.find((value) => !isPlaceholderImageSource(value)) || candidates[0] || "";
 }
 
 function getNormalizedPastedImageSrc(node: HTMLElement, rawHtml: string) {

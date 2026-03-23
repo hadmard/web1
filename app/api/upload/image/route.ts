@@ -58,6 +58,7 @@ function toUploadDiskPath(src: string) {
     .split("/")
     .map((segment) => segment.trim())
     .filter(Boolean);
+
   if (parts.length < 2 || parts[0] !== "uploads") return null;
   return path.join(process.cwd(), "public", ...parts);
 }
@@ -196,9 +197,12 @@ async function uploadRemoteImage(remoteUrlValue: string, folderRaw: string) {
   let response: Response;
   try {
     response = await fetch(remoteUrl, {
-      headers: { Accept: "image/*,*/*;q=0.8" },
+      headers: {
+        Accept: "image/*,*/*;q=0.8",
+        "User-Agent": "Mozilla/5.0 (compatible; ZhengmuImageFetcher/1.0)",
+      },
       cache: "no-store",
-      redirect: "error",
+      redirect: "follow",
     });
   } catch {
     return NextResponse.json({ error: "远程图片下载失败" }, { status: 400 });
@@ -231,6 +235,12 @@ async function uploadRemoteImage(remoteUrlValue: string, folderRaw: string) {
   return NextResponse.json(payload);
 }
 
+function canTransferRemoteImage(session: Awaited<ReturnType<typeof getSession>>, folderRaw: string) {
+  if (!session) return false;
+  if (session.role === "SUPER_ADMIN" || session.role === "ADMIN") return true;
+  return sanitizeFolder(folderRaw).join("/") === "content/editor-inline";
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const src = url.searchParams.get("src") ?? "";
@@ -255,8 +265,8 @@ export async function POST(request: Request) {
   const folderRaw = typeof formData?.get("folder") === "string" ? String(formData?.get("folder")) : "misc";
 
   if (remoteUrl) {
-    if (session.role !== "SUPER_ADMIN" && session.role !== "ADMIN") {
-      return NextResponse.json({ error: "仅管理员可使用网页图片转存" }, { status: 403 });
+    if (!canTransferRemoteImage(session, folderRaw)) {
+      return NextResponse.json({ error: "当前账号没有网页图片转存权限" }, { status: 403 });
     }
     return uploadRemoteImage(remoteUrl, folderRaw);
   }

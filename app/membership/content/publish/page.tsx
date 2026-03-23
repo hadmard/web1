@@ -376,7 +376,7 @@ function PublishCenterPageInner() {
     () => (activeSubAccess ? formatQuota(activeSubAccess.annualLimit, activeSubAccess.remainingCount) : "未选择"),
     [activeSubAccess]
   );
-  const canPasteImages = role === "SUPER_ADMIN" || role === "ADMIN";
+  const canPasteImages = authed === true;
 
   const filteredItems = useMemo(
     () => items.filter((item) => resolveTabKeyFromHref(item.categoryHref, item.subHref) === safeTab),
