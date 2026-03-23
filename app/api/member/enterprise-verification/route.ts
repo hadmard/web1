@@ -1,7 +1,13 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { writeOperationLog } from "@/lib/operation-log";
+import {
+  getEnterpriseVerificationFormatError,
+  normalizeEnterpriseAddress,
+  normalizeEnterprisePhone,
+  normalizeUnifiedSocialCreditCode,
+} from "@/lib/enterprise-verification-validation";
 
 function trimRequired(value: unknown, label: string) {
   const text = typeof value === "string" ? value.trim() : "";
@@ -87,12 +93,12 @@ export async function POST(request: NextRequest) {
       accountName: trimRequired(body.accountName, "企业账号"),
       accountPassword: trimRequired(body.accountPassword, "企业账号密码"),
       contactPerson: trimRequired(body.contactPerson, "联系人"),
-      contactPhone: trimRequired(body.contactPhone, "联系电话"),
+      contactPhone: normalizeEnterprisePhone(trimRequired(body.contactPhone, "联系电话")),
       contactEmail: trimOptional(body.contactEmail),
       logoUrl: trimOptional(body.logoUrl),
       licenseImageUrl: trimRequired(body.licenseImageUrl, "营业执照图片"),
-      licenseCode: trimRequired(body.licenseCode, "统一社会信用代码"),
-      address: trimRequired(body.address, "企业地址"),
+      licenseCode: normalizeUnifiedSocialCreditCode(trimRequired(body.licenseCode, "统一社会信用代码")),
+      address: normalizeEnterpriseAddress(trimRequired(body.address, "企业地址")),
       foundedAt: trimOptional(body.foundedAt),
       registeredCapital: trimOptional(body.registeredCapital),
       website: trimOptional(body.website),
@@ -105,6 +111,11 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const message = error instanceof Error ? error.message : "参数错误";
     return NextResponse.json({ error: message }, { status: 400 });
+  }
+
+  const formatError = getEnterpriseVerificationFormatError(payload);
+  if (formatError) {
+    return NextResponse.json({ error: formatError }, { status: 400 });
   }
 
   const existingPending = await prisma.enterpriseVerification.findFirst({

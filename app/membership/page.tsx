@@ -127,7 +127,7 @@ export default async function MembershipPage() {
                 <p className="mt-2 text-sm text-primary">扫码添加企业微信，获取会员升级、企业认证与合作咨询支持。</p>
                 <div className="mt-4 overflow-hidden rounded-3xl border border-border bg-white">
                   <Image
-                    src="/wechat-qr.jpg.jpg"
+                    src="/wechat-qr.jpg"
                     alt="企业微信咨询二维码"
                     width={950}
                     height={1327}

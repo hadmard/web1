@@ -6,6 +6,12 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { MAX_UPLOAD_IMAGE_MB, uploadImageToServer } from "@/lib/client-image";
 import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
 import { InlinePageBackLink } from "@/components/InlinePageBackLink";
+import {
+  getEnterpriseVerificationFormatError,
+  normalizeEnterpriseAddress,
+  normalizeEnterprisePhone,
+  normalizeUnifiedSocialCreditCode,
+} from "@/lib/enterprise-verification-validation";
 
 type VerifyStatus = "pending" | "approved" | "rejected";
 
@@ -210,10 +216,23 @@ export default function MemberVerificationPage() {
 
   async function submit(e: FormEvent) {
     e.preventDefault();
+    const normalizedForm = {
+      ...form,
+      contactPhone: normalizeEnterprisePhone(form.contactPhone),
+      licenseCode: normalizeUnifiedSocialCreditCode(form.licenseCode),
+      address: normalizeEnterpriseAddress(form.address),
+    };
+    const formatError = getEnterpriseVerificationFormatError(normalizedForm);
+    if (formatError) {
+      setForm(normalizedForm);
+      setMessage(formatError);
+      return;
+    }
     setSaving(true);
     setMessage("");
 
-    const payload = { ...form, attachments: form.attachments };
+    setForm(normalizedForm);
+    const payload = { ...normalizedForm, attachments: normalizedForm.attachments };
     const res = await fetch("/api/member/enterprise-verification", {
       method: "POST",
       credentials: "include",
@@ -228,7 +247,7 @@ export default function MemberVerificationPage() {
       return;
     }
 
-    setMessage("认证资料已提交，等待主管理员审核。");
+    setMessage(latest ? "认证资料修改已提交，等待主管理员重新审核。" : "认证资料已提交，等待主管理员审核。");
     await load();
     setSaving(false);
   }
@@ -259,12 +278,17 @@ export default function MemberVerificationPage() {
       <InlinePageBackLink href="/membership" label="返回会员系统" />
       <header className="rounded-xl border border-border bg-surface-elevated p-5 space-y-2">
         <h1 className="font-serif text-2xl font-bold text-primary">企业认证申请</h1>
-        <p className="text-sm text-muted">提交资料后由主管理员审核，通过后自动生成企业详情展示页。</p>
+        <p className="text-sm text-muted">提交资料后由主管理员审核，通过后自动生成企业详情展示页。认证通过后如需修改资料，也可直接在下方修改并重新提交审核。</p>
         {latest && (
           <p className="text-sm text-primary">
             最近状态：<span className="font-medium">{statusText(latest.status)}</span>
             {latest.reviewNote ? `（审核意见：${latest.reviewNote}）` : ""}
           </p>
+        )}
+        {latest && (
+          <a href="#verification-form" className="apple-inline-link">
+            {latest.status === "approved" ? "修改已通过的认证资料" : "继续修改认证资料"}
+          </a>
         )}
         {(latest?.approvedEnterpriseId || enterpriseId) && (
           <Link
@@ -281,20 +305,41 @@ export default function MemberVerificationPage() {
         )}
       </header>
 
-      <form onSubmit={submit} className="rounded-xl border border-border bg-surface-elevated p-5 space-y-4">
+      <form id="verification-form" onSubmit={submit} className="rounded-xl border border-border bg-surface-elevated p-5 space-y-4">
         <div className="grid md:grid-cols-2 gap-3">
           <TextField label="企业全称" required value={form.companyName} onChange={(v) => setForm((p) => ({ ...p, companyName: v }))} />
           <TextField label="企业简称" value={form.companyShortName} onChange={(v) => setForm((p) => ({ ...p, companyShortName: v }))} />
           <TextField label="企业账号" required value={form.accountName} onChange={(v) => setForm((p) => ({ ...p, accountName: v }))} />
           <TextField label="企业账号密码" required value={form.accountPassword} onChange={(v) => setForm((p) => ({ ...p, accountPassword: v }))} />
           <TextField label="联系人" required value={form.contactPerson} onChange={(v) => setForm((p) => ({ ...p, contactPerson: v }))} />
-          <TextField label="联系电话" required value={form.contactPhone} onChange={(v) => setForm((p) => ({ ...p, contactPhone: v }))} />
+          <TextField
+            label="联系电话"
+            required
+            value={form.contactPhone}
+            onChange={(v) => setForm((p) => ({ ...p, contactPhone: v }))}
+            placeholder="例如：13812345678 或 021-56789012"
+            hint="请填写规范的手机号码，或带区号的固定电话。"
+          />
           <TextField label="联系邮箱" value={form.contactEmail} onChange={(v) => setForm((p) => ({ ...p, contactEmail: v }))} />
-          <TextField label="统一社会信用代码" required value={form.licenseCode} onChange={(v) => setForm((p) => ({ ...p, licenseCode: v }))} />
+          <TextField
+            label="统一社会信用代码"
+            required
+            value={form.licenseCode}
+            onChange={(v) => setForm((p) => ({ ...p, licenseCode: v }))}
+            placeholder="请输入 18 位统一社会信用代码"
+            hint="系统会按国家统一社会信用代码规则校验。"
+          />
           <TextField label="公司官网" value={form.website} onChange={(v) => setForm((p) => ({ ...p, website: v }))} />
           <TextField label="成立时间" value={form.foundedAt} onChange={(v) => setForm((p) => ({ ...p, foundedAt: v }))} placeholder="例如：2018-10" />
           <TextField label="注册资本" value={form.registeredCapital} onChange={(v) => setForm((p) => ({ ...p, registeredCapital: v }))} />
-          <TextField label="企业地址" required value={form.address} onChange={(v) => setForm((p) => ({ ...p, address: v }))} />
+          <TextField
+            label="企业地址"
+            required
+            value={form.address}
+            onChange={(v) => setForm((p) => ({ ...p, address: v }))}
+            placeholder="例如：浙江省杭州市余杭区文一西路 123 号"
+            hint="请填写完整的省/市/区县及详细地址。"
+          />
         </div>
 
         <TextAreaField label="企业介绍" value={form.intro} onChange={(v) => setForm((p) => ({ ...p, intro: v }))} />
@@ -368,7 +413,7 @@ export default function MemberVerificationPage() {
           disabled={saving}
           className="px-4 py-2 rounded bg-accent text-white text-sm hover:opacity-90 disabled:opacity-50"
         >
-          {saving ? "提交中..." : "提交认证申请"}
+          {saving ? "提交中..." : latest ? "提交修改审核" : "提交认证申请"}
         </button>
       </form>
     </div>
@@ -381,12 +426,14 @@ function TextField({
   onChange,
   required,
   placeholder,
+  hint,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   required?: boolean;
   placeholder?: string;
+  hint?: string;
 }) {
   return (
     <label className="block">
@@ -401,6 +448,7 @@ function TextField({
         required={required}
         placeholder={placeholder}
       />
+      {hint ? <span className="mt-1 block text-[11px] text-muted">{hint}</span> : null}
     </label>
   );
 }

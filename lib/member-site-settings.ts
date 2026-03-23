@@ -9,10 +9,11 @@ export type MemberSiteSettings = {
     intro: boolean;
     advantages: boolean;
     tags: boolean;
+    news: boolean;
+    gallery: boolean;
     contact: boolean;
     standards: boolean;
     terms: boolean;
-    brands: boolean;
     video: boolean;
   };
   seo: {
@@ -37,10 +38,11 @@ const DEFAULT_MEMBER_SITE_SETTINGS: MemberSiteSettings = {
     intro: true,
     advantages: true,
     tags: true,
+    news: true,
+    gallery: true,
     contact: true,
     standards: true,
     terms: true,
-    brands: true,
     video: true,
   },
   seo: {
@@ -84,15 +86,16 @@ export function normalizeMemberSiteSettings(value: unknown): MemberSiteSettings 
         : DEFAULT_MEMBER_SITE_SETTINGS.template,
     heroTitle: asString(source.heroTitle),
     heroSubtitle: asString(source.heroSubtitle),
-    contactLabel: asString(source.contactLabel, DEFAULT_MEMBER_SITE_SETTINGS.contactLabel),
+    contactLabel: asString(source.contactLabel, "联系我们"),
     modules: {
       intro: asBool(modules.intro, DEFAULT_MEMBER_SITE_SETTINGS.modules.intro),
       advantages: asBool(modules.advantages, DEFAULT_MEMBER_SITE_SETTINGS.modules.advantages),
       tags: asBool(modules.tags, DEFAULT_MEMBER_SITE_SETTINGS.modules.tags),
+      news: asBool(modules.news, asBool(modules.brands, DEFAULT_MEMBER_SITE_SETTINGS.modules.news)),
+      gallery: asBool(modules.gallery, DEFAULT_MEMBER_SITE_SETTINGS.modules.gallery),
       contact: asBool(modules.contact, DEFAULT_MEMBER_SITE_SETTINGS.modules.contact),
       standards: asBool(modules.standards, DEFAULT_MEMBER_SITE_SETTINGS.modules.standards),
       terms: asBool(modules.terms, DEFAULT_MEMBER_SITE_SETTINGS.modules.terms),
-      brands: asBool(modules.brands, DEFAULT_MEMBER_SITE_SETTINGS.modules.brands),
       video: asBool(modules.video, DEFAULT_MEMBER_SITE_SETTINGS.modules.video),
     },
     seo: {
@@ -115,12 +118,12 @@ export async function getMemberSiteSettings(memberId: string): Promise<MemberSit
     select: { value: true },
   });
 
-  if (!row?.value) return { ...DEFAULT_MEMBER_SITE_SETTINGS };
+  if (!row?.value) return normalizeMemberSiteSettings({});
 
   try {
     return normalizeMemberSiteSettings(JSON.parse(row.value));
   } catch {
-    return { ...DEFAULT_MEMBER_SITE_SETTINGS };
+    return normalizeMemberSiteSettings({});
   }
 }
 
@@ -134,5 +137,5 @@ export async function saveMemberSiteSettings(memberId: string, settings: MemberS
 }
 
 export function getDefaultMemberSiteSettings() {
-  return { ...DEFAULT_MEMBER_SITE_SETTINGS };
+  return normalizeMemberSiteSettings({});
 }

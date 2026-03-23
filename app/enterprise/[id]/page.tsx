@@ -31,33 +31,42 @@ function getTemplateMeta(template: TemplateKey) {
   switch (template) {
     case "professional_service":
       return {
-        title: "专业服务型",
+        title: "专业机构型",
         shell: "grid gap-8 lg:grid-cols-[1.05fr,0.95fr]",
-        hero: "rounded-[32px] border border-border bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(246,243,237,0.94))] p-8 shadow-[0_24px_90px_rgba(34,31,26,0.08)]",
+        hero:
+          "relative overflow-hidden rounded-[34px] border border-[rgba(103,137,168,0.2)] bg-[radial-gradient(circle_at_top_left,rgba(91,129,162,0.3),transparent_34%),linear-gradient(150deg,rgba(14,27,40,0.98),rgba(24,47,67,0.94)_52%,rgba(244,248,251,0.98))] p-8 shadow-[0_28px_96px_rgba(17,32,46,0.22)]",
+        heroTone: "text-white/72",
         introTitle: "机构定位",
         advantagesTitle: "服务能力",
-        articlesTitle: "行业内容与观点",
+        articlesTitle: "行业观点与企业动态",
         galleryTitle: "项目画面",
+        statsTone: "border-white/12 bg-white/10 text-white",
       };
     case "simple_elegant":
       return {
-        title: "简约基础型",
+        title: "轻奢形象型",
         shell: "space-y-8",
-        hero: "rounded-[30px] border border-border bg-white p-7 shadow-[0_20px_70px_rgba(34,31,26,0.06)]",
+        hero:
+          "relative overflow-hidden rounded-[32px] border border-[rgba(198,171,134,0.2)] bg-[radial-gradient(circle_at_top,rgba(220,197,164,0.22),transparent_38%),linear-gradient(180deg,rgba(255,255,255,0.98),rgba(246,241,234,0.94)_64%,rgba(236,228,217,0.96))] p-7 shadow-[0_24px_84px_rgba(82,58,31,0.08)]",
+        heroTone: "text-[rgba(110,84,53,0.78)]",
         introTitle: "基础信息",
         advantagesTitle: "能力摘要",
-        articlesTitle: "最新动态",
-        galleryTitle: "精选图片",
+        articlesTitle: "企业动态",
+        galleryTitle: "精选图库",
+        statsTone: "border-[rgba(190,160,120,0.2)] bg-white/80 text-primary",
       };
     default:
       return {
-        title: "品牌展示型",
+        title: "品牌旗舰型",
         shell: "space-y-8",
-        hero: "rounded-[36px] border border-border bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,244,238,0.92))] p-8 shadow-[0_28px_96px_rgba(34,31,26,0.08)]",
+        hero:
+          "relative overflow-hidden rounded-[36px] border border-[rgba(181,148,99,0.2)] bg-[radial-gradient(circle_at_top,rgba(214,179,122,0.28),transparent_36%),linear-gradient(160deg,rgba(28,24,20,0.98),rgba(76,61,43,0.92)_52%,rgba(247,240,233,0.98))] p-8 shadow-[0_30px_110px_rgba(58,43,22,0.22)]",
+        heroTone: "text-white/72",
         introTitle: "品牌概况",
         advantagesTitle: "核心优势",
-        articlesTitle: "企业资讯",
+        articlesTitle: "企业动态",
         galleryTitle: "案例图库",
+        statsTone: "border-white/12 bg-white/10 text-white",
       };
   }
 }
@@ -107,13 +116,13 @@ export default async function EnterprisePage({ params }: Props) {
     prisma.article.findMany({
       where: { authorMemberId: memberId, status: "approved" },
       orderBy: articleOrderByPinnedLatest,
-      take: 12,
+      take: 6,
       select: { id: true, title: true, slug: true, createdAt: true },
     }),
     prisma.galleryImage.findMany({
       where: { authorMemberId: memberId, status: "approved" },
       orderBy: { createdAt: "desc" },
-      take: 12,
+      take: 8,
       select: { id: true, title: true, imageUrl: true, createdAt: true },
     }),
     standardIds.length
@@ -133,7 +142,12 @@ export default async function EnterprisePage({ params }: Props) {
   const isServiceTemplate = siteSettings.template === "professional_service";
   const isSimpleTemplate = siteSettings.template === "simple_elegant";
   const showcaseGallery = isBrandTemplate ? gallery.slice(0, 3) : gallery.slice(0, 1);
-  const secondaryGallery = isBrandTemplate ? gallery.slice(3, 9) : gallery.slice(1, 7);
+  const secondaryGallery = isBrandTemplate ? gallery.slice(3, 8) : gallery.slice(1, 8);
+  const stats = [
+    { label: "企业动态", value: `${articles.length} 篇` },
+    { label: "案例图库", value: `${gallery.length} 张` },
+    { label: "标准参与", value: `${standards.length} 项` },
+  ];
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-12 space-y-8">
@@ -146,15 +160,23 @@ export default async function EnterprisePage({ params }: Props) {
       </nav>
 
       <section className={meta.hero}>
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.18),transparent_28%)]" />
         <div className={siteSettings.template === "professional_service" ? "grid gap-8 lg:grid-cols-[1.1fr,0.9fr]" : "space-y-6"}>
-          <div>
-            <p className="text-xs uppercase tracking-[0.28em] text-[rgba(138,115,77,0.78)]">{meta.title}</p>
-            <h1 className="mt-4 font-serif text-4xl leading-tight text-primary sm:text-5xl">{heroTitle}</h1>
-            <p className="mt-4 max-w-3xl text-sm leading-7 text-muted">{heroSubtitle}</p>
+          <div className="relative z-10">
+            <p className={`text-xs uppercase tracking-[0.28em] ${meta.heroTone}`}>{meta.title}</p>
+            <h1 className={`mt-4 font-serif text-4xl leading-tight sm:text-5xl ${isSimpleTemplate ? "text-primary" : "text-white"}`}>{heroTitle}</h1>
+            <p className={`mt-4 max-w-3xl text-sm leading-7 ${isSimpleTemplate ? "text-muted" : "text-white/78"}`}>{heroSubtitle}</p>
             {siteSettings.modules.tags && tags.length > 0 && (
               <div className="mt-6 flex flex-wrap gap-2">
                 {tags.map((tag) => (
-                  <span key={tag} className="rounded-full border border-[rgba(175,143,88,0.22)] bg-[rgba(175,143,88,0.08)] px-3 py-1 text-xs text-[rgba(96,78,47,0.92)]">
+                  <span
+                    key={tag}
+                    className={`rounded-full px-3 py-1 text-xs ${
+                      isSimpleTemplate
+                        ? "border border-[rgba(175,143,88,0.22)] bg-[rgba(175,143,88,0.08)] text-[rgba(96,78,47,0.92)]"
+                        : "border border-white/14 bg-white/10 text-white"
+                    }`}
+                  >
                     {tag}
                   </span>
                 ))}
@@ -166,6 +188,14 @@ export default async function EnterprisePage({ params }: Props) {
                 {ent.website ? <InfoChip label="官网" value={ent.website} href={ent.website} /> : null}
               </div>
             )}
+            <div className="mt-8 grid gap-3 sm:grid-cols-3">
+              {stats.map((item) => (
+                <div key={item.label} className={`rounded-[22px] border px-4 py-4 shadow-[0_14px_36px_rgba(15,23,42,0.08)] ${meta.statsTone}`}>
+                  <p className={`text-[11px] uppercase tracking-[0.22em] ${isSimpleTemplate ? "text-muted" : "text-white/68"}`}>{item.label}</p>
+                  <p className={`mt-3 text-2xl font-semibold ${isSimpleTemplate ? "text-primary" : "text-white"}`}>{item.value}</p>
+                </div>
+              ))}
+            </div>
           </div>
 
           {!isSimpleTemplate && showcaseGallery[0] ? (
@@ -248,14 +278,15 @@ export default async function EnterprisePage({ params }: Props) {
             </ContentCard>
           ) : null}
 
-          {siteSettings.modules.brands && articles.length > 0 ? (
+          {siteSettings.modules.news && articles.length > 0 ? (
             <ContentCard title={meta.articlesTitle}>
-              <div className="space-y-3">
+              <div className="grid gap-3 md:grid-cols-2">
                 {articles.map((article) => (
-                  <div key={article.id} className="rounded-2xl border border-border bg-surface px-4 py-4">
-                    <p className="text-sm font-medium text-primary">{article.title}</p>
-                    <p className="mt-1 text-xs text-muted">发布时间：{formatDate(article.createdAt)}</p>
-                  </div>
+                  <Link key={article.id} href={`/news/${article.slug}`} className="rounded-[24px] border border-border bg-surface px-4 py-4 transition hover:-translate-y-0.5 hover:border-accent/35 hover:bg-white hover:shadow-[0_18px_36px_rgba(15,23,42,0.08)]">
+                    <p className="text-[11px] uppercase tracking-[0.22em] text-muted">Enterprise News</p>
+                    <p className="mt-3 text-sm font-medium leading-7 text-primary">{article.title}</p>
+                    <p className="mt-3 text-xs text-muted">发布时间：{formatDate(article.createdAt)}</p>
+                  </Link>
                 ))}
               </div>
             </ContentCard>
@@ -263,6 +294,34 @@ export default async function EnterprisePage({ params }: Props) {
         </div>
 
         <div className="space-y-8">
+          {siteSettings.modules.gallery && secondaryGallery.length > 0 ? (
+            <ContentCard title={meta.galleryTitle}>
+              <div className="grid grid-cols-2 gap-3">
+                {secondaryGallery.map((image) => (
+                  <a
+                    key={image.id}
+                    href={resolveUploadedImageUrl(image.imageUrl)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="group block overflow-hidden rounded-[22px] border border-border bg-white"
+                  >
+                    <Image
+                      src={resolveUploadedImageUrl(image.imageUrl)}
+                      alt={image.title ?? name}
+                      width={500}
+                      height={380}
+                      className="h-36 w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+                    />
+                    <div className="px-3 py-3">
+                      <p className="line-clamp-1 text-sm text-primary">{image.title || name}</p>
+                      <p className="mt-1 text-xs text-muted">{formatDate(image.createdAt)}</p>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </ContentCard>
+          ) : null}
+
           {siteSettings.modules.contact && (ent.contactPerson || ent.contactPhone || ent.contactInfo || ent.website) ? (
             <ContentCard title="联系与合作">
               <InfoGrid
@@ -305,23 +364,6 @@ export default async function EnterprisePage({ params }: Props) {
         </div>
       </div>
 
-      {!isServiceTemplate && secondaryGallery.length > 0 ? (
-        <ContentCard title={meta.galleryTitle}>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {secondaryGallery.map((image) => (
-              <a key={image.id} href={resolveUploadedImageUrl(image.imageUrl)} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-2xl border border-border bg-white">
-                <Image
-                  src={resolveUploadedImageUrl(image.imageUrl)}
-                  alt={image.title ?? name}
-                  width={500}
-                  height={380}
-                  className="h-32 w-full object-cover"
-                />
-              </a>
-            ))}
-          </div>
-        </ContentCard>
-      ) : null}
     </div>
   );
 }
