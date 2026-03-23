@@ -38,6 +38,8 @@ Thumbs.db
 .tmp-*
 docs/
 seedance2/
+data/legacy/
+scripts/import-legacy-companies.ts
 
 # prisma
 prisma/migrations/**/migration_lock.toml
