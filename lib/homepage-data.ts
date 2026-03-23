@@ -1,4 +1,4 @@
-import { articleOrderByPinnedLatest, articleOrderByPinnedPopular } from "@/lib/articles";
+﻿import { articleOrderByPinnedLatest, articleOrderByPinnedPopular } from "@/lib/articles";
 import { ENGINEER_CATEGORY_LABELS, getLatestHuadianYear, getTop10ByYear } from "@/lib/huadianbang";
 import { prisma } from "@/lib/prisma";
 import { getSiteVisualSettings } from "@/lib/site-visual-settings";
@@ -131,11 +131,11 @@ export async function getHomepageData() {
     {
       title: "整木标准",
       subtitle: "材料 / 工艺 / 服务",
-      desc: "以结构化标准体系支撑落地执行与跨团队协作。",
+      desc: "以结构化标准体系支持落地执行与跨团队协作。",
       href: "/standards/all",
       image: visualSettings.backgrounds.homeStructureStandards,
       items: safeStandards.map((item) => ({
-        label: `${item.versionLabel ? `${item.versionLabel} · ` : ""}${item.title}`,
+        label: `${item.versionLabel ? `${item.versionLabel} 路 ` : ""}${item.title}`,
         href: `/standards/${item.slug || item.id}`,
       })),
     },
@@ -146,7 +146,7 @@ export async function getHomepageData() {
       href: "/awards",
       image: visualSettings.backgrounds.homeStructureAwards,
       items: safeAwards.map((item) => ({
-        label: `${item.year ? `${item.year} · ` : ""}${item.title}`,
+        label: `${item.year ? `${item.year} 路 ` : ""}${item.title}`,
         href: `/awards/${item.slug || item.id}`,
       })),
     },

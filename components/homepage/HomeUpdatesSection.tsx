@@ -1,4 +1,4 @@
-import Image from "next/image";
+﻿import Image from "next/image";
 import Link from "next/link";
 import { buildNewsPath } from "@/lib/share-config";
 
@@ -30,7 +30,13 @@ export function HomeUpdatesSection({
           {hasBanner ? (
             <>
               <Image src={bannerSrc} alt="" fill sizes="(max-width: 1024px) 100vw, 1152px" className="showcase-backdrop absolute inset-0" />
-              <Image src={bannerSrc} alt="整木资讯速览栏目横幅" fill sizes="(max-width: 1024px) 100vw, 1152px" className="absolute inset-0 h-full w-full object-cover object-[center_42%]" />
+              <Image
+                src={bannerSrc}
+                alt="整木资讯速览栏目横幅"
+                fill
+                sizes="(max-width: 1024px) 100vw, 1152px"
+                className="absolute inset-0 h-full w-full object-cover object-[center_42%]"
+              />
             </>
           ) : (
             <>

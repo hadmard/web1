@@ -1,4 +1,4 @@
-import Image from "next/image";
+﻿import Image from "next/image";
 import { StructuredSearch } from "@/components/StructuredSearch";
 
 export function HomeHeroSection({ heroBackground }: { heroBackground: string }) {

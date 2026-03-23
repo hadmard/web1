@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import { HomeEnterpriseSection } from "@/components/homepage/HomeEnterpriseSection";
 import { HomeHeroSection } from "@/components/homepage/HomeHeroSection";
 import { HomeHuadianSection } from "@/components/homepage/HomeHuadianSection";
