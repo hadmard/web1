@@ -255,13 +255,30 @@ async function transferPastedRemoteImages(rawHtml: string): Promise<{ html: stri
     })
     .filter((item) => item.original && item.normalized);
 
+  async function uploadPastedImageSource(source: string) {
+    const trimmed = source.trim();
+    if (!trimmed) return "";
+
+    if (trimmed.startsWith("data:image/")) {
+      const response = await fetch(trimmed);
+      const blob = await response.blob();
+      const ext = blob.type.split("/")[1] || "png";
+      const file = new File([blob], `pasted-${Date.now()}.${ext}`, { type: blob.type || "image/png" });
+      return uploadImageToServer(file, { folder: "content/editor-inline" });
+    }
+
+    return uploadRemoteImageToServer(trimmed, { folder: "content/editor-inline" });
+  }
+
   for (const item of sources) {
-    if (imageMap.has(item.original)) continue;
+    if (imageMap.has(item.original) || imageMap.has(item.normalized)) continue;
     try {
-      const uploadedUrl = await uploadRemoteImageToServer(item.normalized, { folder: "content/editor-inline" });
+      const uploadedUrl = await uploadPastedImageSource(item.normalized);
       imageMap.set(item.original, uploadedUrl);
+      imageMap.set(item.normalized, uploadedUrl);
     } catch {
       imageMap.set(item.original, "");
+      imageMap.set(item.normalized, "");
       failedCount += 1;
     }
   }
@@ -310,7 +327,7 @@ const RichImage = Image.extend({
     const attrs = HTMLAttributes as ImageAttrs & { style?: string };
     const styles: string[] = ["display:block"];
 
-    if (attrs.width) styles.push(`width:${attrs.width}px`);
+    if (attrs.width) styles.push(`width:${attrs.width}px`, "max-width:100%");
     if (attrs.height) styles.push(`height:${attrs.height}px`);
     else styles.push("height:auto");
     if (!attrs.width) styles.push("max-width:100%", "width:100%");
@@ -379,7 +396,7 @@ export function RichEditor({
   const [ratio, setRatio] = useState(1);
   const [selectedImagePos, setSelectedImagePos] = useState<number | null>(null);
 
-  const DEFAULT_IMAGE_WIDTH = 420;
+  const DEFAULT_IMAGE_WIDTH = 600;
 
   const editor = useEditor({
     extensions: [
@@ -406,12 +423,13 @@ export function RichEditor({
         class: "rich-editor-content focus:outline-none",
       },
       transformPastedHTML(html) {
-        return sanitizePastedHtml(html);
+        return allowClipboardImagePaste ? html : sanitizePastedHtml(html);
       },
       handlePaste(view, event) {
         const clipboard = event.clipboardData;
         if (!clipboard) return false;
         const pastedHtml = clipboard.getData("text/html");
+        const pastedText = clipboard.getData("text/plain");
         const imageFile =
           Array.from(clipboard.items)
             .find((x) => x.type.startsWith("image/"))
@@ -423,10 +441,17 @@ export function RichEditor({
           }, 0);
           return true;
         }
-        if (allowClipboardImagePaste && pastedHtml && /<img[\s>]/i.test(pastedHtml)) {
+        if (allowClipboardImagePaste && pastedHtml) {
           event.preventDefault();
           window.setTimeout(() => {
             void insertPastedHtmlRef.current?.(pastedHtml);
+          }, 0);
+          return true;
+        }
+        if (allowClipboardImagePaste && pastedText && /https?:\/\/\S+\.(?:png|jpe?g|webp|gif)(?:\?\S*)?$/i.test(pastedText.trim())) {
+          event.preventDefault();
+          window.setTimeout(() => {
+            void insertPastedHtmlRef.current?.(`<p><img src="${pastedText.trim()}" alt="" /></p>`);
           }, 0);
           return true;
         }
@@ -730,7 +755,7 @@ export function RichEditor({
                 applyImageSize();
               }
             }}
-            placeholder="宽（默认420）"
+            placeholder="宽（默认600）"
           />
           <span className="text-[#b39b73]">×</span>
           <input

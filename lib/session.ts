@@ -24,25 +24,25 @@ export type Session = {
   canEditAllContent: boolean;
 };
 
-/** 服务端获取当前登录用户（含角色），未登录返回 null */
 export async function getSession(): Promise<Session | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get("auth")?.value;
   if (!token) return null;
+
   const payload = await verifyToken(token);
   if (!payload) return null;
 
   let dbMember:
     | {
-      id: string;
-      email: string;
-      name: string | null;
-      enterprise?: {
-        companyShortName: string | null;
-        companyName: string | null;
-        contactPerson: string | null;
-      } | null;
-      role: string | null;
+        id: string;
+        email: string;
+        name: string | null;
+        enterprise?: {
+          companyShortName: string | null;
+          companyName: string | null;
+          contactPerson: string | null;
+        } | null;
+        role: string | null;
         memberType: string;
         rankingWeight: number;
         memberTypeExpiresAt: Date | null;
@@ -86,7 +86,6 @@ export async function getSession(): Promise<Session | null> {
       },
     });
   } catch {
-    // Backward-compatible read when DB migration has not been applied yet.
     dbMember = await prisma.member.findUnique({
       where: { id: payload.sub },
       select: {
@@ -108,6 +107,7 @@ export async function getSession(): Promise<Session | null> {
       },
     });
   }
+
   if (!dbMember) return null;
 
   const effective = await ensureEffectiveMemberType({
@@ -117,8 +117,9 @@ export async function getSession(): Promise<Session | null> {
     rankingWeight: dbMember.rankingWeight,
   });
 
+  const resolvedRole = dbMember.role ?? payload.role ?? null;
   const permissions = resolvePermissionFlags({
-    role: dbMember.role ?? payload.role ?? null,
+    role: resolvedRole,
     canPublishWithoutReview: dbMember.canPublishWithoutReview ?? false,
     canManageMembers: dbMember.canManageMembers ?? false,
     canDeleteOwnContent: dbMember.canDeleteOwnContent ?? false,
@@ -129,13 +130,15 @@ export async function getSession(): Promise<Session | null> {
     canEditAllContent: dbMember.canEditAllContent ?? false,
   });
 
-  const displayName =
-    dbMember.enterprise?.companyShortName?.trim() ||
-    dbMember.enterprise?.companyName?.trim() ||
-    dbMember.name?.trim() ||
-    dbMember.enterprise?.contactPerson?.trim() ||
-    dbMember.email.split("@")[0]?.trim() ||
-    "会员";
+  const isAdminRole = resolvedRole === "SUPER_ADMIN" || resolvedRole === "ADMIN";
+  const displayName = isAdminRole
+    ? dbMember.name?.trim() || dbMember.email.split("@")[0]?.trim() || "管理员"
+    : dbMember.enterprise?.companyShortName?.trim() ||
+      dbMember.enterprise?.companyName?.trim() ||
+      dbMember.name?.trim() ||
+      dbMember.enterprise?.contactPerson?.trim() ||
+      dbMember.email.split("@")[0]?.trim() ||
+      "会员";
 
   return {
     sub: payload.sub,
@@ -143,7 +146,7 @@ export async function getSession(): Promise<Session | null> {
     name: dbMember.name ?? null,
     displayName,
     email: payload.email,
-    role: dbMember.role ?? payload.role ?? null,
+    role: resolvedRole,
     memberType: asMemberType(effective.memberType),
     rankingWeight: effective.rankingWeight,
     memberTypeExpiresAt: dbMember.memberTypeExpiresAt?.toISOString() ?? null,
