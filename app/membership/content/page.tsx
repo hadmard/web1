@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type DashboardData = {
   member: {
@@ -57,13 +57,25 @@ type DashboardData = {
   } | null;
 };
 
-const QUICK_LINKS = [
-  { href: "/membership/profile", label: "基础信息管理", desc: "维护企业资料、标签、联系信息" },
-  { href: "/membership/content/site", label: "会员站管理", desc: "设置会员站首页模块、SEO 与同步项" },
-  { href: "/membership/content/publish?tab=articles", label: "内容发布", desc: "发布资讯、词库、标准等内容" },
-  { href: "/membership/content/status", label: "审核与参与记录", desc: "查看投稿、标准反馈、认证状态" },
-  { href: "/membership/content/verification", label: "企业认证", desc: "提交企业认证并跟踪审核状态" },
+const PRIMARY_ACTIONS = [
+  { href: "/membership/content/publish?tab=articles", label: "发布内容", desc: "去资讯、词库、标准等栏目投稿" },
+  { href: "/membership/profile", label: "基础资料", desc: "维护企业简介、标签和联系方式" },
+  { href: "/membership/content/site", label: "会员站设置", desc: "设置模板、首页文案和模块开关" },
+  { href: "/membership/content/verification", label: "企业认证", desc: "提交或修改认证资料，查看审核结果" },
 ];
+
+const SECONDARY_ACTIONS = [
+  { href: "/membership/content/status", label: "审核记录" },
+  { href: "/membership/content/news", label: "资讯管理" },
+  { href: "/membership/content/gallery", label: "图库入口" },
+];
+
+function verificationText(status: string | null | undefined) {
+  if (status === "approved") return "已通过";
+  if (status === "rejected") return "已驳回";
+  if (status === "pending") return "待审核";
+  return "未提交";
+}
 
 export default function MemberContentPage() {
   const [authed, setAuthed] = useState<boolean | null>(null);
@@ -94,14 +106,19 @@ export default function MemberContentPage() {
     })();
   }, []);
 
+  const verification = useMemo(
+    () => verificationText(data?.latestVerification?.status),
+    [data?.latestVerification?.status]
+  );
+
   if (loading) {
-    return <div className="max-w-6xl mx-auto px-4 py-12 text-muted">加载中...</div>;
+    return <div className="mx-auto max-w-6xl px-4 py-12 text-muted">加载中...</div>;
   }
 
   if (authed === false) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-12">
-        <p className="text-sm text-muted mb-3">请先登录后进入会员后台。</p>
+      <div className="mx-auto max-w-4xl px-4 py-12">
+        <p className="mb-3 text-sm text-muted">请先登录后进入会员后台。</p>
         <Link href="/membership/login" className="apple-inline-link">
           前往登录
         </Link>
@@ -110,106 +127,132 @@ export default function MemberContentPage() {
   }
 
   if (!data) {
-    return <div className="max-w-6xl mx-auto px-4 py-12 text-sm text-muted">{message || "加载失败"}</div>;
+    return <div className="mx-auto max-w-6xl px-4 py-12 text-sm text-muted">{message || "加载失败"}</div>;
   }
 
-  const isEnterprise = data.member.type !== "personal";
+  const displayName = data.enterprise?.companyShortName || data.enterprise?.companyName || "当前会员";
+  const newsQuota = data.authorization.news.enabled
+    ? data.authorization.news.annualLimit == null
+      ? "不限"
+      : `${data.authorization.news.remainingCount ?? 0}/${data.authorization.news.annualLimit}`
+    : "未开通";
+  const galleryQuota = data.authorization.gallery.enabled
+    ? data.authorization.gallery.annualLimit == null
+      ? "不限"
+      : `${data.authorization.gallery.remainingCount ?? 0}/${data.authorization.gallery.annualLimit}`
+    : "未开通";
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-12 space-y-6">
-      <header className="overflow-hidden rounded-[30px] border border-border bg-surface-elevated shadow-[0_24px_60px_rgba(15,23,42,0.08)]">
-        <div className="bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(244,239,230,0.9))] p-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="text-sm text-muted">会员后台</p>
-            <h1 className="mt-2 font-serif text-3xl font-semibold text-primary">会员成长驾驶舱</h1>
-            <p className="mt-3 text-sm text-muted">
-              当前会员类型：{data.member.label}
-              {data.enterprise?.companyShortName || data.enterprise?.companyName
-                ? ` · ${data.enterprise.companyShortName || data.enterprise.companyName}`
-                : ""}
-            </p>
-          </div>
-          <div className="rounded-[24px] border border-border bg-white/85 px-4 py-4 text-sm text-muted shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
-            <p>当前年份：{data.authorization.year}</p>
-            <p>资讯剩余：{data.authorization.news.enabled ? (data.authorization.news.annualLimit == null ? "不限" : `${data.authorization.news.remainingCount ?? 0}/${data.authorization.news.annualLimit}`) : "未开通"}</p>
-            <p>图库剩余：{data.authorization.gallery.enabled ? (data.authorization.gallery.annualLimit == null ? "不限" : `${data.authorization.gallery.remainingCount ?? 0}/${data.authorization.gallery.annualLimit}`) : "未开通"}</p>
-            <p>展示权重：{data.member.rankingWeight}</p>
-            <p>资讯额度：{data.quotas.newsPublishLimit == null ? "不限" : `${data.quotas.newsPublishLimit} 篇`}</p>
-            <p>推荐额度：{data.quotas.monthlyRecommendationLimit} 篇 / 月</p>
+    <div className="mx-auto max-w-7xl px-4 py-12 space-y-6">
+      <section className="overflow-hidden rounded-[32px] border border-border bg-surface-elevated shadow-[0_24px_60px_rgba(15,23,42,0.08)]">
+        <div className="bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(244,239,230,0.92))] px-6 py-7">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-[0.24em] text-muted">Member Console</p>
+              <h1 className="mt-3 font-serif text-3xl font-semibold tracking-tight text-primary">会员后台</h1>
+              <p className="mt-3 text-sm text-muted">
+                {displayName} · {data.member.label}
+              </p>
+              <p className="mt-2 text-sm text-muted">
+                把常用操作收进一个工作台里：资料、认证、发布、会员站，都从这里进。
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <HeroMiniCard label="资讯额度" value={newsQuota} />
+              <HeroMiniCard label="图库额度" value={galleryQuota} />
+              <HeroMiniCard label="认证状态" value={verification} />
+            </div>
           </div>
         </div>
-        </div>
-      </header>
-
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="资讯内容" value={data.stats.articles.total} sub={`待审 ${data.stats.articles.pending} · 通过 ${data.stats.articles.approved}`} />
-        <StatCard label="图库内容" value={data.stats.gallery.total} sub={`待审 ${data.stats.gallery.pending} · 通过 ${data.stats.gallery.approved}`} />
-        <StatCard label="标准参与" value={data.stats.standardFeedback.total} sub={`待审 ${data.stats.standardFeedback.pending} · 通过 ${data.stats.standardFeedback.approved}`} />
-        <StatCard
-          label="会员站模块"
-          value={data.siteSettingsSummary?.enabledModules ?? 0}
-          sub={data.siteSettingsSummary?.syncEnabled ? "同步已开启" : "同步未开启"}
-        />
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-[1.4fr,1fr]">
+      <section className="grid gap-4 xl:grid-cols-[1.15fr,0.85fr]">
         <article className="rounded-[28px] border border-border bg-surface-elevated p-6 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
-          <h2 className="text-lg font-semibold text-primary">功能入口</h2>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            {QUICK_LINKS.map((item) => (
-              <Link key={item.href} href={item.href} className="rounded-[22px] border border-border bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(244,239,230,0.86))] px-4 py-4 transition hover:border-accent/30 hover:shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
-                <p className="text-sm font-medium text-primary">{item.label}</p>
-                <p className="mt-1 text-xs text-muted">{item.desc}</p>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold text-primary">常用操作</h2>
+              <p className="mt-1 text-sm text-muted">主流后台更像一个工作台，不需要你先分辨一堆页面。</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {SECONDARY_ACTIONS.map((item) => (
+                <Link key={item.href} href={item.href} className="rounded-full border border-border bg-surface px-3 py-1.5 text-xs text-primary transition hover:bg-white">
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+          <div className="mt-5 grid gap-3 md:grid-cols-2">
+            {PRIMARY_ACTIONS.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="rounded-[24px] border border-border bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(244,239,230,0.86))] px-5 py-5 transition hover:-translate-y-0.5 hover:border-accent/35 hover:shadow-[0_14px_30px_rgba(15,23,42,0.08)]"
+              >
+                <p className="text-base font-medium text-primary">{item.label}</p>
+                <p className="mt-2 text-sm leading-6 text-muted">{item.desc}</p>
               </Link>
             ))}
           </div>
         </article>
 
         <article className="rounded-[28px] border border-border bg-surface-elevated p-6 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
-          <h2 className="text-lg font-semibold text-primary">状态提醒</h2>
-          <div className="mt-4 space-y-3 text-sm text-muted">
-            <InfoRow label="当前授权年度" value={String(data.authorization.year)} />
-            <InfoRow label="标准反馈" value={data.features.canSubmitStandardFeedback ? `已开通 · 本年 ${data.authorization.standardFeedback.usedCount}` : "未开通"} />
-            <InfoRow label="企业认证" value={data.latestVerification ? data.latestVerification.status : "未提交"} />
+          <h2 className="text-lg font-semibold text-primary">账号状态</h2>
+          <div className="mt-4 space-y-3">
+            <InfoRow label="授权年度" value={String(data.authorization.year)} />
             <InfoRow label="会员站标题" value={data.siteSettingsSummary?.heroTitle || "未设置"} />
-            <InfoRow label="企业资料" value={isEnterprise ? "可维护" : "个人会员不适用"} />
+            <InfoRow label="会员站模块" value={`${data.siteSettingsSummary?.enabledModules ?? 0} 个`} />
+            <InfoRow label="认证状态" value={verification} />
             <InfoRow label="词库共建" value={data.features.supportsDictionaryContribution ? "已开通" : "未开通"} />
-            <InfoRow label="标准共建" value={data.features.supportsStandardCoBuild ? "已开通" : "未开通"} />
-            <InfoRow label="子账号管理" value={data.features.supportsSubAccounts ? "已开通" : "暂未开通"} />
+            <InfoRow label="标准参与" value={data.features.supportsStandardCoBuild ? "已开通" : "未开通"} />
           </div>
         </article>
       </section>
 
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <StatCard label="资讯内容" value={data.stats.articles.total} sub={`待审核 ${data.stats.articles.pending} · 已通过 ${data.stats.articles.approved}`} />
+        <StatCard label="图库内容" value={data.stats.gallery.total} sub={`待审核 ${data.stats.gallery.pending} · 已通过 ${data.stats.gallery.approved}`} />
+        <StatCard label="标准反馈" value={data.stats.standardFeedback.total} sub={`待审核 ${data.stats.standardFeedback.pending} · 已通过 ${data.stats.standardFeedback.approved}`} />
+        <StatCard label="推荐额度" value={data.authorization.recommendation.remainingCount} sub={`全年 ${data.authorization.recommendation.annualLimit} 次`} />
+      </section>
+
       <section className="grid gap-4 lg:grid-cols-3">
         <FeaturePanel
-          title="企业后台"
+          title="企业展示"
           items={[
-            { label: "基础信息维护", enabled: data.features.supportsEnterpriseProfile },
-            { label: "会员站模块设置", enabled: data.features.supportsEnterpriseSite },
+            { label: "企业资料维护", enabled: data.features.supportsEnterpriseProfile },
+            { label: "会员站设置", enabled: data.features.supportsEnterpriseSite },
             { label: "SEO 设置", enabled: data.features.supportsSeoSettings },
-            { label: "同步扩展", enabled: isEnterprise },
+            { label: "同步扩展", enabled: Boolean(data.siteSettingsSummary?.syncEnabled) },
           ]}
         />
         <FeaturePanel
-          title="内容与审核"
+          title="内容权限"
           items={[
-            { label: "资讯发布审核", enabled: true },
-            { label: "图库发布审核", enabled: isEnterprise },
+            { label: "资讯发布", enabled: data.authorization.news.enabled },
+            { label: "图库上传", enabled: data.features.canUploadGallery },
             { label: "词库共建", enabled: data.features.supportsDictionaryContribution },
-            { label: "标准建议", enabled: data.features.supportsStandardCoBuild },
+            { label: "标准反馈", enabled: data.features.canSubmitStandardFeedback },
           ]}
         />
         <FeaturePanel
-          title="成长与展示"
+          title="成长权益"
           items={[
             { label: "推荐位资格", enabled: data.features.canRecommendContent },
-            { label: "优先展示", enabled: true },
-            { label: "行业信用沉淀", enabled: true },
-            { label: "搜索排序加权", enabled: true },
+            { label: "排序加权", enabled: true },
+            { label: "信用沉淀", enabled: true },
+            { label: "子账号管理", enabled: data.features.supportsSubAccounts },
           ]}
         />
       </section>
+    </div>
+  );
+}
+
+function HeroMiniCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-[24px] border border-border bg-white/85 px-4 py-4 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
+      <p className="text-[11px] uppercase tracking-[0.2em] text-muted">{label}</p>
+      <p className="mt-3 text-lg font-semibold text-primary">{value}</p>
     </div>
   );
 }
@@ -227,7 +270,7 @@ function StatCard({ label, value, sub }: { label: string; value: number; sub: st
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-3 rounded-[20px] border border-border bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(244,239,230,0.84))] px-3 py-2">
-      <span>{label}</span>
+      <span className="text-muted">{label}</span>
       <span className="text-primary">{value}</span>
     </div>
   );
@@ -254,4 +297,3 @@ function FeaturePanel({
     </article>
   );
 }
-
