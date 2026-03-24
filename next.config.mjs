@@ -1,5 +1,12 @@
 /** @type {import('next').NextConfig} */
-const legacyNewsSectionAliases = ["cnews", "logdiary", "home", "brand", "choose", "collocation"];
+const legacyNewsSectionAliasRedirects = [
+  { section: "cnews", destination: "/news/enterprise" },
+  { section: "logdiary", destination: "https://jiu.cnzhengmu.com/news/logdiary" },
+  { section: "home", destination: "https://jiu.cnzhengmu.com/news/home" },
+  { section: "brand", destination: "https://jiu.cnzhengmu.com/news/brand" },
+  { section: "choose", destination: "https://jiu.cnzhengmu.com/news/choose" },
+  { section: "collocation", destination: "https://jiu.cnzhengmu.com/news/collocation" },
+];
 const legacyNewsStaticSections = ["baoguang", "hangye", "jingpei", "qiye", "shichang", "top10"];
 const legacyAcademySections = ["jingying", "lingxiu", "zhuanjia"];
 const legacyTopicSections = ["kannanxun", "shanghaijianbohui"];
@@ -135,15 +142,15 @@ const nextConfig = {
           permanent: false,
         },
       ]),
-      ...legacyNewsSectionAliases.flatMap((section) => [
+      ...legacyNewsSectionAliasRedirects.flatMap(({ section, destination }) => [
         {
           source: `/news/${section}`,
-          destination: `https://jiu.cnzhengmu.com/news/${section}`,
+          destination,
           permanent: false,
         },
         {
           source: `/news/${section}/`,
-          destination: `https://jiu.cnzhengmu.com/news/${section}`,
+          destination,
           permanent: false,
         },
       ]),
