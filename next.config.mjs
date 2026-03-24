@@ -1,4 +1,6 @@
 /** @type {import('next').NextConfig} */
+const legacyNewsSectionAliases = ["cnews", "logdiary", "home", "brand", "choose", "collocation"];
+
 const nextConfig = {
   reactStrictMode: true,
   async redirects() {
@@ -68,6 +70,18 @@ const nextConfig = {
         destination: "https://jiu.cnzhengmu.com/news/:section/:id.html",
         permanent: false,
       },
+      ...legacyNewsSectionAliases.flatMap((section) => [
+        {
+          source: `/news/${section}`,
+          destination: `https://jiu.cnzhengmu.com/news/${section}`,
+          permanent: false,
+        },
+        {
+          source: `/news/${section}/`,
+          destination: `https://jiu.cnzhengmu.com/news/${section}`,
+          permanent: false,
+        },
+      ]),
       {
         source: "/news/:id.html",
         destination: "https://jiu.cnzhengmu.com/news/:id.html",
