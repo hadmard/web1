@@ -17,6 +17,7 @@ import { articleOrderByPinnedLatest } from "@/lib/articles";
 
 export const revalidate = 300;
 export const dynamic = "force-dynamic";
+const LEGACY_SITE_URL = "https://jiu.cnzhengmu.com";
 
 const SHARE_SITE_NAME = "中华整木网";
 const NEWS_SUBCATEGORY_META: Record<string, { title: string; description: string }> = {
@@ -60,6 +61,10 @@ type Props = {
 
 const NEWS_SUB_SLUGS = new Set(["trends", "enterprise", "tech", "events"]);
 
+function isLegacyNumericNewsId(value: string) {
+  return /^\d+$/.test((value || "").trim());
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   if (NEWS_SUB_SLUGS.has(slug)) {
@@ -71,6 +76,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       type: "website",
       image: DEFAULT_NEWS_SHARE_IMAGE,
     });
+  }
+
+  if (isLegacyNumericNewsId(slug)) {
+    return {
+      title: "整木资讯",
+      alternates: { canonical: `${LEGACY_SITE_URL}/index.php?m=news&c=shows&id=${encodeURIComponent(slug)}` },
+    };
   }
 
   const article = await findNewsArticleBySegment(slug);
@@ -241,7 +253,12 @@ export default async function ArticlePage({ params, searchParams }: Props) {
   }
 
   const article = await findNewsArticleBySegment(slug);
-  if (!article || article.status !== "approved") notFound();
+  if (!article || article.status !== "approved") {
+    if (isLegacyNumericNewsId(slug)) {
+      redirect(`${LEGACY_SITE_URL}/index.php?m=news&c=shows&id=${encodeURIComponent(slug)}`);
+    }
+    notFound();
+  }
 
   const currentSegment = normalizeNewsSegment(slug);
   if (currentSegment !== article.id) {
