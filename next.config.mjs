@@ -79,6 +79,16 @@ const nextConfig = {
         permanent: false,
       },
       {
+        source: "/zhanhui/:section",
+        destination: "https://jiu.cnzhengmu.com/zhanhui/:section/",
+        permanent: false,
+      },
+      {
+        source: "/zhanhui/:section/",
+        destination: "https://jiu.cnzhengmu.com/zhanhui/:section/",
+        permanent: false,
+      },
+      {
         source: "/shangxueyuan/:section/:id.html",
         destination: "https://jiu.cnzhengmu.com/shangxueyuan/:section/:id.html",
         permanent: false,
