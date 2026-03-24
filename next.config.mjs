@@ -1,10 +1,43 @@
 /** @type {import('next').NextConfig} */
 const legacyNewsSectionAliases = ["cnews", "logdiary", "home", "brand", "choose", "collocation"];
+const legacyNewsStaticSections = ["baoguang", "hangye", "jingpei", "qiye", "shichang", "top10"];
+const legacyAcademySections = ["jingying", "lingxiu", "zhuanjia"];
+const legacyTopicSections = ["kannanxun", "shanghaijianbohui"];
 
 const nextConfig = {
   reactStrictMode: true,
   async redirects() {
     return [
+      {
+        source: "/list-:id.html",
+        destination: "https://jiu.cnzhengmu.com/list-:id.html",
+        permanent: false,
+      },
+      {
+        source: "/list-:id-:page.html",
+        destination: "https://jiu.cnzhengmu.com/list-:id-:page.html",
+        permanent: false,
+      },
+      {
+        source: "/about",
+        destination: "https://jiu.cnzhengmu.com/about/",
+        permanent: false,
+      },
+      {
+        source: "/about/",
+        destination: "https://jiu.cnzhengmu.com/about/",
+        permanent: false,
+      },
+      {
+        source: "/gonggao",
+        destination: "https://jiu.cnzhengmu.com/gonggao/",
+        permanent: false,
+      },
+      {
+        source: "/gonggao/",
+        destination: "https://jiu.cnzhengmu.com/gonggao/",
+        permanent: false,
+      },
       {
         source: "/company/:id.html",
         destination: "https://jiu.cnzhengmu.com/company/:id.html",
@@ -66,10 +99,42 @@ const nextConfig = {
         permanent: false,
       },
       {
+        source: "/news/baitai/:slug.html",
+        destination: "/news/all",
+        statusCode: 301,
+      },
+      {
+        source: "/news/baitai/:path*",
+        destination: "/news/all",
+        statusCode: 301,
+      },
+      {
+        source: "/news/baitai",
+        destination: "/news/all",
+        statusCode: 301,
+      },
+      {
+        source: "/news/baitai/",
+        destination: "/news/all",
+        statusCode: 301,
+      },
+      {
         source: "/news/:section/:id.html",
         destination: "https://jiu.cnzhengmu.com/news/:section/:id.html",
         permanent: false,
       },
+      ...legacyNewsStaticSections.flatMap((section) => [
+        {
+          source: `/news/${section}`,
+          destination: `https://jiu.cnzhengmu.com/news/${section}/`,
+          permanent: false,
+        },
+        {
+          source: `/news/${section}/`,
+          destination: `https://jiu.cnzhengmu.com/news/${section}/`,
+          permanent: false,
+        },
+      ]),
       ...legacyNewsSectionAliases.flatMap((section) => [
         {
           source: `/news/${section}`,
@@ -85,6 +150,16 @@ const nextConfig = {
       {
         source: "/news/:id.html",
         destination: "https://jiu.cnzhengmu.com/news/:id.html",
+        permanent: false,
+      },
+      {
+        source: "/zhanhui",
+        destination: "https://jiu.cnzhengmu.com/zhanhui/",
+        permanent: false,
+      },
+      {
+        source: "/zhanhui/",
+        destination: "https://jiu.cnzhengmu.com/zhanhui/",
         permanent: false,
       },
       {
@@ -107,6 +182,50 @@ const nextConfig = {
         destination: "https://jiu.cnzhengmu.com/shangxueyuan/:section/:id.html",
         permanent: false,
       },
+      {
+        source: "/shangxueyuan",
+        destination: "https://jiu.cnzhengmu.com/shangxueyuan/",
+        permanent: false,
+      },
+      {
+        source: "/shangxueyuan/",
+        destination: "https://jiu.cnzhengmu.com/shangxueyuan/",
+        permanent: false,
+      },
+      ...legacyAcademySections.flatMap((section) => [
+        {
+          source: `/shangxueyuan/${section}`,
+          destination: `https://jiu.cnzhengmu.com/shangxueyuan/${section}/`,
+          permanent: false,
+        },
+        {
+          source: `/shangxueyuan/${section}/`,
+          destination: `https://jiu.cnzhengmu.com/shangxueyuan/${section}/`,
+          permanent: false,
+        },
+      ]),
+      {
+        source: "/zhuanti",
+        destination: "https://jiu.cnzhengmu.com/zhuanti/shanghaijianbohui/",
+        permanent: false,
+      },
+      {
+        source: "/zhuanti/",
+        destination: "https://jiu.cnzhengmu.com/zhuanti/shanghaijianbohui/",
+        permanent: false,
+      },
+      ...legacyTopicSections.flatMap((section) => [
+        {
+          source: `/zhuanti/${section}`,
+          destination: `https://jiu.cnzhengmu.com/zhuanti/${section}/`,
+          permanent: false,
+        },
+        {
+          source: `/zhuanti/${section}/`,
+          destination: `https://jiu.cnzhengmu.com/zhuanti/${section}/`,
+          permanent: false,
+        },
+      ]),
       {
         source: "/platform/:path*",
         destination: "https://jiu.cnzhengmu.com/platform/:path*",
