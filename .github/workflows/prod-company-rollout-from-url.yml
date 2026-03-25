@@ -1,0 +1,182 @@
+name: Production Company Rollout From URL
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/prod-company-rollout-from-url.yml"
+
+concurrency:
+  group: prod-company-rollout-from-url
+  cancel-in-progress: false
+
+jobs:
+  rollout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Download legacy company export
+        run: |
+          mkdir -p custom/data
+          curl -fSL "https://jiu.cnzhengmu.com/uploads/tmp-import/legacy-companies-ae5cd3251a3a40888b71a772a461a5ba.json" -o custom/data/legacy-companies-export.json
+          node - <<'NODE'
+          const fs = require("node:fs");
+          const rows = JSON.parse(fs.readFileSync("custom/data/legacy-companies-export.json", "utf8"));
+          console.log(`::warning::LEGACY_EXPORT_COUNT=${rows.length}`);
+NODE
+
+      - name: Upload legacy company export to production
+        run: |
+          ssh -o BatchMode=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "mkdir -p /home/web1/custom/data"
+          scp -o BatchMode=yes custom/data/legacy-companies-export.json ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/home/web1/custom/data/legacy-companies-export.json
+
+      - name: Run production company rollout
+        run: |
+          ssh -o BatchMode=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+            set -e
+            cd /home/web1
+            npm run run:company-rollout -- \
+              -InputPath custom/data/legacy-companies-export.json \
+              -Mode apply \
+              -VerifyUrlList custom/samples/company-rollout-verify-urls.txt
+          EOF
+
+      - name: Summarize production database state
+        run: |
+          ssh -o BatchMode=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+            set -e
+            cd /home/web1
+            node - <<'NODE'
+          const fs = require("node:fs");
+          const path = require("node:path");
+          const { PrismaClient } = require("@prisma/client");
+
+          async function main() {
+            const prisma = new PrismaClient();
+            try {
+              const reportDir = path.resolve("custom/reports");
+              const reportNames = fs
+                .readdirSync(reportDir)
+                .filter((name) => /^company-migration-apply-.*\.json$/.test(name))
+                .sort()
+                .reverse();
+              const latestReportPath = reportNames[0] ? path.join(reportDir, reportNames[0]) : null;
+              const latestReport = latestReportPath ? JSON.parse(fs.readFileSync(latestReportPath, "utf8")) : [];
+              const importedCount = Array.isArray(latestReport) ? latestReport.length : 0;
+
+              const visibleBrandCount = await prisma.brand.count({ where: { isBrandVisible: true } });
+              const enterpriseCount = await prisma.enterprise.count();
+              const missingLogoCount = await prisma.brand.count({
+                where: {
+                  isBrandVisible: true,
+                  OR: [{ logoUrl: null }, { logoUrl: "" }],
+                },
+              });
+              const emptyIntroCount = await prisma.enterprise.count({
+                where: {
+                  OR: [{ intro: null }, { intro: "" }],
+                },
+              });
+
+              const duplicates = await prisma.$queryRawUnsafe(`
+                SELECT COUNT(*)::int AS count
+                FROM (
+                  SELECT slug
+                  FROM brands
+                  GROUP BY slug
+                  HAVING COUNT(*) > 1
+                ) dup
+              `);
+              const duplicateSlugCount = Array.isArray(duplicates) && duplicates[0] ? Number(duplicates[0].count ?? 0) : 0;
+
+              const samples = await prisma.brand.findMany({
+                where: { isBrandVisible: true, enterpriseId: { not: null } },
+                orderBy: [{ isRecommend: "desc" }, { sortOrder: "asc" }, { createdAt: "asc" }],
+                take: 3,
+                select: {
+                  slug: true,
+                  logoUrl: true,
+                  enterprise: {
+                    select: {
+                      id: true,
+                      companyName: true,
+                    },
+                  },
+                },
+              });
+
+              console.log(`::warning::PROD_IMPORTED_COUNT=${importedCount}`);
+              console.log(`::warning::PROD_VISIBLE_BRAND_COUNT=${visibleBrandCount}`);
+              console.log(`::warning::PROD_ENTERPRISE_COUNT=${enterpriseCount}`);
+              console.log(`::warning::PROD_DUPLICATE_SLUG_COUNT=${duplicateSlugCount}`);
+              console.log(`::warning::PROD_MISSING_LOGO_COUNT=${missingLogoCount}`);
+              console.log(`::warning::PROD_EMPTY_INTRO_COUNT=${emptyIntroCount}`);
+              samples.forEach((sample, index) => {
+                console.log(`::warning::PROD_SAMPLE_${index + 1}=https://cnzhengmu.com/enterprise/${sample.enterprise.id}`);
+                console.log(`::warning::PROD_SAMPLE_NAME_${index + 1}=${sample.enterprise.companyName ?? sample.slug}`);
+              });
+            } finally {
+              await prisma.$disconnect();
+            }
+          }
+
+          main().catch((error) => {
+            console.error(error);
+            process.exit(1);
+          });
+NODE
+          EOF
+
+      - name: Verify public pages
+        run: |
+          node - <<'NODE'
+          async function fetchText(url) {
+            const response = await fetch(url, { redirect: "follow" });
+            const text = await response.text();
+            return { status: response.status, url: response.url, text };
+          }
+
+          function countUniqueEnterpriseLinks(html) {
+            const hits = [...html.matchAll(/href="\/enterprise\/([^"#?]+)"/g)].map((match) => match[1]);
+            return new Set(hits).size;
+          }
+
+          async function main() {
+            const brands = await fetchText("https://cnzhengmu.com/brands");
+            const brandsAll = await fetchText("https://cnzhengmu.com/brands/all");
+            const brandsDisplayCount = countUniqueEnterpriseLinks(brands.text);
+            const brandsAllDisplayCount = countUniqueEnterpriseLinks(brandsAll.text);
+            const totalMatch = brandsAll.text.match(/共\s*<!-- -->?(\d+)<!-- -->?\s*家|共\s*(\d+)\s*家/);
+            const totalCount = totalMatch ? Number(totalMatch[1] || totalMatch[2] || 0) : 0;
+            const detailLinks = [...new Set([...brandsAll.text.matchAll(/href="(\/enterprise\/[^"#?]+)"/g)].map((match) => `https://cnzhengmu.com${match[1]}`))].slice(0, 3);
+
+            console.log(`::warning::PUBLIC_BRANDS_STATUS=${brands.status}`);
+            console.log(`::warning::PUBLIC_BRANDS_DISPLAY_COUNT=${brandsDisplayCount}`);
+            console.log(`::warning::PUBLIC_BRANDS_ALL_STATUS=${brandsAll.status}`);
+            console.log(`::warning::PUBLIC_BRANDS_ALL_PAGE_COUNT=${brandsAllDisplayCount}`);
+            console.log(`::warning::PUBLIC_BRANDS_ALL_TOTAL=${totalCount}`);
+
+            for (const [index, link] of detailLinks.entries()) {
+              const detail = await fetchText(link);
+              console.log(`::warning::PUBLIC_DETAIL_${index + 1}=${detail.url}`);
+              console.log(`::warning::PUBLIC_DETAIL_STATUS_${index + 1}=${detail.status}`);
+            }
+          }
+
+          main().catch((error) => {
+            console.error(error);
+            process.exit(1);
+          });
+NODE
