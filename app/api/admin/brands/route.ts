@@ -1,6 +1,6 @@
 ﻿import { revalidatePath } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
-import { normalizePlainTextField, toSummaryText } from "@/lib/brand-content";
+import { containsSuspiciousText, htmlToPlainText, normalizePlainTextField, toSummaryText } from "@/lib/brand-content";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 
@@ -47,6 +47,24 @@ function revalidateBrandPaths(enterpriseId: string | null | undefined, slug: str
   if (slug) revalidatePath(`/brands/${slug}`);
 }
 
+function getBrandQualityFlags(input: {
+  brandLogoUrl: string | null;
+  enterpriseLogoUrl: string | null;
+  summarySource: string | null;
+  contactPhone: string | null;
+  website: string | null;
+  contactInfo: string | null;
+}) {
+  const summaryText = htmlToPlainText(input.summarySource);
+  return {
+    missingLogo: !(input.enterpriseLogoUrl || input.brandLogoUrl),
+    missingSummary: !summaryText,
+    missingContact: !(input.contactPhone || input.website || input.contactInfo),
+    weakIntro: summaryText.length > 0 && summaryText.length < 36,
+    suspiciousIntro: containsSuspiciousText(input.summarySource),
+  };
+}
+
 const adminBrandInclude = {
   enterprise: {
     select: {
@@ -90,7 +108,10 @@ export async function GET(request: NextRequest) {
   const skip = (page - 1) * limit;
   const q = searchParams.get("q")?.trim() ?? "";
   const recommend = searchParams.get("recommend");
-  const onlyIncomplete = searchParams.get("quality") === "needs_attention";
+  const quality = searchParams.get("quality");
+  const requiresPostFilter = quality === "intro_short" || quality === "intro_dirty";
+  const querySkip = requiresPostFilter ? 0 : skip;
+  const queryTake = requiresPostFilter ? 500 : limit;
 
   const conditions: Record<string, unknown>[] = [];
   if (q) {
@@ -112,7 +133,7 @@ export async function GET(request: NextRequest) {
   if (recommend === "1" || recommend === "0") {
     conditions.push({ isRecommend: recommend === "1" });
   }
-  if (onlyIncomplete) {
+  if (quality === "needs_attention") {
     conditions.push({
       OR: [
         { logoUrl: null },
@@ -122,6 +143,31 @@ export async function GET(request: NextRequest) {
         { enterprise: { positioning: null } },
         { enterprise: { intro: null } },
         { enterprise: { contactPhone: null } },
+      ],
+    });
+  }
+  if (quality === "missing_logo") {
+    conditions.push({
+      AND: [{ logoUrl: null }, { enterprise: { logoUrl: null } }],
+    });
+  }
+  if (quality === "missing_summary") {
+    conditions.push({
+      AND: [{ tagline: null }, { positioning: null }, { enterprise: { positioning: null } }, { enterprise: { intro: null } }],
+    });
+  }
+  if (quality === "missing_contact") {
+    conditions.push({
+      AND: [{ enterprise: { contactPhone: null } }, { enterprise: { website: null } }, { enterprise: { contactInfo: null } }],
+    });
+  }
+  if (quality === "intro_short") {
+    conditions.push({
+      OR: [
+        { enterprise: { positioning: { not: null } } },
+        { enterprise: { intro: { not: null } } },
+        { tagline: { not: null } },
+        { positioning: { not: null } },
       ],
     });
   }
@@ -144,8 +190,8 @@ export async function GET(request: NextRequest) {
     prisma.brand.findMany({
       where,
       orderBy: [{ isBrandVisible: "desc" }, { isRecommend: "desc" }, { sortOrder: "desc" }, { rankingWeight: "desc" }, { updatedAt: "desc" }],
-      skip,
-      take: limit,
+      skip: querySkip,
+      take: queryTake,
       include: adminBrandInclude,
     }),
     prisma.brand.count({ where }),
@@ -171,20 +217,30 @@ export async function GET(request: NextRequest) {
         summary: toSummaryText(summarySource, 120),
         detailHref: item.enterprise ? `/enterprise/${item.enterprise.id}` : `/brands/${item.slug}`,
       },
-      qualityFlags: {
-        missingLogo: !displayLogo,
-        missingSummary: !summarySource,
-        missingContact: !(item.enterprise?.contactPhone || item.enterprise?.website || item.enterprise?.contactInfo),
-      },
+      qualityFlags: getBrandQualityFlags({
+        brandLogoUrl: item.logoUrl,
+        enterpriseLogoUrl: item.enterprise?.logoUrl ?? null,
+        summarySource,
+        contactPhone: item.enterprise?.contactPhone ?? null,
+        website: item.enterprise?.website ?? null,
+        contactInfo: item.enterprise?.contactInfo ?? null,
+      }),
     };
+  }).filter((item) => {
+    if (quality === "intro_short") return item.qualityFlags.weakIntro;
+    if (quality === "intro_dirty") return item.qualityFlags.suspiciousIntro;
+    return true;
   });
 
+  const effectiveTotal = requiresPostFilter ? normalized.length : total;
+  const pagedItems = requiresPostFilter ? normalized.slice(skip, skip + limit) : normalized;
+
   return NextResponse.json({
-    items: normalized,
-    total,
+    items: pagedItems,
+    total: effectiveTotal,
     page,
     limit,
-    totalPages: Math.max(1, Math.ceil(total / limit)),
+    totalPages: Math.max(1, Math.ceil(effectiveTotal / limit)),
     stats: {
       visibleTotal,
       recommendedTotal,

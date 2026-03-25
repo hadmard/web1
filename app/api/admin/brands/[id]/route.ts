@@ -1,6 +1,6 @@
 ﻿import { revalidatePath } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
-import { normalizePlainTextField } from "@/lib/brand-content";
+import { containsSuspiciousText, htmlToPlainText, normalizePlainTextField } from "@/lib/brand-content";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 
@@ -36,6 +36,24 @@ function revalidateBrandPaths(enterpriseId: string | null | undefined, slug: str
   revalidatePath("/brands/all");
   if (enterpriseId) revalidatePath(`/enterprise/${enterpriseId}`);
   if (slug) revalidatePath(`/brands/${slug}`);
+}
+
+function getBrandQualityFlags(input: {
+  brandLogoUrl: string | null;
+  enterpriseLogoUrl: string | null;
+  summarySource: string | null;
+  contactPhone: string | null;
+  website: string | null;
+  contactInfo: string | null;
+}) {
+  const summaryText = htmlToPlainText(input.summarySource);
+  return {
+    missingLogo: !(input.enterpriseLogoUrl || input.brandLogoUrl),
+    missingSummary: !summaryText,
+    missingContact: !(input.contactPhone || input.website || input.contactInfo),
+    weakIntro: summaryText.length > 0 && summaryText.length < 36,
+    suspiciousIntro: containsSuspiciousText(input.summarySource),
+  };
 }
 
 const adminBrandInclude = {
@@ -101,11 +119,14 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       summary: normalizePlainTextField(summarySource) ?? "",
       detailHref: brand.enterprise ? `/enterprise/${brand.enterprise.id}` : `/brands/${brand.slug}`,
     },
-    qualityFlags: {
-      missingLogo: !displayLogo,
-      missingSummary: !summarySource,
-      missingContact: !(brand.enterprise?.contactPhone || brand.enterprise?.website || brand.enterprise?.contactInfo),
-    },
+    qualityFlags: getBrandQualityFlags({
+      brandLogoUrl: brand.logoUrl,
+      enterpriseLogoUrl: brand.enterprise?.logoUrl ?? null,
+      summarySource,
+      contactPhone: brand.enterprise?.contactPhone ?? null,
+      website: brand.enterprise?.website ?? null,
+      contactInfo: brand.enterprise?.contactInfo ?? null,
+    }),
   });
 }
 

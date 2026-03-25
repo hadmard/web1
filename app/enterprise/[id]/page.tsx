@@ -16,10 +16,7 @@ type TemplateKey = "brand_showcase" | "professional_service" | "simple_elegant";
 
 function parseCsv(input: string | null | undefined): string[] {
   if (!input) return [];
-  return input
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
+  return input.split(",").map((item) => item.trim()).filter(Boolean);
 }
 
 function formatDate(input: string | Date | null | undefined) {
@@ -78,6 +75,10 @@ function extractContactLabel(value: string | null | undefined) {
   if (!input) return "联系品牌";
   if (/^https?:\/\//i.test(input)) return "访问官网";
   return "立即致电";
+}
+
+function chunkParagraphs(value: string) {
+  return value.split(/\n{2,}/).map((item) => item.trim()).filter(Boolean);
 }
 
 export async function generateMetadata({ params }: Props) {
@@ -146,7 +147,9 @@ export default async function EnterprisePage({ params }: Props) {
   const meta = getTemplateMeta(siteSettings.template);
   const heroTitle = siteSettings.heroTitle || name;
   const introRichText = ent.intro || "";
+  const introPlain = htmlToPlainText(ent.intro || ent.positioning || "");
   const introPreview = toSummaryText(ent.positioning || ent.intro, 150) || "以结构化内容展示企业实力、服务能力与行业参与。";
+  const introParagraphs = chunkParagraphs(introPlain);
   const contactHref = buildContactHref(ent.contactPhone || ent.website || ent.contactInfo);
   const websiteHref = buildContactHref(ent.website);
   const contactAnchor = contactHref || "#contact-panel";
@@ -169,6 +172,11 @@ export default async function EnterprisePage({ params }: Props) {
     { label: "企业动态", value: `${articles.length} 篇` },
     { label: "案例图库", value: `${gallery.length} 张` },
     { label: "标准参与", value: `${standards.length} 项` },
+  ];
+  const consultNotes = [
+    ent.productSystem || "整木定制 / 木作服务",
+    ent.contactPhone || ent.website || "支持线上联系与详情咨询",
+    ent.region || "全国范围",
   ];
 
   return (
@@ -203,7 +211,7 @@ export default async function EnterprisePage({ params }: Props) {
 
               <div className="min-w-0 flex-1">
                 <h1 className={`font-serif text-4xl leading-tight sm:text-5xl ${meta.title}`}>{heroTitle}</h1>
-                <p className={`mt-4 max-w-3xl text-sm leading-7 ${meta.body}`}>{introPreview}</p>
+                <p className={`mt-4 max-w-3xl text-base leading-8 ${meta.body}`}>{introPreview}</p>
                 <div className="mt-5 flex flex-wrap gap-2">
                   {(tags.length > 0 ? tags : ["整木品牌", "企业展示"]).map((tag) => (
                     <span key={tag} className={`rounded-full border px-3 py-1 text-xs ${meta.chip}`}>
@@ -212,22 +220,13 @@ export default async function EnterprisePage({ params }: Props) {
                   ))}
                 </div>
                 <div className="mt-6 flex flex-wrap gap-3">
-                  <a
-                    href={contactAnchor}
-                    className="inline-flex items-center justify-center rounded-full bg-accent px-5 py-3 text-sm font-medium text-white transition hover:opacity-92"
-                  >
+                  <a href={contactAnchor} className="inline-flex items-center justify-center rounded-full bg-accent px-5 py-3 text-sm font-medium text-white transition hover:opacity-92">
                     {extractContactLabel(ent.contactPhone || ent.website || ent.contactInfo)}
                   </a>
-                  <a
-                    href="#contact-panel"
-                    className="inline-flex items-center justify-center rounded-full border border-white/18 bg-white/10 px-5 py-3 text-sm font-medium text-white transition hover:bg-white/16"
-                  >
+                  <a href="#contact-panel" className="inline-flex items-center justify-center rounded-full border border-white/18 bg-white/10 px-5 py-3 text-sm font-medium text-white transition hover:bg-white/16">
                     立即咨询
                   </a>
-                  <a
-                    href="#contact-panel"
-                    className="inline-flex items-center justify-center rounded-full border border-white/18 bg-white/10 px-5 py-3 text-sm font-medium text-white transition hover:bg-white/16"
-                  >
+                  <a href="#contact-panel" className="inline-flex items-center justify-center rounded-full border border-white/18 bg-white/10 px-5 py-3 text-sm font-medium text-white transition hover:bg-white/16">
                     获取方案
                   </a>
                 </div>
@@ -271,7 +270,7 @@ export default async function EnterprisePage({ params }: Props) {
             ) : (
               <div className="rounded-[28px] border border-white/14 bg-white/10 p-6 text-sm leading-7 text-white/82">
                 <p className="text-xs uppercase tracking-[0.2em] text-white/58">品牌摘要</p>
-                <p className="mt-4">{htmlToPlainText(ent.intro || ent.positioning) || "企业正在完善品牌介绍、案例和联系信息。"}</p>
+                <p className="mt-4">{introPlain || "企业正在完善品牌介绍、案例和联系信息。"}</p>
               </div>
             )}
 
@@ -287,38 +286,50 @@ export default async function EnterprisePage({ params }: Props) {
         </div>
       </section>
 
-      <div className="grid gap-8 xl:grid-cols-[1.08fr,0.92fr]">
+      <div className="grid gap-8 xl:grid-cols-[1.05fr,0.95fr]">
         <div className="space-y-8">
-          <ContentCard title="品牌简介" helper="这里展示企业维护后的正式介绍内容，后台修改后前台会立即同步。">
+          <ContentCard title="品牌简介" helper="通过更舒展的段落和清洗后的富文本，让长内容也保持可读和有节奏。">
             {introRichText ? (
-              <RichContent html={introRichText} className="text-[15px] leading-8 text-primary" />
+              <div className="space-y-5">
+                <div className="rounded-[24px] border border-[rgba(180,154,107,0.18)] bg-[linear-gradient(180deg,rgba(255,252,247,0.98),rgba(248,242,233,0.9))] px-5 py-5 text-sm leading-8 text-primary shadow-[0_16px_36px_rgba(15,23,42,0.05)]">
+                  {introPreview}
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  {introParagraphs.slice(0, 4).map((paragraph, index) => (
+                    <div key={`${index}-${paragraph.slice(0, 12)}`} className="rounded-[22px] border border-border bg-surface px-4 py-4 text-sm leading-7 text-primary/88">
+                      {paragraph}
+                    </div>
+                  ))}
+                </div>
+                <div className="rounded-[24px] border border-border bg-white p-5">
+                  <RichContent html={introRichText} className="text-[15px] leading-8 text-primary" />
+                </div>
+              </div>
             ) : (
               <p className="text-sm leading-7 text-muted">暂未填写品牌简介。</p>
             )}
           </ContentCard>
 
           {(ent.positioning || qualityFacts.length > 0) ? (
-            <ContentCard title="品牌亮点" helper="帮助用户快速理解这家企业做什么、擅长什么、适合什么项目。">
-              {ent.positioning ? (
-                <div className="rounded-[24px] border border-[rgba(180,154,107,0.18)] bg-[linear-gradient(180deg,rgba(255,252,247,0.98),rgba(248,242,233,0.9))] px-5 py-5 text-sm leading-8 text-primary shadow-[0_16px_36px_rgba(15,23,42,0.05)]">
-                  {ent.positioning}
-                </div>
-              ) : null}
-              {qualityFacts.length > 0 ? (
-                <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                  {qualityFacts.map((item) => (
-                    <div key={item.label} className="rounded-[22px] border border-border bg-surface px-4 py-4">
-                      <p className="text-xs uppercase tracking-[0.18em] text-muted">{item.label}</p>
-                      <p className="mt-2 text-sm leading-7 text-primary">{item.value}</p>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
+            <ContentCard title="品牌亮点" helper="帮助用户在 10 秒内理解这家企业擅长什么、适合什么合作方向。">
+              <div className="grid gap-4 md:grid-cols-2">
+                {ent.positioning ? (
+                  <div className="rounded-[24px] border border-[rgba(180,154,107,0.18)] bg-[linear-gradient(180deg,rgba(255,252,247,0.98),rgba(248,242,233,0.9))] px-5 py-5 text-sm leading-8 text-primary shadow-[0_16px_36px_rgba(15,23,42,0.05)] md:col-span-2">
+                    {ent.positioning}
+                  </div>
+                ) : null}
+                {qualityFacts.map((item) => (
+                  <div key={item.label} className="rounded-[22px] border border-border bg-surface px-4 py-4">
+                    <p className="text-xs uppercase tracking-[0.18em] text-muted">{item.label}</p>
+                    <p className="mt-2 text-sm leading-7 text-primary">{item.value}</p>
+                  </div>
+                ))}
+              </div>
             </ContentCard>
           ) : null}
 
           {articles.length > 0 ? (
-            <ContentCard title="企业动态" helper="最新通过审核的企业内容会优先在这里展示。">
+            <ContentCard title="企业动态" helper="最新通过审核的内容会优先承接品牌认知和后续咨询。">
               <div className="grid gap-3 md:grid-cols-2">
                 {articles.map((article) => (
                   <Link
@@ -338,12 +349,14 @@ export default async function EnterprisePage({ params }: Props) {
 
         <div className="space-y-8">
           <ContentCard title="联系品牌" helper="把咨询、合作、索取方案这三个动作集中到首要区域。" id="contact-panel">
-            <div className="space-y-4">
-              <ContactRow label="联系人" value={ent.contactPerson} />
-              <ContactRow label="联系电话" value={ent.contactPhone} href={buildContactHref(ent.contactPhone)} />
-              <ContactRow label="联系方式" value={ent.contactInfo} />
-              <ContactRow label="官网地址" value={ent.website} href={websiteHref} />
-              <ContactRow label="企业地址" value={ent.address} />
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-4 md:col-span-2">
+                <ContactRow label="联系人" value={ent.contactPerson} />
+                <ContactRow label="联系电话" value={ent.contactPhone} href={buildContactHref(ent.contactPhone)} />
+                <ContactRow label="联系方式" value={ent.contactInfo} />
+                <ContactRow label="官网地址" value={ent.website} href={websiteHref} />
+                <ContactRow label="企业地址" value={ent.address} />
+              </div>
             </div>
             <div className="mt-5 grid gap-3 sm:grid-cols-3">
               <a href={contactAnchor} className="inline-flex items-center justify-center rounded-full bg-accent px-4 py-3 text-sm font-medium text-white transition hover:opacity-92">
@@ -355,6 +368,14 @@ export default async function EnterprisePage({ params }: Props) {
               <a href="#contact-panel" className="inline-flex items-center justify-center rounded-full border border-border bg-surface px-4 py-3 text-sm font-medium text-primary transition hover:bg-white">
                 获取方案
               </a>
+            </div>
+            <div className="mt-5 rounded-[22px] border border-[rgba(181,157,121,0.16)] bg-[rgba(255,249,238,0.72)] px-4 py-4 text-sm text-primary/88">
+              <p className="text-xs uppercase tracking-[0.16em] text-muted">合作提示</p>
+              <ul className="mt-3 space-y-2 leading-7">
+                {consultNotes.map((note) => (
+                  <li key={note}>· {note}</li>
+                ))}
+              </ul>
             </div>
           </ContentCard>
 
@@ -412,17 +433,7 @@ export default async function EnterprisePage({ params }: Props) {
   );
 }
 
-function ContentCard({
-  title,
-  helper,
-  children,
-  id,
-}: {
-  title: string;
-  helper?: string;
-  children: React.ReactNode;
-  id?: string;
-}) {
+function ContentCard({ title, helper, children, id }: { title: string; helper?: string; children: React.ReactNode; id?: string }) {
   return (
     <section id={id} className="rounded-[28px] border border-border bg-white p-6 shadow-[0_18px_60px_rgba(34,31,26,0.05)]">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -434,15 +445,7 @@ function ContentCard({
   );
 }
 
-function ContactRow({
-  label,
-  value,
-  href,
-}: {
-  label: string;
-  value: string | null | undefined;
-  href?: string | null;
-}) {
+function ContactRow({ label, value, href }: { label: string; value: string | null | undefined; href?: string | null }) {
   if (!value) return null;
   return (
     <div className="rounded-[22px] border border-border bg-surface px-4 py-4">

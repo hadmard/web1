@@ -1,5 +1,5 @@
 ﻿import type { Metadata } from "next";
-import { HomeEnterpriseSection } from "@/components/homepage/HomeEnterpriseSection";
+import { HomeBrandEntrySection } from "@/components/homepage/HomeBrandEntrySection";
 import { HomeHeroSection } from "@/components/homepage/HomeHeroSection";
 import { HomeHuadianSection } from "@/components/homepage/HomeHuadianSection";
 import { HomeJoinSection } from "@/components/homepage/HomeJoinSection";
@@ -30,7 +30,7 @@ export default async function HomePage() {
         hotNews={data.hotNews}
       />
       <HomeStructureSection cards={data.structureCards} />
-      <HomeEnterpriseSection
+      <HomeBrandEntrySection
         middleAd={data.middleAd}
         enterpriseImage={data.visualSettings.backgrounds.homeEnterprise}
         enterprises={data.enterprises}

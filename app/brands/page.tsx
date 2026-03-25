@@ -14,16 +14,24 @@ export async function generateMetadata(): Promise<Metadata> {
   return buildCategoryMetadata(
     "/brands",
     "整木市场",
-    "整木市场栏目，涵盖整木品牌与整木选购 FAQ，帮助用户完成品牌选择与采购决策。"
+    "整木市场栏目，涵盖整木品牌与整木选购 FAQ，帮助用户完成品牌选择与采购决策。",
   );
 }
 
 function BrandMark({ name, logoUrl }: { name: string; logoUrl: string | null }) {
   if (logoUrl) {
-    return <Image src={resolveUploadedImageUrl(logoUrl)} alt={`${name} logo`} width={88} height={88} className="h-[76px] w-[76px] rounded-[22px] border border-[rgba(174,149,111,0.18)] bg-white object-contain p-3 shadow-[0_12px_28px_rgba(15,23,42,0.05)]" />;
+    return (
+      <Image
+        src={resolveUploadedImageUrl(logoUrl)}
+        alt={`${name} logo`}
+        width={96}
+        height={96}
+        className="h-[84px] w-[84px] rounded-[26px] border border-[rgba(174,149,111,0.18)] bg-white object-contain p-3 shadow-[0_14px_34px_rgba(15,23,42,0.06)]"
+      />
+    );
   }
 
-  return <div className="flex h-[76px] w-[76px] items-center justify-center rounded-[22px] border border-dashed border-[rgba(174,149,111,0.28)] bg-white text-[11px] tracking-[0.18em] text-[#8d7a5a]">LOGO</div>;
+  return <div className="flex h-[84px] w-[84px] items-center justify-center rounded-[26px] border border-dashed border-[rgba(174,149,111,0.28)] bg-white text-[11px] tracking-[0.18em] text-[#8d7a5a]">LOGO</div>;
 }
 
 export default async function BrandsPage() {
@@ -34,17 +42,17 @@ export default async function BrandsPage() {
   return (
     <CategoryHome basePath="/brands" category={category} searchHref="/brands/all">
       <section className="mt-8 space-y-6">
-        <article className="overflow-hidden rounded-[34px] border border-[rgba(181,157,121,0.18)] bg-[radial-gradient(circle_at_top_left,rgba(213,183,131,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.98),rgba(247,242,235,0.92))] shadow-[0_24px_72px_rgba(34,31,26,0.07)]">
-          <div className="grid gap-0 xl:grid-cols-[1.06fr,0.94fr]">
+        <article className="overflow-hidden rounded-[36px] border border-[rgba(181,157,121,0.18)] bg-[radial-gradient(circle_at_top_left,rgba(213,183,131,0.15),transparent_32%),linear-gradient(180deg,rgba(255,255,255,0.98),rgba(247,242,235,0.92))] shadow-[0_24px_76px_rgba(34,31,26,0.08)]">
+          <div className="grid gap-0 xl:grid-cols-[1.08fr,0.92fr]">
             <div className="p-7 sm:p-9">
-              <p className="text-xs uppercase tracking-[0.3em] text-[#9d7e4d]">Brand Showcase</p>
-              <h2 className="mt-4 font-serif text-3xl text-primary sm:text-[2.8rem] sm:leading-[1.1]">品牌展示</h2>
+              <p className="text-xs uppercase tracking-[0.3em] text-[#9d7e4d]">Brand Gallery</p>
+              <h2 className="mt-4 font-serif text-3xl text-primary sm:text-[2.9rem] sm:leading-[1.08]">整木品牌橱窗</h2>
               <p className="mt-5 max-w-2xl text-sm leading-8 text-muted">
-                这里聚合展示可运营、可维护的整木品牌资料。前台摘要、地区、Logo 与联系入口统一走企业实时信息，方便用户快速判断品牌定位与合作方向。
+                用更克制、更有层级的图文结构展示品牌定位、服务方向与合作入口。现有资料不完整也会走统一兜底规则，保证前台像正式品牌页，而不是数据堆砌页。
               </p>
-              <div className="mt-6 flex flex-wrap gap-3">
+              <div className="mt-7 flex flex-wrap gap-3">
                 <Link href="/brands/all" className="inline-flex items-center justify-center rounded-full bg-accent px-5 py-3 text-sm font-medium text-white transition hover:opacity-92">
-                  查看全部品牌
+                  浏览全部品牌
                 </Link>
                 <Link href="/brands/all" className="inline-flex items-center justify-center rounded-full border border-border bg-white px-5 py-3 text-sm font-medium text-primary transition hover:bg-surface">
                   按地区筛选
@@ -53,35 +61,29 @@ export default async function BrandsPage() {
             </div>
             <div className="border-t border-[rgba(181,157,121,0.16)] p-6 sm:p-8 xl:border-l xl:border-t-0">
               <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
-                <div className="rounded-[24px] border border-[rgba(180,154,107,0.18)] bg-white/88 px-4 py-4 shadow-[0_14px_36px_rgba(15,23,42,0.05)]">
-                  <p className="text-[11px] uppercase tracking-[0.2em] text-[#8d7a5a]">展示规则</p>
-                  <p className="mt-3 text-sm leading-7 text-primary">企业实时字段优先，统一摘要、地区和联系方式展示口径。</p>
-                </div>
-                <div className="rounded-[24px] border border-[rgba(180,154,107,0.18)] bg-white/88 px-4 py-4 shadow-[0_14px_36px_rgba(15,23,42,0.05)]">
-                  <p className="text-[11px] uppercase tracking-[0.2em] text-[#8d7a5a]">转化入口</p>
-                  <p className="mt-3 text-sm leading-7 text-primary">详情页保留联系品牌、立即咨询、获取方案等动作入口。</p>
-                </div>
-                <div className="rounded-[24px] border border-[rgba(180,154,107,0.18)] bg-white/88 px-4 py-4 shadow-[0_14px_36px_rgba(15,23,42,0.05)]">
-                  <p className="text-[11px] uppercase tracking-[0.2em] text-[#8d7a5a]">运营维护</p>
-                  <p className="mt-3 text-sm leading-7 text-primary">后台可直接治理 Logo、简介、地区和联系信息，保存后前台立即刷新。</p>
-                </div>
+                <GlassNote title="展示规则" body="摘要、Logo、地区与联系方式优先读取企业实时字段，列表页与详情页展示口径保持一致。" />
+                <GlassNote title="品牌体验" body="即使资料不完整，也用统一卡片结构、留白和标签体系保持品牌感与阅读节奏。" />
+                <GlassNote title="咨询转化" body="首屏和卡片都保留咨询入口，让用户快速理解品牌并继续沟通。" />
               </div>
             </div>
           </div>
         </article>
 
         {lead ? (
-          <article className="grid gap-4 xl:grid-cols-[1.06fr,0.94fr]">
-            <Link href={lead.enterprise ? `/enterprise/${lead.enterprise.id}` : `/brands/${lead.slug}`} className="group overflow-hidden rounded-[32px] border border-[rgba(181,157,121,0.18)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(246,240,231,0.92))] p-7 shadow-[0_20px_60px_rgba(34,31,26,0.07)] transition hover:-translate-y-1 hover:shadow-[0_26px_72px_rgba(34,31,26,0.1)]">
+          <article className="grid gap-4 xl:grid-cols-[1.08fr,0.92fr]">
+            <div className="group overflow-hidden rounded-[34px] border border-[rgba(181,157,121,0.18)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(246,240,231,0.92))] p-7 shadow-[0_20px_64px_rgba(34,31,26,0.08)] transition hover:-translate-y-1 hover:shadow-[0_26px_78px_rgba(34,31,26,0.12)]">
               <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
                 <div className="max-w-2xl">
-                  <p className="text-xs uppercase tracking-[0.28em] text-[#9d7e4d]">Featured</p>
-                  <h3 className="mt-3 font-serif text-3xl leading-tight text-primary sm:text-[2.35rem]">{lead.enterpriseName}</h3>
+                  <p className="text-xs uppercase tracking-[0.28em] text-[#9d7e4d]">Featured Brand</p>
+                  <Link href={lead.enterprise ? `/enterprise/${lead.enterprise.id}` : `/brands/${lead.slug}`} className="mt-3 inline-block font-serif text-3xl leading-tight text-primary transition hover:text-accent sm:text-[2.4rem]">
+                    {lead.enterpriseName}
+                  </Link>
+                  <p className="mt-4 text-base leading-8 text-primary/88">{lead.headline}</p>
                   <p className="mt-4 text-sm leading-8 text-muted">{lead.summary}</p>
                   <div className="mt-5 flex flex-wrap gap-2 text-xs text-muted">
-                    <span className="rounded-full border border-border px-3 py-1.5">{lead.region}</span>
-                    {lead.area ? <span className="rounded-full border border-border px-3 py-1.5">{lead.area}</span> : null}
-                    {lead.enterprise?.productSystem ? <span className="rounded-full border border-border px-3 py-1.5">{lead.enterprise.productSystem}</span> : null}
+                    {lead.highlights.map((item) => (
+                      <span key={item} className="rounded-full border border-border px-3 py-1.5">{item}</span>
+                    ))}
                   </div>
                 </div>
                 <div className="flex flex-col items-start gap-4 sm:items-end">
@@ -89,27 +91,50 @@ export default async function BrandsPage() {
                   <BrandMark name={lead.enterpriseName} logoUrl={lead.logoUrl} />
                 </div>
               </div>
-              <div className="mt-7 flex flex-wrap items-center gap-3 text-sm">
-                <span className="rounded-full border border-[rgba(181,157,121,0.2)] bg-white/88 px-4 py-2 text-accent">联系品牌</span>
-                <span className="rounded-full border border-[rgba(181,157,121,0.2)] bg-white/88 px-4 py-2 text-primary">获取方案</span>
-                <span className="text-primary transition group-hover:translate-x-0.5">查看详情</span>
+              <div className="mt-8 grid gap-4 border-t border-[rgba(181,157,121,0.12)] pt-5 text-sm sm:grid-cols-[1fr,auto] sm:items-center">
+                <div className="space-y-2 text-muted">
+                  <p>{lead.locationLabel}</p>
+                  <p>{lead.serviceLine}</p>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  {lead.contactHref ? (
+                    <a
+                      href={lead.contactHref}
+                      target={lead.contactHref.startsWith("http") ? "_blank" : undefined}
+                      rel={lead.contactHref.startsWith("http") ? "noreferrer" : undefined}
+                      className="rounded-full border border-[rgba(181,157,121,0.2)] bg-white px-4 py-2 text-accent transition hover:bg-[rgba(255,249,238,0.92)]"
+                    >
+                      {lead.contactLabel}
+                    </a>
+                  ) : (
+                    <span className="rounded-full border border-[rgba(181,157,121,0.2)] bg-white px-4 py-2 text-accent">{lead.contactLabel}</span>
+                  )}
+                  <Link
+                    href={lead.enterprise ? `/enterprise/${lead.enterprise.id}` : `/brands/${lead.slug}`}
+                    className="rounded-full border border-[rgba(181,157,121,0.2)] bg-white px-4 py-2 text-primary transition hover:bg-[rgba(255,249,238,0.92)]"
+                  >
+                    查看详情
+                  </Link>
+                </div>
               </div>
-            </Link>
+            </div>
 
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
               {rest.map((item) => {
                 const href = item.enterprise ? `/enterprise/${item.enterprise.id}` : `/brands/${item.slug}`;
                 return (
-                  <Link key={item.id} href={href} className="group rounded-[28px] border border-[rgba(181,157,121,0.16)] bg-white/92 p-5 shadow-[0_16px_40px_rgba(15,23,42,0.05)] transition hover:-translate-y-1 hover:shadow-[0_22px_54px_rgba(15,23,42,0.08)]">
+                  <Link key={item.id} href={href} className="group rounded-[28px] border border-[rgba(181,157,121,0.16)] bg-white/94 p-5 shadow-[0_16px_40px_rgba(15,23,42,0.05)] transition hover:-translate-y-1 hover:shadow-[0_22px_54px_rgba(15,23,42,0.08)]">
                     <div className="flex items-start gap-4">
                       <BrandMark name={item.enterpriseName} logoUrl={item.logoUrl} />
                       <div className="min-w-0 flex-1">
                         <p className="text-[11px] uppercase tracking-[0.18em] text-[#9d7e4d]">{item.memberType === "enterprise_advanced" ? "高级企业" : "企业会员"}</p>
                         <h3 className="mt-2 font-serif text-2xl text-primary">{item.enterpriseName}</h3>
-                        <p className="mt-3 line-clamp-3 text-sm leading-7 text-muted">{item.summary}</p>
+                        <p className="mt-3 text-sm leading-7 text-primary/88">{item.headline}</p>
+                        <p className="mt-2 line-clamp-2 text-sm leading-7 text-muted">{item.summary}</p>
                         <div className="mt-4 flex flex-wrap gap-2 text-xs text-muted">
-                          <span className="rounded-full border border-border px-2.5 py-1">{item.region}</span>
-                          {item.area ? <span className="rounded-full border border-border px-2.5 py-1">{item.area}</span> : null}
+                          {item.highlights.slice(0, 2).map((tag) => (
+                            <span key={tag} className="rounded-full border border-border px-2.5 py-1">{tag}</span>
+                          ))}
                         </div>
                       </div>
                     </div>
@@ -124,13 +149,13 @@ export default async function BrandsPage() {
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <h3 className="section-label mb-2 text-primary">推荐品牌</h3>
-              <p className="text-sm text-muted">优先展示适合用户快速判断和咨询的推荐企业。</p>
+              <p className="text-sm text-muted">优先展示资料较完整、品牌定位清晰、便于咨询转化的品牌。</p>
             </div>
-            <p className="text-sm text-muted">共展示 {brands.length} 家推荐品牌</p>
+            <p className="text-sm text-muted">当前橱窗展示 {brands.length} 家品牌</p>
           </div>
 
           {brands.length === 0 ? (
-            <p className="mt-6 text-sm text-muted">暂无品牌展示数据，企业会员迁移完成后会在这里呈现。</p>
+            <p className="mt-6 text-sm text-muted">暂无可展示的品牌资料。</p>
           ) : (
             <div className="mt-6 grid gap-4 lg:grid-cols-2">
               {brands.map((item) => {
@@ -147,13 +172,18 @@ export default async function BrandsPage() {
                           </div>
                           {item.isRecommend ? <span className="rounded-full border border-[rgba(181,157,121,0.22)] bg-[rgba(245,236,220,0.8)] px-3 py-1 text-xs text-accent">推荐</span> : null}
                         </div>
-                        <p className="mt-4 text-sm leading-8 text-muted">{item.summary}</p>
+                        <p className="mt-4 line-clamp-2 text-sm leading-7 text-primary/88">{item.headline}</p>
+                        <p className="mt-2 line-clamp-3 text-sm leading-7 text-muted">{item.summary}</p>
                         <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-sm">
                           <div className="flex flex-wrap gap-2 text-xs text-muted">
-                            <span className="rounded-full border border-border px-2.5 py-1">{item.region}</span>
-                            {item.area ? <span className="rounded-full border border-border px-2.5 py-1">{item.area}</span> : null}
+                            {item.highlights.slice(0, 3).map((tag) => (
+                              <span key={tag} className="rounded-full border border-border px-2.5 py-1">{tag}</span>
+                            ))}
                           </div>
-                          <span className="text-primary transition group-hover:translate-x-0.5">查看详情</span>
+                          <div className="flex items-center gap-3">
+                            <span className="text-xs text-muted">{item.contactHref ? "支持咨询联系" : "查看完整品牌资料"}</span>
+                            <span className="text-primary transition group-hover:translate-x-0.5">了解品牌</span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -165,5 +195,14 @@ export default async function BrandsPage() {
         </article>
       </section>
     </CategoryHome>
+  );
+}
+
+function GlassNote({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="rounded-[24px] border border-[rgba(180,154,107,0.18)] bg-white/88 px-4 py-4 shadow-[0_14px_36px_rgba(15,23,42,0.05)]">
+      <p className="text-[11px] uppercase tracking-[0.2em] text-[#8d7a5a]">{title}</p>
+      <p className="mt-3 text-sm leading-7 text-primary">{body}</p>
+    </div>
   );
 }

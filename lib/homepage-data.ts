@@ -1,4 +1,5 @@
 ﻿import { articleOrderByPinnedLatest, articleOrderByPinnedPopular } from "@/lib/articles";
+import { getBrandDirectoryList } from "@/lib/brand-directory";
 import { ENGINEER_CATEGORY_LABELS, getLatestHuadianYear, getTop10ByYear } from "@/lib/huadianbang";
 import { prisma } from "@/lib/prisma";
 import { getSiteVisualSettings } from "@/lib/site-visual-settings";
@@ -33,6 +34,16 @@ export type HomepageRegionCount = {
   count: number;
 };
 
+export type HomepageBrandItem = {
+  id: string;
+  enterpriseName: string;
+  headline: string;
+  locationLabel: string;
+  logoUrl: string | null;
+  detailHref: string;
+  contactLabel: string;
+};
+
 export async function getHomepageData() {
   const [
     visualSettings,
@@ -42,7 +53,6 @@ export async function getHomepageData() {
     latestTerms,
     latestStandards,
     latestAwards,
-    enterprises,
   ] = await Promise.all([
     getSiteVisualSettings(),
     prisma.article.findMany({
@@ -57,12 +67,7 @@ export async function getHomepageData() {
       take: 6,
       select: { id: true, title: true, slug: true },
     }),
-    prisma.article.findMany({
-      where: { status: "approved", OR: [{ categoryHref: { startsWith: "/brands" } }, { subHref: { startsWith: "/brands" } }] },
-      orderBy: articleOrderByPinnedLatest,
-      take: 8,
-      select: { id: true, title: true, slug: true },
-    }),
+    getBrandDirectoryList(8),
     prisma.article.findMany({
       where: { status: "approved", OR: [{ categoryHref: { startsWith: "/dictionary" } }, { subHref: { startsWith: "/dictionary" } }] },
       orderBy: articleOrderByPinnedLatest,
@@ -80,28 +85,18 @@ export async function getHomepageData() {
       take: 8,
       select: { id: true, title: true, slug: true, year: true },
     }),
-    prisma.enterprise.findMany({
-      orderBy: { updatedAt: "desc" },
-      take: 8,
-      select: {
-        id: true,
-        region: true,
-        area: true,
-        member: { select: { name: true, memberType: true } },
-      },
-    }),
   ]);
 
   const regionMap = new Map<string, number>();
   REGION_ORDER.forEach((region) => regionMap.set(region, 0));
-  enterprises.forEach((enterprise) => {
+  latestBrands.forEach((enterprise) => {
     const region = (enterprise.region || "").trim();
     if (regionMap.has(region)) {
       regionMap.set(region, (regionMap.get(region) ?? 0) + 1);
     }
   });
 
-  const safeBrands = latestBrands.filter((item) => isReadableLabel(item.title));
+  const safeBrands = latestBrands.filter((item) => isReadableLabel(item.enterpriseName));
   const safeTerms = latestTerms.filter((item) => isReadableLabel(item.title));
   const safeStandards = latestStandards.filter((item) => isReadableLabel(item.title));
   const safeAwards = latestAwards.filter((item) => isReadableLabel(item.title));
@@ -114,7 +109,10 @@ export async function getHomepageData() {
       desc: "覆盖整木品牌与整木选购 FAQ，快速完成品牌对比与决策。",
       href: "/brands/all",
       image: visualSettings.backgrounds.homeStructureMarket,
-      items: safeBrands.map((item) => ({ label: item.title, href: `/brands/${item.slug}` })),
+      items: safeBrands.map((item) => ({
+        label: item.enterpriseName,
+        href: item.enterprise ? `/enterprise/${item.enterprise.id}` : `/brands/${item.slug}`,
+      })),
     },
     {
       title: "整木词库",
@@ -151,6 +149,16 @@ export async function getHomepageData() {
       })),
     },
   ];
+
+  const enterprises = latestBrands.map((item) => ({
+    id: item.id,
+    enterpriseName: item.enterpriseName,
+    headline: item.headline,
+    locationLabel: item.locationLabel,
+    logoUrl: item.logoUrl,
+    detailHref: item.enterprise ? `/enterprise/${item.enterprise.id}` : `/brands/${item.slug}`,
+    contactLabel: item.contactLabel,
+  }));
 
   return {
     visualSettings,

@@ -1,0 +1,83 @@
+name: Production Instance Diagnostics
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/prod-instance-diagnostics.yml"
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Inspect production instance
+        run: |
+          ssh -o BatchMode=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+            set -e
+
+            echo "== HOST =="
+            hostname
+            whoami
+            pwd
+
+            echo "== KNOWN APP DIRS =="
+            for dir in /home/web1 /var/www /www/wwwroot; do
+              if [ -d "$dir" ]; then
+                echo "-- $dir"
+                find "$dir" -maxdepth 2 -type f -name package.json 2>/dev/null || true
+              fi
+            done
+
+            echo "== SYSTEMD SERVICES =="
+            systemctl list-units --type=service --all --no-pager | grep -Ei 'web1|node|next|pm2|cnzhengmu' || true
+
+            echo "== WEB1 SERVICE DETAIL =="
+            systemctl show web1 --no-pager -p Id -p Description -p LoadState -p ActiveState -p SubState -p FragmentPath -p WorkingDirectory -p ExecStart -p User -p EnvironmentFile || true
+
+            echo "== LISTEN PORTS =="
+            sudo ss -ltnp | grep -E ':80 |:443 |:3000 |:3001 |:3002 |:3010 |:3011 ' || true
+
+            echo "== NGINX CNZHENGMU ROUTING =="
+            sudo nginx -T 2>/dev/null | grep -nE 'server_name|proxy_pass|root |cnzhengmu\\.com|www\\.cnzhengmu\\.com|127\\.0\\.0\\.1|localhost|/home/web1' -C 2 || true
+
+            echo "== DEPLOY DIR BRAND PAGE MARKERS =="
+            if [ -f /home/web1/app/brands/page.tsx ]; then
+              grep -nE '品牌展示|品牌发布内容|查看全部品牌' /home/web1/app/brands/page.tsx || true
+            fi
+
+            echo "== DATABASE TARGET (REDACTED) =="
+            if [ -f /home/web1/.env.production ]; then
+              DB_URL=$(grep '^DATABASE_URL=' /home/web1/.env.production | head -n 1 | cut -d '=' -f 2- | tr -d '"')
+            elif [ -f /home/web1/.env ]; then
+              DB_URL=$(grep '^DATABASE_URL=' /home/web1/.env | head -n 1 | cut -d '=' -f 2- | tr -d '"')
+            else
+              DB_URL=""
+            fi
+
+            if [ -n "$DB_URL" ]; then
+              node - <<'NODE'
+            const raw = process.env.DB_URL || "";
+            try {
+              const sanitized = raw.replace(/^postgres(ql)?:\/\//, "http://");
+              const parsed = new URL(sanitized);
+              console.log(`db_host=${parsed.hostname}`);
+              console.log(`db_port=${parsed.port || "5432"}`);
+              console.log(`db_name=${parsed.pathname.replace(/^\//, "").split("?")[0]}`);
+            } catch (error) {
+              console.log("db_parse_failed");
+            }
+NODE
+            else
+              echo "db_url_not_found_in_env_files"
+            fi
+          EOF

@@ -11,6 +11,7 @@ const brandCardSelect = {
   area: true,
   positioning: true,
   isRecommend: true,
+  isBrandVisible: true,
   sortOrder: true,
   rankingWeight: true,
   displayTemplate: true,
@@ -29,9 +30,13 @@ const brandCardSelect = {
       area: true,
       positioning: true,
       productSystem: true,
+      craftLevel: true,
+      certifications: true,
       awards: true,
       contactPhone: true,
+      contactInfo: true,
       website: true,
+      address: true,
       updatedAt: true,
       member: {
         select: {
@@ -62,6 +67,7 @@ type BrandRecord = {
   area: string | null;
   positioning: string | null;
   isRecommend: boolean;
+  isBrandVisible: boolean;
   sortOrder: number;
   rankingWeight: number;
   displayTemplate: string | null;
@@ -79,9 +85,13 @@ type BrandRecord = {
     area: string | null;
     positioning: string | null;
     productSystem: string | null;
+    craftLevel: string | null;
+    certifications: string | null;
     awards: string | null;
     contactPhone: string | null;
+    contactInfo: string | null;
     website: string | null;
+    address: string | null;
     updatedAt: Date;
     member: {
       id: string;
@@ -136,23 +146,55 @@ function cleanDisplayField(value: string | null | undefined) {
   return containsSuspiciousText(text) ? null : text;
 }
 
+function pickSummarySource(record: BrandRecord) {
+  return (
+    record.enterprise?.positioning ||
+    record.enterprise?.intro ||
+    record.tagline ||
+    record.positioning ||
+    "企业资料完善后，这里会展示品牌定位、服务能力与核心亮点。"
+  );
+}
+
+function buildHighlightTokens(record: BrandRecord, region: string, area: string | null) {
+  return [
+    cleanDisplayField(record.enterprise?.productSystem),
+    cleanDisplayField(record.enterprise?.craftLevel),
+    area,
+    region,
+    cleanDisplayField(record.enterprise?.awards),
+  ].filter(Boolean).slice(0, 4) as string[];
+}
+
+function buildContactHref(phone: string | null, website: string | null) {
+  if (phone) return `tel:${phone.replace(/[^\d+]/g, "")}`;
+  if (website && /^https?:\/\//i.test(website)) return website;
+  return null;
+}
+
+function buildContactLabel(phone: string | null, website: string | null, contactInfo: string | null) {
+  if (phone) return "立即致电";
+  if (website) return "访问官网";
+  if (contactInfo) return "联系品牌";
+  return "查看详情";
+}
+
 function normalizeBrand(record: BrandRecord) {
   const enterprise = record.enterprise;
   const memberType = record.memberTypeSnapshot || enterprise?.member?.memberType || "enterprise_basic";
   const enterpriseName = cleanDisplayField(enterprise?.companyShortName || enterprise?.companyName || record.name) || record.name;
   const region = cleanDisplayField(enterprise?.region || record.region) || "全国";
   const area = cleanDisplayField(enterprise?.area || record.area);
-  const rawSummary =
-    enterprise?.positioning ||
-    enterprise?.intro ||
-    record.tagline ||
-    record.positioning ||
-    "企业资料完善后，这里会展示品牌定位、服务能力与核心亮点。";
-
+  const rawSummary = pickSummarySource(record);
   const summary = toSummaryText(rawSummary, 120);
   const safeSummary = containsSuspiciousText(summary)
     ? "品牌资料正在整理中，当前可先查看企业详情、联系方式和服务能力。"
     : summary;
+  const contactPhone = cleanDisplayField(enterprise?.contactPhone);
+  const contactInfo = cleanDisplayField(enterprise?.contactInfo);
+  const website = cleanDisplayField(enterprise?.website);
+  const headline = cleanDisplayField(enterprise?.positioning || record.tagline) || safeSummary;
+  const highlights = buildHighlightTokens(record, region, area);
 
   return {
     ...record,
@@ -163,10 +205,17 @@ function normalizeBrand(record: BrandRecord) {
     region,
     area,
     summary: safeSummary,
+    headline,
+    highlights,
     summaryPlain: htmlToPlainText(rawSummary),
     summaryRichText: enterprise?.intro || record.positioning || record.tagline || null,
-    contactPhone: cleanDisplayField(enterprise?.contactPhone),
-    website: cleanDisplayField(enterprise?.website),
+    contactPhone,
+    contactInfo,
+    website,
+    contactHref: buildContactHref(contactPhone, website),
+    contactLabel: buildContactLabel(contactPhone, website, contactInfo),
+    locationLabel: [region, area].filter(Boolean).join(" / "),
+    serviceLine: cleanDisplayField(enterprise?.productSystem || enterprise?.craftLevel) || "整木定制 / 品牌展示",
     displayTemplate: record.displayTemplate || "brand_showcase",
     updatedAt: enterprise?.updatedAt && enterprise.updatedAt > record.updatedAt ? enterprise.updatedAt : record.updatedAt,
   };

@@ -1,4 +1,4 @@
-import { revalidatePath } from "next/cache";
+﻿import { revalidatePath } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 import { normalizePlainTextField, normalizeRichTextField, toSummaryText } from "@/lib/brand-content";
 import { prisma } from "@/lib/prisma";

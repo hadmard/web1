@@ -23,6 +23,8 @@ type BrandRow = {
     missingLogo: boolean;
     missingSummary: boolean;
     missingContact: boolean;
+    weakIntro?: boolean;
+    suspiciousIntro?: boolean;
   };
   enterprise: {
     id: string;
@@ -56,6 +58,8 @@ function issueLabels(item: BrandRow) {
     item.qualityFlags.missingLogo ? "缺 Logo" : null,
     item.qualityFlags.missingSummary ? "缺摘要" : null,
     item.qualityFlags.missingContact ? "缺联系" : null,
+    item.qualityFlags.weakIntro ? "简介过短" : null,
+    item.qualityFlags.suspiciousIntro ? "内容待清洗" : null,
   ].filter(Boolean) as string[];
 }
 
@@ -66,13 +70,26 @@ function memberTypeLabel(item: BrandRow) {
   return memberType;
 }
 
+function applyStatsDelta(
+  current: { visibleTotal: number; recommendedTotal: number; needsAttentionTotal: number },
+  patch: Partial<Pick<BrandRow, "isBrandVisible" | "isRecommend">>,
+  options: { visibleChanged?: number; recommendedChanged?: number } = {},
+) {
+  return {
+    ...current,
+    visibleTotal: current.visibleTotal + (options.visibleChanged ?? 0),
+    recommendedTotal: current.recommendedTotal + (options.recommendedChanged ?? 0),
+  };
+}
+
 export default function AdminBrandsPage() {
   const [items, setItems] = useState<BrandRow[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const [pageInput, setPageInput] = useState("1");
   const [totalPages, setTotalPages] = useState(1);
   const [q, setQ] = useState("");
-  const [onlyNeedsAttention, setOnlyNeedsAttention] = useState(false);
+  const [qualityFilter, setQualityFilter] = useState("needs_attention");
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -83,12 +100,12 @@ export default function AdminBrandsPage() {
     needsAttentionTotal: 0,
   });
 
-  const load = useCallback(async (search = "", needsAttention = false, nextPage = 1) => {
+  const load = useCallback(async (search = "", quality = "needs_attention", nextPage = 1) => {
     setLoading(true);
     setMessage("");
     const params = new URLSearchParams({ limit: String(PAGE_SIZE), page: String(nextPage) });
     if (search.trim()) params.set("q", search.trim());
-    if (needsAttention) params.set("quality", "needs_attention");
+    if (quality && quality !== "all") params.set("quality", quality);
 
     const res = await fetch(`/api/admin/brands?${params.toString()}`, {
       credentials: "include",
@@ -99,6 +116,7 @@ export default function AdminBrandsPage() {
       setItems([]);
       setTotal(0);
       setPage(1);
+      setPageInput("1");
       setTotalPages(1);
       setStats({ visibleTotal: 0, recommendedTotal: 0, needsAttentionTotal: 0 });
       setMessage(data.error ?? "品牌列表加载失败");
@@ -107,10 +125,17 @@ export default function AdminBrandsPage() {
     }
 
     const nextItems = Array.isArray(data.items) ? data.items : [];
+    const currentPage = typeof data.page === "number" ? data.page : nextPage;
+    const computedTotalPages =
+      typeof data.totalPages === "number"
+        ? data.totalPages
+        : Math.max(1, Math.ceil((typeof data.total === "number" ? data.total : nextItems.length) / PAGE_SIZE));
+
     setItems(nextItems);
     setTotal(typeof data.total === "number" ? data.total : nextItems.length);
-    setPage(typeof data.page === "number" ? data.page : nextPage);
-    setTotalPages(typeof data.totalPages === "number" ? data.totalPages : Math.max(1, Math.ceil((typeof data.total === "number" ? data.total : nextItems.length) / PAGE_SIZE)));
+    setPage(currentPage);
+    setPageInput(String(currentPage));
+    setTotalPages(computedTotalPages);
     setStats({
       visibleTotal: typeof data.stats?.visibleTotal === "number" ? data.stats.visibleTotal : 0,
       recommendedTotal: typeof data.stats?.recommendedTotal === "number" ? data.stats.recommendedTotal : 0,
@@ -120,12 +145,13 @@ export default function AdminBrandsPage() {
   }, []);
 
   useEffect(() => {
-    void load("", false, 1);
+    void load("", "needs_attention", 1);
   }, [load]);
 
   const currentPageVisibleCount = useMemo(() => items.filter((item) => item.isBrandVisible).length, [items]);
 
   async function updateBrand(id: string, patch: Partial<BrandRow>) {
+    const currentItem = items.find((item) => item.id === id) ?? null;
     setSavingId(id);
     setMessage("");
     const res = await fetch(`/api/admin/brands/${id}`, {
@@ -142,11 +168,35 @@ export default function AdminBrandsPage() {
     }
 
     setItems((prev) => prev.map((item) => (item.id === id ? ({ ...item, ...data } as BrandRow) : item)));
+    setStats((prev) =>
+      applyStatsDelta(
+        prev,
+        patch,
+        {
+          visibleChanged:
+            typeof patch.isBrandVisible === "boolean" && currentItem && currentItem.isBrandVisible !== patch.isBrandVisible
+              ? patch.isBrandVisible
+                ? 1
+                : -1
+              : 0,
+          recommendedChanged:
+            typeof patch.isRecommend === "boolean" && currentItem && currentItem.isRecommend !== patch.isRecommend
+              ? patch.isRecommend
+                ? 1
+                : -1
+              : 0,
+        },
+      ),
+    );
     setSavingId(null);
   }
 
-  async function runBatchAction(patch: Pick<BrandRow, "isBrandVisible"> | Pick<BrandRow, "isRecommend">, successMessage: string) {
-    if (items.length === 0) return;
+  async function runBatchAction(
+    patch: Pick<BrandRow, "isBrandVisible"> | Pick<BrandRow, "isRecommend">,
+    scope: "page" | "filter",
+    successMessage: string,
+  ) {
+    if (scope === "page" && items.length === 0) return;
     setBatchSaving(true);
     setMessage("");
     const res = await fetch("/api/admin/brands/batch", {
@@ -154,31 +204,54 @@ export default function AdminBrandsPage() {
       credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        ids: items.map((item) => item.id),
+        scope,
+        ids: scope === "page" ? items.map((item) => item.id) : [],
+        filters: {
+          q,
+          quality: qualityFilter !== "all" ? qualityFilter : undefined,
+        },
         patch,
       }),
     });
-    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    const data = (await res.json().catch(() => ({}))) as { error?: string; count?: number };
     if (!res.ok) {
       setMessage(data.error ?? "批量操作失败");
       setBatchSaving(false);
       return;
     }
 
-    setItems((prev) => prev.map((item) => ({ ...item, ...patch })));
-    setStats((prev) => ({
-      ...prev,
-      visibleTotal:
+    if (scope === "page") {
+      const visibleChanged =
         "isBrandVisible" in patch
-          ? prev.visibleTotal + (patch.isBrandVisible ? items.filter((item) => !item.isBrandVisible).length : -items.filter((item) => item.isBrandVisible).length)
-          : prev.visibleTotal,
-      recommendedTotal:
+          ? patch.isBrandVisible
+            ? items.filter((item) => !item.isBrandVisible).length
+            : -items.filter((item) => item.isBrandVisible).length
+          : 0;
+      const recommendedChanged =
         "isRecommend" in patch
-          ? prev.recommendedTotal + (patch.isRecommend ? items.filter((item) => !item.isRecommend).length : -items.filter((item) => item.isRecommend).length)
-          : prev.recommendedTotal,
-    }));
-    setMessage(successMessage);
+          ? patch.isRecommend
+            ? items.filter((item) => !item.isRecommend).length
+            : -items.filter((item) => item.isRecommend).length
+          : 0;
+
+      setItems((prev) => prev.map((item) => ({ ...item, ...patch })));
+      setStats((prev) => applyStatsDelta(prev, patch, { visibleChanged, recommendedChanged }));
+    } else {
+      await load(q, qualityFilter, page);
+    }
+
+    setMessage(`${successMessage}${typeof data.count === "number" ? ` 本次处理 ${data.count} 家。` : ""}`);
     setBatchSaving(false);
+  }
+
+  function jumpToPage() {
+    const parsed = Number.parseInt(pageInput.trim(), 10);
+    if (Number.isNaN(parsed)) {
+      setPageInput(String(page));
+      return;
+    }
+    const safePage = Math.min(Math.max(parsed, 1), totalPages);
+    void load(q, qualityFilter, safePage);
   }
 
   return (
@@ -206,7 +279,7 @@ export default function AdminBrandsPage() {
           className="grid gap-3 lg:grid-cols-[1fr,auto,auto,auto]"
           onSubmit={(event) => {
             event.preventDefault();
-            void load(q, onlyNeedsAttention, 1);
+            void load(q, qualityFilter, 1);
           }}
         >
           <input
@@ -215,29 +288,40 @@ export default function AdminBrandsPage() {
             className="h-12 rounded-[16px] border border-border bg-surface px-4 text-sm text-primary"
             placeholder="搜索企业名、品牌名、地区、产品体系"
           />
-          <label className="inline-flex h-12 items-center gap-2 rounded-[16px] border border-border bg-surface px-4 text-sm text-primary">
-            <input type="checkbox" checked={onlyNeedsAttention} onChange={(event) => setOnlyNeedsAttention(event.target.checked)} />
-            只看待完善资料
-          </label>
+          <select
+            value={qualityFilter}
+            onChange={(event) => setQualityFilter(event.target.value)}
+            className="h-12 rounded-[16px] border border-border bg-surface px-4 text-sm text-primary"
+          >
+            <option value="needs_attention">待完善资料</option>
+            <option value="missing_logo">缺 Logo</option>
+            <option value="missing_summary">缺摘要</option>
+            <option value="missing_contact">缺联系</option>
+            <option value="intro_short">简介过短</option>
+            <option value="intro_dirty">内容待清洗</option>
+            <option value="all">全部品牌</option>
+          </select>
           <button className="h-12 rounded-[16px] bg-accent px-5 text-sm font-medium text-white">搜索</button>
           <button
             type="button"
             className="h-12 rounded-[16px] border border-border px-5 text-sm text-primary transition hover:bg-surface"
             onClick={() => {
               setQ("");
-              setOnlyNeedsAttention(false);
-              void load("", false, 1);
+              setQualityFilter("needs_attention");
+              void load("", "needs_attention", 1);
             }}
           >
             重置
           </button>
         </form>
-        <p className="mt-3 text-xs text-muted">后台列表每页展示 20 家，排序优先级为：前台显示中的企业优先、推荐品牌优先、人工排序值优先、会员权重优先。</p>
+        <p className="mt-3 text-xs text-muted">
+          后台列表每页展示 20 家，排序优先级为：前台显示中的企业优先、推荐品牌优先、人工排序值优先、会员权重优先。支持按缺 Logo、缺摘要、缺联系、简介过短、内容待清洗筛查；下面“本页”按钮只作用当前 20 条，要批量处理全部筛选结果请用“当前筛选结果”按钮。
+        </p>
         <div className="mt-4 flex flex-wrap gap-2">
           <button
             type="button"
             disabled={batchSaving || loading || items.length === 0}
-            onClick={() => void runBatchAction({ isBrandVisible: true }, "本页品牌已一键设为前台显示。")}
+            onClick={() => void runBatchAction({ isBrandVisible: true }, "page", "本页品牌已一键设为前台显示。")}
             className="rounded-full border border-border px-4 py-2 text-sm text-primary transition hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
           >
             本页一键显示
@@ -245,7 +329,7 @@ export default function AdminBrandsPage() {
           <button
             type="button"
             disabled={batchSaving || loading || items.length === 0}
-            onClick={() => void runBatchAction({ isBrandVisible: false }, "本页品牌已一键隐藏。")}
+            onClick={() => void runBatchAction({ isBrandVisible: false }, "page", "本页品牌已一键隐藏。")}
             className="rounded-full border border-border px-4 py-2 text-sm text-primary transition hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
           >
             本页一键隐藏
@@ -253,7 +337,7 @@ export default function AdminBrandsPage() {
           <button
             type="button"
             disabled={batchSaving || loading || items.length === 0}
-            onClick={() => void runBatchAction({ isRecommend: true }, "本页品牌已一键设为推荐。")}
+            onClick={() => void runBatchAction({ isRecommend: true }, "page", "本页品牌已一键设为推荐。")}
             className="rounded-full border border-border px-4 py-2 text-sm text-primary transition hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
           >
             本页一键推荐
@@ -261,10 +345,26 @@ export default function AdminBrandsPage() {
           <button
             type="button"
             disabled={batchSaving || loading || items.length === 0}
-            onClick={() => void runBatchAction({ isRecommend: false }, "本页品牌已一键取消推荐。")}
+            onClick={() => void runBatchAction({ isRecommend: false }, "page", "本页品牌已一键取消推荐。")}
             className="rounded-full border border-border px-4 py-2 text-sm text-primary transition hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
           >
             本页取消推荐
+          </button>
+          <button
+            type="button"
+            disabled={batchSaving || loading || total === 0}
+            onClick={() => void runBatchAction({ isBrandVisible: false }, "filter", "当前筛选结果已一键隐藏。")}
+            className="rounded-full border border-[rgba(181,157,121,0.24)] bg-[rgba(255,249,238,0.92)] px-4 py-2 text-sm text-accent transition hover:bg-[rgba(255,244,227,0.95)] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            当前筛选结果一键隐藏
+          </button>
+          <button
+            type="button"
+            disabled={batchSaving || loading || total === 0}
+            onClick={() => void runBatchAction({ isBrandVisible: true }, "filter", "当前筛选结果已一键设为前台显示。")}
+            className="rounded-full border border-[rgba(181,157,121,0.24)] bg-[rgba(255,249,238,0.92)] px-4 py-2 text-sm text-accent transition hover:bg-[rgba(255,244,227,0.95)] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            当前筛选结果一键显示
           </button>
         </div>
       </section>
@@ -286,10 +386,10 @@ export default function AdminBrandsPage() {
           <div className="p-8 text-sm text-muted">当前没有匹配的品牌数据。</div>
         ) : (
           <div className="divide-y divide-border">
-            {items.map((item) => {
+            {items.map((item, index) => {
               const issues = issueLabels(item);
               const disabled = savingId === item.id;
-              const rowNumber = (page - 1) * PAGE_SIZE + items.findIndex((row) => row.id === item.id) + 1;
+              const rowNumber = (page - 1) * PAGE_SIZE + index + 1;
               return (
                 <article key={item.id} className="px-5 py-4">
                   <div className="grid gap-4 lg:grid-cols-[64px_minmax(0,1.5fr)_120px_120px_150px_120px_140px] lg:items-center">
@@ -361,11 +461,11 @@ export default function AdminBrandsPage() {
           <span>当前第 {page} / {totalPages} 页，本页前台显示 {currentPageVisibleCount} 家。</span>
           <span>推荐品牌共 {stats.recommendedTotal} 家，管理员可直接在列表中控制前台显示与推荐状态。</span>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             disabled={page <= 1 || loading}
-            onClick={() => void load(q, onlyNeedsAttention, page - 1)}
+            onClick={() => void load(q, qualityFilter, page - 1)}
             className="rounded-full border border-border px-4 py-2 text-primary transition hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
           >
             上一页
@@ -373,11 +473,34 @@ export default function AdminBrandsPage() {
           <button
             type="button"
             disabled={page >= totalPages || loading}
-            onClick={() => void load(q, onlyNeedsAttention, page + 1)}
+            onClick={() => void load(q, qualityFilter, page + 1)}
             className="rounded-full border border-border px-4 py-2 text-primary transition hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
           >
             下一页
           </button>
+          <div className="ml-auto flex items-center gap-2">
+            <span>跳到第</span>
+            <input
+              value={pageInput}
+              onChange={(event) => setPageInput(event.target.value.replace(/[^0-9]/g, ""))}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  jumpToPage();
+                }
+              }}
+              className="h-10 w-20 rounded-[14px] border border-border bg-surface px-3 text-center text-sm text-primary"
+            />
+            <span>页</span>
+            <button
+              type="button"
+              disabled={loading}
+              onClick={jumpToPage}
+              className="rounded-full border border-border px-4 py-2 text-primary transition hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              跳转
+            </button>
+          </div>
         </div>
       </footer>
     </div>

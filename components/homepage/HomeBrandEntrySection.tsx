@@ -8,7 +8,7 @@ type RegionCount = {
   count: number;
 };
 
-export function HomeEnterpriseSection({
+export function HomeBrandEntrySection({
   middleAd,
   enterpriseImage,
   enterprises,
@@ -41,7 +41,7 @@ export function HomeEnterpriseSection({
             ) : hasEnterpriseImage ? (
               <Image
                 src={enterpriseImage}
-                alt="企业入口栏目封面图"
+                alt="品牌入口栏目封面图"
                 width={1600}
                 height={900}
                 sizes="(max-width: 1024px) 100vw, 760px"
