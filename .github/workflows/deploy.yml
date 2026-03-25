@@ -41,17 +41,14 @@ jobs:
             fi
 
             if [ -n "$db_url" ]; then
-              db_target=$(DB_URL="$db_url" node - <<'NODE'
-            const raw = process.env.DB_URL || "";
-            try {
-              const sanitized = raw.replace(/^postgres(ql)?:\/\//, "http://");
-              const parsed = new URL(sanitized);
-              process.stdout.write(`db_host=${parsed.hostname};db_port=${parsed.port || "5432"};db_name=${parsed.pathname.replace(/^\//, "").split("?")[0]}`);
-            } catch (error) {
-              process.stdout.write("db_parse_failed");
-            }
-NODE
-              )
+              db_no_proto=$(printf '%s' "$db_url" | sed -E 's#^postgres(ql)?://##')
+              db_host=$(printf '%s' "$db_no_proto" | sed -E 's#^[^@]*@([^:/?]+).*#\1#')
+              db_port=$(printf '%s' "$db_no_proto" | sed -En 's#^[^@]*@[^:/?]+:([0-9]+).*#\1#p')
+              db_name=$(printf '%s' "$db_no_proto" | sed -E 's#^[^/]*/([^?]+).*#\1#')
+              if [ -z "$db_port" ]; then
+                db_port="5432"
+              fi
+              db_target="db_host=$db_host;db_port=$db_port;db_name=$db_name"
             else
               db_target="db_url_not_found"
             fi
