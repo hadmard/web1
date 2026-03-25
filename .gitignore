@@ -67,6 +67,12 @@ storage/
 public/uploads/
 public/storage/
 
+# local migration artifacts
+custom/backups/
+custom/data/
+custom/reports/
+custom/tmp/
+
 # local review notes/assets
 网站修改.md
 网站修改_media/

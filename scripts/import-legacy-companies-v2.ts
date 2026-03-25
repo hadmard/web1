@@ -97,10 +97,17 @@ type MemberSnapshot = {
 type ImportReportRow = {
   legacyId: string;
   memberId: string;
+  enterpriseId: string;
+  brandId: string;
   account: string;
   usedLegacyPassword: boolean;
   generatedPassword: string | null;
   companyName: string | null;
+  memberType: string;
+  isRecommend: boolean;
+  sortOrder: number;
+  mode: "dry-run" | "apply";
+  targetSlug: string;
 };
 
 const prisma = new PrismaClient();
@@ -186,7 +193,10 @@ function asString(value: unknown) {
 }
 
 function asNullableString(value: unknown) {
-  const normalized = asString(value);
+  const normalized =
+    typeof value === "number" || typeof value === "bigint"
+      ? String(value)
+      : asString(value);
   return normalized.length > 0 ? normalized : null;
 }
 
@@ -197,6 +207,20 @@ function asNumber(value: unknown) {
     if (!Number.isNaN(parsed)) return parsed;
   }
   return null;
+}
+
+function resolveLegacyKey(row: LegacyCompanyRow) {
+  const companyId = asNumber(row.company_id);
+  if (companyId && companyId > 0) {
+    return String(companyId);
+  }
+
+  const fallbackId = asNumber(row.id);
+  if (fallbackId && fallbackId > 0) {
+    return String(fallbackId);
+  }
+
+  return asNullableString(row.company_id) ?? asNullableString(row.id) ?? "unknown";
 }
 
 function joinParts(parts: Array<string | null>) {
@@ -223,6 +247,45 @@ function chooseTemplate(row: LegacyCompanyRow): TemplateKey {
   return asString(row.video) ? "professional_service" : "simple_elegant";
 }
 
+function slugifyBrandName(value: string) {
+  const normalized = value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return normalized || "legacy-brand";
+}
+
+function buildPreferredBrandSlug(preferredName: string, legacyKey: string) {
+  const baseFromName = slugifyBrandName(preferredName);
+  return baseFromName === "legacy-brand" ? `legacy-brand-${legacyKey}` : baseFromName;
+}
+
+async function resolveUniqueBrandSlug(
+  tx: import("@prisma/client").Prisma.TransactionClient,
+  preferredName: string,
+  legacyKey: string,
+  existingBrandId?: string
+) {
+  const base = buildPreferredBrandSlug(preferredName, legacyKey);
+  let candidate = base;
+  let counter = 2;
+
+  for (;;) {
+    const hit = await tx.brand.findUnique({
+      where: { slug: candidate },
+      select: { id: true },
+    });
+
+    if (!hit || (existingBrandId && hit.id === existingBrandId)) {
+      return candidate;
+    }
+
+    candidate = `${base}-${counter}`;
+    counter += 1;
+  }
+}
+
 function sanitizeAccountPart(value: string) {
   return value
     .trim()
@@ -246,8 +309,7 @@ function chooseAccount(row: LegacyCompanyRow) {
     if (normalized.length >= 4) return normalized;
   }
 
-  const legacyId = asNullableString(row.company_id) ?? asNullableString(row.id) ?? "company";
-  return `legacy-company-${legacyId}`;
+  return `legacy-company-${resolveLegacyKey(row)}`;
 }
 
 function normalizeLegacyPasswordHash(value: string | null) {
@@ -256,7 +318,7 @@ function normalizeLegacyPasswordHash(value: string | null) {
 }
 
 function buildFallbackPassword(row: LegacyCompanyRow) {
-  const legacyId = asNullableString(row.company_id) ?? asNullableString(row.id) ?? "0000";
+  const legacyId = resolveLegacyKey(row);
   return `Cnzm#${legacyId}`;
 }
 
@@ -342,6 +404,7 @@ function resolveMemberId(row: LegacyCompanyRow, memberMap: MemberMap) {
   if (inline) return inline;
 
   const keys = [
+    resolveLegacyKey(row),
     asNullableString(row.company_id),
     asNullableString(row.id),
     asNullableString(row.domain),
@@ -397,6 +460,42 @@ function buildEnterprisePatch(row: LegacyCompanyRow) {
   };
 }
 
+function buildBrandPatch(row: LegacyCompanyRow, enterpriseId: string, nextMemberType: string) {
+  const brandName =
+    asNullableString(row.short_name) ??
+    asNullableString(row.name) ??
+    `legacy-brand-${asNullableString(row.company_id) ?? asNullableString(row.id) ?? "unknown"}`;
+  const isVip = asNumber(row.is_vip) === 1;
+  const rankingWeight = isVip ? 20 : 0;
+  const sortOrder = isVip ? 100 : 10;
+
+  return {
+    name: brandName,
+    enterpriseId,
+    logoUrl: toAbsoluteUrl(asNullableString(row.logo)),
+    tagline:
+      asNullableString(row.signature) ??
+      limitText(buildIntro(row), 90) ??
+      null,
+    region: buildRegion(row),
+    area: buildArea(row),
+    positioning: asNullableString(row.signature),
+    materialSystem: null,
+    productStructure: asNullableString(row.business_scope),
+    priceRange: null,
+    targetAudience: null,
+    businessModel: null,
+    contactUrl: toAbsoluteUrl(asNullableString(row.website)),
+    certUrl: toAbsoluteUrl(asNullableString(row.business_license)),
+    isRecommend: isVip,
+    isBrandVisible: true,
+    sortOrder,
+    rankingWeight,
+    displayTemplate: chooseTemplate(row),
+    memberTypeSnapshot: nextMemberType,
+  };
+}
+
 async function findExistingMember(mappedMemberId: string | null, account: string): Promise<MemberSnapshot | null> {
   if (mappedMemberId) {
     return prisma.member.findUnique({
@@ -411,6 +510,31 @@ async function findExistingMember(mappedMemberId: string | null, account: string
   });
 }
 
+async function findExistingMemberByEnterpriseIdentity(row: LegacyCompanyRow): Promise<MemberSnapshot | null> {
+  const companyName = asNullableString(row.name);
+  const companyShortName = asNullableString(row.short_name);
+
+  if (!companyName && !companyShortName) {
+    return null;
+  }
+
+  const enterprise = await prisma.enterprise.findFirst({
+    where: {
+      OR: [
+        companyName ? { companyName } : undefined,
+        companyShortName ? { companyShortName } : undefined,
+      ].filter(Boolean) as Array<{ companyName?: string; companyShortName?: string }>,
+    },
+    select: {
+      member: {
+        select: { id: true, name: true, memberType: true, email: true },
+      },
+    },
+  });
+
+  return enterprise?.member ?? null;
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const rows = readJsonFile<LegacyCompanyRow[]>(args.inputPath);
@@ -423,16 +547,21 @@ async function main() {
   const report: ImportReportRow[] = [];
 
   for (const row of rows) {
-    const legacyId = asNullableString(row.company_id) ?? asNullableString(row.id) ?? "unknown";
+    const legacyId = resolveLegacyKey(row);
     const mappedMemberId = resolveMemberId(row, memberMap);
     const account = chooseAccount(row);
     const normalizedLegacyPasswordHash = normalizeLegacyPasswordHash(asNullableString(row.user_password_hash));
     const generatedPassword = normalizedLegacyPasswordHash ? null : buildFallbackPassword(row);
     const nextMemberType = asNumber(row.is_vip) === 1 ? "enterprise_advanced" : "enterprise_basic";
     const enterprisePatch = buildEnterprisePatch(row);
+    const dryRunBrandPatch = buildBrandPatch(row, "__dry_run_enterprise__", nextMemberType);
     const siteSettings = buildSiteSettings(row);
 
     let member = await findExistingMember(mappedMemberId, account);
+
+    if (!member) {
+      member = await findExistingMemberByEnterpriseIdentity(row);
+    }
 
     if (mappedMemberId && !member) {
       skipped += 1;
@@ -441,6 +570,21 @@ async function main() {
     }
 
     if (!args.apply) {
+      report.push({
+        legacyId,
+        memberId: member?.id ?? "",
+        enterpriseId: "",
+        brandId: "",
+        account: member?.email ?? account,
+        usedLegacyPassword: Boolean(normalizedLegacyPasswordHash),
+        generatedPassword,
+        companyName: enterprisePatch.companyShortName ?? enterprisePatch.companyName,
+        memberType: args.syncMemberType ? nextMemberType : member?.memberType ?? nextMemberType,
+        isRecommend: nextMemberType === "enterprise_advanced",
+        sortOrder: nextMemberType === "enterprise_advanced" ? 100 : 10,
+        mode: "dry-run",
+        targetSlug: buildPreferredBrandSlug(dryRunBrandPatch.name, legacyId),
+      });
       imported += 1;
       if (args.siteSettings) siteSettingsCount += 1;
       console.log(
@@ -455,6 +599,10 @@ async function main() {
             memberTypeBefore: member?.memberType ?? null,
             memberTypeAfter: args.syncMemberType ? nextMemberType : member?.memberType ?? nextMemberType,
             enterprise: enterprisePatch,
+            brand: {
+              ...dryRunBrandPatch,
+              slug: buildPreferredBrandSlug(dryRunBrandPatch.name, legacyId),
+            },
             siteSettings: args.siteSettings ? siteSettings : null,
           },
           null,
@@ -498,6 +646,35 @@ async function main() {
         update: enterprisePatch,
       });
 
+      const enterprise = await tx.enterprise.findUnique({
+        where: { memberId: member.id },
+        select: { id: true, brand: { select: { id: true, slug: true } } },
+      });
+
+      if (!enterprise) {
+        throw new Error(`Enterprise upsert failed for legacy ${legacyId}`);
+      }
+
+      const brandPatch = buildBrandPatch(row, enterprise.id, nextMemberType);
+      const resolvedSlug = await resolveUniqueBrandSlug(
+        tx,
+        brandPatch.name,
+        legacyId,
+        enterprise.brand?.id
+      );
+
+      await tx.brand.upsert({
+        where: enterprise.brand?.id ? { id: enterprise.brand.id } : { slug: resolvedSlug },
+        create: {
+          ...brandPatch,
+          slug: resolvedSlug,
+        },
+        update: {
+          ...brandPatch,
+          slug: resolvedSlug,
+        },
+      });
+
       if (args.siteSettings) {
         await tx.appSetting.upsert({
           where: { key: `member_site_settings:${member.id}` },
@@ -529,10 +706,35 @@ async function main() {
     report.push({
       legacyId,
       memberId: member.id,
+      enterpriseId:
+        (
+          await prisma.enterprise.findUnique({
+            where: { memberId: member.id },
+            select: { id: true, brand: { select: { id: true } } },
+          })
+        )?.id ?? "",
+      brandId:
+        (
+          await prisma.enterprise.findUnique({
+            where: { memberId: member.id },
+            select: { brand: { select: { id: true } } },
+          })
+        )?.brand?.id ?? "",
       account: member.email,
       usedLegacyPassword: Boolean(normalizedLegacyPasswordHash),
       generatedPassword,
       companyName: enterprisePatch.companyShortName ?? enterprisePatch.companyName,
+      memberType: member.memberType,
+      isRecommend: nextMemberType === "enterprise_advanced",
+      sortOrder: nextMemberType === "enterprise_advanced" ? 100 : 10,
+      mode: "apply",
+      targetSlug:
+        (
+          await prisma.enterprise.findUnique({
+            where: { memberId: member.id },
+            select: { brand: { select: { slug: true } } },
+          })
+        )?.brand?.slug ?? "",
     });
     console.log(`imported legacy=${legacyId} -> member=${member.id} (${member.email})`);
   }

@@ -44,6 +44,13 @@ model Standard {
 model Brand {
   id               String   @id @default(cuid())
   name             String
+  slug             String   @unique
+  enterpriseId     String?  @unique
+  enterprise       Enterprise? @relation(fields: [enterpriseId], references: [id], onDelete: SetNull)
+  logoUrl          String?
+  tagline          String?
+  region           String?
+  area             String?
   positioning      String?
   materialSystem   String?
   productStructure String?
@@ -52,9 +59,17 @@ model Brand {
   businessModel    String?
   contactUrl       String?
   certUrl          String?
+  isRecommend      Boolean  @default(false)
+  isBrandVisible   Boolean  @default(true)
+  sortOrder        Int      @default(0)
+  rankingWeight    Int      @default(0)
+  displayTemplate  String?
+  memberTypeSnapshot String?
   updatedAt        DateTime @updatedAt
   createdAt        DateTime @default(now())
 
+  @@index([isBrandVisible, isRecommend, sortOrder])
+  @@index([region, area])
   @@map("brands")
 }
 
@@ -116,6 +131,7 @@ model Enterprise {
   id              String   @id @default(cuid())
   memberId        String   @unique
   member          Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  brand           Brand?
   companyName     String?
   companyShortName String?
   contactPerson   String?

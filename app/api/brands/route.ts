@@ -12,12 +12,34 @@ export async function GET(request: NextRequest) {
 
     const [items, total] = await Promise.all([
       prisma.brand.findMany({
-        select: { id: true, name: true, positioning: true, updatedAt: true },
-        orderBy: { updatedAt: "desc" },
+        where: { isBrandVisible: true },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          logoUrl: true,
+          tagline: true,
+          region: true,
+          area: true,
+          positioning: true,
+          isRecommend: true,
+          sortOrder: true,
+          rankingWeight: true,
+          displayTemplate: true,
+          updatedAt: true,
+          enterprise: {
+            select: {
+              id: true,
+              companyName: true,
+              companyShortName: true,
+            },
+          },
+        },
+        orderBy: [{ isRecommend: "desc" }, { sortOrder: "desc" }, { rankingWeight: "desc" }, { updatedAt: "desc" }],
         skip,
         take: limit,
       }),
-      prisma.brand.count(),
+      prisma.brand.count({ where: { isBrandVisible: true } }),
     ]);
 
     return NextResponse.json({ items, total, page, limit });
