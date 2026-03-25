@@ -38,9 +38,100 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y sshpass
 
+      - name: Validate legacy rollout secrets
+        env:
+          LEGACY_SSH_HOST: ${{ secrets.LEGACY_SSH_HOST }}
+          LEGACY_SSH_PORT: ${{ secrets.LEGACY_SSH_PORT }}
+          LEGACY_SSH_USER: ${{ secrets.LEGACY_SSH_USER }}
+          LEGACY_SSH_PASSWORD: ${{ secrets.LEGACY_SSH_PASSWORD }}
+          LEGACY_MYSQL_HOST: ${{ secrets.LEGACY_MYSQL_HOST }}
+          LEGACY_MYSQL_PORT: ${{ secrets.LEGACY_MYSQL_PORT }}
+          LEGACY_MYSQL_DB: ${{ secrets.LEGACY_MYSQL_DB }}
+          LEGACY_MYSQL_USER: ${{ secrets.LEGACY_MYSQL_USER }}
+          LEGACY_MYSQL_PASSWORD: ${{ secrets.LEGACY_MYSQL_PASSWORD }}
+        run: |
+          missing=()
+          for name in LEGACY_SSH_HOST LEGACY_SSH_USER LEGACY_SSH_PASSWORD LEGACY_MYSQL_HOST LEGACY_MYSQL_PORT LEGACY_MYSQL_DB LEGACY_MYSQL_USER LEGACY_MYSQL_PASSWORD; do
+            if [ -z "${!name}" ]; then
+              missing+=("$name")
+            fi
+          done
+
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "::error::LEGACY_SECRET_MISSING=${missing[*]}"
+            exit 1
+          fi
+
+          echo "::warning::LEGACY_SECRET_CHECK=required secrets present"
+          echo "::warning::LEGACY_SSH_PORT=${LEGACY_SSH_PORT:-22}"
+
+      - name: Probe legacy SSH access
+        env:
+          LEGACY_SSH_HOST: ${{ secrets.LEGACY_SSH_HOST }}
+          LEGACY_SSH_PORT: ${{ secrets.LEGACY_SSH_PORT }}
+          LEGACY_SSH_USER: ${{ secrets.LEGACY_SSH_USER }}
+          LEGACY_SSH_PASSWORD: ${{ secrets.LEGACY_SSH_PASSWORD }}
+        run: |
+          set +e
+          ssh_output=$(
+            sshpass -p "$LEGACY_SSH_PASSWORD" ssh \
+              -p "${LEGACY_SSH_PORT:-22}" \
+              -o StrictHostKeyChecking=no \
+              -o BatchMode=no \
+              -o PreferredAuthentications=password \
+              -o ConnectTimeout=15 \
+              "$LEGACY_SSH_USER@$LEGACY_SSH_HOST" \
+              "echo LEGACY_SSH_OK" 2>&1
+          )
+          ssh_status=$?
+          ssh_output_flat=$(printf '%s' "$ssh_output" | tr '\n' ';')
+          echo "::warning::LEGACY_SSH_STATUS=$ssh_status"
+          echo "::warning::LEGACY_SSH_OUTPUT=$ssh_output_flat"
+          if [ "$ssh_status" -ne 0 ]; then
+            exit "$ssh_status"
+          fi
+
+      - name: Probe legacy MySQL access
+        env:
+          LEGACY_SSH_HOST: ${{ secrets.LEGACY_SSH_HOST }}
+          LEGACY_SSH_PORT: ${{ secrets.LEGACY_SSH_PORT }}
+          LEGACY_SSH_USER: ${{ secrets.LEGACY_SSH_USER }}
+          LEGACY_SSH_PASSWORD: ${{ secrets.LEGACY_SSH_PASSWORD }}
+          LEGACY_MYSQL_HOST: ${{ secrets.LEGACY_MYSQL_HOST }}
+          LEGACY_MYSQL_PORT: ${{ secrets.LEGACY_MYSQL_PORT }}
+          LEGACY_MYSQL_DB: ${{ secrets.LEGACY_MYSQL_DB }}
+          LEGACY_MYSQL_USER: ${{ secrets.LEGACY_MYSQL_USER }}
+          LEGACY_MYSQL_PASSWORD: ${{ secrets.LEGACY_MYSQL_PASSWORD }}
+        run: |
+          cat > /tmp/legacy-mysql-probe.sh <<'EOF'
+          mysql -N -B --default-character-set=utf8mb4 -h"$LEGACY_MYSQL_HOST" -P"$LEGACY_MYSQL_PORT" -u"$LEGACY_MYSQL_USER" -p"$LEGACY_MYSQL_PASSWORD" -D "$LEGACY_MYSQL_DB" -e "SELECT 1;"
+          EOF
+          chmod 700 /tmp/legacy-mysql-probe.sh
+
+          set +e
+          mysql_output=$(
+            sshpass -p "$LEGACY_SSH_PASSWORD" ssh \
+              -p "${LEGACY_SSH_PORT:-22}" \
+              -o StrictHostKeyChecking=no \
+              -o BatchMode=no \
+              -o PreferredAuthentications=password \
+              -o ConnectTimeout=15 \
+              "$LEGACY_SSH_USER@$LEGACY_SSH_HOST" \
+              "LEGACY_MYSQL_HOST=$(printf '%q' "$LEGACY_MYSQL_HOST") LEGACY_MYSQL_PORT=$(printf '%q' "$LEGACY_MYSQL_PORT") LEGACY_MYSQL_DB=$(printf '%q' "$LEGACY_MYSQL_DB") LEGACY_MYSQL_USER=$(printf '%q' "$LEGACY_MYSQL_USER") LEGACY_MYSQL_PASSWORD=$(printf '%q' "$LEGACY_MYSQL_PASSWORD") bash -s" \
+              < /tmp/legacy-mysql-probe.sh 2>&1
+          )
+          mysql_status=$?
+          mysql_output_flat=$(printf '%s' "$mysql_output" | tr '\n' ';')
+          echo "::warning::LEGACY_MYSQL_STATUS=$mysql_status"
+          echo "::warning::LEGACY_MYSQL_OUTPUT=$mysql_output_flat"
+          if [ "$mysql_status" -ne 0 ]; then
+            exit "$mysql_status"
+          fi
+
       - name: Fetch legacy company export
         env:
           LEGACY_SSH_HOST: ${{ secrets.LEGACY_SSH_HOST }}
+          LEGACY_SSH_PORT: ${{ secrets.LEGACY_SSH_PORT }}
           LEGACY_SSH_USER: ${{ secrets.LEGACY_SSH_USER }}
           LEGACY_SSH_PASSWORD: ${{ secrets.LEGACY_SSH_PASSWORD }}
           LEGACY_MYSQL_HOST: ${{ secrets.LEGACY_MYSQL_HOST }}
@@ -118,7 +209,7 @@ jobs:
           legacy_mysql_user_q=$(printf '%q' "$LEGACY_MYSQL_USER")
           legacy_mysql_password_q=$(printf '%q' "$LEGACY_MYSQL_PASSWORD")
 
-          sshpass -p "$LEGACY_SSH_PASSWORD" ssh -o StrictHostKeyChecking=no -o BatchMode=no "$LEGACY_SSH_USER@$LEGACY_SSH_HOST" \
+          sshpass -p "$LEGACY_SSH_PASSWORD" ssh -p "${LEGACY_SSH_PORT:-22}" -o StrictHostKeyChecking=no -o BatchMode=no -o PreferredAuthentications=password "$LEGACY_SSH_USER@$LEGACY_SSH_HOST" \
             "LEGACY_MYSQL_HOST=$legacy_mysql_host_q LEGACY_MYSQL_PORT=$legacy_mysql_port_q LEGACY_MYSQL_DB=$legacy_mysql_db_q LEGACY_MYSQL_USER=$legacy_mysql_user_q LEGACY_MYSQL_PASSWORD=$legacy_mysql_password_q bash -s" \
             < /tmp/legacy-company-export.sh > custom/tmp/legacy-companies-raw.jsonl
 
