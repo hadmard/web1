@@ -90,9 +90,10 @@ export async function generateMetadata({ params }: Props) {
 
   const settings = await getMemberSiteSettings(ent.member.id);
   const name = ent.companyShortName || ent.companyName || ent.member.name || "企业";
+  const description = toSummaryText(settings.seo.description || ent.positioning || ent.intro, 120) || "企业结构化展示页";
   return {
     title: settings.seo.title || `${name} | 企业展示 | 中华整木网`,
-    description: settings.seo.description || toSummaryText(ent.positioning || ent.intro, 120) || "企业结构化展示页",
+    description,
     keywords: settings.seo.keywords || undefined,
   };
 }
