@@ -1,0 +1,42 @@
+name: Production Company Rollout
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/prod-company-rollout.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: prod-company-rollout
+  cancel-in-progress: false
+
+jobs:
+  rollout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Run production company rollout
+        run: |
+          ssh -o BatchMode=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+            set -e
+            cd /home/web1
+
+            if [ ! -f custom/data/legacy-companies-export.json ]; then
+              echo "Missing custom/data/legacy-companies-export.json on server"
+              exit 1
+            fi
+
+            npm run run:company-rollout -- \
+              -InputPath custom/data/legacy-companies-export.json \
+              -Mode apply \
+              -VerifyUrlList custom/samples/company-rollout-verify-urls.txt
+          EOF
