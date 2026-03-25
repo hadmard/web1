@@ -5,6 +5,12 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/prod-company-rollout.yml"
+      - "scripts/import-legacy-companies-v2.ts"
+      - "scripts/run-company-migration.ps1"
+      - "scripts/run-company-rollout.ps1"
+      - "scripts/convert-jsonl-to-json.mjs"
+      - "custom/samples/company-rollout-verify-urls.txt"
+      - "package.json"
   workflow_dispatch:
 
 concurrency:
@@ -17,6 +23,9 @@ jobs:
     timeout-minutes: 30
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
@@ -24,16 +33,107 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
 
+      - name: Install legacy export dependency
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y sshpass
+
+      - name: Fetch legacy company export
+        env:
+          LEGACY_SSH_HOST: ${{ secrets.LEGACY_SSH_HOST }}
+          LEGACY_SSH_USER: ${{ secrets.LEGACY_SSH_USER }}
+          LEGACY_SSH_PASSWORD: ${{ secrets.LEGACY_SSH_PASSWORD }}
+          LEGACY_MYSQL_HOST: ${{ secrets.LEGACY_MYSQL_HOST }}
+          LEGACY_MYSQL_PORT: ${{ secrets.LEGACY_MYSQL_PORT }}
+          LEGACY_MYSQL_DB: ${{ secrets.LEGACY_MYSQL_DB }}
+          LEGACY_MYSQL_USER: ${{ secrets.LEGACY_MYSQL_USER }}
+          LEGACY_MYSQL_PASSWORD: ${{ secrets.LEGACY_MYSQL_PASSWORD }}
+        run: |
+          mkdir -p custom/tmp custom/data
+          cat > /tmp/legacy-company-export.sh <<'EOF'
+          mysql -N -B --default-character-set=utf8mb4 -h"$LEGACY_MYSQL_HOST" -P"$LEGACY_MYSQL_PORT" -u"$LEGACY_MYSQL_USER" -p"$LEGACY_MYSQL_PASSWORD" -D "$LEGACY_MYSQL_DB" -e "
+          SELECT REPLACE(TO_BASE64(JSON_OBJECT(
+            'id', c.id,
+            'company_id', c.company_id,
+            'name', c.name,
+            'short_name', c.short_name,
+            'content', c.content,
+            'logo', c.logo,
+            'banner', c.banner,
+            'video', c.video,
+            'signature', c.signature,
+            'business_license', c.business_license,
+            'license_code', c.license_code,
+            'legal_person', c.legal_person,
+            'register_capital', c.register_capital,
+            'business_scope', c.business_scope,
+            'start_deadline', DATE_FORMAT(c.start_deadline, '%Y-%m-%d'),
+            'end_deadline', DATE_FORMAT(c.end_deadline, '%Y-%m-%d'),
+            'contact', c.contact,
+            'address', c.address,
+            'phone', c.phone,
+            'fax', c.fax,
+            'email', c.email,
+            'website', c.website,
+            'wechat_qrcode', c.wechat_qrcode,
+            'province_name', ap.name,
+            'city_name', ac.name,
+            'divide', c.divide,
+            'tag_ids', c.tag_ids,
+            'tag_names', GROUP_CONCAT(DISTINCT t.name ORDER BY t.id SEPARATOR ','),
+            'domain', c.domain,
+            'theme_color', c.theme_color,
+            'status', c.status,
+            'is_vip', c.is_vip,
+            'is_vip_cate', c.is_vip_cate,
+            'category', c.category,
+            'user_id', u.id,
+            'username', u.username,
+            'user_email', u.email,
+            'user_mobile', u.mobile,
+            'user_password_hash', u.password_hash,
+            'user_name', u.name,
+            'user_nickname', u.nickname
+          )), '\n', '')
+          FROM company c
+          LEFT JOIN (
+            SELECT company_id, MIN(user_id) AS user_id
+            FROM company_user_relation
+            WHERE is_delete = 0 AND status = 1
+            GROUP BY company_id
+          ) cur ON cur.company_id = c.company_id
+          LEFT JOIN user u ON u.id = cur.user_id AND u.is_delete = 0
+          LEFT JOIN area ap ON ap.id = c.province_id AND ap.is_delete = 0
+          LEFT JOIN area ac ON ac.id = c.city_id AND ac.is_delete = 0
+          LEFT JOIN tag t ON FIND_IN_SET(t.id, c.tag_ids) > 0 AND t.is_delete = 0
+          WHERE c.is_delete = 0 AND c.status = 1
+          GROUP BY c.id
+          ORDER BY c.id ASC;
+          "
+          EOF
+          chmod 700 /tmp/legacy-company-export.sh
+          legacy_mysql_host_q=$(printf '%q' "$LEGACY_MYSQL_HOST")
+          legacy_mysql_port_q=$(printf '%q' "$LEGACY_MYSQL_PORT")
+          legacy_mysql_db_q=$(printf '%q' "$LEGACY_MYSQL_DB")
+          legacy_mysql_user_q=$(printf '%q' "$LEGACY_MYSQL_USER")
+          legacy_mysql_password_q=$(printf '%q' "$LEGACY_MYSQL_PASSWORD")
+
+          sshpass -p "$LEGACY_SSH_PASSWORD" ssh -o StrictHostKeyChecking=no -o BatchMode=no "$LEGACY_SSH_USER@$LEGACY_SSH_HOST" \
+            "LEGACY_MYSQL_HOST=$legacy_mysql_host_q LEGACY_MYSQL_PORT=$legacy_mysql_port_q LEGACY_MYSQL_DB=$legacy_mysql_db_q LEGACY_MYSQL_USER=$legacy_mysql_user_q LEGACY_MYSQL_PASSWORD=$legacy_mysql_password_q bash -s" \
+            < /tmp/legacy-company-export.sh > custom/tmp/legacy-companies-raw.jsonl
+
+          node scripts/convert-jsonl-to-json.mjs --input custom/tmp/legacy-companies-raw.jsonl --output custom/data/legacy-companies-export.json
+
+      - name: Upload legacy company export to production
+        run: |
+          ssh -o BatchMode=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "mkdir -p /home/web1/custom/data"
+          scp -o BatchMode=yes custom/data/legacy-companies-export.json ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/home/web1/custom/data/legacy-companies-export.json
+
       - name: Run production company rollout
         run: |
           ssh -o BatchMode=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
             set -e
             cd /home/web1
-
-            if [ ! -f custom/data/legacy-companies-export.json ]; then
-              echo "Missing custom/data/legacy-companies-export.json on server"
-              exit 1
-            fi
 
             npm run run:company-rollout -- \
               -InputPath custom/data/legacy-companies-export.json \
