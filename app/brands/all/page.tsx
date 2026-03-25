@@ -5,7 +5,8 @@ import { buildCategoryMetadata } from "@/lib/category-metadata";
 import { getBrandDirectory } from "@/lib/brand-directory";
 import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 type Props = {
   searchParams: Promise<{
@@ -206,4 +207,3 @@ export default async function BrandsAllPage({ searchParams }: Props) {
     </div>
   );
 }
-

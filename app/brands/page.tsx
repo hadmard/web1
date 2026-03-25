@@ -5,7 +5,8 @@ import { getCategoryWithMetaByHref } from "@/lib/categories";
 import { buildCategoryMetadata } from "@/lib/category-metadata";
 import { getBrandDirectoryList } from "@/lib/brand-directory";
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export async function generateMetadata(): Promise<Metadata> {
   return buildCategoryMetadata(
@@ -75,4 +76,3 @@ export default async function BrandsPage() {
     </CategoryHome>
   );
 }
-

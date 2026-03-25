@@ -136,14 +136,14 @@ function normalizeBrand(record: {
     enterprise,
     memberType,
     enterpriseName: enterprise?.companyShortName || enterprise?.companyName || record.name,
-    logoUrl: record.logoUrl || enterprise?.logoUrl || null,
-    region: record.region || enterprise?.region || "全国",
-    area: record.area || enterprise?.area || null,
+    logoUrl: enterprise?.logoUrl || record.logoUrl || null,
+    region: enterprise?.region || record.region || "全国",
+    area: enterprise?.area || record.area || null,
     summary:
-      record.tagline ||
       enterprise?.positioning ||
-      record.positioning ||
       enterprise?.intro ||
+      record.tagline ||
+      record.positioning ||
       "企业资料完善后，将在这里展示品牌亮点。",
     displayTemplate: record.displayTemplate || "brand_showcase",
     updatedAt: enterprise?.updatedAt && enterprise.updatedAt > record.updatedAt ? enterprise.updatedAt : record.updatedAt,
