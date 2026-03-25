@@ -45,6 +45,7 @@ type ApiResponse = {
   limit?: number;
   totalPages?: number;
   stats?: {
+    totalBrands?: number;
     visibleTotal?: number;
     recommendedTotal?: number;
     needsAttentionTotal?: number;
@@ -71,7 +72,7 @@ function memberTypeLabel(item: BrandRow) {
 }
 
 function applyStatsDelta(
-  current: { visibleTotal: number; recommendedTotal: number; needsAttentionTotal: number },
+  current: { totalBrands: number; visibleTotal: number; recommendedTotal: number; needsAttentionTotal: number },
   patch: Partial<Pick<BrandRow, "isBrandVisible" | "isRecommend">>,
   options: { visibleChanged?: number; recommendedChanged?: number } = {},
 ) {
@@ -94,8 +95,9 @@ export default function AdminBrandsPage() {
   const [message, setMessage] = useState("");
   const [savingId, setSavingId] = useState<string | null>(null);
   const [batchSaving, setBatchSaving] = useState(false);
-  const [selectedBrandId, setSelectedBrandId] = useState<string | null>(null);
+  const [selectedBrandIds, setSelectedBrandIds] = useState<string[]>([]);
   const [stats, setStats] = useState({
+    totalBrands: 0,
     visibleTotal: 0,
     recommendedTotal: 0,
     needsAttentionTotal: 0,
@@ -119,7 +121,7 @@ export default function AdminBrandsPage() {
       setPage(1);
       setPageInput("1");
       setTotalPages(1);
-      setStats({ visibleTotal: 0, recommendedTotal: 0, needsAttentionTotal: 0 });
+      setStats({ totalBrands: 0, visibleTotal: 0, recommendedTotal: 0, needsAttentionTotal: 0 });
       setMessage(data.error ?? "品牌列表加载失败");
       setLoading(false);
       return;
@@ -138,6 +140,7 @@ export default function AdminBrandsPage() {
     setPageInput(String(currentPage));
     setTotalPages(computedTotalPages);
     setStats({
+      totalBrands: typeof data.stats?.totalBrands === "number" ? data.stats.totalBrands : 0,
       visibleTotal: typeof data.stats?.visibleTotal === "number" ? data.stats.visibleTotal : 0,
       recommendedTotal: typeof data.stats?.recommendedTotal === "number" ? data.stats.recommendedTotal : 0,
       needsAttentionTotal: typeof data.stats?.needsAttentionTotal === "number" ? data.stats.needsAttentionTotal : 0,
@@ -245,6 +248,10 @@ export default function AdminBrandsPage() {
     setBatchSaving(false);
   }
 
+  function toggleSelectedBrand(id: string) {
+    setSelectedBrandIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
+  }
+
   function jumpToPage() {
     const parsed = Number.parseInt(pageInput.trim(), 10);
     if (Number.isNaN(parsed)) {
@@ -267,7 +274,7 @@ export default function AdminBrandsPage() {
             </p>
           </div>
           <div className="grid min-w-[300px] grid-cols-3 gap-3 text-center text-sm">
-            <StatCard label="品牌总数" value={String(total)} />
+            <StatCard label="品牌总数" value={String(stats.totalBrands)} />
             <StatCard label="前台显示" value={String(stats.visibleTotal)} />
             <StatCard label="待完善" value={String(stats.needsAttentionTotal)} tone={stats.needsAttentionTotal > 0 ? "accent" : "normal"} />
           </div>
@@ -372,7 +379,7 @@ export default function AdminBrandsPage() {
 
       <section className="overflow-hidden rounded-[28px] border border-[rgba(181,157,121,0.16)] bg-white shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
         <div className="hidden border-b border-border px-5 py-4 text-xs uppercase tracking-[0.18em] text-muted lg:grid lg:grid-cols-[88px_64px_minmax(0,1.5fr)_120px_120px_150px_120px_140px] lg:gap-4">
-          <span>操作</span>
+          <span>选择</span>
           <span>序号</span>
           <span>企业 / 品牌</span>
           <span>会员类型</span>
@@ -396,7 +403,7 @@ export default function AdminBrandsPage() {
                 <article
                   key={item.id}
                   className={`px-5 py-4 transition ${
-                    selectedBrandId === item.id ? "bg-[rgba(255,249,238,0.78)]" : ""
+                    selectedBrandIds.includes(item.id) ? "bg-[rgba(255,249,238,0.78)]" : ""
                   }`}
                 >
                   <div className="grid gap-4 lg:grid-cols-[88px_64px_minmax(0,1.5fr)_120px_120px_150px_120px_140px] lg:items-center">
@@ -405,14 +412,23 @@ export default function AdminBrandsPage() {
                         type="button"
                         aria-label={item.enterprise ? `选中 ${item.frontDisplay.name}` : `选中 ${item.name}`}
                         title={item.enterprise ? "选中企业" : "选中品牌"}
-                        onClick={() => setSelectedBrandId(item.id)}
-                        className={`inline-flex h-10 w-10 items-center justify-center rounded-full border text-base transition ${
-                          selectedBrandId === item.id
-                            ? "border-accent bg-accent text-white shadow-[0_10px_24px_rgba(180,154,107,0.22)]"
-                            : "border-border bg-white text-primary hover:bg-surface"
+                        onClick={() => toggleSelectedBrand(item.id)}
+                        className={`relative inline-flex h-10 w-10 items-center justify-center rounded-full border transition ${
+                          selectedBrandIds.includes(item.id)
+                            ? "border-accent bg-[rgba(186,158,108,0.12)] shadow-[0_10px_24px_rgba(180,154,107,0.14)]"
+                            : "border-border bg-white hover:border-accent/40 hover:bg-surface"
                         }`}
                       >
-                        {selectedBrandId === item.id ? "✓" : "○"}
+                        <span
+                          className={`h-4 w-4 rounded-full border transition ${
+                            selectedBrandIds.includes(item.id)
+                              ? "border-accent bg-accent"
+                              : "border-[rgba(148,163,184,0.6)] bg-white"
+                          }`}
+                        />
+                        {selectedBrandIds.includes(item.id) ? (
+                          <span className="pointer-events-none absolute h-1.5 w-1.5 rounded-full bg-white" />
+                        ) : null}
                       </button>
                     </div>
                     <div className="text-sm font-medium text-muted">{rowNumber}</div>
@@ -421,7 +437,7 @@ export default function AdminBrandsPage() {
                         href={item.frontDisplay.detailHref}
                         target="_blank"
                         className={`truncate text-base font-medium transition hover:text-accent hover:underline ${
-                          selectedBrandId === item.id ? "text-accent" : "text-primary"
+                          selectedBrandIds.includes(item.id) ? "text-accent" : "text-primary"
                         }`}
                       >
                         {item.frontDisplay.name}

@@ -186,7 +186,7 @@ export async function GET(request: NextRequest) {
     ],
   };
 
-  const [items, total, visibleTotal, recommendedTotal, needsAttentionTotal] = await Promise.all([
+  const [items, total, visibleTotal, recommendedTotal, needsAttentionTotal, totalBrands] = await Promise.all([
     prisma.brand.findMany({
       where,
       orderBy: [{ isBrandVisible: "desc" }, { isRecommend: "desc" }, { sortOrder: "desc" }, { rankingWeight: "desc" }, { updatedAt: "desc" }],
@@ -198,6 +198,7 @@ export async function GET(request: NextRequest) {
     prisma.brand.count({ where: { isBrandVisible: true } }),
     prisma.brand.count({ where: { isBrandVisible: true, isRecommend: true } }),
     prisma.brand.count({ where: needsAttentionWhere }),
+    prisma.brand.count(),
   ]);
 
   const normalized = items.map((item) => {
@@ -242,6 +243,7 @@ export async function GET(request: NextRequest) {
     limit,
     totalPages: Math.max(1, Math.ceil(effectiveTotal / limit)),
     stats: {
+      totalBrands,
       visibleTotal,
       recommendedTotal,
       needsAttentionTotal,
