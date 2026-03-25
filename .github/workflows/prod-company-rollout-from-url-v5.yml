@@ -48,20 +48,53 @@ jobs:
             cd /home/web1
             mkdir -p custom/reports custom/backups
 
+            DATABASE_URL=""
             if [ -f .env.production ]; then
               export DATABASE_URL=$(grep '^DATABASE_URL=' .env.production | head -n 1 | cut -d '=' -f 2- | tr -d '"')
             elif [ -f .env ]; then
               export DATABASE_URL=$(grep '^DATABASE_URL=' .env | head -n 1 | cut -d '=' -f 2- | tr -d '"')
             fi
 
+            if [ -z "$DATABASE_URL" ]; then
+              env_file_candidates=$(systemctl show web1 --no-pager -p EnvironmentFile --value 2>/dev/null || true)
+              for env_file in $env_file_candidates; do
+                env_file="${env_file#-}"
+                if [ -f "$env_file" ]; then
+                  DATABASE_URL=$(grep '^DATABASE_URL=' "$env_file" | head -n 1 | cut -d '=' -f 2- | tr -d '"')
+                  if [ -n "$DATABASE_URL" ]; then
+                    export DATABASE_URL
+                    echo "::warning::PROD_DATABASE_URL_SOURCE=$env_file"
+                    break
+                  fi
+                fi
+              done
+            fi
+
+            if [ -z "$DATABASE_URL" ]; then
+              inline_env=$(systemctl show web1 --no-pager -p Environment --value 2>/dev/null || true)
+              DATABASE_URL=$(printf '%s\n' "$inline_env" | tr ' ' '\n' | grep '^DATABASE_URL=' | head -n 1 | cut -d '=' -f 2- | tr -d '"' || true)
+              if [ -n "$DATABASE_URL" ]; then
+                export DATABASE_URL
+                echo "::warning::PROD_DATABASE_URL_SOURCE=systemd-inline"
+              fi
+            fi
+
+            if [ -z "$DATABASE_URL" ]; then
+              echo "DATABASE_URL not found in .env, .env.production, or systemd service configuration" >&2
+              exit 1
+            fi
+
             if command -v pg_dump >/dev/null 2>&1 && [ -n "$DATABASE_URL" ]; then
               backup_path="custom/backups/postgres-backup-$(date +%Y-%m-%dT%H-%M-%S).dump"
-              pg_dump "$DATABASE_URL" > "$backup_path"
-              echo "::warning::PROD_BACKUP_PATH=$backup_path"
+              if pg_dump "$DATABASE_URL" > "$backup_path"; then
+                echo "::warning::PROD_BACKUP_PATH=$backup_path"
+              else
+                echo "::warning::PROD_BACKUP_SKIPPED=pg_dump_failed"
+              fi
             fi
 
             report_path="custom/reports/company-migration-apply-$(date +%Y-%m-%dT%H-%M-%S).json"
-            npx ts-node --transpile-only scripts/import-legacy-companies-v2.ts --input custom/data/legacy-companies-export.json --apply --report "$report_path"
+            ./node_modules/.bin/ts-node --transpile-only scripts/import-legacy-companies-v2.ts --input custom/data/legacy-companies-export.json --apply --report "$report_path"
             npm run build
             sudo systemctl restart web1
             echo "::warning::PROD_REPORT_PATH=$report_path"
