@@ -1,6 +1,8 @@
+﻿import { revalidatePath } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/session";
+import { normalizePlainTextField, toSummaryText } from "@/lib/brand-content";
 import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/session";
 
 function isAdmin(session: { role: string | null } | null) {
   return session?.role === "SUPER_ADMIN" || session?.role === "ADMIN";
@@ -23,7 +25,7 @@ function parseBoolean(value: unknown, fallback = false) {
 function parseInteger(value: unknown, fallback = 0) {
   if (typeof value === "number" && Number.isFinite(value)) return Math.trunc(value);
   if (typeof value === "string" && value.trim()) {
-    const parsed = parseInt(value.trim(), 10);
+    const parsed = Number.parseInt(value.trim(), 10);
     if (!Number.isNaN(parsed)) return parsed;
   }
   return fallback;
@@ -38,6 +40,44 @@ function slugifyBrandName(value: string) {
   return normalized || `brand-${Date.now()}`;
 }
 
+function revalidateBrandPaths(enterpriseId: string | null | undefined, slug: string | null | undefined) {
+  revalidatePath("/brands");
+  revalidatePath("/brands/all");
+  if (enterpriseId) revalidatePath(`/enterprise/${enterpriseId}`);
+  if (slug) revalidatePath(`/brands/${slug}`);
+}
+
+const adminBrandInclude = {
+  enterprise: {
+    select: {
+      id: true,
+      memberId: true,
+      companyName: true,
+      companyShortName: true,
+      intro: true,
+      logoUrl: true,
+      region: true,
+      area: true,
+      positioning: true,
+      contactPerson: true,
+      contactPhone: true,
+      contactInfo: true,
+      website: true,
+      address: true,
+      productSystem: true,
+      craftLevel: true,
+      certifications: true,
+      awards: true,
+      member: {
+        select: {
+          memberType: true,
+          rankingWeight: true,
+        },
+      },
+    },
+  },
+} as const;
+
 export async function GET(request: NextRequest) {
   const session = await getSession();
   if (!session || !isAdmin(session)) {
@@ -45,11 +85,12 @@ export async function GET(request: NextRequest) {
   }
 
   const { searchParams } = new URL(request.url);
-  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
-  const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") ?? "20", 10)));
+  const page = Math.max(1, Number.parseInt(searchParams.get("page") ?? "1", 10));
+  const limit = Math.min(100, Math.max(1, Number.parseInt(searchParams.get("limit") ?? "20", 10)));
   const skip = (page - 1) * limit;
   const q = searchParams.get("q")?.trim() ?? "";
   const recommend = searchParams.get("recommend");
+  const onlyIncomplete = searchParams.get("quality") === "needs_attention";
 
   const where: Record<string, unknown> = {};
   if (q) {
@@ -61,10 +102,25 @@ export async function GET(request: NextRequest) {
       { area: { contains: q } },
       { enterprise: { companyName: { contains: q } } },
       { enterprise: { companyShortName: { contains: q } } },
+      { enterprise: { intro: { contains: q } } },
+      { enterprise: { positioning: { contains: q } } },
+      { enterprise: { productSystem: { contains: q } } },
     ];
   }
   if (recommend === "1" || recommend === "0") {
     where.isRecommend = recommend === "1";
+  }
+  if (onlyIncomplete) {
+    where.OR = [
+      ...(Array.isArray(where.OR) ? where.OR : []),
+      { logoUrl: null },
+      { enterprise: { logoUrl: null } },
+      { tagline: null },
+      { positioning: null },
+      { enterprise: { positioning: null } },
+      { enterprise: { intro: null } },
+      { enterprise: { contactPhone: null } },
+    ];
   }
 
   const [items, total] = await Promise.all([
@@ -73,26 +129,37 @@ export async function GET(request: NextRequest) {
       orderBy: [{ isRecommend: "desc" }, { sortOrder: "desc" }, { rankingWeight: "desc" }, { updatedAt: "desc" }],
       skip,
       take: limit,
-      include: {
-        enterprise: {
-          select: {
-            id: true,
-            companyName: true,
-            companyShortName: true,
-            memberId: true,
-            member: {
-              select: {
-                memberType: true,
-                rankingWeight: true,
-              },
-            },
-          },
-        },
-      },
+      include: adminBrandInclude,
     }),
     prisma.brand.count({ where }),
   ]);
-  return NextResponse.json({ items, total, page, limit });
+
+  const normalized = items.map((item) => {
+    const displayName = item.enterprise?.companyShortName || item.enterprise?.companyName || item.name;
+    const displayLogo = item.enterprise?.logoUrl || item.logoUrl || null;
+    const displayRegion = item.enterprise?.region || item.region || "全国";
+    const displayArea = item.enterprise?.area || item.area || null;
+    const summarySource = item.enterprise?.positioning || item.enterprise?.intro || item.tagline || item.positioning || null;
+
+    return {
+      ...item,
+      frontDisplay: {
+        name: displayName,
+        logoUrl: displayLogo,
+        region: displayRegion,
+        area: displayArea,
+        summary: toSummaryText(summarySource, 120),
+        detailHref: item.enterprise ? `/enterprise/${item.enterprise.id}` : `/brands/${item.slug}`,
+      },
+      qualityFlags: {
+        missingLogo: !displayLogo,
+        missingSummary: !summarySource,
+        missingContact: !(item.enterprise?.contactPhone || item.enterprise?.website || item.enterprise?.contactInfo),
+      },
+    };
+  });
+
+  return NextResponse.json({ items: normalized, total, page, limit });
 }
 
 export async function POST(request: NextRequest) {
@@ -101,82 +168,45 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "需要管理员权限" }, { status: 403 });
   }
 
-  const body = await request.json();
-  const {
-    name,
-    slug,
-    enterpriseId,
-    logoUrl,
-    tagline,
-    region,
-    area,
-    positioning,
-    materialSystem,
-    productStructure,
-    priceRange,
-    targetAudience,
-    businessModel,
-    contactUrl,
-    certUrl,
-    isRecommend,
-    isBrandVisible,
-    sortOrder,
-    rankingWeight,
-    displayTemplate,
-    memberTypeSnapshot,
-  } = body;
-
-  if (!name || typeof name !== "string") {
+  const body = await request.json().catch(() => ({}));
+  const name = typeof body.name === "string" ? body.name.trim() : "";
+  if (!name) {
     return NextResponse.json({ error: "品牌名称必填" }, { status: 400 });
   }
 
   try {
     const brand = await prisma.brand.create({
       data: {
-        name: name.trim(),
-        slug: asTrimmedString(slug) ?? slugifyBrandName(name),
-        enterpriseId: asTrimmedString(enterpriseId),
-        logoUrl: asTrimmedString(logoUrl),
-        tagline: asTrimmedString(tagline),
-        region: asTrimmedString(region),
-        area: asTrimmedString(area),
-        positioning: asTrimmedString(positioning),
-        materialSystem: asTrimmedString(materialSystem),
-        productStructure: asTrimmedString(productStructure),
-        priceRange: asTrimmedString(priceRange),
-        targetAudience: asTrimmedString(targetAudience),
-        businessModel: asTrimmedString(businessModel),
-        contactUrl: asTrimmedString(contactUrl),
-        certUrl: asTrimmedString(certUrl),
-        isRecommend: parseBoolean(isRecommend, false),
-        isBrandVisible: parseBoolean(isBrandVisible, true),
-        sortOrder: parseInteger(sortOrder, 0),
-        rankingWeight: parseInteger(rankingWeight, 0),
-        displayTemplate: asTrimmedString(displayTemplate),
-        memberTypeSnapshot: asTrimmedString(memberTypeSnapshot),
+        name,
+        slug: asTrimmedString(body.slug) ?? slugifyBrandName(name),
+        enterpriseId: asTrimmedString(body.enterpriseId),
+        logoUrl: asTrimmedString(body.logoUrl),
+        tagline: normalizePlainTextField(body.tagline),
+        region: normalizePlainTextField(body.region),
+        area: normalizePlainTextField(body.area),
+        positioning: normalizePlainTextField(body.positioning),
+        materialSystem: normalizePlainTextField(body.materialSystem),
+        productStructure: normalizePlainTextField(body.productStructure),
+        priceRange: normalizePlainTextField(body.priceRange),
+        targetAudience: normalizePlainTextField(body.targetAudience),
+        businessModel: normalizePlainTextField(body.businessModel),
+        contactUrl: asTrimmedString(body.contactUrl),
+        certUrl: asTrimmedString(body.certUrl),
+        isRecommend: parseBoolean(body.isRecommend, false),
+        isBrandVisible: parseBoolean(body.isBrandVisible, true),
+        sortOrder: parseInteger(body.sortOrder, 0),
+        rankingWeight: parseInteger(body.rankingWeight, 0),
+        displayTemplate: asTrimmedString(body.displayTemplate),
+        memberTypeSnapshot: asTrimmedString(body.memberTypeSnapshot),
       },
-      include: {
-        enterprise: {
-          select: {
-            id: true,
-            companyName: true,
-            companyShortName: true,
-            memberId: true,
-            member: {
-              select: {
-                memberType: true,
-                rankingWeight: true,
-              },
-            },
-          },
-        },
-      },
+      include: adminBrandInclude,
     });
+
+    revalidateBrandPaths(brand.enterprise?.id, brand.slug);
     return NextResponse.json(brand);
-  } catch (e) {
-    console.error("POST /api/admin/brands", e);
-    const msg =
-      process.env.NODE_ENV === "development" && e instanceof Error ? e.message : "发布失败，请稍后重试";
-    return NextResponse.json({ error: msg }, { status: 500 });
+  } catch (error) {
+    console.error("POST /api/admin/brands", error);
+    const message = process.env.NODE_ENV === "development" && error instanceof Error ? error.message : "品牌创建失败，请稍后重试";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

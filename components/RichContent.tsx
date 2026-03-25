@@ -1,15 +1,10 @@
 import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
+import { sanitizeRichText } from "@/lib/brand-content";
 
 type RichContentProps = {
   html: string;
   className?: string;
 };
-
-function sanitizeHtml(html: string): string {
-  return html
-    .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "")
-    .replace(/<style[\s\S]*?>[\s\S]*?<\/style>/gi, "");
-}
 
 function rewriteUploadedImageSources(html: string): string {
   return html.replace(/(<img\b[^>]*\bsrc=["'])([^"']+)(["'][^>]*>)/gi, (_match, prefix, src, suffix) => {
@@ -18,7 +13,7 @@ function rewriteUploadedImageSources(html: string): string {
 }
 
 export function RichContent({ html, className }: RichContentProps) {
-  const safe = rewriteUploadedImageSources(sanitizeHtml(html || ""));
+  const safe = rewriteUploadedImageSources(sanitizeRichText(html || ""));
   const mergedClassName = ["rich-editor-content", className].filter(Boolean).join(" ");
   return <div className={mergedClassName} dangerouslySetInnerHTML={{ __html: safe }} />;
 }

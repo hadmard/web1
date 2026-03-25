@@ -1,6 +1,8 @@
+﻿import { revalidatePath } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
-import { getSession } from "@/lib/session";
+import { normalizePlainTextField } from "@/lib/brand-content";
 import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/session";
 
 function isAdmin(session: { role: string | null } | null) {
   return session?.role === "SUPER_ADMIN" || session?.role === "ADMIN";
@@ -19,102 +21,117 @@ function parseBoolean(value: unknown) {
 function parseInteger(value: unknown) {
   if (typeof value === "number" && Number.isFinite(value)) return Math.trunc(value);
   if (typeof value === "string" && value.trim()) {
-    const parsed = parseInt(value.trim(), 10);
+    const parsed = Number.parseInt(value.trim(), 10);
     if (!Number.isNaN(parsed)) return parsed;
   }
   return undefined;
 }
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+function trimString(value: unknown) {
+  return typeof value === "string" ? value.trim() || null : undefined;
+}
+
+function revalidateBrandPaths(enterpriseId: string | null | undefined, slug: string | null | undefined) {
+  revalidatePath("/brands");
+  revalidatePath("/brands/all");
+  if (enterpriseId) revalidatePath(`/enterprise/${enterpriseId}`);
+  if (slug) revalidatePath(`/brands/${slug}`);
+}
+
+const adminBrandInclude = {
+  enterprise: {
+    select: {
+      id: true,
+      companyName: true,
+      companyShortName: true,
+      memberId: true,
+      intro: true,
+      logoUrl: true,
+      region: true,
+      area: true,
+      positioning: true,
+      contactPerson: true,
+      contactPhone: true,
+      contactInfo: true,
+      website: true,
+      address: true,
+      productSystem: true,
+      craftLevel: true,
+      certifications: true,
+      awards: true,
+      member: {
+        select: {
+          memberType: true,
+          rankingWeight: true,
+        },
+      },
+    },
+  },
+} as const;
+
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
   if (!session || !isAdmin(session)) {
     return NextResponse.json({ error: "需要管理员权限" }, { status: 403 });
   }
+
   const { id } = await params;
-  const body = await request.json();
-  const str = (v: unknown) => (typeof v === "string" ? v.trim() || null : undefined);
-  const data: {
-    name?: string;
-    slug?: string;
-    enterpriseId?: string | null;
-    logoUrl?: string | null;
-    tagline?: string | null;
-    region?: string | null;
-    area?: string | null;
-    positioning?: string | null;
-    materialSystem?: string | null;
-    productStructure?: string | null;
-    priceRange?: string | null;
-    targetAudience?: string | null;
-    businessModel?: string | null;
-    contactUrl?: string | null;
-    certUrl?: string | null;
-    isRecommend?: boolean;
-    isBrandVisible?: boolean;
-    sortOrder?: number;
-    rankingWeight?: number;
-    displayTemplate?: string | null;
-    memberTypeSnapshot?: string | null;
-  } = {};
+  const body = await request.json().catch(() => ({}));
+  const data: Record<string, string | number | boolean | null | undefined> = {};
+
   if (typeof body.name === "string") data.name = body.name.trim();
-  if (body.slug !== undefined) data.slug = str(body.slug) ?? undefined;
-  if (body.enterpriseId !== undefined) data.enterpriseId = str(body.enterpriseId);
-  if (body.logoUrl !== undefined) data.logoUrl = str(body.logoUrl);
-  if (body.tagline !== undefined) data.tagline = str(body.tagline);
-  if (body.region !== undefined) data.region = str(body.region);
-  if (body.area !== undefined) data.area = str(body.area);
-  if (body.positioning !== undefined) data.positioning = str(body.positioning) ?? undefined;
-  if (body.materialSystem !== undefined) data.materialSystem = str(body.materialSystem) ?? undefined;
-  if (body.productStructure !== undefined) data.productStructure = str(body.productStructure) ?? undefined;
-  if (body.priceRange !== undefined) data.priceRange = str(body.priceRange) ?? undefined;
-  if (body.targetAudience !== undefined) data.targetAudience = str(body.targetAudience) ?? undefined;
-  if (body.businessModel !== undefined) data.businessModel = str(body.businessModel) ?? undefined;
-  if (body.contactUrl !== undefined) data.contactUrl = str(body.contactUrl) ?? undefined;
-  if (body.certUrl !== undefined) data.certUrl = str(body.certUrl) ?? undefined;
+  if (body.slug !== undefined) data.slug = trimString(body.slug) ?? undefined;
+  if (body.enterpriseId !== undefined) data.enterpriseId = trimString(body.enterpriseId);
+  if (body.logoUrl !== undefined) data.logoUrl = trimString(body.logoUrl);
+  if (body.tagline !== undefined) data.tagline = normalizePlainTextField(body.tagline) ?? undefined;
+  if (body.region !== undefined) data.region = normalizePlainTextField(body.region) ?? undefined;
+  if (body.area !== undefined) data.area = normalizePlainTextField(body.area) ?? undefined;
+  if (body.positioning !== undefined) data.positioning = normalizePlainTextField(body.positioning) ?? undefined;
+  if (body.materialSystem !== undefined) data.materialSystem = normalizePlainTextField(body.materialSystem) ?? undefined;
+  if (body.productStructure !== undefined) data.productStructure = normalizePlainTextField(body.productStructure) ?? undefined;
+  if (body.priceRange !== undefined) data.priceRange = normalizePlainTextField(body.priceRange) ?? undefined;
+  if (body.targetAudience !== undefined) data.targetAudience = normalizePlainTextField(body.targetAudience) ?? undefined;
+  if (body.businessModel !== undefined) data.businessModel = normalizePlainTextField(body.businessModel) ?? undefined;
+  if (body.contactUrl !== undefined) data.contactUrl = trimString(body.contactUrl) ?? undefined;
+  if (body.certUrl !== undefined) data.certUrl = trimString(body.certUrl) ?? undefined;
   if (body.isRecommend !== undefined) data.isRecommend = parseBoolean(body.isRecommend);
   if (body.isBrandVisible !== undefined) data.isBrandVisible = parseBoolean(body.isBrandVisible);
   if (body.sortOrder !== undefined) data.sortOrder = parseInteger(body.sortOrder);
   if (body.rankingWeight !== undefined) data.rankingWeight = parseInteger(body.rankingWeight);
-  if (body.displayTemplate !== undefined) data.displayTemplate = str(body.displayTemplate);
-  if (body.memberTypeSnapshot !== undefined) data.memberTypeSnapshot = str(body.memberTypeSnapshot);
-  if (Object.keys(data).length === 0) {
+  if (body.displayTemplate !== undefined) data.displayTemplate = trimString(body.displayTemplate);
+  if (body.memberTypeSnapshot !== undefined) data.memberTypeSnapshot = trimString(body.memberTypeSnapshot);
+
+  const updates = Object.fromEntries(Object.entries(data).filter(([, value]) => value !== undefined));
+  if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: "请提供要更新的字段" }, { status: 400 });
   }
+
   const brand = await prisma.brand.update({
     where: { id },
-    data,
-    include: {
-      enterprise: {
-        select: {
-          id: true,
-          companyName: true,
-          companyShortName: true,
-          memberId: true,
-          member: {
-            select: {
-              memberType: true,
-              rankingWeight: true,
-            },
-          },
-        },
-      },
-    },
+    data: updates,
+    include: adminBrandInclude,
   });
+
+  revalidateBrandPaths(brand.enterprise?.id, brand.slug);
   return NextResponse.json(brand);
 }
 
-export async function DELETE(
-  _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
   if (!session || !isAdmin(session)) {
     return NextResponse.json({ error: "需要管理员权限" }, { status: 403 });
   }
+
   const { id } = await params;
+  const existing = await prisma.brand.findUnique({
+    where: { id },
+    select: {
+      slug: true,
+      enterpriseId: true,
+    },
+  });
+
   await prisma.brand.delete({ where: { id } });
+  revalidateBrandPaths(existing?.enterpriseId, existing?.slug);
   return NextResponse.json({ ok: true });
 }

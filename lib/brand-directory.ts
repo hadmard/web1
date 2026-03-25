@@ -1,3 +1,4 @@
+﻿import { htmlToPlainText, toSummaryText } from "./brand-content";
 import { prisma } from "./prisma";
 
 const brandCardSelect = {
@@ -51,6 +52,45 @@ export type BrandDirectoryFilters = {
   pageSize?: number;
 };
 
+type BrandRecord = {
+  id: string;
+  slug: string;
+  name: string;
+  logoUrl: string | null;
+  tagline: string | null;
+  region: string | null;
+  area: string | null;
+  positioning: string | null;
+  isRecommend: boolean;
+  sortOrder: number;
+  rankingWeight: number;
+  displayTemplate: string | null;
+  memberTypeSnapshot: string | null;
+  updatedAt: Date;
+  createdAt: Date;
+  enterprise: {
+    id: string;
+    memberId: string;
+    companyName: string | null;
+    companyShortName: string | null;
+    intro: string | null;
+    logoUrl: string | null;
+    region: string | null;
+    area: string | null;
+    positioning: string | null;
+    productSystem: string | null;
+    awards: string | null;
+    contactPhone: string | null;
+    website: string | null;
+    updatedAt: Date;
+    member: {
+      id: string;
+      memberType: string;
+      rankingWeight: number;
+    } | null;
+  } | null;
+};
+
 function buildBrandWhere(filters: BrandDirectoryFilters = {}) {
   const q = filters.q?.trim();
   const region = filters.region?.trim();
@@ -90,61 +130,32 @@ function buildBrandWhere(filters: BrandDirectoryFilters = {}) {
   };
 }
 
-function normalizeBrand(record: {
-  id: string;
-  slug: string;
-  name: string;
-  logoUrl: string | null;
-  tagline: string | null;
-  region: string | null;
-  area: string | null;
-  positioning: string | null;
-  isRecommend: boolean;
-  sortOrder: number;
-  rankingWeight: number;
-  displayTemplate: string | null;
-  memberTypeSnapshot: string | null;
-  updatedAt: Date;
-  createdAt: Date;
-  enterprise: {
-    id: string;
-    memberId: string;
-    companyName: string | null;
-    companyShortName: string | null;
-    intro: string | null;
-    logoUrl: string | null;
-    region: string | null;
-    area: string | null;
-    positioning: string | null;
-    productSystem: string | null;
-    awards: string | null;
-    contactPhone: string | null;
-    website: string | null;
-    updatedAt: Date;
-    member: {
-      id: string;
-      memberType: string;
-      rankingWeight: number;
-    } | null;
-  } | null;
-}) {
+function normalizeBrand(record: BrandRecord) {
   const enterprise = record.enterprise;
   const memberType = record.memberTypeSnapshot || enterprise?.member?.memberType || "enterprise_basic";
+  const enterpriseName = enterprise?.companyShortName || enterprise?.companyName || record.name;
+  const region = enterprise?.region || record.region || "全国";
+  const area = enterprise?.area || record.area || null;
+  const rawSummary =
+    enterprise?.positioning ||
+    enterprise?.intro ||
+    record.tagline ||
+    record.positioning ||
+    "企业资料完善后，这里会展示品牌定位、服务能力与核心亮点。";
 
   return {
     ...record,
     enterprise,
     memberType,
-    enterpriseName: enterprise?.companyShortName || enterprise?.companyName || record.name,
+    enterpriseName,
     logoUrl: enterprise?.logoUrl || record.logoUrl || null,
-    region: enterprise?.region || record.region || "全国",
-    area: enterprise?.area || record.area || null,
-    summary:
-      enterprise?.positioning ||
-      enterprise?.intro ||
-      record.tagline ||
-      record.positioning ||
-      "企业资料完善后，将在这里展示品牌亮点。",
+    region,
+    area,
+    summary: toSummaryText(rawSummary, 120),
+    summaryPlain: htmlToPlainText(rawSummary),
+    summaryRichText: enterprise?.intro || record.positioning || record.tagline || null,
+    contactPhone: enterprise?.contactPhone || null,
+    website: enterprise?.website || null,
     displayTemplate: record.displayTemplate || "brand_showcase",
     updatedAt: enterprise?.updatedAt && enterprise.updatedAt > record.updatedAt ? enterprise.updatedAt : record.updatedAt,
   };

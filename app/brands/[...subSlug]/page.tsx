@@ -5,7 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { buildPageMetadata } from "@/lib/seo";
 import { getBrandDirectoryBySlug } from "@/lib/brand-directory";
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 type Props = {
   params: Promise<{ subSlug: string[] }>;

@@ -3,6 +3,7 @@ import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { writeOperationLog } from "@/lib/operation-log";
 import { revalidatePath } from "next/cache";
+import { normalizePlainTextField, normalizeRichTextField, toSummaryText } from "@/lib/brand-content";
 
 function trimOrNull(v: unknown) {
   return typeof v === "string" ? v.trim() || null : null;
@@ -41,25 +42,25 @@ export async function PATCH(request: NextRequest) {
   const body = await request.json().catch(() => ({}));
 
   const baseData = {
-    intro: trimOrNull(body.intro),
+    intro: normalizeRichTextField(body.intro),
     logoUrl: trimOrNull(body.logoUrl),
-    region: trimOrNull(body.region),
-    area: trimOrNull(body.area),
-    contactInfo: trimOrNull(body.contactInfo),
-    contactPhone: trimOrNull(body.contactPhone),
+    region: normalizePlainTextField(body.region),
+    area: normalizePlainTextField(body.area),
+    contactInfo: normalizePlainTextField(body.contactInfo),
+    contactPhone: normalizePlainTextField(body.contactPhone),
   };
 
   const advancedData =
     session.memberType === "enterprise_advanced"
       ? {
-          positioning: trimOrNull(body.positioning),
-          productSystem: trimOrNull(body.productSystem),
-          craftLevel: trimOrNull(body.craftLevel),
-          certifications: trimOrNull(body.certifications),
-          awards: trimOrNull(body.awards),
-          relatedStandards: trimOrNull(body.relatedStandards),
-          relatedTerms: trimOrNull(body.relatedTerms),
-          relatedBrands: trimOrNull(body.relatedBrands),
+          positioning: normalizePlainTextField(body.positioning),
+          productSystem: normalizePlainTextField(body.productSystem),
+          craftLevel: normalizePlainTextField(body.craftLevel),
+          certifications: normalizePlainTextField(body.certifications),
+          awards: normalizePlainTextField(body.awards),
+          relatedStandards: normalizePlainTextField(body.relatedStandards),
+          relatedTerms: normalizePlainTextField(body.relatedTerms),
+          relatedBrands: normalizePlainTextField(body.relatedBrands),
           videoUrl: trimOrNull(body.videoUrl),
         }
       : {};
@@ -85,5 +86,13 @@ export async function PATCH(request: NextRequest) {
   revalidatePath("/brands");
   revalidatePath("/brands/all");
 
-  return NextResponse.json(enterprise);
+  return NextResponse.json({
+    ...enterprise,
+    frontDisplay: {
+      name: enterprise.companyShortName || enterprise.companyName || session.name,
+      region: enterprise.region || "全国",
+      summary: toSummaryText(enterprise.positioning || enterprise.intro, 120),
+      detailHref: `/enterprise/${enterprise.id}`,
+    },
+  });
 }
