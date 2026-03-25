@@ -1,10 +1,33 @@
-import { prisma } from "@/lib/prisma";
+﻿import { prisma } from "@/lib/prisma";
 
 export type MemberSiteSettings = {
   template: "brand_showcase" | "professional_service" | "simple_elegant";
   heroTitle: string;
   heroSubtitle: string;
   contactLabel: string;
+  homepageTagline: string;
+  homepageTags: string[];
+  heroImageUrl: string;
+  primaryCtaLabel: string;
+  secondaryCtaLabel: string;
+  secondaryCtaType: "anchor" | "external";
+  secondaryCtaTarget: string;
+  capabilityCards: Array<{
+    title: string;
+    description: string;
+    iconKey: string;
+  }>;
+  contact: {
+    contactPerson: string;
+    contactPhone: string;
+    wechatId: string;
+    wechatQrImageUrl: string;
+    websiteUrl: string;
+    city: string;
+    address: string;
+    contactFormUrl: string;
+    contactIntro: string;
+  };
   modules: {
     intro: boolean;
     advantages: boolean;
@@ -20,6 +43,7 @@ export type MemberSiteSettings = {
     title: string;
     keywords: string;
     description: string;
+    imageUrl: string;
   };
   sync: {
     websiteUrl: string;
@@ -34,6 +58,25 @@ const DEFAULT_MEMBER_SITE_SETTINGS: MemberSiteSettings = {
   heroTitle: "",
   heroSubtitle: "",
   contactLabel: "联系我们",
+  homepageTagline: "",
+  homepageTags: [],
+  heroImageUrl: "",
+  primaryCtaLabel: "立即咨询",
+  secondaryCtaLabel: "查看案例",
+  secondaryCtaType: "anchor",
+  secondaryCtaTarget: "#gallery-section",
+  capabilityCards: [],
+  contact: {
+    contactPerson: "",
+    contactPhone: "",
+    wechatId: "",
+    wechatQrImageUrl: "",
+    websiteUrl: "",
+    city: "",
+    address: "",
+    contactFormUrl: "",
+    contactIntro: "",
+  },
   modules: {
     intro: true,
     advantages: true,
@@ -49,6 +92,7 @@ const DEFAULT_MEMBER_SITE_SETTINGS: MemberSiteSettings = {
     title: "",
     keywords: "",
     description: "",
+    imageUrl: "",
   },
   sync: {
     websiteUrl: "",
@@ -70,6 +114,42 @@ function asBool(value: unknown, fallback: boolean) {
   return typeof value === "boolean" ? value : fallback;
 }
 
+function asStringArray(value: unknown, maxItems = 6) {
+  if (!Array.isArray(value)) return [];
+  return Array.from(
+    new Set(
+      value
+        .map((item) => (typeof item === "string" ? item.trim() : ""))
+        .filter(Boolean),
+    ),
+  ).slice(0, maxItems);
+}
+
+function asCtaType(value: unknown): "anchor" | "external" {
+  return value === "external" ? "external" : "anchor";
+}
+
+function normalizeTarget(value: unknown, type: "anchor" | "external") {
+  const normalized = asString(value, type === "anchor" ? "#gallery-section" : "");
+  if (type === "external") return normalized;
+  return normalized.startsWith("#") ? normalized : "#gallery-section";
+}
+
+function asCapabilityCards(value: unknown) {
+  if (!Array.isArray(value)) return [] as MemberSiteSettings["capabilityCards"];
+  return value
+    .map((item) => {
+      const source = item && typeof item === "object" ? (item as Record<string, unknown>) : {};
+      return {
+        title: asString(source.title),
+        description: asString(source.description),
+        iconKey: asString(source.iconKey),
+      };
+    })
+    .filter((item) => item.title || item.description)
+    .slice(0, 6);
+}
+
 export function normalizeMemberSiteSettings(value: unknown): MemberSiteSettings {
   const source = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
   const modules =
@@ -78,6 +158,8 @@ export function normalizeMemberSiteSettings(value: unknown): MemberSiteSettings 
       : {};
   const seo = source.seo && typeof source.seo === "object" ? (source.seo as Record<string, unknown>) : {};
   const sync = source.sync && typeof source.sync === "object" ? (source.sync as Record<string, unknown>) : {};
+  const contact = source.contact && typeof source.contact === "object" ? (source.contact as Record<string, unknown>) : {};
+  const secondaryCtaType = asCtaType(source.secondaryCtaType);
 
   return {
     template:
@@ -86,7 +168,26 @@ export function normalizeMemberSiteSettings(value: unknown): MemberSiteSettings 
         : DEFAULT_MEMBER_SITE_SETTINGS.template,
     heroTitle: asString(source.heroTitle),
     heroSubtitle: asString(source.heroSubtitle),
-    contactLabel: asString(source.contactLabel, "联系我们"),
+    contactLabel: asString(source.contactLabel, DEFAULT_MEMBER_SITE_SETTINGS.contactLabel),
+    homepageTagline: asString(source.homepageTagline),
+    homepageTags: asStringArray(source.homepageTags),
+    heroImageUrl: asString(source.heroImageUrl),
+    primaryCtaLabel: asString(source.primaryCtaLabel, DEFAULT_MEMBER_SITE_SETTINGS.primaryCtaLabel),
+    secondaryCtaLabel: asString(source.secondaryCtaLabel, DEFAULT_MEMBER_SITE_SETTINGS.secondaryCtaLabel),
+    secondaryCtaType,
+    secondaryCtaTarget: normalizeTarget(source.secondaryCtaTarget, secondaryCtaType),
+    capabilityCards: asCapabilityCards(source.capabilityCards),
+    contact: {
+      contactPerson: asString(contact.contactPerson),
+      contactPhone: asString(contact.contactPhone),
+      wechatId: asString(contact.wechatId),
+      wechatQrImageUrl: asString(contact.wechatQrImageUrl),
+      websiteUrl: asString(contact.websiteUrl),
+      city: asString(contact.city),
+      address: asString(contact.address),
+      contactFormUrl: asString(contact.contactFormUrl),
+      contactIntro: asString(contact.contactIntro),
+    },
     modules: {
       intro: asBool(modules.intro, DEFAULT_MEMBER_SITE_SETTINGS.modules.intro),
       advantages: asBool(modules.advantages, DEFAULT_MEMBER_SITE_SETTINGS.modules.advantages),
@@ -102,6 +203,7 @@ export function normalizeMemberSiteSettings(value: unknown): MemberSiteSettings 
       title: asString(seo.title),
       keywords: asString(seo.keywords),
       description: asString(seo.description),
+      imageUrl: asString(seo.imageUrl),
     },
     sync: {
       websiteUrl: asString(sync.websiteUrl),

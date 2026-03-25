@@ -9,6 +9,29 @@ type SiteSettings = {
   heroTitle: string;
   heroSubtitle: string;
   contactLabel: string;
+  homepageTagline: string;
+  homepageTags: string[];
+  heroImageUrl: string;
+  primaryCtaLabel: string;
+  secondaryCtaLabel: string;
+  secondaryCtaType: "anchor" | "external";
+  secondaryCtaTarget: string;
+  capabilityCards: Array<{
+    title: string;
+    description: string;
+    iconKey: string;
+  }>;
+  contact: {
+    contactPerson: string;
+    contactPhone: string;
+    wechatId: string;
+    wechatQrImageUrl: string;
+    websiteUrl: string;
+    city: string;
+    address: string;
+    contactFormUrl: string;
+    contactIntro: string;
+  };
   modules: {
     intro: boolean;
     advantages: boolean;
@@ -24,6 +47,7 @@ type SiteSettings = {
     title: string;
     keywords: string;
     description: string;
+    imageUrl: string;
   };
   sync: {
     websiteUrl: string;
@@ -38,6 +62,25 @@ const EMPTY_SETTINGS: SiteSettings = {
   heroTitle: "",
   heroSubtitle: "",
   contactLabel: "联系我们",
+  homepageTagline: "",
+  homepageTags: [],
+  heroImageUrl: "",
+  primaryCtaLabel: "立即咨询",
+  secondaryCtaLabel: "查看案例",
+  secondaryCtaType: "anchor",
+  secondaryCtaTarget: "#gallery-section",
+  capabilityCards: [],
+  contact: {
+    contactPerson: "",
+    contactPhone: "",
+    wechatId: "",
+    wechatQrImageUrl: "",
+    websiteUrl: "",
+    city: "",
+    address: "",
+    contactFormUrl: "",
+    contactIntro: "",
+  },
   modules: {
     intro: true,
     advantages: true,
@@ -53,6 +96,7 @@ const EMPTY_SETTINGS: SiteSettings = {
     title: "",
     keywords: "",
     description: "",
+    imageUrl: "",
   },
   sync: {
     websiteUrl: "",
@@ -72,28 +116,28 @@ const TEMPLATE_OPTIONS: Array<{
 }> = [
   {
     value: "brand_showcase",
-    label: "品牌旗舰型",
-    eyebrow: "高端品牌官网",
-    desc: "大图首屏、企业动态和案例图库都会更突出，适合制造品牌、整木工厂和高定企业。",
-    bullets: ["沉浸式首屏", "企业动态主视觉", "案例图库更强"],
+    label: "高端品牌型",
+    eyebrow: "模板 A",
+    desc: "大图首屏、留白节奏和品牌画面更强，适合高定、整木、进口品牌与强调形象表达的企业。",
+    bullets: ["品牌官网感", "大图首屏", "留白更强"],
     previewClass:
       "bg-[radial-gradient(circle_at_top,rgba(212,177,120,0.34),transparent_46%),linear-gradient(160deg,#1f1b16,#4c3d2b_48%,#f5efe7)]",
   },
   {
     value: "professional_service",
-    label: "专业机构型",
-    eyebrow: "咨询与服务官网",
-    desc: "强调服务能力、交付流程和行业洞察，适合设计机构、顾问团队和供应链服务商。",
-    bullets: ["能力矩阵", "资讯与观点", "商务洽谈感更强"],
+    label: "招商转化型",
+    eyebrow: "模板 B",
+    desc: "强调优势表达、合作转化和沟通效率，适合招商、加盟、工程与重咨询转化的企业。",
+    bullets: ["CTA 更强", "合作导向", "转化更直接"],
     previewClass:
       "bg-[radial-gradient(circle_at_top_left,rgba(109,143,173,0.34),transparent_38%),linear-gradient(150deg,#11202e,#213a50_52%,#edf4f8)]",
   },
   {
     value: "simple_elegant",
-    label: "轻奢形象型",
-    eyebrow: "简洁但不简单",
-    desc: "保留企业站该有的层次感，把内容组织得更清楚，适合资料还在逐步完善的企业。",
-    bullets: ["留白高级", "信息更清楚", "适合初期建站"],
+    label: "内容运营型",
+    eyebrow: "模板 C",
+    desc: "强化新闻、案例和持续更新感，让企业主页更像官网加资讯站，适合经常发内容的企业。",
+    bullets: ["内容优先", "资讯感更强", "持续更新"],
     previewClass:
       "bg-[radial-gradient(circle_at_top,rgba(224,196,157,0.28),transparent_40%),linear-gradient(180deg,#ffffff,#f6f1ea_64%,#ece4d9)]",
   },
@@ -110,6 +154,19 @@ const MODULE_OPTIONS: Array<{ key: keyof SiteSettings["modules"]; label: string;
   { key: "terms", label: "词库参与", desc: "展示企业词条和行业词库共建内容。" },
   { key: "video", label: "企业视频", desc: "展示企业视频入口或品牌片链接。" },
 ];
+
+function enforceFixedModules(settings: SiteSettings): SiteSettings {
+  return {
+    ...settings,
+    modules: {
+      ...settings.modules,
+      intro: true,
+      news: true,
+      gallery: true,
+      contact: true,
+    },
+  };
+}
 
 export default function MembershipSitePage() {
   const [authed, setAuthed] = useState<boolean | null>(null);
@@ -134,7 +191,7 @@ export default function MembershipSitePage() {
           return;
         }
         setAuthed(true);
-        const nextSettings = data.settings ?? EMPTY_SETTINGS;
+        const nextSettings = enforceFixedModules(data.settings ?? EMPTY_SETTINGS);
         setSettings(nextSettings);
         setSavedSnapshot(JSON.stringify(nextSettings));
       } catch {
@@ -167,7 +224,7 @@ export default function MembershipSitePage() {
         setMessage(data.error ?? "保存失败");
         return;
       }
-      const nextSettings = data.settings ?? settings;
+      const nextSettings = enforceFixedModules(data.settings ?? settings);
       setSettings(nextSettings);
       setSavedSnapshot(JSON.stringify(nextSettings));
       setMessage("会员站设置已保存");
@@ -198,6 +255,8 @@ export default function MembershipSitePage() {
   );
   const extendedModules = MODULE_OPTIONS.filter((option) => !["intro", "advantages", "news", "gallery", "contact"].includes(option.key));
   const enabledModules = MODULE_OPTIONS.filter((option) => settings.modules[option.key]);
+
+  const lockedModules = new Set<keyof SiteSettings["modules"]>(["intro", "news", "gallery", "contact"]);
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-12 space-y-6">
@@ -308,14 +367,159 @@ export default function MembershipSitePage() {
           </article>
 
           <article className="rounded-[28px] border border-border bg-surface-elevated p-6 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
-            <h2 className="text-lg font-semibold text-primary">首页文案</h2>
-            <p className="mt-1 text-sm text-muted">这三项决定访客第一眼看到的内容，平时主要改这里。</p>
+            <h2 className="text-lg font-semibold text-primary">首屏设置</h2>
+            <p className="mt-1 text-sm text-muted">先把一句话定位、标签、主视觉和 CTA 配好，企业主页的品牌感会先立住。</p>
             <div className="mt-5 grid gap-4 md:grid-cols-2">
               <TextField label="首页主标题" value={settings.heroTitle} onChange={(value) => setSettings((prev) => ({ ...prev, heroTitle: value }))} />
-              <TextField label="联系按钮文案" value={settings.contactLabel} onChange={(value) => setSettings((prev) => ({ ...prev, contactLabel: value }))} />
+              <TextField label="一句话定位" value={settings.homepageTagline} onChange={(value) => setSettings((prev) => ({ ...prev, homepageTagline: value }))} />
+            </div>
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <TextField label="主按钮文案" value={settings.primaryCtaLabel} onChange={(value) => setSettings((prev) => ({ ...prev, primaryCtaLabel: value, contactLabel: value }))} />
+              <TextField label="次按钮文案" value={settings.secondaryCtaLabel} onChange={(value) => setSettings((prev) => ({ ...prev, secondaryCtaLabel: value }))} />
+            </div>
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <TextField
+                label="品牌标签"
+                value={settings.homepageTags.join(", ")}
+                onChange={(value) =>
+                  setSettings((prev) => ({
+                    ...prev,
+                    homepageTags: value
+                      .split(/[,，]/)
+                      .map((item) => item.trim())
+                      .filter(Boolean)
+                      .slice(0, 6),
+                  }))
+                }
+              />
+              <TextField label="主视觉图" value={settings.heroImageUrl} onChange={(value) => setSettings((prev) => ({ ...prev, heroImageUrl: value }))} />
+            </div>
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <label className="block">
+                <span className="text-sm text-primary">次按钮跳转类型</span>
+                <select
+                  className="mt-1 w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm text-primary"
+                  value={settings.secondaryCtaType}
+                  onChange={(e) =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      secondaryCtaType: e.target.value === "external" ? "external" : "anchor",
+                      secondaryCtaTarget: e.target.value === "external" ? prev.secondaryCtaTarget : "#gallery-section",
+                    }))
+                  }
+                >
+                  <option value="anchor">页面锚点</option>
+                  <option value="external">外部链接</option>
+                </select>
+              </label>
+              <TextField
+                label={settings.secondaryCtaType === "external" ? "次按钮目标链接" : "次按钮锚点"}
+                value={settings.secondaryCtaTarget}
+                onChange={(value) => setSettings((prev) => ({ ...prev, secondaryCtaTarget: value }))}
+              />
             </div>
             <div className="mt-4">
               <TextAreaField label="首页副标题" value={settings.heroSubtitle} onChange={(value) => setSettings((prev) => ({ ...prev, heroSubtitle: value }))} />
+            </div>
+          </article>
+
+          <article className="rounded-[28px] border border-border bg-surface-elevated p-6 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold text-primary">核心能力卡片</h2>
+                <p className="mt-1 text-sm text-muted">建议维护 3 到 6 条，把企业能力从长文本里拆成更适合前台展示的结构。</p>
+              </div>
+              <button
+                type="button"
+                disabled={settings.capabilityCards.length >= 6}
+                onClick={() =>
+                  setSettings((prev) => ({
+                    ...prev,
+                    capabilityCards: [...prev.capabilityCards, { title: "", description: "", iconKey: "" }],
+                  }))
+                }
+                className="rounded-full border border-border bg-white px-4 py-2 text-sm text-primary transition hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                新增卡片
+              </button>
+            </div>
+            <div className="mt-5 space-y-4">
+              {settings.capabilityCards.length === 0 ? (
+                <div className="rounded-[24px] border border-dashed border-border bg-surface px-4 py-4 text-sm text-muted">
+                  还没有配置专用能力卡片。前台会先根据企业主营、工艺和区域自动补齐。
+                </div>
+              ) : null}
+              {settings.capabilityCards.map((card, index) => (
+                <div key={`capability-${index}`} className="rounded-[24px] border border-border bg-white p-4">
+                  <div className="mb-4 flex items-center justify-between gap-3">
+                    <p className="text-sm font-medium text-primary">卡片 {index + 1}</p>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSettings((prev) => ({
+                          ...prev,
+                          capabilityCards: prev.capabilityCards.filter((_, itemIndex) => itemIndex !== index),
+                        }))
+                      }
+                      className="text-sm text-accent hover:underline"
+                    >
+                      删除
+                    </button>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <TextField
+                      label="标题"
+                      value={card.title}
+                      onChange={(value) =>
+                        setSettings((prev) => ({
+                          ...prev,
+                          capabilityCards: prev.capabilityCards.map((item, itemIndex) => (itemIndex === index ? { ...item, title: value } : item)),
+                        }))
+                      }
+                    />
+                    <TextField
+                      label="图标标识"
+                      value={card.iconKey}
+                      onChange={(value) =>
+                        setSettings((prev) => ({
+                          ...prev,
+                          capabilityCards: prev.capabilityCards.map((item, itemIndex) => (itemIndex === index ? { ...item, iconKey: value } : item)),
+                        }))
+                      }
+                    />
+                  </div>
+                  <div className="mt-4">
+                    <TextAreaField
+                      label="描述"
+                      value={card.description}
+                      onChange={(value) =>
+                        setSettings((prev) => ({
+                          ...prev,
+                          capabilityCards: prev.capabilityCards.map((item, itemIndex) => (itemIndex === index ? { ...item, description: value } : item)),
+                        }))
+                      }
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article className="rounded-[28px] border border-border bg-surface-elevated p-6 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
+            <h2 className="text-lg font-semibold text-primary">联系转化</h2>
+            <p className="mt-1 text-sm text-muted">优先填写真实可联系的信息；缺少时前台会保留平台兜底入口，但不会伪造数据。</p>
+            <div className="mt-5 grid gap-4 md:grid-cols-2">
+              <TextField label="联系人" value={settings.contact.contactPerson} onChange={(value) => setSettings((prev) => ({ ...prev, contact: { ...prev.contact, contactPerson: value } }))} />
+              <TextField label="联系电话" value={settings.contact.contactPhone} onChange={(value) => setSettings((prev) => ({ ...prev, contact: { ...prev.contact, contactPhone: value } }))} />
+              <TextField label="微信号" value={settings.contact.wechatId} onChange={(value) => setSettings((prev) => ({ ...prev, contact: { ...prev.contact, wechatId: value } }))} />
+              <TextField label="微信二维码" value={settings.contact.wechatQrImageUrl} onChange={(value) => setSettings((prev) => ({ ...prev, contact: { ...prev.contact, wechatQrImageUrl: value } }))} />
+              <TextField label="官网链接" value={settings.contact.websiteUrl} onChange={(value) => setSettings((prev) => ({ ...prev, contact: { ...prev.contact, websiteUrl: value } }))} />
+              <TextField label="所在城市" value={settings.contact.city} onChange={(value) => setSettings((prev) => ({ ...prev, contact: { ...prev.contact, city: value } }))} />
+              <TextField label="联系表单链接" value={settings.contact.contactFormUrl} onChange={(value) => setSettings((prev) => ({ ...prev, contact: { ...prev.contact, contactFormUrl: value } }))} />
+              <TextField label="地址" value={settings.contact.address} onChange={(value) => setSettings((prev) => ({ ...prev, contact: { ...prev.contact, address: value } }))} />
+            </div>
+            <div className="mt-4">
+              <TextAreaField label="联系引导文案" value={settings.contact.contactIntro} onChange={(value) => setSettings((prev) => ({ ...prev, contact: { ...prev.contact, contactIntro: value } }))} />
             </div>
           </article>
 
@@ -325,6 +529,7 @@ export default function MembershipSitePage() {
             <div className="mt-5 grid gap-3 lg:grid-cols-2">
               {coreModules.map((option) => {
                 const enabled = settings.modules[option.key];
+                const locked = lockedModules.has(option.key);
                 return (
                   <label
                     key={option.key}
@@ -337,10 +542,12 @@ export default function MembershipSitePage() {
                     <div>
                       <p className="text-base font-medium text-primary">{option.label}</p>
                       <p className="mt-2 text-sm leading-6 text-muted">{option.desc}</p>
+                      {locked ? <p className="mt-2 text-xs text-accent">该模块为固定结构，前台始终展示。</p> : null}
                     </div>
                     <input
                       type="checkbox"
                       checked={enabled}
+                      disabled={locked}
                       onChange={(e) =>
                         setSettings((prev) => ({
                           ...prev,
@@ -411,6 +618,9 @@ export default function MembershipSitePage() {
                     <TextField label="SEO 标题" value={settings.seo.title} onChange={(value) => setSettings((prev) => ({ ...prev, seo: { ...prev.seo, title: value } }))} />
                     <TextField label="SEO 关键词" value={settings.seo.keywords} onChange={(value) => setSettings((prev) => ({ ...prev, seo: { ...prev.seo, keywords: value } }))} />
                   </div>
+                  <div className="mt-4">
+                    <TextField label="分享封面图" value={settings.seo.imageUrl} onChange={(value) => setSettings((prev) => ({ ...prev, seo: { ...prev.seo, imageUrl: value } }))} />
+                  </div>
                   <TextAreaField label="SEO 描述" value={settings.seo.description} onChange={(value) => setSettings((prev) => ({ ...prev, seo: { ...prev.seo, description: value } }))} />
                 </div>
 
@@ -445,7 +655,12 @@ export default function MembershipSitePage() {
             <div className="mt-4 space-y-3">
               <SummaryRow label="模板" value={currentTemplate.label} />
               <SummaryRow label="首页标题" value={settings.heroTitle || "未设置"} />
-              <SummaryRow label="联系按钮" value={settings.contactLabel || "联系我们"} />
+              <SummaryRow label="一句话定位" value={settings.homepageTagline || "未设置"} />
+              <SummaryRow label="主按钮" value={settings.primaryCtaLabel || "立即咨询"} />
+              <SummaryRow label="次按钮" value={settings.secondaryCtaLabel || "查看案例"} />
+              <SummaryRow label="能力卡片" value={`${settings.capabilityCards.filter((item) => item.title || item.description).length} 条`} />
+              <SummaryRow label="联系电话" value={settings.contact.contactPhone || "未设置"} />
+              <SummaryRow label="分享图" value={settings.seo.imageUrl ? "已设置" : "未设置"} />
               <SummaryRow label="SEO 状态" value={settings.seo.title || settings.seo.description ? "已填写" : "未填写"} />
               <SummaryRow label="同步状态" value={settings.sync.syncEnabled ? "已开启" : "未开启"} />
             </div>
@@ -465,8 +680,8 @@ export default function MembershipSitePage() {
           <article className="rounded-[28px] border border-border bg-surface-elevated p-6 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
             <h2 className="text-lg font-semibold text-primary">使用建议</h2>
             <ul className="mt-4 space-y-3 text-sm text-muted">
-              <li>先定模板，再写首页标题和副标题。</li>
-              <li>只保留 4-5 个最重要模块，页面会更高级。</li>
+              <li>先写一句话定位，再补主视觉图和两个按钮文案。</li>
+              <li>品牌标签建议控制在 3 到 6 个，避免首屏过满。</li>
               <li>SEO 和同步不是日常操作，保持折叠就行。</li>
             </ul>
           </article>
