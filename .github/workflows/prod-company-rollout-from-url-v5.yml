@@ -105,6 +105,41 @@ jobs:
           ssh -o BatchMode=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
             set -e
             cd /home/web1
+
+            DATABASE_URL=""
+            if [ -f .env.production ]; then
+              export DATABASE_URL=$(grep '^DATABASE_URL=' .env.production | head -n 1 | cut -d '=' -f 2- | tr -d '"')
+            elif [ -f .env ]; then
+              export DATABASE_URL=$(grep '^DATABASE_URL=' .env | head -n 1 | cut -d '=' -f 2- | tr -d '"')
+            fi
+
+            if [ -z "$DATABASE_URL" ]; then
+              env_file_candidates=$(systemctl show web1 --no-pager -p EnvironmentFile --value 2>/dev/null || true)
+              for env_file in $env_file_candidates; do
+                env_file="${env_file#-}"
+                if [ -f "$env_file" ]; then
+                  DATABASE_URL=$(grep '^DATABASE_URL=' "$env_file" | head -n 1 | cut -d '=' -f 2- | tr -d '"')
+                  if [ -n "$DATABASE_URL" ]; then
+                    export DATABASE_URL
+                    break
+                  fi
+                fi
+              done
+            fi
+
+            if [ -z "$DATABASE_URL" ]; then
+              inline_env=$(systemctl show web1 --no-pager -p Environment --value 2>/dev/null || true)
+              DATABASE_URL=$(printf '%s\n' "$inline_env" | tr ' ' '\n' | grep '^DATABASE_URL=' | head -n 1 | cut -d '=' -f 2- | tr -d '"' || true)
+              if [ -n "$DATABASE_URL" ]; then
+                export DATABASE_URL
+              fi
+            fi
+
+            if [ -z "$DATABASE_URL" ]; then
+              echo "DATABASE_URL not found for summary step" >&2
+              exit 1
+            fi
+
             latest_report=$(ls -t custom/reports/company-migration-apply-*.json | head -n 1)
             node -e "const fs=require('node:fs'); const rows=JSON.parse(fs.readFileSync(process.argv[1],'utf8')); console.log('::warning::PROD_IMPORTED_COUNT=' + rows.length); rows.slice(0,3).forEach((row,index)=>{ console.log('::warning::PROD_SAMPLE_' + (index + 1) + '=https://cnzhengmu.com/enterprise/' + row.enterpriseId); });" "$latest_report"
             node -e "const {PrismaClient}=require('@prisma/client'); (async()=>{ const prisma=new PrismaClient(); try { console.log('::warning::PROD_VISIBLE_BRAND_COUNT=' + await prisma.brand.count({where:{isBrandVisible:true}})); console.log('::warning::PROD_ENTERPRISE_COUNT=' + await prisma.enterprise.count()); console.log('::warning::PROD_MISSING_LOGO_COUNT=' + await prisma.brand.count({where:{isBrandVisible:true, OR:[{logoUrl:null},{logoUrl:''}]}})); console.log('::warning::PROD_EMPTY_INTRO_COUNT=' + await prisma.enterprise.count({where:{OR:[{intro:null},{intro:''}]}})); } finally { await prisma.$disconnect(); } })().catch((error)=>{ console.error(error); process.exit(1); });"
