@@ -94,6 +94,7 @@ export default function AdminBrandsPage() {
   const [message, setMessage] = useState("");
   const [savingId, setSavingId] = useState<string | null>(null);
   const [batchSaving, setBatchSaving] = useState(false);
+  const [selectedBrandId, setSelectedBrandId] = useState<string | null>(null);
   const [stats, setStats] = useState({
     visibleTotal: 0,
     recommendedTotal: 0,
@@ -370,7 +371,8 @@ export default function AdminBrandsPage() {
       </section>
 
       <section className="overflow-hidden rounded-[28px] border border-[rgba(181,157,121,0.16)] bg-white shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
-        <div className="hidden border-b border-border px-5 py-4 text-xs uppercase tracking-[0.18em] text-muted lg:grid lg:grid-cols-[64px_minmax(0,1.5fr)_120px_120px_150px_120px_140px] lg:gap-4">
+        <div className="hidden border-b border-border px-5 py-4 text-xs uppercase tracking-[0.18em] text-muted lg:grid lg:grid-cols-[88px_64px_minmax(0,1.5fr)_120px_120px_150px_120px_140px] lg:gap-4">
+          <span>操作</span>
           <span>序号</span>
           <span>企业 / 品牌</span>
           <span>会员类型</span>
@@ -391,17 +393,44 @@ export default function AdminBrandsPage() {
               const disabled = savingId === item.id;
               const rowNumber = (page - 1) * PAGE_SIZE + index + 1;
               return (
-                <article key={item.id} className="px-5 py-4">
-                  <div className="grid gap-4 lg:grid-cols-[64px_minmax(0,1.5fr)_120px_120px_150px_120px_140px] lg:items-center">
+                <article
+                  key={item.id}
+                  className={`px-5 py-4 transition ${
+                    selectedBrandId === item.id ? "bg-[rgba(255,249,238,0.78)]" : ""
+                  }`}
+                >
+                  <div className="grid gap-4 lg:grid-cols-[88px_64px_minmax(0,1.5fr)_120px_120px_150px_120px_140px] lg:items-center">
+                    <div>
+                      <button
+                        type="button"
+                        aria-label={item.enterprise ? `选中 ${item.frontDisplay.name}` : `选中 ${item.name}`}
+                        title={item.enterprise ? "选中企业" : "选中品牌"}
+                        onClick={() => setSelectedBrandId(item.id)}
+                        className={`inline-flex h-10 w-10 items-center justify-center rounded-full border text-base transition ${
+                          selectedBrandId === item.id
+                            ? "border-accent bg-accent text-white shadow-[0_10px_24px_rgba(180,154,107,0.22)]"
+                            : "border-border bg-white text-primary hover:bg-surface"
+                        }`}
+                      >
+                        {selectedBrandId === item.id ? "✓" : "○"}
+                      </button>
+                    </div>
                     <div className="text-sm font-medium text-muted">{rowNumber}</div>
                     <div className="min-w-0">
-                      <p className="truncate text-base font-medium text-primary">{item.frontDisplay.name}</p>
+                      <Link
+                        href={item.frontDisplay.detailHref}
+                        target="_blank"
+                        className={`truncate text-base font-medium transition hover:text-accent hover:underline ${
+                          selectedBrandId === item.id ? "text-accent" : "text-primary"
+                        }`}
+                      >
+                        {item.frontDisplay.name}
+                      </Link>
                       <p className="mt-1 truncate text-sm text-muted">
                         {item.frontDisplay.region}
                         {item.frontDisplay.area ? ` / ${item.frontDisplay.area}` : ""}
                         {item.enterprise?.companyName && item.enterprise.companyName !== item.frontDisplay.name ? ` / ${item.enterprise.companyName}` : ""}
                       </p>
-                      <p className="mt-2 line-clamp-2 text-sm text-muted">{item.frontDisplay.summary}</p>
                     </div>
 
                     <div className="text-sm text-primary">{memberTypeLabel(item)}</div>
@@ -442,10 +471,7 @@ export default function AdminBrandsPage() {
 
                     <div className="flex flex-wrap gap-3 text-sm">
                       <Link href={`/membership/admin/brands/${item.id}`} className="text-accent hover:underline">
-                        管理详情
-                      </Link>
-                      <Link href={item.frontDisplay.detailHref} target="_blank" className="text-primary hover:underline">
-                        前台查看
+                        {item.enterprise ? "管理详情" : "选择企业"}
                       </Link>
                     </div>
                   </div>

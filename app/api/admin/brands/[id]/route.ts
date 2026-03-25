@@ -87,6 +87,18 @@ const adminBrandInclude = {
   },
 } as const;
 
+const enterpriseOptionSelect = {
+  id: true,
+  companyName: true,
+  companyShortName: true,
+  member: {
+    select: {
+      name: true,
+      memberType: true,
+    },
+  },
+} as const;
+
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
   if (!session || !isAdmin(session)) {
@@ -126,6 +138,16 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       contactPhone: brand.enterprise?.contactPhone ?? null,
       website: brand.enterprise?.website ?? null,
       contactInfo: brand.enterprise?.contactInfo ?? null,
+    }),
+    enterpriseOptions: await prisma.enterprise.findMany({
+      where: {
+        OR: [
+          { brand: null },
+          ...(brand.enterprise?.id ? [{ id: brand.enterprise.id }] : []),
+        ],
+      },
+      orderBy: [{ companyShortName: "asc" }, { companyName: "asc" }],
+      select: enterpriseOptionSelect,
     }),
   });
 }

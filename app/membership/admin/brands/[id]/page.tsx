@@ -57,6 +57,15 @@ type BrandDetail = {
       rankingWeight: number;
     } | null;
   } | null;
+  enterpriseOptions: Array<{
+    id: string;
+    companyName: string | null;
+    companyShortName: string | null;
+    member: {
+      name: string | null;
+      memberType: string;
+    };
+  }>;
 };
 
 type EnterpriseForm = {
@@ -139,6 +148,7 @@ export default function AdminBrandDetailPage() {
   const [savingBrand, setSavingBrand] = useState(false);
   const [savingEnterprise, setSavingEnterprise] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [selectedEnterpriseId, setSelectedEnterpriseId] = useState("");
 
   const previewName = useMemo(() => enterpriseForm.companyShortName || enterpriseForm.companyName || brand?.name || "品牌名称", [enterpriseForm.companyName, enterpriseForm.companyShortName, brand?.name]);
   const previewSummary = useMemo(
@@ -167,11 +177,16 @@ export default function AdminBrandDetailPage() {
       }
       setBrand(data);
       setEnterpriseForm(buildEnterpriseForm(data));
+      setSelectedEnterpriseId(data.enterprise?.id ?? "");
       setLoading(false);
     })();
   }, [id]);
 
-  async function updateBrand(patch: Partial<BrandDetail>) {
+  async function updateBrand(patch: {
+    isBrandVisible?: boolean;
+    isRecommend?: boolean;
+    enterpriseId?: string;
+  }) {
     if (!brand) return;
     setSavingBrand(true);
     setMessage("");
@@ -188,6 +203,18 @@ export default function AdminBrandDetailPage() {
       return;
     }
     setBrand((prev) => (prev ? ({ ...prev, ...data } as BrandDetail) : prev));
+    if (Object.prototype.hasOwnProperty.call(patch, "enterpriseId")) {
+      const detailRes = await fetch(`/api/admin/brands/${brand.id}`, {
+        credentials: "include",
+        cache: "no-store",
+      });
+      const detailData = (await detailRes.json().catch(() => ({}))) as BrandDetail & { error?: string };
+      if (detailRes.ok) {
+        setBrand(detailData);
+        setEnterpriseForm(buildEnterpriseForm(detailData));
+        setSelectedEnterpriseId(detailData.enterprise?.id ?? "");
+      }
+    }
     setSavingBrand(false);
     setMessage("品牌展示设置已更新。前台相关页面会立即同步。");
   }
@@ -261,7 +288,7 @@ export default function AdminBrandDetailPage() {
   }
 
   if (loading) return <p className="text-muted">加载品牌详情中...</p>;
-  if (!brand || !brand.enterprise) return <p className="text-muted">未找到可治理的品牌详情。</p>;
+  if (!brand) return <p className="text-muted">未找到可治理的品牌详情。</p>;
 
   const qualityItems = issueLabels(brand);
 
@@ -303,6 +330,39 @@ export default function AdminBrandDetailPage() {
               </div>
             </div>
             <div className="mt-5 grid gap-4 md:grid-cols-2">
+              <div className="rounded-[24px] border border-border bg-surface p-5 md:col-span-2">
+                <p className="text-sm font-medium text-primary">绑定企业</p>
+                <p className="mt-2 text-sm leading-7 text-muted">先把品牌绑定到具体企业，列表页名称、详情页和联系方式才会按企业实时资料展示。</p>
+                <div className="mt-4 flex flex-col gap-3 lg:flex-row">
+                  <select
+                    value={selectedEnterpriseId}
+                    onChange={(event) => setSelectedEnterpriseId(event.target.value)}
+                    className="h-11 w-full rounded-[16px] border border-border bg-white px-4 text-sm text-primary"
+                  >
+                    <option value="">请选择企业</option>
+                    {brand.enterpriseOptions.map((option) => {
+                      const optionLabel =
+                        option.companyShortName || option.companyName || option.member.name || option.id;
+                      const companyLabel =
+                        option.companyName && option.companyName !== optionLabel ? ` / ${option.companyName}` : "";
+                      return (
+                        <option key={option.id} value={option.id}>
+                          {optionLabel}
+                          {companyLabel}
+                        </option>
+                      );
+                    })}
+                  </select>
+                  <button
+                    type="button"
+                    disabled={savingBrand || !selectedEnterpriseId || selectedEnterpriseId === brand.enterprise?.id}
+                    onClick={() => void updateBrand({ enterpriseId: selectedEnterpriseId })}
+                    className="rounded-full border border-border bg-white px-5 py-2.5 text-sm text-primary transition hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {brand.enterprise ? "更新绑定企业" : "绑定企业"}
+                  </button>
+                </div>
+              </div>
               <ActionCard
                 title="前台显示"
                 body="决定这家企业是否出现在 /brands 与 /brands/all。"
@@ -322,106 +382,115 @@ export default function AdminBrandDetailPage() {
             </div>
           </section>
 
-          <section className="rounded-[28px] border border-[rgba(181,157,121,0.16)] bg-white p-6 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
-            <div>
-              <h2 className="text-lg font-semibold text-primary">基础信息</h2>
-              <p className="mt-2 text-sm text-muted">企业名称、地区与联系信息会直接影响列表页和详情页基础信息区。</p>
-            </div>
-            <div className="mt-5 grid gap-4 md:grid-cols-2">
-              <Field label="企业全称" helper="详情页标题兜底字段。">
-                <input className="h-11 w-full rounded-[16px] border border-border bg-surface px-4 text-sm text-primary" value={enterpriseForm.companyName} onChange={(event) => setEnterpriseForm((prev) => ({ ...prev, companyName: event.target.value }))} />
-              </Field>
-              <Field label="企业简称" helper="品牌卡片与详情页主标题优先字段。">
-                <input className="h-11 w-full rounded-[16px] border border-border bg-surface px-4 text-sm text-primary" value={enterpriseForm.companyShortName} onChange={(event) => setEnterpriseForm((prev) => ({ ...prev, companyShortName: event.target.value }))} />
-              </Field>
-              <Field label="所在区域" helper="影响品牌列表与详情页地区标签。">
-                <input className="h-11 w-full rounded-[16px] border border-border bg-surface px-4 text-sm text-primary" value={enterpriseForm.region} onChange={(event) => setEnterpriseForm((prev) => ({ ...prev, region: event.target.value }))} />
-              </Field>
-              <Field label="省市地区" helper="用于细化到省市或城市。">
-                <input className="h-11 w-full rounded-[16px] border border-border bg-surface px-4 text-sm text-primary" value={enterpriseForm.area} onChange={(event) => setEnterpriseForm((prev) => ({ ...prev, area: event.target.value }))} />
-              </Field>
-              <Field label="联系人">
-                <input className="h-11 w-full rounded-[16px] border border-border bg-surface px-4 text-sm text-primary" value={enterpriseForm.contactPerson} onChange={(event) => setEnterpriseForm((prev) => ({ ...prev, contactPerson: event.target.value }))} />
-              </Field>
-              <Field label="联系电话" helper="前台 CTA 会优先使用电话。">
-                <input className="h-11 w-full rounded-[16px] border border-border bg-surface px-4 text-sm text-primary" value={enterpriseForm.contactPhone} onChange={(event) => setEnterpriseForm((prev) => ({ ...prev, contactPhone: event.target.value }))} />
-              </Field>
-              <Field label="联系信息" className="md:col-span-2" helper="可填写微信、商务邮箱或其他联系说明。">
-                <input className="h-11 w-full rounded-[16px] border border-border bg-surface px-4 text-sm text-primary" value={enterpriseForm.contactInfo} onChange={(event) => setEnterpriseForm((prev) => ({ ...prev, contactInfo: event.target.value }))} />
-              </Field>
-              <Field label="官网">
-                <input className="h-11 w-full rounded-[16px] border border-border bg-surface px-4 text-sm text-primary" value={enterpriseForm.website} onChange={(event) => setEnterpriseForm((prev) => ({ ...prev, website: event.target.value }))} />
-              </Field>
-              <Field label="企业地址">
-                <input className="h-11 w-full rounded-[16px] border border-border bg-surface px-4 text-sm text-primary" value={enterpriseForm.address} onChange={(event) => setEnterpriseForm((prev) => ({ ...prev, address: event.target.value }))} />
-              </Field>
-            </div>
-          </section>
-
-          <section className="rounded-[28px] border border-[rgba(181,157,121,0.16)] bg-white p-6 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
-            <div>
-              <h2 className="text-lg font-semibold text-primary">展示信息</h2>
-              <p className="mt-2 text-sm text-muted">这组字段决定品牌卡片摘要、详情页亮点区和首页推荐位的表现。</p>
-            </div>
-            <div className="mt-5 grid gap-4 md:grid-cols-2">
-              <Field label="品牌定位" helper="列表页摘要与详情页首屏一句话定位优先字段。">
-                <input className="h-11 w-full rounded-[16px] border border-border bg-surface px-4 text-sm text-primary" value={enterpriseForm.positioning} onChange={(event) => setEnterpriseForm((prev) => ({ ...prev, positioning: event.target.value }))} />
-              </Field>
-              <Field label="产品体系" helper="用于补足“做什么”。">
-                <input className="h-11 w-full rounded-[16px] border border-border bg-surface px-4 text-sm text-primary" value={enterpriseForm.productSystem} onChange={(event) => setEnterpriseForm((prev) => ({ ...prev, productSystem: event.target.value }))} />
-              </Field>
-              <Field label="工艺等级">
-                <input className="h-11 w-full rounded-[16px] border border-border bg-surface px-4 text-sm text-primary" value={enterpriseForm.craftLevel} onChange={(event) => setEnterpriseForm((prev) => ({ ...prev, craftLevel: event.target.value }))} />
-              </Field>
-              <Field label="认证情况">
-                <input className="h-11 w-full rounded-[16px] border border-border bg-surface px-4 text-sm text-primary" value={enterpriseForm.certifications} onChange={(event) => setEnterpriseForm((prev) => ({ ...prev, certifications: event.target.value }))} />
-              </Field>
-              <Field label="获奖记录" className="md:col-span-2">
-                <input className="h-11 w-full rounded-[16px] border border-border bg-surface px-4 text-sm text-primary" value={enterpriseForm.awards} onChange={(event) => setEnterpriseForm((prev) => ({ ...prev, awards: event.target.value }))} />
-              </Field>
-            </div>
-
-            <div className="mt-5 grid gap-4 lg:grid-cols-[1fr,240px]">
-              <Field label="企业 Logo" helper="卡片、推荐位和详情页首屏统一使用这里的图片。">
-                <input className="h-11 w-full rounded-[16px] border border-border bg-surface px-4 text-sm text-primary" value={enterpriseForm.logoUrl} onChange={(event) => setEnterpriseForm((prev) => ({ ...prev, logoUrl: event.target.value }))} />
-                <div className="mt-3 flex flex-wrap gap-3">
-                  <label className="inline-flex cursor-pointer items-center rounded-full border border-border bg-white px-4 py-2 text-sm text-primary transition hover:bg-surface">
-                    <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
-                    {uploadingLogo ? "上传中..." : `上传 Logo（最大 ${MAX_UPLOAD_IMAGE_MB}MB）`}
-                  </label>
+          {brand.enterprise ? (
+            <>
+              <section className="rounded-[28px] border border-[rgba(181,157,121,0.16)] bg-white p-6 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
+                <div>
+                  <h2 className="text-lg font-semibold text-primary">基础信息</h2>
+                  <p className="mt-2 text-sm text-muted">企业名称、地区与联系信息会直接影响列表页和详情页基础信息区。</p>
                 </div>
-              </Field>
-              <div className="rounded-[22px] border border-border bg-surface p-4">
-                <p className="text-xs uppercase tracking-[0.16em] text-muted">Logo 预览</p>
-                <div className="mt-3 flex h-28 items-center justify-center rounded-[18px] border border-dashed border-border bg-white">
-                  {enterpriseForm.logoUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={resolveUploadedImageUrl(enterpriseForm.logoUrl)} alt="Logo 预览" className="max-h-20 max-w-full object-contain" />
-                  ) : (
-                    <span className="text-xs text-muted">暂无 Logo</span>
-                  )}
+                <div className="mt-5 grid gap-4 md:grid-cols-2">
+                  <Field label="企业全称" helper="详情页标题兜底字段。">
+                    <input className="h-11 w-full rounded-[16px] border border-border bg-surface px-4 text-sm text-primary" value={enterpriseForm.companyName} onChange={(event) => setEnterpriseForm((prev) => ({ ...prev, companyName: event.target.value }))} />
+                  </Field>
+                  <Field label="企业简称" helper="品牌卡片与详情页主标题优先字段。">
+                    <input className="h-11 w-full rounded-[16px] border border-border bg-surface px-4 text-sm text-primary" value={enterpriseForm.companyShortName} onChange={(event) => setEnterpriseForm((prev) => ({ ...prev, companyShortName: event.target.value }))} />
+                  </Field>
+                  <Field label="所在区域" helper="影响品牌列表与详情页地区标签。">
+                    <input className="h-11 w-full rounded-[16px] border border-border bg-surface px-4 text-sm text-primary" value={enterpriseForm.region} onChange={(event) => setEnterpriseForm((prev) => ({ ...prev, region: event.target.value }))} />
+                  </Field>
+                  <Field label="省市地区" helper="用于细化到省市或城市。">
+                    <input className="h-11 w-full rounded-[16px] border border-border bg-surface px-4 text-sm text-primary" value={enterpriseForm.area} onChange={(event) => setEnterpriseForm((prev) => ({ ...prev, area: event.target.value }))} />
+                  </Field>
+                  <Field label="联系人">
+                    <input className="h-11 w-full rounded-[16px] border border-border bg-surface px-4 text-sm text-primary" value={enterpriseForm.contactPerson} onChange={(event) => setEnterpriseForm((prev) => ({ ...prev, contactPerson: event.target.value }))} />
+                  </Field>
+                  <Field label="联系电话" helper="前台 CTA 会优先使用电话。">
+                    <input className="h-11 w-full rounded-[16px] border border-border bg-surface px-4 text-sm text-primary" value={enterpriseForm.contactPhone} onChange={(event) => setEnterpriseForm((prev) => ({ ...prev, contactPhone: event.target.value }))} />
+                  </Field>
+                  <Field label="联系信息" className="md:col-span-2" helper="可填写微信、商务邮箱或其他联系说明。">
+                    <input className="h-11 w-full rounded-[16px] border border-border bg-surface px-4 text-sm text-primary" value={enterpriseForm.contactInfo} onChange={(event) => setEnterpriseForm((prev) => ({ ...prev, contactInfo: event.target.value }))} />
+                  </Field>
+                  <Field label="官网">
+                    <input className="h-11 w-full rounded-[16px] border border-border bg-surface px-4 text-sm text-primary" value={enterpriseForm.website} onChange={(event) => setEnterpriseForm((prev) => ({ ...prev, website: event.target.value }))} />
+                  </Field>
+                  <Field label="企业地址">
+                    <input className="h-11 w-full rounded-[16px] border border-border bg-surface px-4 text-sm text-primary" value={enterpriseForm.address} onChange={(event) => setEnterpriseForm((prev) => ({ ...prev, address: event.target.value }))} />
+                  </Field>
                 </div>
-              </div>
-            </div>
-          </section>
+              </section>
 
-          <section className="rounded-[28px] border border-[rgba(181,157,121,0.16)] bg-white p-6 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
-            <div>
-              <h2 className="text-lg font-semibold text-primary">企业简介</h2>
-              <p className="mt-2 text-sm text-muted">支持直接粘贴旧站内容。系统会在保存时自动清洗危险标签、内联样式和脏 HTML，并统一前台展示格式。</p>
-            </div>
-            <div className="mt-4">
-              <RichEditor value={enterpriseForm.intro} onChange={(value) => setEnterpriseForm((prev) => ({ ...prev, intro: value }))} minHeight={260} placeholder="建议用 2-4 段介绍企业定位、产品体系、服务能力和合作方式。" />
-            </div>
-            <div className="mt-5 flex flex-wrap gap-3">
-              <button type="button" disabled={savingEnterprise || uploadingLogo} onClick={() => void saveEnterprise()} className="rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-55">
-                {savingEnterprise ? "保存中..." : "保存企业资料"}
-              </button>
-              <button type="button" className="rounded-full border border-border bg-surface px-5 py-2.5 text-sm text-primary transition hover:bg-white" onClick={() => setEnterpriseForm(buildEnterpriseForm(brand))}>
-                恢复当前数据
-              </button>
-            </div>
-          </section>
+              <section className="rounded-[28px] border border-[rgba(181,157,121,0.16)] bg-white p-6 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
+                <div>
+                  <h2 className="text-lg font-semibold text-primary">展示信息</h2>
+                  <p className="mt-2 text-sm text-muted">这组字段决定品牌卡片摘要、详情页亮点区和首页推荐位的表现。</p>
+                </div>
+                <div className="mt-5 grid gap-4 md:grid-cols-2">
+                  <Field label="品牌定位" helper="列表页摘要与详情页首屏一句话定位优先字段。">
+                    <input className="h-11 w-full rounded-[16px] border border-border bg-surface px-4 text-sm text-primary" value={enterpriseForm.positioning} onChange={(event) => setEnterpriseForm((prev) => ({ ...prev, positioning: event.target.value }))} />
+                  </Field>
+                  <Field label="产品体系" helper="用于补足“做什么”。">
+                    <input className="h-11 w-full rounded-[16px] border border-border bg-surface px-4 text-sm text-primary" value={enterpriseForm.productSystem} onChange={(event) => setEnterpriseForm((prev) => ({ ...prev, productSystem: event.target.value }))} />
+                  </Field>
+                  <Field label="工艺等级">
+                    <input className="h-11 w-full rounded-[16px] border border-border bg-surface px-4 text-sm text-primary" value={enterpriseForm.craftLevel} onChange={(event) => setEnterpriseForm((prev) => ({ ...prev, craftLevel: event.target.value }))} />
+                  </Field>
+                  <Field label="认证情况">
+                    <input className="h-11 w-full rounded-[16px] border border-border bg-surface px-4 text-sm text-primary" value={enterpriseForm.certifications} onChange={(event) => setEnterpriseForm((prev) => ({ ...prev, certifications: event.target.value }))} />
+                  </Field>
+                  <Field label="获奖记录" className="md:col-span-2">
+                    <input className="h-11 w-full rounded-[16px] border border-border bg-surface px-4 text-sm text-primary" value={enterpriseForm.awards} onChange={(event) => setEnterpriseForm((prev) => ({ ...prev, awards: event.target.value }))} />
+                  </Field>
+                </div>
+
+                <div className="mt-5 grid gap-4 lg:grid-cols-[1fr,240px]">
+                  <Field label="企业 Logo" helper="卡片、推荐位和详情页首屏统一使用这里的图片。">
+                    <input className="h-11 w-full rounded-[16px] border border-border bg-surface px-4 text-sm text-primary" value={enterpriseForm.logoUrl} onChange={(event) => setEnterpriseForm((prev) => ({ ...prev, logoUrl: event.target.value }))} />
+                    <div className="mt-3 flex flex-wrap gap-3">
+                      <label className="inline-flex cursor-pointer items-center rounded-full border border-border bg-white px-4 py-2 text-sm text-primary transition hover:bg-surface">
+                        <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+                        {uploadingLogo ? "上传中..." : `上传 Logo（最大 ${MAX_UPLOAD_IMAGE_MB}MB）`}
+                      </label>
+                    </div>
+                  </Field>
+                  <div className="rounded-[22px] border border-border bg-surface p-4">
+                    <p className="text-xs uppercase tracking-[0.16em] text-muted">Logo 预览</p>
+                    <div className="mt-3 flex h-28 items-center justify-center rounded-[18px] border border-dashed border-border bg-white">
+                      {enterpriseForm.logoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={resolveUploadedImageUrl(enterpriseForm.logoUrl)} alt="Logo 预览" className="max-h-20 max-w-full object-contain" />
+                      ) : (
+                        <span className="text-xs text-muted">暂无 Logo</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section className="rounded-[28px] border border-[rgba(181,157,121,0.16)] bg-white p-6 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
+                <div>
+                  <h2 className="text-lg font-semibold text-primary">企业简介</h2>
+                  <p className="mt-2 text-sm text-muted">支持直接粘贴旧站内容。系统会在保存时自动清洗危险标签、内联样式和脏 HTML，并统一前台展示格式。</p>
+                </div>
+                <div className="mt-4">
+                  <RichEditor value={enterpriseForm.intro} onChange={(value) => setEnterpriseForm((prev) => ({ ...prev, intro: value }))} minHeight={260} placeholder="建议用 2-4 段介绍企业定位、产品体系、服务能力和合作方式。" />
+                </div>
+                <div className="mt-5 flex flex-wrap gap-3">
+                  <button type="button" disabled={savingEnterprise || uploadingLogo} onClick={() => void saveEnterprise()} className="rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-55">
+                    {savingEnterprise ? "保存中..." : "保存企业资料"}
+                  </button>
+                  <button type="button" className="rounded-full border border-border bg-surface px-5 py-2.5 text-sm text-primary transition hover:bg-white" onClick={() => setEnterpriseForm(buildEnterpriseForm(brand))}>
+                    恢复当前数据
+                  </button>
+                </div>
+              </section>
+            </>
+          ) : (
+            <section className="rounded-[28px] border border-[rgba(181,157,121,0.16)] bg-white p-6 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
+              <h2 className="text-lg font-semibold text-primary">企业资料</h2>
+              <p className="mt-3 text-sm leading-7 text-muted">当前品牌还没有绑定企业，请先在上面的“绑定企业”里选择一家公司，再维护展示资料。</p>
+            </section>
+          )}
         </div>
 
         <aside className="space-y-6">
