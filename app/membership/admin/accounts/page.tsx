@@ -24,6 +24,7 @@ type AdminVisibleRow = {
   displayName: string;
   role: string | null;
   memberType: string;
+  enterpriseId?: string | null;
   enterpriseName?: string | null;
   brandName?: string | null;
 };
@@ -285,9 +286,13 @@ export default function AdminAccountsPage() {
             <ul className="space-y-2">
               {visibleRows.map((row) => (
                 <li key={row.id} className="text-sm text-primary border-b border-border pb-2 last:border-0">
-                  <Link href={`/membership/admin/accounts/${row.id}`} className="hover:text-accent hover:underline">
-                    {row.displayName}
-                  </Link>
+                  {row.enterpriseId ? (
+                    <Link href={`/enterprise/${row.enterpriseId}`} className="hover:text-accent hover:underline">
+                      {row.displayName}
+                    </Link>
+                  ) : (
+                    <span>{row.displayName}</span>
+                  )}
                   {(row.enterpriseName || row.brandName) ? (
                     <span className="ml-2 text-xs text-muted">
                       {row.enterpriseName || "未绑定企业"}
@@ -346,9 +351,13 @@ export default function AdminAccountsPage() {
                 <tr key={m.id} className="border-b border-border last:border-0">
                   <td className="py-2 pr-4">
                     <div>
-                      <Link href={`/membership/admin/accounts/${m.id}`} className="text-primary hover:text-accent hover:underline">
-                        {m.account}
-                      </Link>
+                      {m.enterprise?.id ? (
+                        <Link href={`/enterprise/${m.enterprise.id}`} className="text-primary hover:text-accent hover:underline">
+                          {m.account}
+                        </Link>
+                      ) : (
+                        <span className="text-primary">{m.account}</span>
+                      )}
                     </div>
                     <div className="text-xs text-muted">{m.name || "未命名"}</div>
                     {m.enterprise ? (

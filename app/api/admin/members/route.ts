@@ -117,6 +117,7 @@ export async function GET(request: NextRequest) {
         displayName: m.name?.trim() || m.email,
         role: m.role,
         memberType: m.memberType,
+        enterpriseId: m.enterprise?.id || null,
         enterpriseName: m.enterprise?.companyShortName || m.enterprise?.companyName || null,
         brandName: m.enterprise?.brand?.name || null,
       }))
