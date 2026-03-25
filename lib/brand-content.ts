@@ -1,4 +1,4 @@
-const BLOCK_TAGS = new Set([
+﻿const BLOCK_TAGS = new Set([
   "p",
   "div",
   "section",
@@ -20,10 +20,13 @@ const BLOCK_TAGS = new Set([
 
 const ALLOWED_TAGS = new Set(["p", "br", "strong", "em", "u", "blockquote", "ul", "ol", "li", "h2", "h3", "a", "img"]);
 const DROP_WITH_CONTENT_TAGS = ["script", "style", "iframe", "object", "embed", "svg", "math", "form", "noscript"];
+const SUSPICIOUS_TEXT_PATTERN = /[�]{2,}|(?:Ã|Â|â|ð|æ|å|ç){2,}|(?:\?{2,})/;
 
 function decodeNamedEntity(entity: string) {
   switch (entity) {
     case "nbsp":
+    case "ensp":
+    case "emsp":
       return " ";
     case "amp":
       return "&";
@@ -32,12 +35,9 @@ function decodeNamedEntity(entity: string) {
     case "gt":
       return ">";
     case "quot":
-      return "\"";
+      return '"';
     case "apos":
       return "'";
-    case "ensp":
-    case "emsp":
-      return " ";
     case "middot":
       return "·";
     default:
@@ -45,8 +45,39 @@ function decodeNamedEntity(entity: string) {
   }
 }
 
+function attemptLatin1Repair(input: string) {
+  try {
+    const bytes = Uint8Array.from(Array.from(input), (char) => char.charCodeAt(0) & 0xff);
+    return new TextDecoder("utf-8", { fatal: false }).decode(bytes);
+  } catch {
+    return input;
+  }
+}
+
+function suspiciousScore(value: string) {
+  const suspicious = value.match(/[�ÃÂâðæåç]/g)?.length ?? 0;
+  return suspicious / Math.max(1, value.length);
+}
+
+export function repairMojibake(input: string) {
+  const raw = String(input ?? "");
+  if (!raw) return "";
+  if (!SUSPICIOUS_TEXT_PATTERN.test(raw) && suspiciousScore(raw) < 0.08) return raw;
+
+  const repaired = attemptLatin1Repair(raw);
+  if (suspiciousScore(repaired) < suspiciousScore(raw)) {
+    return repaired;
+  }
+  return raw;
+}
+
+export function containsSuspiciousText(input: string | null | undefined) {
+  const value = String(input ?? "");
+  return Boolean(value) && (SUSPICIOUS_TEXT_PATTERN.test(value) || suspiciousScore(value) >= 0.08);
+}
+
 export function decodeHtmlEntities(input: string) {
-  return input.replace(/&(#x?[0-9a-f]+|[a-z]+);/gi, (match, entity) => {
+  return repairMojibake(input).replace(/&(#x?[0-9a-f]+|[a-z]+);/gi, (match, entity) => {
     const normalized = String(entity).toLowerCase();
     if (normalized.startsWith("#x")) {
       const codePoint = Number.parseInt(normalized.slice(2), 16);
@@ -65,7 +96,7 @@ export function escapeHtml(input: string) {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
+    .replace(/\"/g, "&quot;")
     .replace(/'/g, "&#39;");
 }
 
@@ -82,6 +113,7 @@ function stripUnsafeContainers(input: string) {
 function normalizeUnsafeWrappers(input: string) {
   return input
     .replace(/<\/?(?:span|font)\b[^>]*>/gi, "")
+    .replace(/\sstyle\s*=\s*(\"([^\"]*)\"|'([^']*)')/gi, "")
     .replace(/<(?:div|section|article|header|footer|aside)\b[^>]*>/gi, "<p>")
     .replace(/<\/(?:div|section|article|header|footer|aside)>/gi, "</p>")
     .replace(/<(?:h1|h4|h5|h6)\b[^>]*>/gi, "<h3>")
@@ -102,7 +134,7 @@ function isSafeSrc(value: string) {
 
 function parseAttributes(input: string) {
   const attributes = new Map<string, string>();
-  const regex = /([:@\w-]+)(?:\s*=\s*("([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
+  const regex = /([:@\w-]+)(?:\s*=\s*(\"([^\"]*)\"|'([^']*)'|([^\s\"'=<>`]+)))?/g;
 
   let match: RegExpExecArray | null;
   while ((match = regex.exec(input)) !== null) {
@@ -188,7 +220,7 @@ function repairNestedParagraphs(input: string) {
 }
 
 export function sanitizeRichText(input: string | null | undefined) {
-  const raw = String(input ?? "").trim();
+  const raw = repairMojibake(String(input ?? "").trim());
   if (!raw) return "";
   if (!looksLikeHtml(raw)) return textToParagraphs(raw);
 

@@ -86,33 +86,50 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const page = Math.max(1, Number.parseInt(searchParams.get("page") ?? "1", 10));
-  const limit = Math.min(100, Math.max(1, Number.parseInt(searchParams.get("limit") ?? "20", 10)));
+  const limit = Math.min(500, Math.max(1, Number.parseInt(searchParams.get("limit") ?? "20", 10)));
   const skip = (page - 1) * limit;
   const q = searchParams.get("q")?.trim() ?? "";
   const recommend = searchParams.get("recommend");
   const onlyIncomplete = searchParams.get("quality") === "needs_attention";
 
-  const where: Record<string, unknown> = {};
+  const conditions: Record<string, unknown>[] = [];
   if (q) {
-    where.OR = [
-      { name: { contains: q } },
-      { slug: { contains: q } },
-      { tagline: { contains: q } },
-      { region: { contains: q } },
-      { area: { contains: q } },
-      { enterprise: { companyName: { contains: q } } },
-      { enterprise: { companyShortName: { contains: q } } },
-      { enterprise: { intro: { contains: q } } },
-      { enterprise: { positioning: { contains: q } } },
-      { enterprise: { productSystem: { contains: q } } },
-    ];
+    conditions.push({
+      OR: [
+        { name: { contains: q } },
+        { slug: { contains: q } },
+        { tagline: { contains: q } },
+        { region: { contains: q } },
+        { area: { contains: q } },
+        { enterprise: { companyName: { contains: q } } },
+        { enterprise: { companyShortName: { contains: q } } },
+        { enterprise: { intro: { contains: q } } },
+        { enterprise: { positioning: { contains: q } } },
+        { enterprise: { productSystem: { contains: q } } },
+      ],
+    });
   }
   if (recommend === "1" || recommend === "0") {
-    where.isRecommend = recommend === "1";
+    conditions.push({ isRecommend: recommend === "1" });
   }
   if (onlyIncomplete) {
-    where.OR = [
-      ...(Array.isArray(where.OR) ? where.OR : []),
+    conditions.push({
+      OR: [
+        { logoUrl: null },
+        { enterprise: { logoUrl: null } },
+        { tagline: null },
+        { positioning: null },
+        { enterprise: { positioning: null } },
+        { enterprise: { intro: null } },
+        { enterprise: { contactPhone: null } },
+      ],
+    });
+  }
+
+  const where = conditions.length > 0 ? { AND: conditions } : {};
+
+  const needsAttentionWhere = {
+    OR: [
       { logoUrl: null },
       { enterprise: { logoUrl: null } },
       { tagline: null },
@@ -120,18 +137,21 @@ export async function GET(request: NextRequest) {
       { enterprise: { positioning: null } },
       { enterprise: { intro: null } },
       { enterprise: { contactPhone: null } },
-    ];
-  }
+    ],
+  };
 
-  const [items, total] = await Promise.all([
+  const [items, total, visibleTotal, recommendedTotal, needsAttentionTotal] = await Promise.all([
     prisma.brand.findMany({
       where,
-      orderBy: [{ isRecommend: "desc" }, { sortOrder: "desc" }, { rankingWeight: "desc" }, { updatedAt: "desc" }],
+      orderBy: [{ isBrandVisible: "desc" }, { isRecommend: "desc" }, { sortOrder: "desc" }, { rankingWeight: "desc" }, { updatedAt: "desc" }],
       skip,
       take: limit,
       include: adminBrandInclude,
     }),
     prisma.brand.count({ where }),
+    prisma.brand.count({ where: { isBrandVisible: true } }),
+    prisma.brand.count({ where: { isBrandVisible: true, isRecommend: true } }),
+    prisma.brand.count({ where: needsAttentionWhere }),
   ]);
 
   const normalized = items.map((item) => {
@@ -159,7 +179,18 @@ export async function GET(request: NextRequest) {
     };
   });
 
-  return NextResponse.json({ items: normalized, total, page, limit });
+  return NextResponse.json({
+    items: normalized,
+    total,
+    page,
+    limit,
+    totalPages: Math.max(1, Math.ceil(total / limit)),
+    stats: {
+      visibleTotal,
+      recommendedTotal,
+      needsAttentionTotal,
+    },
+  });
 }
 
 export async function POST(request: NextRequest) {

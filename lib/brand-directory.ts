@@ -1,4 +1,4 @@
-﻿import { htmlToPlainText, toSummaryText } from "./brand-content";
+﻿import { containsSuspiciousText, htmlToPlainText, normalizePlainTextField, toSummaryText } from "./brand-content";
 import { prisma } from "./prisma";
 
 const brandCardSelect = {
@@ -130,18 +130,29 @@ function buildBrandWhere(filters: BrandDirectoryFilters = {}) {
   };
 }
 
+function cleanDisplayField(value: string | null | undefined) {
+  const text = normalizePlainTextField(value);
+  if (!text) return null;
+  return containsSuspiciousText(text) ? null : text;
+}
+
 function normalizeBrand(record: BrandRecord) {
   const enterprise = record.enterprise;
   const memberType = record.memberTypeSnapshot || enterprise?.member?.memberType || "enterprise_basic";
-  const enterpriseName = enterprise?.companyShortName || enterprise?.companyName || record.name;
-  const region = enterprise?.region || record.region || "全国";
-  const area = enterprise?.area || record.area || null;
+  const enterpriseName = cleanDisplayField(enterprise?.companyShortName || enterprise?.companyName || record.name) || record.name;
+  const region = cleanDisplayField(enterprise?.region || record.region) || "全国";
+  const area = cleanDisplayField(enterprise?.area || record.area);
   const rawSummary =
     enterprise?.positioning ||
     enterprise?.intro ||
     record.tagline ||
     record.positioning ||
     "企业资料完善后，这里会展示品牌定位、服务能力与核心亮点。";
+
+  const summary = toSummaryText(rawSummary, 120);
+  const safeSummary = containsSuspiciousText(summary)
+    ? "品牌资料正在整理中，当前可先查看企业详情、联系方式和服务能力。"
+    : summary;
 
   return {
     ...record,
@@ -151,11 +162,11 @@ function normalizeBrand(record: BrandRecord) {
     logoUrl: enterprise?.logoUrl || record.logoUrl || null,
     region,
     area,
-    summary: toSummaryText(rawSummary, 120),
+    summary: safeSummary,
     summaryPlain: htmlToPlainText(rawSummary),
     summaryRichText: enterprise?.intro || record.positioning || record.tagline || null,
-    contactPhone: enterprise?.contactPhone || null,
-    website: enterprise?.website || null,
+    contactPhone: cleanDisplayField(enterprise?.contactPhone),
+    website: cleanDisplayField(enterprise?.website),
     displayTemplate: record.displayTemplate || "brand_showcase",
     updatedAt: enterprise?.updatedAt && enterprise.updatedAt > record.updatedAt ? enterprise.updatedAt : record.updatedAt,
   };

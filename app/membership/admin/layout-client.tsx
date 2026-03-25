@@ -258,7 +258,7 @@ export default function AdminLayoutClient({ children }: { children: React.ReactN
 
   const isLinkActive = (href: string) => {
     if (href === "/membership/admin/accounts") return pathname === "/membership/admin/accounts";
-    if (href === "/membership/admin/brands") return pathname === "/membership/admin/brands";
+    if (href === "/membership/admin/brands") return pathname === "/membership/admin/brands" || pathname.startsWith("/membership/admin/brands/");
     if (href === "/membership/admin/permissions") return pathname === "/membership/admin/permissions";
     if (href === "/membership/admin/member-tiers") return pathname === "/membership/admin/member-tiers";
     if (href === "/membership/admin/member-grants") return pathname === "/membership/admin/member-grants";

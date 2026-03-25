@@ -1,12 +1,7 @@
 ﻿"use client";
 
 import Link from "next/link";
-import { ChangeEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { RichContent } from "@/components/RichContent";
-import { RichEditor } from "@/components/RichEditor";
-import { toSummaryText } from "@/lib/brand-content";
-import { MAX_UPLOAD_IMAGE_MB, uploadImageToServer } from "@/lib/client-image";
-import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 type BrandRow = {
   id: string;
@@ -16,8 +11,6 @@ type BrandRow = {
   isBrandVisible: boolean;
   sortOrder: number;
   rankingWeight: number;
-  displayTemplate: string | null;
-  memberTypeSnapshot: string | null;
   frontDisplay: {
     name: string;
     logoUrl: string | null;
@@ -36,20 +29,6 @@ type BrandRow = {
     memberId: string;
     companyName: string | null;
     companyShortName: string | null;
-    intro: string | null;
-    logoUrl: string | null;
-    region: string | null;
-    area: string | null;
-    positioning: string | null;
-    contactPerson: string | null;
-    contactPhone: string | null;
-    contactInfo: string | null;
-    website: string | null;
-    address: string | null;
-    productSystem: string | null;
-    craftLevel: string | null;
-    certifications: string | null;
-    awards: string | null;
     member?: {
       memberType: string;
       rankingWeight: number;
@@ -60,74 +39,28 @@ type BrandRow = {
 type ApiResponse = {
   items: BrandRow[];
   total: number;
-};
-
-type EnterpriseForm = {
-  companyName: string;
-  companyShortName: string;
-  intro: string;
-  logoUrl: string;
-  region: string;
-  area: string;
-  positioning: string;
-  contactPerson: string;
-  contactPhone: string;
-  contactInfo: string;
-  website: string;
-  address: string;
-  productSystem: string;
-  craftLevel: string;
-  certifications: string;
-  awards: string;
-};
-
-const EMPTY_FORM: EnterpriseForm = {
-  companyName: "",
-  companyShortName: "",
-  intro: "",
-  logoUrl: "",
-  region: "",
-  area: "",
-  positioning: "",
-  contactPerson: "",
-  contactPhone: "",
-  contactInfo: "",
-  website: "",
-  address: "",
-  productSystem: "",
-  craftLevel: "",
-  certifications: "",
-  awards: "",
-};
-
-function buildEnterpriseForm(item: BrandRow | null): EnterpriseForm {
-  if (!item?.enterprise) return EMPTY_FORM;
-  return {
-    companyName: item.enterprise.companyName ?? "",
-    companyShortName: item.enterprise.companyShortName ?? "",
-    intro: item.enterprise.intro ?? "",
-    logoUrl: item.enterprise.logoUrl ?? "",
-    region: item.enterprise.region ?? "",
-    area: item.enterprise.area ?? "",
-    positioning: item.enterprise.positioning ?? "",
-    contactPerson: item.enterprise.contactPerson ?? "",
-    contactPhone: item.enterprise.contactPhone ?? "",
-    contactInfo: item.enterprise.contactInfo ?? "",
-    website: item.enterprise.website ?? "",
-    address: item.enterprise.address ?? "",
-    productSystem: item.enterprise.productSystem ?? "",
-    craftLevel: item.enterprise.craftLevel ?? "",
-    certifications: item.enterprise.certifications ?? "",
-    awards: item.enterprise.awards ?? "",
+  page?: number;
+  limit?: number;
+  totalPages?: number;
+  stats?: {
+    visibleTotal?: number;
+    recommendedTotal?: number;
+    needsAttentionTotal?: number;
   };
-}
+};
 
-function qualityCount(item: BrandRow) {
-  return Object.values(item.qualityFlags).filter(Boolean).length;
+const PAGE_SIZE = 20;
+
+function issueLabels(item: BrandRow) {
+  return [
+    item.qualityFlags.missingLogo ? "缺 Logo" : null,
+    item.qualityFlags.missingSummary ? "缺摘要" : null,
+    item.qualityFlags.missingContact ? "缺联系" : null,
+  ].filter(Boolean) as string[];
 }
 
 function memberTypeLabel(item: BrandRow) {
-  const memberType = item.memberTypeSnapshot || item.enterprise?.member?.memberType || "enterprise_basic";
+  const memberType = item.enterprise?.member?.memberType || "enterprise_basic";
   if (memberType === "enterprise_advanced") return "VIP 企业";
   if (memberType === "enterprise_basic") return "企业会员";
   return memberType;
@@ -135,19 +68,25 @@ function memberTypeLabel(item: BrandRow) {
 
 export default function AdminBrandsPage() {
   const [items, setItems] = useState<BrandRow[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [q, setQ] = useState("");
   const [onlyNeedsAttention, setOnlyNeedsAttention] = useState(false);
-  const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [savingBrandId, setSavingBrandId] = useState<string | null>(null);
-  const [savingEnterprise, setSavingEnterprise] = useState(false);
-  const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [enterpriseForm, setEnterpriseForm] = useState<EnterpriseForm>(EMPTY_FORM);
+  const [message, setMessage] = useState("");
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const [batchSaving, setBatchSaving] = useState(false);
+  const [stats, setStats] = useState({
+    visibleTotal: 0,
+    recommendedTotal: 0,
+    needsAttentionTotal: 0,
+  });
 
-  const load = useCallback(async (search = "", needsAttention = false) => {
+  const load = useCallback(async (search = "", needsAttention = false, nextPage = 1) => {
     setLoading(true);
-    const params = new URLSearchParams({ limit: "100" });
+    setMessage("");
+    const params = new URLSearchParams({ limit: String(PAGE_SIZE), page: String(nextPage) });
     if (search.trim()) params.set("q", search.trim());
     if (needsAttention) params.set("quality", "needs_attention");
 
@@ -157,6 +96,11 @@ export default function AdminBrandsPage() {
     });
     const data = (await res.json().catch(() => ({}))) as Partial<ApiResponse> & { error?: string };
     if (!res.ok) {
+      setItems([]);
+      setTotal(0);
+      setPage(1);
+      setTotalPages(1);
+      setStats({ visibleTotal: 0, recommendedTotal: 0, needsAttentionTotal: 0 });
       setMessage(data.error ?? "品牌列表加载失败");
       setLoading(false);
       return;
@@ -164,38 +108,25 @@ export default function AdminBrandsPage() {
 
     const nextItems = Array.isArray(data.items) ? data.items : [];
     setItems(nextItems);
-    setSelectedId((prev) => (prev && nextItems.some((item) => item.id === prev) ? prev : nextItems[0]?.id ?? null));
+    setTotal(typeof data.total === "number" ? data.total : nextItems.length);
+    setPage(typeof data.page === "number" ? data.page : nextPage);
+    setTotalPages(typeof data.totalPages === "number" ? data.totalPages : Math.max(1, Math.ceil((typeof data.total === "number" ? data.total : nextItems.length) / PAGE_SIZE)));
+    setStats({
+      visibleTotal: typeof data.stats?.visibleTotal === "number" ? data.stats.visibleTotal : 0,
+      recommendedTotal: typeof data.stats?.recommendedTotal === "number" ? data.stats.recommendedTotal : 0,
+      needsAttentionTotal: typeof data.stats?.needsAttentionTotal === "number" ? data.stats.needsAttentionTotal : 0,
+    });
     setLoading(false);
   }, []);
 
   useEffect(() => {
-    void load("", false);
+    void load("", false, 1);
   }, [load]);
 
-  const selectedBrand = useMemo(() => items.find((item) => item.id === selectedId) ?? null, [items, selectedId]);
-  const sortedItems = useMemo(
-    () =>
-      [...items].sort((a, b) => {
-        const aQuality = qualityCount(a);
-        const bQuality = qualityCount(b);
-        if (aQuality !== bQuality) return bQuality - aQuality;
-        if (a.isRecommend !== b.isRecommend) return a.isRecommend ? -1 : 1;
-        if (a.sortOrder !== b.sortOrder) return b.sortOrder - a.sortOrder;
-        return b.rankingWeight - a.rankingWeight;
-      }),
-    [items]
-  );
-  const previewSummary = useMemo(
-    () => toSummaryText(enterpriseForm.positioning || enterpriseForm.intro, 120) || "填写企业定位或简介后，这里会显示前台摘要。",
-    [enterpriseForm.intro, enterpriseForm.positioning]
-  );
-
-  useEffect(() => {
-    setEnterpriseForm(buildEnterpriseForm(selectedBrand));
-  }, [selectedBrand]);
+  const currentPageVisibleCount = useMemo(() => items.filter((item) => item.isBrandVisible).length, [items]);
 
   async function updateBrand(id: string, patch: Partial<BrandRow>) {
-    setSavingBrandId(id);
+    setSavingId(id);
     setMessage("");
     const res = await fetch(`/api/admin/brands/${id}`, {
       method: "PATCH",
@@ -206,376 +137,258 @@ export default function AdminBrandsPage() {
     const data = (await res.json().catch(() => ({}))) as Partial<BrandRow> & { error?: string };
     if (!res.ok) {
       setMessage(data.error ?? "品牌设置更新失败");
-      setSavingBrandId(null);
+      setSavingId(null);
       return;
     }
-    setItems((prev) => prev.map((item) => (item.id === id ? { ...item, ...data } as BrandRow : item)));
-    setSavingBrandId(null);
-    setMessage("品牌展示设置已更新。");
+
+    setItems((prev) => prev.map((item) => (item.id === id ? ({ ...item, ...data } as BrandRow) : item)));
+    setSavingId(null);
   }
 
-  async function saveEnterprise() {
-    if (!selectedBrand?.enterprise) return;
-    setSavingEnterprise(true);
+  async function runBatchAction(patch: Pick<BrandRow, "isBrandVisible"> | Pick<BrandRow, "isRecommend">, successMessage: string) {
+    if (items.length === 0) return;
+    setBatchSaving(true);
     setMessage("");
-
-    const res = await fetch(`/api/admin/enterprises/${selectedBrand.enterprise.id}`, {
+    const res = await fetch("/api/admin/brands/batch", {
       method: "PATCH",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(enterpriseForm),
+      body: JSON.stringify({
+        ids: items.map((item) => item.id),
+        patch,
+      }),
     });
-    const data = await res.json().catch(() => ({}));
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
     if (!res.ok) {
-      setMessage(data.error ?? "企业资料保存失败");
-      setSavingEnterprise(false);
+      setMessage(data.error ?? "批量操作失败");
+      setBatchSaving(false);
       return;
     }
 
-    setItems((prev) =>
-      prev.map((item) =>
-        item.id === selectedBrand.id
-          ? {
-              ...item,
-              enterprise: {
-                ...item.enterprise!,
-                ...enterpriseForm,
-              },
-              frontDisplay: {
-                ...item.frontDisplay,
-                name: enterpriseForm.companyShortName || enterpriseForm.companyName || item.name,
-                logoUrl: enterpriseForm.logoUrl || item.frontDisplay.logoUrl || null,
-                region: enterpriseForm.region || item.frontDisplay.region || "全国",
-                area: enterpriseForm.area || item.frontDisplay.area || null,
-                summary: previewSummary,
-              },
-              qualityFlags: {
-                missingLogo: !(enterpriseForm.logoUrl || item.frontDisplay.logoUrl),
-                missingSummary: !(enterpriseForm.positioning || enterpriseForm.intro || item.frontDisplay.summary),
-                missingContact: !(enterpriseForm.contactPhone || enterpriseForm.website || enterpriseForm.contactInfo),
-              },
-            }
-          : item
-      )
-    );
-    setMessage("企业资料已保存，前台品牌页会立即同步。");
-    setSavingEnterprise(false);
+    setItems((prev) => prev.map((item) => ({ ...item, ...patch })));
+    setStats((prev) => ({
+      ...prev,
+      visibleTotal:
+        "isBrandVisible" in patch
+          ? prev.visibleTotal + (patch.isBrandVisible ? items.filter((item) => !item.isBrandVisible).length : -items.filter((item) => item.isBrandVisible).length)
+          : prev.visibleTotal,
+      recommendedTotal:
+        "isRecommend" in patch
+          ? prev.recommendedTotal + (patch.isRecommend ? items.filter((item) => !item.isRecommend).length : -items.filter((item) => item.isRecommend).length)
+          : prev.recommendedTotal,
+    }));
+    setMessage(successMessage);
+    setBatchSaving(false);
   }
-
-  async function handleLogoUpload(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    setUploadingLogo(true);
-    setMessage("");
-    try {
-      const imageUrl = await uploadImageToServer(file, { folder: "content/enterprise-logos" });
-      setEnterpriseForm((prev) => ({ ...prev, logoUrl: imageUrl }));
-      setMessage("Logo 已上传，保存后前台会立即更新。");
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Logo 上传失败");
-    } finally {
-      setUploadingLogo(false);
-      event.target.value = "";
-    }
-  }
-
-  if (loading) return <p className="text-muted">加载品牌治理面板中...</p>;
 
   return (
     <div className="space-y-6">
-      <header className="rounded-[28px] border border-border bg-surface-elevated p-6 shadow-[0_18px_48px_rgba(15,23,42,0.06)]">
-        <p className="text-xs uppercase tracking-[0.24em] text-muted">Brand Operations Console</p>
-        <h1 className="mt-3 font-serif text-3xl text-primary">品牌前后台治理</h1>
-        <p className="mt-3 max-w-4xl text-sm leading-7 text-muted">
-          这里统一处理“导入品牌数据 → 后台管理 → 前台展示”的主链路。前台真正读取的企业实时字段、品牌推荐状态和数据质量缺口，都会集中展示在这里，方便管理员直接治理。
-        </p>
-        {message ? <p className="mt-3 text-sm text-accent">{message}</p> : null}
+      <header className="rounded-[28px] border border-[rgba(181,157,121,0.16)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(247,242,235,0.92))] p-6 shadow-[0_18px_48px_rgba(15,23,42,0.06)]">
+        <p className="text-xs uppercase tracking-[0.3em] text-[#9d7e4d]">Brand Management</p>
+        <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h1 className="font-serif text-3xl text-primary">品牌管理</h1>
+            <p className="mt-3 max-w-4xl text-sm leading-7 text-muted">
+              这里用于统一管理前台品牌展示。管理员先在列表里判断哪些企业需要前台显示，再进入详情页维护 Logo、简介、联系方式和展示资料。
+            </p>
+          </div>
+          <div className="grid min-w-[300px] grid-cols-3 gap-3 text-center text-sm">
+            <StatCard label="品牌总数" value={String(total)} />
+            <StatCard label="前台显示" value={String(stats.visibleTotal)} />
+            <StatCard label="待完善" value={String(stats.needsAttentionTotal)} tone={stats.needsAttentionTotal > 0 ? "accent" : "normal"} />
+          </div>
+        </div>
+        {message ? <p className="mt-4 text-sm text-accent">{message}</p> : null}
       </header>
 
-      <section className="rounded-[28px] border border-border bg-surface-elevated p-5 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
+      <section className="rounded-[24px] border border-[rgba(181,157,121,0.16)] bg-white p-4 shadow-[0_14px_36px_rgba(15,23,42,0.05)] sm:p-5">
         <form
           className="grid gap-3 lg:grid-cols-[1fr,auto,auto,auto]"
           onSubmit={(event) => {
             event.preventDefault();
-            void load(q, onlyNeedsAttention);
+            void load(q, onlyNeedsAttention, 1);
           }}
         >
           <input
             value={q}
             onChange={(event) => setQ(event.target.value)}
-            className="h-12 rounded-[18px] border border-border bg-surface px-4 text-sm text-primary"
-            placeholder="搜索品牌名、企业名、地区、定位或产品体系"
+            className="h-12 rounded-[16px] border border-border bg-surface px-4 text-sm text-primary"
+            placeholder="搜索企业名、品牌名、地区、产品体系"
           />
-          <label className="inline-flex h-12 items-center gap-2 rounded-[18px] border border-border bg-surface px-4 text-sm text-primary">
+          <label className="inline-flex h-12 items-center gap-2 rounded-[16px] border border-border bg-surface px-4 text-sm text-primary">
             <input type="checkbox" checked={onlyNeedsAttention} onChange={(event) => setOnlyNeedsAttention(event.target.checked)} />
-            只看待治理数据
+            只看待完善资料
           </label>
-          <button className="h-12 rounded-[18px] bg-accent px-5 text-sm font-medium text-white">搜索</button>
+          <button className="h-12 rounded-[16px] bg-accent px-5 text-sm font-medium text-white">搜索</button>
           <button
             type="button"
-            className="h-12 rounded-[18px] border border-border px-5 text-sm text-primary hover:bg-white"
+            className="h-12 rounded-[16px] border border-border px-5 text-sm text-primary transition hover:bg-surface"
             onClick={() => {
               setQ("");
               setOnlyNeedsAttention(false);
-              void load("", false);
+              void load("", false, 1);
             }}
           >
             重置
           </button>
         </form>
+        <p className="mt-3 text-xs text-muted">后台列表每页展示 20 家，排序优先级为：前台显示中的企业优先、推荐品牌优先、人工排序值优先、会员权重优先。</p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={batchSaving || loading || items.length === 0}
+            onClick={() => void runBatchAction({ isBrandVisible: true }, "本页品牌已一键设为前台显示。")}
+            className="rounded-full border border-border px-4 py-2 text-sm text-primary transition hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            本页一键显示
+          </button>
+          <button
+            type="button"
+            disabled={batchSaving || loading || items.length === 0}
+            onClick={() => void runBatchAction({ isBrandVisible: false }, "本页品牌已一键隐藏。")}
+            className="rounded-full border border-border px-4 py-2 text-sm text-primary transition hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            本页一键隐藏
+          </button>
+          <button
+            type="button"
+            disabled={batchSaving || loading || items.length === 0}
+            onClick={() => void runBatchAction({ isRecommend: true }, "本页品牌已一键设为推荐。")}
+            className="rounded-full border border-border px-4 py-2 text-sm text-primary transition hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            本页一键推荐
+          </button>
+          <button
+            type="button"
+            disabled={batchSaving || loading || items.length === 0}
+            onClick={() => void runBatchAction({ isRecommend: false }, "本页品牌已一键取消推荐。")}
+            className="rounded-full border border-border px-4 py-2 text-sm text-primary transition hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            本页取消推荐
+          </button>
+        </div>
       </section>
 
-      <div className="grid gap-6 xl:grid-cols-[0.95fr,1.05fr]">
-        <section className="space-y-4">
-          {sortedItems.length === 0 ? (
-            <div className="rounded-[28px] border border-border bg-surface-elevated p-8 text-sm text-muted">当前没有匹配的品牌数据。</div>
-          ) : (
-            sortedItems.map((item) => {
-              const selected = item.id === selectedId;
-              const quality = qualityCount(item);
+      <section className="overflow-hidden rounded-[28px] border border-[rgba(181,157,121,0.16)] bg-white shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
+        <div className="hidden border-b border-border px-5 py-4 text-xs uppercase tracking-[0.18em] text-muted lg:grid lg:grid-cols-[64px_minmax(0,1.5fr)_120px_120px_150px_120px_140px] lg:gap-4">
+          <span>序号</span>
+          <span>企业 / 品牌</span>
+          <span>会员类型</span>
+          <span>前台显示</span>
+          <span>资料状态</span>
+          <span>推荐</span>
+          <span>操作</span>
+        </div>
+
+        {loading ? (
+          <div className="p-8 text-sm text-muted">加载品牌列表中...</div>
+        ) : items.length === 0 ? (
+          <div className="p-8 text-sm text-muted">当前没有匹配的品牌数据。</div>
+        ) : (
+          <div className="divide-y divide-border">
+            {items.map((item) => {
+              const issues = issueLabels(item);
+              const disabled = savingId === item.id;
+              const rowNumber = (page - 1) * PAGE_SIZE + items.findIndex((row) => row.id === item.id) + 1;
               return (
-                <article
-                  key={item.id}
-                  className={`rounded-[28px] border p-5 transition ${selected ? "border-accent bg-white shadow-[0_22px_52px_rgba(15,23,42,0.08)]" : "border-border bg-surface-elevated shadow-[0_14px_36px_rgba(15,23,42,0.05)]"}`}
-                >
-                  <button type="button" onClick={() => setSelectedId(item.id)} className="w-full text-left">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-[11px] uppercase tracking-[0.16em] text-muted">{memberTypeLabel(item)}</p>
-                        <h2 className="mt-2 font-serif text-2xl text-primary">{item.frontDisplay.name}</h2>
-                        <p className="mt-2 text-sm leading-7 text-muted line-clamp-3">{item.frontDisplay.summary}</p>
-                      </div>
-                      <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-[20px] border border-border bg-white">
-                        {item.frontDisplay.logoUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={resolveUploadedImageUrl(item.frontDisplay.logoUrl)} alt={`${item.frontDisplay.name} logo`} className="h-full w-full object-contain p-2" />
-                        ) : (
-                          <span className="text-[11px] text-muted">LOGO</span>
-                        )}
-                      </div>
+                <article key={item.id} className="px-5 py-4">
+                  <div className="grid gap-4 lg:grid-cols-[64px_minmax(0,1.5fr)_120px_120px_150px_120px_140px] lg:items-center">
+                    <div className="text-sm font-medium text-muted">{rowNumber}</div>
+                    <div className="min-w-0">
+                      <p className="truncate text-base font-medium text-primary">{item.frontDisplay.name}</p>
+                      <p className="mt-1 truncate text-sm text-muted">
+                        {item.frontDisplay.region}
+                        {item.frontDisplay.area ? ` / ${item.frontDisplay.area}` : ""}
+                        {item.enterprise?.companyName && item.enterprise.companyName !== item.frontDisplay.name ? ` / ${item.enterprise.companyName}` : ""}
+                      </p>
+                      <p className="mt-2 line-clamp-2 text-sm text-muted">{item.frontDisplay.summary}</p>
                     </div>
-                  </button>
 
-                  <div className="mt-4 flex flex-wrap gap-2 text-xs">
-                    <span className="rounded-full border border-border px-2.5 py-1 text-muted">{item.frontDisplay.region}{item.frontDisplay.area ? ` · ${item.frontDisplay.area}` : ""}</span>
-                    {item.isRecommend ? <span className="rounded-full bg-accent px-2.5 py-1 text-white">推荐展示</span> : null}
-                    {quality > 0 ? <span className="rounded-full border border-[rgba(180,154,107,0.28)] bg-[rgba(255,249,238,0.92)] px-2.5 py-1 text-accent">待治理 {quality} 项</span> : <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-emerald-700">资料完整</span>}
-                  </div>
+                    <div className="text-sm text-primary">{memberTypeLabel(item)}</div>
 
-                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                    <ToggleChip label="推荐" checked={item.isRecommend} disabled={savingBrandId === item.id} onChange={(checked) => void updateBrand(item.id, { isRecommend: checked })} />
-                    <ToggleChip label="前台显示" checked={item.isBrandVisible} disabled={savingBrandId === item.id} onChange={(checked) => void updateBrand(item.id, { isBrandVisible: checked })} />
-                  </div>
-
-                  <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                    <label className="block text-xs text-muted">
-                      展示模板
-                      <select
-                        value={item.displayTemplate ?? "brand_showcase"}
-                        onChange={(event) => void updateBrand(item.id, { displayTemplate: event.target.value })}
-                        className="mt-1 h-10 w-full rounded-[16px] border border-border bg-surface px-3 text-sm text-primary"
-                        disabled={savingBrandId === item.id}
+                    <div>
+                      <button
+                        type="button"
+                        disabled={disabled}
+                        onClick={() => void updateBrand(item.id, { isBrandVisible: !item.isBrandVisible })}
+                        className={`rounded-full px-3 py-1.5 text-sm transition ${item.isBrandVisible ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"} ${disabled ? "cursor-not-allowed opacity-60" : ""}`}
                       >
-                        <option value="brand_showcase">品牌旗舰型</option>
-                        <option value="professional_service">专业机构型</option>
-                        <option value="simple_elegant">轻奢形象型</option>
-                      </select>
-                    </label>
-                    <label className="block text-xs text-muted">
-                      排序值
-                      <input
-                        type="number"
-                        value={item.sortOrder}
-                        onChange={(event) => setItems((prev) => prev.map((row) => (row.id === item.id ? { ...row, sortOrder: Number(event.target.value) } : row)))}
-                        onBlur={(event) => void updateBrand(item.id, { sortOrder: Number(event.target.value) })}
-                        className="mt-1 h-10 w-full rounded-[16px] border border-border bg-surface px-3 text-sm text-primary"
-                        disabled={savingBrandId === item.id}
-                      />
-                    </label>
-                    <label className="block text-xs text-muted">
-                      权重
-                      <input
-                        type="number"
-                        value={item.rankingWeight}
-                        onChange={(event) => setItems((prev) => prev.map((row) => (row.id === item.id ? { ...row, rankingWeight: Number(event.target.value) } : row)))}
-                        onBlur={(event) => void updateBrand(item.id, { rankingWeight: Number(event.target.value) })}
-                        className="mt-1 h-10 w-full rounded-[16px] border border-border bg-surface px-3 text-sm text-primary"
-                        disabled={savingBrandId === item.id}
-                      />
-                    </label>
-                  </div>
+                        {item.isBrandVisible ? "显示中" : "已隐藏"}
+                      </button>
+                    </div>
 
-                  <div className="mt-4 flex flex-wrap gap-3 text-sm">
-                    <Link href={item.frontDisplay.detailHref} target="_blank" className="apple-inline-link">
-                      打开前台详情页
-                    </Link>
-                    <button type="button" onClick={() => setSelectedId(item.id)} className="text-accent hover:underline">
-                      在右侧治理资料
-                    </button>
+                    <div className="flex flex-wrap gap-2">
+                      {issues.length > 0 ? (
+                        issues.map((label) => (
+                          <span key={label} className="rounded-full border border-[rgba(181,157,121,0.18)] bg-[rgba(255,249,238,0.92)] px-2.5 py-1 text-xs text-accent">
+                            {label}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs text-emerald-700">完整</span>
+                      )}
+                    </div>
+
+                    <div>
+                      <button
+                        type="button"
+                        disabled={disabled}
+                        onClick={() => void updateBrand(item.id, { isRecommend: !item.isRecommend })}
+                        className={`rounded-full px-3 py-1.5 text-sm transition ${item.isRecommend ? "bg-[rgba(245,236,220,0.85)] text-accent" : "bg-slate-100 text-slate-600"} ${disabled ? "cursor-not-allowed opacity-60" : ""}`}
+                      >
+                        {item.isRecommend ? "推荐中" : "普通"}
+                      </button>
+                    </div>
+
+                    <div className="flex flex-wrap gap-3 text-sm">
+                      <Link href={`/membership/admin/brands/${item.id}`} className="text-accent hover:underline">
+                        管理详情
+                      </Link>
+                      <Link href={item.frontDisplay.detailHref} target="_blank" className="text-primary hover:underline">
+                        前台查看
+                      </Link>
+                    </div>
                   </div>
                 </article>
               );
-            })
-          )}
-        </section>
+            })}
+          </div>
+        )}
+      </section>
 
-        <aside className="space-y-6">
-          {selectedBrand?.enterprise ? (
-            <>
-              <section className="rounded-[28px] border border-border bg-surface-elevated p-6 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.2em] text-muted">治理对象</p>
-                    <h2 className="mt-2 font-serif text-2xl text-primary">{selectedBrand.frontDisplay.name}</h2>
-                    <p className="mt-2 text-sm leading-7 text-muted">前台真正读取的是右侧这些企业实时字段。品牌快照只做兜底，不再覆盖这里的值。</p>
-                  </div>
-                  <Link href={selectedBrand.frontDisplay.detailHref} target="_blank" className="apple-inline-link">
-                    查看前台效果
-                  </Link>
-                </div>
-
-                <div className="mt-5 grid gap-4 md:grid-cols-2">
-                  <label className="block">
-                    <span className="text-sm font-medium text-primary">企业全称</span>
-                    <input className="mt-2 h-11 w-full rounded-[18px] border border-border bg-surface px-4 text-sm text-primary" value={enterpriseForm.companyName} onChange={(event) => setEnterpriseForm((prev) => ({ ...prev, companyName: event.target.value }))} />
-                  </label>
-                  <label className="block">
-                    <span className="text-sm font-medium text-primary">企业简称</span>
-                    <input className="mt-2 h-11 w-full rounded-[18px] border border-border bg-surface px-4 text-sm text-primary" value={enterpriseForm.companyShortName} onChange={(event) => setEnterpriseForm((prev) => ({ ...prev, companyShortName: event.target.value }))} />
-                  </label>
-                </div>
-
-                <div className="mt-5 grid gap-4 md:grid-cols-[1fr,0.8fr]">
-                  <label className="block">
-                    <span className="text-sm font-medium text-primary">企业 Logo</span>
-                    <input className="mt-2 h-11 w-full rounded-[18px] border border-border bg-surface px-4 text-sm text-primary" value={enterpriseForm.logoUrl} onChange={(event) => setEnterpriseForm((prev) => ({ ...prev, logoUrl: event.target.value }))} placeholder="填写图片地址或直接上传" />
-                    <div className="mt-3 flex flex-wrap gap-3">
-                      <label className="inline-flex cursor-pointer items-center rounded-full border border-border bg-white px-4 py-2 text-sm text-primary transition hover:bg-surface">
-                        <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
-                        {uploadingLogo ? "上传中..." : `上传 Logo（最大 ${MAX_UPLOAD_IMAGE_MB}MB）`}
-                      </label>
-                      {enterpriseForm.logoUrl ? <button type="button" className="rounded-full border border-border bg-surface px-4 py-2 text-sm text-primary transition hover:bg-white" onClick={() => setEnterpriseForm((prev) => ({ ...prev, logoUrl: "" }))}>清除</button> : null}
-                    </div>
-                  </label>
-                  <div className="rounded-[22px] border border-border bg-surface p-4">
-                    <p className="text-xs uppercase tracking-[0.16em] text-muted">Logo 预览</p>
-                    <div className="mt-3 flex h-24 items-center justify-center rounded-[18px] border border-dashed border-border bg-white">
-                      {enterpriseForm.logoUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={resolveUploadedImageUrl(enterpriseForm.logoUrl)} alt="Logo 预览" className="max-h-16 max-w-full object-contain" />
-                      ) : (
-                        <span className="text-xs text-muted">暂无 Logo</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-5 grid gap-4 md:grid-cols-2">
-                  <label className="block">
-                    <span className="text-sm font-medium text-primary">品牌定位</span>
-                    <input className="mt-2 h-11 w-full rounded-[18px] border border-border bg-surface px-4 text-sm text-primary" value={enterpriseForm.positioning} onChange={(event) => setEnterpriseForm((prev) => ({ ...prev, positioning: event.target.value }))} placeholder="一句话说清企业是谁、做什么" />
-                  </label>
-                  <label className="block">
-                    <span className="text-sm font-medium text-primary">产品体系</span>
-                    <input className="mt-2 h-11 w-full rounded-[18px] border border-border bg-surface px-4 text-sm text-primary" value={enterpriseForm.productSystem} onChange={(event) => setEnterpriseForm((prev) => ({ ...prev, productSystem: event.target.value }))} placeholder="如：整木定制、木门墙板、柜类系统" />
-                  </label>
-                  <label className="block">
-                    <span className="text-sm font-medium text-primary">所在区域</span>
-                    <input className="mt-2 h-11 w-full rounded-[18px] border border-border bg-surface px-4 text-sm text-primary" value={enterpriseForm.region} onChange={(event) => setEnterpriseForm((prev) => ({ ...prev, region: event.target.value }))} placeholder="如：华东" />
-                  </label>
-                  <label className="block">
-                    <span className="text-sm font-medium text-primary">省市地区</span>
-                    <input className="mt-2 h-11 w-full rounded-[18px] border border-border bg-surface px-4 text-sm text-primary" value={enterpriseForm.area} onChange={(event) => setEnterpriseForm((prev) => ({ ...prev, area: event.target.value }))} placeholder="如：浙江杭州" />
-                  </label>
-                  <label className="block">
-                    <span className="text-sm font-medium text-primary">联系人</span>
-                    <input className="mt-2 h-11 w-full rounded-[18px] border border-border bg-surface px-4 text-sm text-primary" value={enterpriseForm.contactPerson} onChange={(event) => setEnterpriseForm((prev) => ({ ...prev, contactPerson: event.target.value }))} />
-                  </label>
-                  <label className="block">
-                    <span className="text-sm font-medium text-primary">联系电话</span>
-                    <input className="mt-2 h-11 w-full rounded-[18px] border border-border bg-surface px-4 text-sm text-primary" value={enterpriseForm.contactPhone} onChange={(event) => setEnterpriseForm((prev) => ({ ...prev, contactPhone: event.target.value }))} />
-                  </label>
-                  <label className="block md:col-span-2">
-                    <span className="text-sm font-medium text-primary">联系信息</span>
-                    <input className="mt-2 h-11 w-full rounded-[18px] border border-border bg-surface px-4 text-sm text-primary" value={enterpriseForm.contactInfo} onChange={(event) => setEnterpriseForm((prev) => ({ ...prev, contactInfo: event.target.value }))} placeholder="如：微信、客服说明、商务邮箱" />
-                  </label>
-                  <label className="block">
-                    <span className="text-sm font-medium text-primary">官网</span>
-                    <input className="mt-2 h-11 w-full rounded-[18px] border border-border bg-surface px-4 text-sm text-primary" value={enterpriseForm.website} onChange={(event) => setEnterpriseForm((prev) => ({ ...prev, website: event.target.value }))} placeholder="https://..." />
-                  </label>
-                  <label className="block">
-                    <span className="text-sm font-medium text-primary">企业地址</span>
-                    <input className="mt-2 h-11 w-full rounded-[18px] border border-border bg-surface px-4 text-sm text-primary" value={enterpriseForm.address} onChange={(event) => setEnterpriseForm((prev) => ({ ...prev, address: event.target.value }))} />
-                  </label>
-                  <label className="block">
-                    <span className="text-sm font-medium text-primary">工艺等级</span>
-                    <input className="mt-2 h-11 w-full rounded-[18px] border border-border bg-surface px-4 text-sm text-primary" value={enterpriseForm.craftLevel} onChange={(event) => setEnterpriseForm((prev) => ({ ...prev, craftLevel: event.target.value }))} />
-                  </label>
-                  <label className="block">
-                    <span className="text-sm font-medium text-primary">认证情况</span>
-                    <input className="mt-2 h-11 w-full rounded-[18px] border border-border bg-surface px-4 text-sm text-primary" value={enterpriseForm.certifications} onChange={(event) => setEnterpriseForm((prev) => ({ ...prev, certifications: event.target.value }))} />
-                  </label>
-                  <label className="block md:col-span-2">
-                    <span className="text-sm font-medium text-primary">获奖记录</span>
-                    <input className="mt-2 h-11 w-full rounded-[18px] border border-border bg-surface px-4 text-sm text-primary" value={enterpriseForm.awards} onChange={(event) => setEnterpriseForm((prev) => ({ ...prev, awards: event.target.value }))} />
-                  </label>
-                </div>
-
-                <div className="mt-5">
-                  <span className="text-sm font-medium text-primary">企业简介</span>
-                  <p className="mt-1 text-xs leading-6 text-muted">支持把旧站内容贴进来，系统会在保存时自动清洗危险标签、内联样式和脏 HTML。</p>
-                  <div className="mt-3">
-                    <RichEditor value={enterpriseForm.intro} onChange={(value) => setEnterpriseForm((prev) => ({ ...prev, intro: value }))} minHeight={240} placeholder="建议用 2-4 段介绍企业定位、产品体系、服务能力和合作方式。" />
-                  </div>
-                </div>
-
-                <div className="mt-5 flex flex-wrap gap-3">
-                  <button type="button" disabled={savingEnterprise || uploadingLogo} onClick={() => void saveEnterprise()} className="rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-55">
-                    {savingEnterprise ? "保存中..." : "保存企业资料"}
-                  </button>
-                  <button type="button" className="rounded-full border border-border bg-surface px-5 py-2.5 text-sm text-primary transition hover:bg-white" onClick={() => setEnterpriseForm(buildEnterpriseForm(selectedBrand))}>
-                    恢复当前数据
-                  </button>
-                </div>
-              </section>
-
-              <section className="rounded-[28px] border border-border bg-surface-elevated p-6 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
-                <h2 className="text-lg font-semibold text-primary">前台结果预览</h2>
-                <p className="mt-2 text-sm leading-7 text-muted">这部分模拟品牌卡片和详情页会读取的最终展示值，帮助管理员在保存前就判断是否还需要补资料。</p>
-                <div className="mt-5 rounded-[24px] border border-[rgba(180,154,107,0.18)] bg-[linear-gradient(180deg,rgba(255,252,247,0.98),rgba(248,242,233,0.9))] p-5 shadow-[0_16px_36px_rgba(15,23,42,0.05)]">
-                  <p className="text-xs uppercase tracking-[0.2em] text-[#8d7a5a]">Front Display</p>
-                  <h3 className="mt-3 font-serif text-2xl text-primary">{enterpriseForm.companyShortName || enterpriseForm.companyName || selectedBrand.name}</h3>
-                  <p className="mt-3 text-sm leading-7 text-muted">{previewSummary}</p>
-                  <div className="mt-4 flex flex-wrap gap-2 text-xs text-muted">
-                    <span className="rounded-full border border-border px-2.5 py-1">{enterpriseForm.region || selectedBrand.frontDisplay.region || "全国"}</span>
-                    {enterpriseForm.area ? <span className="rounded-full border border-border px-2.5 py-1">{enterpriseForm.area}</span> : null}
-                    {enterpriseForm.productSystem ? <span className="rounded-full border border-border px-2.5 py-1">{enterpriseForm.productSystem}</span> : null}
-                  </div>
-                </div>
-                <div className="mt-5 rounded-[24px] border border-border bg-white p-5">
-                  <p className="text-xs uppercase tracking-[0.16em] text-muted">简介预览</p>
-                  <div className="mt-4 max-h-[320px] overflow-y-auto rounded-[20px] border border-border bg-surface p-4">
-                    {enterpriseForm.intro ? <RichContent html={enterpriseForm.intro} className="text-sm leading-7 text-primary" /> : <p className="text-sm text-muted">这里会展示清洗后的企业简介效果。</p>}
-                  </div>
-                </div>
-              </section>
-            </>
-          ) : (
-            <section className="rounded-[28px] border border-border bg-surface-elevated p-8 text-sm leading-7 text-muted shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
-              当前选中的品牌未绑定企业，无法进行企业资料治理。请先在品牌记录中补齐企业绑定关系。
-            </section>
-          )}
-        </aside>
-      </div>
+      <footer className="space-y-3 text-sm text-muted">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <span>当前第 {page} / {totalPages} 页，本页前台显示 {currentPageVisibleCount} 家。</span>
+          <span>推荐品牌共 {stats.recommendedTotal} 家，管理员可直接在列表中控制前台显示与推荐状态。</span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={page <= 1 || loading}
+            onClick={() => void load(q, onlyNeedsAttention, page - 1)}
+            className="rounded-full border border-border px-4 py-2 text-primary transition hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            上一页
+          </button>
+          <button
+            type="button"
+            disabled={page >= totalPages || loading}
+            onClick={() => void load(q, onlyNeedsAttention, page + 1)}
+            className="rounded-full border border-border px-4 py-2 text-primary transition hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            下一页
+          </button>
+        </div>
+      </footer>
     </div>
   );
 }
 
-function ToggleChip({ label, checked, disabled, onChange }: { label: string; checked: boolean; disabled?: boolean; onChange: (checked: boolean) => void }) {
+function StatCard({ label, value, tone = "normal" }: { label: string; value: string; tone?: "normal" | "accent" }) {
   return (
-    <label className={`flex items-center justify-between rounded-[18px] border px-4 py-3 text-sm ${checked ? "border-[rgba(180,154,107,0.28)] bg-[rgba(255,249,238,0.92)] text-accent" : "border-border bg-surface text-primary"}`}>
-      <span>{label}</span>
-      <input type="checkbox" checked={checked} disabled={disabled} onChange={(event) => onChange(event.target.checked)} />
-    </label>
+    <div className={`rounded-[20px] border px-3 py-3 ${tone === "accent" ? "border-[rgba(181,157,121,0.2)] bg-[rgba(255,249,238,0.92)]" : "border-border bg-white"}`}>
+      <p className="text-[11px] uppercase tracking-[0.18em] text-muted">{label}</p>
+      <p className="mt-2 text-xl font-semibold text-primary">{value}</p>
+    </div>
   );
 }

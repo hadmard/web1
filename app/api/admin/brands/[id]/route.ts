@@ -69,6 +69,46 @@ const adminBrandInclude = {
   },
 } as const;
 
+export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const session = await getSession();
+  if (!session || !isAdmin(session)) {
+    return NextResponse.json({ error: "需要管理员权限" }, { status: 403 });
+  }
+
+  const { id } = await params;
+  const brand = await prisma.brand.findUnique({
+    where: { id },
+    include: adminBrandInclude,
+  });
+
+  if (!brand) {
+    return NextResponse.json({ error: "品牌不存在" }, { status: 404 });
+  }
+
+  const displayName = brand.enterprise?.companyShortName || brand.enterprise?.companyName || brand.name;
+  const displayLogo = brand.enterprise?.logoUrl || brand.logoUrl || null;
+  const displayRegion = brand.enterprise?.region || brand.region || "全国";
+  const displayArea = brand.enterprise?.area || brand.area || null;
+  const summarySource = brand.enterprise?.positioning || brand.enterprise?.intro || brand.tagline || brand.positioning || null;
+
+  return NextResponse.json({
+    ...brand,
+    frontDisplay: {
+      name: displayName,
+      logoUrl: displayLogo,
+      region: displayRegion,
+      area: displayArea,
+      summary: normalizePlainTextField(summarySource) ?? "",
+      detailHref: brand.enterprise ? `/enterprise/${brand.enterprise.id}` : `/brands/${brand.slug}`,
+    },
+    qualityFlags: {
+      missingLogo: !displayLogo,
+      missingSummary: !summarySource,
+      missingContact: !(brand.enterprise?.contactPhone || brand.enterprise?.website || brand.enterprise?.contactInfo),
+    },
+  });
+}
+
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
   if (!session || !isAdmin(session)) {

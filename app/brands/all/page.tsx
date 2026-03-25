@@ -27,6 +27,22 @@ export async function generateMetadata(): Promise<Metadata> {
   );
 }
 
+function BrandLogo({ name, logoUrl, size = 72 }: { name: string; logoUrl: string | null; size?: number }) {
+  if (logoUrl) {
+    return (
+      <Image
+        src={resolveUploadedImageUrl(logoUrl)}
+        alt={`${name} logo`}
+        width={size}
+        height={size}
+        className="h-[72px] w-[72px] rounded-[22px] border border-[rgba(174,149,111,0.18)] bg-white object-contain p-3 shadow-[0_12px_28px_rgba(15,23,42,0.05)]"
+      />
+    );
+  }
+
+  return <div className="flex h-[72px] w-[72px] items-center justify-center rounded-[22px] border border-dashed border-[rgba(174,149,111,0.28)] bg-white text-[11px] tracking-[0.18em] text-[#8d7a5a]">LOGO</div>;
+}
+
 export default async function BrandsAllPage({ searchParams }: Props) {
   const params = await searchParams;
   const q = (params.q ?? "").trim();
@@ -38,6 +54,9 @@ export default async function BrandsAllPage({ searchParams }: Props) {
     page,
     pageSize: PAGE_SIZE,
   });
+
+  const featured = recommended[0] ?? null;
+  const featuredAside = recommended.slice(1, 4);
 
   const buildQuery = (overrides: Partial<Record<"page" | "q" | "region", string>>) => {
     const merged = {
@@ -55,7 +74,7 @@ export default async function BrandsAllPage({ searchParams }: Props) {
   };
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:py-10">
       <nav className="mb-6 text-sm text-muted" aria-label="面包屑">
         <Link href="/" className="hover:text-accent">首页</Link>
         <span className="mx-2">/</span>
@@ -64,81 +83,91 @@ export default async function BrandsAllPage({ searchParams }: Props) {
         <span className="text-primary">品牌总览</span>
       </nav>
 
-      <section className="overflow-hidden rounded-[32px] border border-border bg-[radial-gradient(circle_at_top,rgba(213,183,131,0.16),transparent_36%),linear-gradient(180deg,rgba(255,255,255,0.98),rgba(246,241,233,0.94))] shadow-[0_24px_72px_rgba(15,23,42,0.06)]">
-        <div className="grid gap-0 xl:grid-cols-[1.06fr,0.94fr]">
-          <div className="p-6 sm:p-8">
-            <p className="text-xs uppercase tracking-[0.24em] text-accent">Brand Directory</p>
-            <h1 className="mt-3 font-serif text-3xl font-semibold text-primary sm:text-4xl">品牌总览</h1>
-            <p className="mt-4 max-w-2xl text-sm leading-8 text-muted">
-              展示企业会员迁移后的真实品牌数据。前台摘要、Logo、地区与联系方式统一走企业实时字段，避免旧快照和导入脏数据影响展示。
+      <section className="overflow-hidden rounded-[36px] border border-[rgba(181,157,121,0.18)] bg-[radial-gradient(circle_at_top_left,rgba(213,183,131,0.15),transparent_32%),linear-gradient(180deg,rgba(255,255,255,0.98),rgba(247,242,235,0.92))] shadow-[0_28px_80px_rgba(34,31,26,0.07)]">
+        <div className="grid gap-0 xl:grid-cols-[1.08fr,0.92fr]">
+          <div className="p-7 sm:p-9">
+            <p className="text-xs uppercase tracking-[0.3em] text-[#9d7e4d]">Brand Directory</p>
+            <h1 className="mt-4 font-serif text-3xl text-primary sm:text-[2.8rem] sm:leading-[1.1]">整木品牌总览</h1>
+            <p className="mt-5 max-w-2xl text-sm leading-8 text-muted">
+              用更清晰的图文结构呈现企业实力、地区分布和合作方向。品牌页统一读取企业实时资料，避免旧快照和导入脏数据影响前台观感。
             </p>
-            <div className="mt-5 flex flex-wrap gap-3 text-sm">
-              <span className="rounded-full border border-[rgba(180,154,107,0.22)] bg-white/80 px-4 py-2 text-primary">当前共 {total} 家</span>
-              <span className="rounded-full border border-[rgba(180,154,107,0.22)] bg-white/80 px-4 py-2 text-primary">推荐品牌优先展示</span>
+            <div className="mt-6 flex flex-wrap gap-3 text-sm">
+              <span className="rounded-full border border-[rgba(181,157,121,0.2)] bg-white/80 px-4 py-2 text-primary">当前品牌 {total} 家</span>
+              <span className="rounded-full border border-[rgba(181,157,121,0.2)] bg-white/80 px-4 py-2 text-primary">推荐品牌优先展示</span>
+              <span className="rounded-full border border-[rgba(181,157,121,0.2)] bg-white/80 px-4 py-2 text-primary">支持地区与关键词筛选</span>
             </div>
           </div>
-          <div className="border-t border-border/70 p-6 sm:p-8 xl:border-l xl:border-t-0">
-            <form method="get" className="grid gap-3 rounded-[24px] border border-border bg-white/82 p-5 shadow-[0_14px_36px_rgba(15,23,42,0.05)]">
-              <div>
-                <label className="mb-1 block text-xs text-muted">关键词</label>
-                <input name="q" defaultValue={q} className="h-12 w-full rounded-[18px] border border-border bg-surface px-4 text-sm text-primary" placeholder="品牌名 / 企业名 / 产品体系 / 地区关键词" />
-              </div>
+          <div className="border-t border-[rgba(181,157,121,0.16)] p-6 sm:p-8 xl:border-l xl:border-t-0">
+            <form method="get" className="rounded-[28px] border border-[rgba(181,157,121,0.18)] bg-white/86 p-5 shadow-[0_16px_38px_rgba(15,23,42,0.05)]">
+              <label className="block text-xs uppercase tracking-[0.18em] text-[#8d7a5a]">搜索品牌</label>
+              <input name="q" defaultValue={q} className="mt-3 h-12 w-full rounded-[18px] border border-border bg-surface px-4 text-sm text-primary" placeholder="品牌名 / 企业名 / 产品体系 / 地区关键词" />
               <input type="hidden" name="region" value={region} />
-              <div className="flex flex-wrap gap-2">
-                <button className="rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white">筛选品牌</button>
-                <Link href="/brands/all" className="rounded-full border border-border bg-white px-5 py-2.5 text-sm text-primary transition hover:bg-surface">重置筛选</Link>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <button className="rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white">开始筛选</button>
+                <Link href="/brands/all" className="rounded-full border border-border bg-white px-5 py-2.5 text-sm text-primary transition hover:bg-surface">重置</Link>
               </div>
+              <p className="mt-4 text-xs leading-6 text-muted">建议先按地区浏览，再结合品牌名或产品体系做细筛。</p>
             </form>
           </div>
         </div>
       </section>
 
       <section className="mt-6 flex flex-wrap gap-2 text-xs">
-        <Link href={buildQuery({ region: "", page: "1" })} className={`rounded-full border px-3 py-1.5 ${region === "" ? "border-accent bg-[rgba(180,154,107,0.08)] text-accent" : "border-border text-muted hover:text-primary"}`}>
+        <Link href={buildQuery({ region: "", page: "1" })} className={`rounded-full border px-3 py-1.5 transition ${region === "" ? "border-accent bg-[rgba(180,154,107,0.08)] text-accent" : "border-border text-muted hover:border-[rgba(180,154,107,0.26)] hover:text-primary"}`}>
           全部
         </Link>
         {REGION_OPTIONS.map((item) => (
-          <Link key={item} href={buildQuery({ region: item, page: "1" })} className={`rounded-full border px-3 py-1.5 ${region === item ? "border-accent bg-[rgba(180,154,107,0.08)] text-accent" : "border-border text-muted hover:text-primary"}`}>
+          <Link key={item} href={buildQuery({ region: item, page: "1" })} className={`rounded-full border px-3 py-1.5 transition ${region === item ? "border-accent bg-[rgba(180,154,107,0.08)] text-accent" : "border-border text-muted hover:border-[rgba(180,154,107,0.26)] hover:text-primary"}`}>
             {item}
           </Link>
         ))}
       </section>
 
-      {recommended.length > 0 ? (
-        <section className="mt-8">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs uppercase tracking-[0.24em] text-accent">Featured Brands</p>
-              <h2 className="mt-1 font-serif text-2xl text-primary">推荐品牌</h2>
+      {featured ? (
+        <section className="mt-8 grid gap-4 xl:grid-cols-[1.12fr,0.88fr]">
+          <Link
+            href={featured.enterprise ? `/enterprise/${featured.enterprise.id}` : `/brands/${featured.slug}`}
+            className="group overflow-hidden rounded-[34px] border border-[rgba(175,143,88,0.18)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(246,240,231,0.92))] p-7 shadow-[0_24px_72px_rgba(34,31,26,0.08)] transition hover:-translate-y-1 hover:shadow-[0_28px_84px_rgba(34,31,26,0.12)]"
+          >
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+              <div className="max-w-2xl">
+                <p className="text-xs uppercase tracking-[0.3em] text-[#9d7e4d]">Featured Brand</p>
+                <h2 className="mt-4 font-serif text-3xl leading-tight text-primary sm:text-[2.35rem]">{featured.enterpriseName}</h2>
+                <p className="mt-4 text-base leading-8 text-muted">{featured.summary}</p>
+                <div className="mt-5 flex flex-wrap gap-2 text-xs text-muted">
+                  <span className="rounded-full border border-border px-3 py-1.5">{featured.region}</span>
+                  {featured.area ? <span className="rounded-full border border-border px-3 py-1.5">{featured.area}</span> : null}
+                  {featured.enterprise?.productSystem ? <span className="rounded-full border border-border px-3 py-1.5">{featured.enterprise.productSystem}</span> : null}
+                </div>
+              </div>
+              <div className="flex flex-col items-start gap-4 sm:items-end">
+                <span className="rounded-full bg-accent px-3.5 py-1.5 text-xs text-white">推荐品牌</span>
+                <BrandLogo name={featured.enterpriseName} logoUrl={featured.logoUrl} size={88} />
+              </div>
             </div>
-            <p className="text-sm text-muted">VIP 企业与推荐品牌会在这里优先展示。</p>
-          </div>
+            <div className="mt-8 flex flex-wrap items-center gap-3 text-sm">
+              <span className="rounded-full border border-[rgba(181,157,121,0.2)] bg-white/88 px-4 py-2 text-accent">联系品牌</span>
+              <span className="rounded-full border border-[rgba(181,157,121,0.2)] bg-white/88 px-4 py-2 text-primary">获取方案</span>
+              <span className="text-primary transition group-hover:translate-x-0.5">查看详情</span>
+            </div>
+          </Link>
 
-          <div className="grid gap-4 lg:grid-cols-3">
-            {recommended.map((item) => {
+          <div className="grid gap-4">
+            {featuredAside.map((item) => {
               const href = item.enterprise ? `/enterprise/${item.enterprise.id}` : `/brands/${item.slug}`;
               return (
-                <Link
-                  key={`featured-${item.id}`}
-                  href={href}
-                  className="overflow-hidden rounded-[28px] border border-[rgba(175,143,88,0.18)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(246,240,231,0.92))] p-6 shadow-[0_18px_60px_rgba(34,31,26,0.08)] transition hover:-translate-y-1 hover:shadow-[0_24px_72px_rgba(34,31,26,0.12)]"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-[11px] uppercase tracking-[0.18em] text-[#8a734d]">{item.memberType === "enterprise_advanced" ? "高级企业" : "推荐企业"}</p>
+                <Link key={`featured-${item.id}`} href={href} className="group rounded-[28px] border border-[rgba(181,157,121,0.16)] bg-white/92 p-5 shadow-[0_16px_40px_rgba(15,23,42,0.05)] transition hover:-translate-y-1 hover:shadow-[0_22px_54px_rgba(15,23,42,0.08)]">
+                  <div className="flex items-start gap-4">
+                    <BrandLogo name={item.enterpriseName} logoUrl={item.logoUrl} />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[11px] uppercase tracking-[0.2em] text-[#9d7e4d]">推荐</p>
                       <h3 className="mt-2 font-serif text-2xl text-primary">{item.enterpriseName}</h3>
+                      <p className="mt-3 line-clamp-3 text-sm leading-7 text-muted">{item.summary}</p>
+                      <div className="mt-4 flex flex-wrap gap-2 text-xs text-muted">
+                        <span className="rounded-full border border-border px-2.5 py-1">{item.region}</span>
+                        {item.area ? <span className="rounded-full border border-border px-2.5 py-1">{item.area}</span> : null}
+                      </div>
                     </div>
-                    <span className="rounded-full bg-accent px-3 py-1 text-[11px] text-white">推荐</span>
-                  </div>
-                  <p className="mt-4 line-clamp-4 text-sm leading-7 text-muted">{item.summary}</p>
-                  <div className="mt-5 flex flex-wrap gap-2 text-xs text-muted">
-                    <span className="rounded-full border border-border px-2.5 py-1">{item.region}</span>
-                    {item.area ? <span className="rounded-full border border-border px-2.5 py-1">{item.area}</span> : null}
-                    {item.enterprise?.productSystem ? <span className="rounded-full border border-border px-2.5 py-1">{item.enterprise.productSystem}</span> : null}
-                  </div>
-                  <div className="mt-5 flex items-center justify-between text-sm">
-                    <span className="text-accent">联系品牌</span>
-                    <span className="text-primary">查看详情</span>
                   </div>
                 </Link>
               );
@@ -147,49 +176,68 @@ export default async function BrandsAllPage({ searchParams }: Props) {
         </section>
       ) : null}
 
-      <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {items.length === 0 ? (
-          <article className="glass-panel sm:col-span-2 lg:col-span-3 p-8 text-center text-sm text-muted">暂无符合条件的品牌数据。</article>
-        ) : (
-          items.map((item) => {
-            const href = item.enterprise ? `/enterprise/${item.enterprise.id}` : `/brands/${item.slug}`;
-            const updated = item.updatedAt.toLocaleDateString("zh-CN");
+      <section className="mt-10">
+        <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-xs uppercase tracking-[0.3em] text-[#9d7e4d]">All Brands</p>
+            <h2 className="mt-2 font-serif text-2xl text-primary">全部品牌</h2>
+          </div>
+          <p className="text-sm text-muted">第 {safePage} / {totalPages} 页，共 {items.length} 条当前结果</p>
+        </div>
 
-            return (
-              <Link key={item.id} href={href} className="group block rounded-[28px] border border-border bg-white p-5 shadow-[0_16px_40px_rgba(15,23,42,0.05)] transition hover:-translate-y-1 hover:border-accent/35 hover:shadow-[0_24px_56px_rgba(15,23,42,0.08)]">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-[11px] uppercase tracking-[0.12em] text-muted">{item.memberType === "enterprise_advanced" ? "高级企业" : "企业会员"}</p>
-                    <h2 className="mt-1 line-clamp-1 font-serif text-xl text-primary">{item.enterpriseName}</h2>
+        {items.length === 0 ? (
+          <article className="rounded-[28px] border border-border bg-white p-10 text-center text-sm text-muted shadow-[0_14px_36px_rgba(15,23,42,0.05)]">暂无符合条件的品牌数据。</article>
+        ) : (
+          <div className="grid gap-4 lg:grid-cols-2">
+            {items.map((item) => {
+              const href = item.enterprise ? `/enterprise/${item.enterprise.id}` : `/brands/${item.slug}`;
+              const updated = item.updatedAt.toLocaleDateString("zh-CN");
+              return (
+                <Link key={item.id} href={href} className="group block rounded-[30px] border border-[rgba(181,157,121,0.16)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(250,247,242,0.92))] p-5 shadow-[0_16px_40px_rgba(15,23,42,0.05)] transition hover:-translate-y-1 hover:border-[rgba(181,157,121,0.3)] hover:shadow-[0_22px_54px_rgba(15,23,42,0.08)] sm:p-6">
+                  <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
+                    <div className="shrink-0">
+                      <BrandLogo name={item.enterpriseName} logoUrl={item.logoUrl} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <p className="text-[11px] uppercase tracking-[0.18em] text-muted">{item.memberType === "enterprise_advanced" ? "高级企业" : "企业会员"}</p>
+                          <h3 className="mt-2 font-serif text-[1.75rem] leading-tight text-primary">{item.enterpriseName}</h3>
+                        </div>
+                        {item.isRecommend ? <span className="rounded-full border border-[rgba(181,157,121,0.22)] bg-[rgba(245,236,220,0.8)] px-3 py-1 text-xs text-accent">推荐展示</span> : null}
+                      </div>
+                      <p className="mt-4 text-sm leading-8 text-muted">{item.summary}</p>
+                      <div className="mt-5 flex flex-wrap gap-2 text-xs text-muted">
+                        <span className="rounded-full border border-border px-3 py-1.5">{item.region}</span>
+                        {item.area ? <span className="rounded-full border border-border px-3 py-1.5">{item.area}</span> : null}
+                        {item.enterprise?.productSystem ? <span className="rounded-full border border-border px-3 py-1.5">{item.enterprise.productSystem}</span> : null}
+                      </div>
+                      <div className="mt-6 flex flex-wrap items-center justify-between gap-3 text-sm">
+                        <div className="flex flex-wrap gap-3 text-muted">
+                          <span>更新于 {updated}</span>
+                          <span>{item.contactPhone || item.website ? "支持咨询联系" : "详情页查看完整资料"}</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="rounded-full border border-[rgba(181,157,121,0.18)] bg-white px-3.5 py-1.5 text-accent">联系品牌</span>
+                          <span className="text-primary transition group-hover:translate-x-0.5">查看详情</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  {item.logoUrl ? (
-                    <Image src={resolveUploadedImageUrl(item.logoUrl)} alt={`${item.enterpriseName} logo`} width={64} height={64} className="h-16 w-16 rounded-[18px] border border-border bg-white object-contain p-2 shadow-[0_10px_24px_rgba(15,23,42,0.04)]" />
-                  ) : (
-                    <div className="flex h-16 w-16 items-center justify-center rounded-[18px] border border-dashed border-border text-[11px] text-muted">LOGO</div>
-                  )}
-                </div>
-                <p className="mt-4 line-clamp-4 text-sm leading-7 text-muted">{item.summary}</p>
-                <div className="mt-4 flex flex-wrap gap-2 text-xs text-muted">
-                  <span className="rounded-full border border-border px-2.5 py-1">{item.region}</span>
-                  {item.area ? <span className="rounded-full border border-border px-2.5 py-1">{item.area}</span> : null}
-                </div>
-                <div className="mt-5 flex items-center justify-between text-sm">
-                  <span className="text-muted">更新于 {updated}</span>
-                  <span className="text-accent transition group-hover:translate-x-0.5">查看详情</span>
-                </div>
-              </Link>
-            );
-          })
+                </Link>
+              );
+            })}
+          </div>
         )}
       </section>
 
       <div className="mt-8 flex items-center justify-between text-sm">
-        <span className="text-muted">第 {safePage} / {totalPages} 页</span>
+        <span className="text-muted">当前为第 {safePage} 页，共 {totalPages} 页</span>
         <div className="flex gap-2">
-          <Link href={buildQuery({ page: String(Math.max(1, safePage - 1)) })} className={`rounded-full border px-4 py-2 ${safePage <= 1 ? "pointer-events-none opacity-50 border-border text-muted" : "border-border text-primary hover:bg-surface"}`}>
+          <Link href={buildQuery({ page: String(Math.max(1, safePage - 1)) })} className={`rounded-full border px-4 py-2 ${safePage <= 1 ? "pointer-events-none border-border text-muted opacity-50" : "border-border text-primary hover:bg-surface"}`}>
             上一页
           </Link>
-          <Link href={buildQuery({ page: String(Math.min(totalPages, safePage + 1)) })} className={`rounded-full border px-4 py-2 ${safePage >= totalPages ? "pointer-events-none opacity-50 border-border text-muted" : "border-border text-primary hover:bg-surface"}`}>
+          <Link href={buildQuery({ page: String(Math.min(totalPages, safePage + 1)) })} className={`rounded-full border px-4 py-2 ${safePage >= totalPages ? "pointer-events-none border-border text-muted opacity-50" : "border-border text-primary hover:bg-surface"}`}>
             下一页
           </Link>
         </div>
