@@ -9,6 +9,8 @@ const MAX_FAILED_LOGIN = 5;
 const LOCK_MINUTES = 15;
 
 export async function POST(request: NextRequest) {
+  let stage = "parse_body";
+  let account = "";
   try {
     const body = await request.json();
     const accountRaw =
@@ -19,14 +21,19 @@ export async function POST(request: NextRequest) {
           : "";
     const password = typeof body?.password === "string" ? body.password : "";
 
-    const account = accountRaw.trim();
+    account = accountRaw.trim();
+    console.info("[login] request_received", { account });
     if (!account || !password) {
       return NextResponse.json({ error: "账号与密码必填" }, { status: 400 });
     }
 
+    stage = "ensure_primary_admin";
     await ensurePrimaryAdminAccount(account);
+    console.info("[login] ensure_primary_admin_ok", { account });
 
+    stage = "find_member";
     const member = await prisma.member.findUnique({ where: { email: account } });
+    console.info("[login] find_member_result", { account, found: Boolean(member) });
     if (!member) {
       return NextResponse.json({ error: "账号或密码错误" }, { status: 401 });
     }
@@ -36,8 +43,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "登录失败次数过多，请稍后再试" }, { status: 429 });
     }
 
+    stage = "bcrypt_compare";
     const ok = await bcrypt.compare(password, member.passwordHash);
+    console.info("[login] bcrypt_compare_result", { account, ok });
     if (!ok) {
+      stage = "update_failed_login_count";
       const failed = (member.failedLoginCount ?? 0) + 1;
       const shouldLock = failed >= MAX_FAILED_LOGIN;
       await prisma.member.update({
@@ -50,6 +60,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "账号或密码错误" }, { status: 401 });
     }
 
+    stage = "ensure_effective_member_type";
     const effective = await ensureEffectiveMemberType({
       id: member.id,
       memberType: member.memberType,
@@ -59,6 +70,7 @@ export async function POST(request: NextRequest) {
 
     const memberType = asMemberType(effective.memberType);
 
+    stage = "update_login_success";
     await prisma.member.update({
       where: { id: member.id },
       data: {
@@ -68,6 +80,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    stage = "sign_token";
     const token = await signToken({
       sub: member.id,
       email: member.email, // keep token schema stable; email stores login account
@@ -95,7 +108,12 @@ export async function POST(request: NextRequest) {
 
     return res;
   } catch (e) {
-    console.error(e);
+    console.error("[login] fatal_error", {
+      account,
+      stage,
+      message: e instanceof Error ? e.message : String(e),
+      stack: e instanceof Error ? e.stack : undefined,
+    });
     return NextResponse.json({ error: "服务器错误，请稍后重试" }, { status: 500 });
   }
 }

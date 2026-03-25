@@ -1,0 +1,125 @@
+name: Production Login Diagnostics
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "app/api/auth/login/route.ts"
+      - ".github/workflows/prod-login-diagnostics.yml"
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Wait for deploy and login attempts
+        run: sleep 300
+
+      - name: Inspect production login chain
+        run: |
+          ssh -o BatchMode=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+            set -e
+            cd /home/web1
+
+            echo "== LOGIN ENV CHECK =="
+            if [ -f .env.production ]; then
+              grep -E '^(JWT_SECRET|DATABASE_URL)=' .env.production | sed 's/=.*/=[redacted]/'
+            elif [ -f .env ]; then
+              grep -E '^(JWT_SECRET|DATABASE_URL)=' .env | sed 's/=.*/=[redacted]/'
+            else
+              echo "env_file_missing"
+            fi
+
+            echo "== LOGIN ROUTE HEAD =="
+            sed -n '1,220p' app/api/auth/login/route.ts
+
+            echo "== LOGIN JOURNAL LAST 200 =="
+            sudo journalctl -u web1 --since '20 minutes ago' --no-pager -n 200 || true
+
+            echo "== MEMBERS TABLE COLUMNS =="
+            node - <<'NODE'
+            const { PrismaClient } = require("@prisma/client");
+            const prisma = new PrismaClient();
+            (async () => {
+              try {
+                const cols = await prisma.$queryRawUnsafe(`
+                  select column_name
+                  from information_schema.columns
+                  where table_name = 'members'
+                  order by ordinal_position
+                `);
+                console.log(JSON.stringify(cols, null, 2));
+              } finally {
+                await prisma.$disconnect();
+              }
+            })().catch((error) => {
+              console.error(error);
+              process.exit(1);
+            });
+NODE
+
+            echo "== TEST QUERY MEMBER ACCOUNT =="
+            node - <<'NODE'
+            const { PrismaClient } = require("@prisma/client");
+            const prisma = new PrismaClient();
+            (async () => {
+              try {
+                const member = await prisma.member.findUnique({
+                  where: { email: '63fee8ab0d110' },
+                  select: {
+                    id: true,
+                    email: true,
+                    role: true,
+                    memberType: true,
+                    failedLoginCount: true,
+                    lockedUntil: true,
+                    lastLoginAt: true,
+                  },
+                });
+                console.log(JSON.stringify(member, null, 2));
+              } finally {
+                await prisma.$disconnect();
+              }
+            })().catch((error) => {
+              console.error(error);
+              process.exit(1);
+            });
+NODE
+
+            echo "== TEST QUERY ADMIN ACCOUNT =="
+            node - <<'NODE'
+            const { PrismaClient } = require("@prisma/client");
+            const prisma = new PrismaClient();
+            (async () => {
+              try {
+                const member = await prisma.member.findUnique({
+                  where: { email: 'yfcccc' },
+                  select: {
+                    id: true,
+                    email: true,
+                    role: true,
+                    memberType: true,
+                    failedLoginCount: true,
+                    lockedUntil: true,
+                    lastLoginAt: true,
+                  },
+                });
+                console.log(JSON.stringify(member, null, 2));
+              } finally {
+                await prisma.$disconnect();
+              }
+            })().catch((error) => {
+              console.error(error);
+              process.exit(1);
+            });
+NODE
+          EOF
