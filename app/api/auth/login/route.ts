@@ -11,7 +11,6 @@ const LOCK_MINUTES = 15;
 export async function POST(request: NextRequest) {
   let stage = "parse_body";
   let account = "";
-  const debugRequested = request.headers.get("x-login-debug") === "1";
   try {
     const body = await request.json();
     const accountRaw =
@@ -117,10 +116,7 @@ export async function POST(request: NextRequest) {
       stack: e instanceof Error ? e.stack : undefined,
     });
     return NextResponse.json(
-      {
-        error: "服务器错误，请稍后重试",
-        ...(debugRequested ? { debug: { account, stage, message } } : {}),
-      },
+      { error: "服务器错误，请稍后重试" },
       { status: 500 }
     );
   }
