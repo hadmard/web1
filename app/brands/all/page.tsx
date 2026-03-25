@@ -89,9 +89,6 @@ export default async function BrandsAllPage({ searchParams }: Props) {
           <div className="p-7 sm:p-9">
             <p className="text-xs uppercase tracking-[0.3em] text-[#9d7e4d]">Brand Directory</p>
             <h1 className="mt-4 font-serif text-3xl text-primary sm:text-[2.8rem] sm:leading-[1.1]">整木品牌总览</h1>
-            <p className="mt-5 max-w-2xl text-sm leading-8 text-muted">
-              以更像品牌橱窗的方式展示现有企业资料。用户可以先按地区和关键词筛选，再从摘要、服务方向和联系入口快速判断值得进一步了解的品牌。
-            </p>
             <div className="mt-6 flex flex-wrap gap-3 text-sm">
               <span className="rounded-full border border-[rgba(181,157,121,0.2)] bg-white/80 px-4 py-2 text-primary">当前品牌 {total} 家</span>
               <span className="rounded-full border border-[rgba(181,157,121,0.2)] bg-white/80 px-4 py-2 text-primary">推荐品牌优先展示</span>
@@ -107,7 +104,6 @@ export default async function BrandsAllPage({ searchParams }: Props) {
                 <button className="rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white">开始筛选</button>
                 <Link href="/brands/all" className="rounded-full border border-border bg-white px-5 py-2.5 text-sm text-primary transition hover:bg-surface">重置</Link>
               </div>
-              <p className="mt-4 text-xs leading-6 text-muted">建议先按地区浏览，再结合品牌名或产品体系做细筛。</p>
             </form>
           </div>
         </div>
