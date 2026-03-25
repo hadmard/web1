@@ -33,22 +33,43 @@ function serializeMember(
     canEditMemberContent: boolean;
     canEditAllContent: boolean;
     createdAt: Date;
+    enterprise?: {
+      id: string;
+      companyName: string | null;
+      companyShortName: string | null;
+      brand: { id: string; name: string; slug: string } | null;
+    } | null;
   }
 ) {
   const merged = mergeEffectivePermissionFlags(member);
   return {
     ...merged,
     account: member.email,
+    enterprise: member.enterprise ?? null,
   };
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const session = await getSession();
   if (!session || !isAdmin(session)) {
     return NextResponse.json({ error: "需要管理员权限" }, { status: 403 });
   }
 
+  const { searchParams } = new URL(request.url);
+  const q = searchParams.get("q")?.trim() ?? "";
+
   const members = await prisma.member.findMany({
+    where: q
+      ? {
+          OR: [
+            { email: { contains: q } },
+            { name: { contains: q } },
+            { enterprise: { companyName: { contains: q } } },
+            { enterprise: { companyShortName: { contains: q } } },
+            { enterprise: { brand: { name: { contains: q } } } },
+          ],
+        }
+      : undefined,
     select: {
       id: true,
       email: true,
@@ -66,6 +87,20 @@ export async function GET() {
       canEditMemberContent: true,
       canEditAllContent: true,
       createdAt: true,
+      enterprise: {
+        select: {
+          id: true,
+          companyName: true,
+          companyShortName: true,
+          brand: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+            },
+          },
+        },
+      },
     },
     orderBy: { createdAt: "desc" },
   });
@@ -82,6 +117,8 @@ export async function GET() {
         displayName: m.name?.trim() || m.email,
         role: m.role,
         memberType: m.memberType,
+        enterpriseName: m.enterprise?.companyShortName || m.enterprise?.companyName || null,
+        brandName: m.enterprise?.brand?.name || null,
       }))
   );
 }

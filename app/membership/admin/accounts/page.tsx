@@ -1,6 +1,7 @@
 ﻿"use client";
 
-import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 type MemberRow = {
   id: string;
@@ -10,6 +11,12 @@ type MemberRow = {
   memberType: string;
   canManageMembers: boolean;
   createdAt: string;
+  enterprise?: {
+    id: string;
+    companyName: string | null;
+    companyShortName: string | null;
+    brand?: { id: string; name: string; slug: string } | null;
+  } | null;
 };
 
 type AdminVisibleRow = {
@@ -17,6 +24,8 @@ type AdminVisibleRow = {
   displayName: string;
   role: string | null;
   memberType: string;
+  enterpriseName?: string | null;
+  brandName?: string | null;
 };
 
 export default function AdminAccountsPage() {
@@ -34,11 +43,13 @@ export default function AdminAccountsPage() {
   const [newPassword, setNewPassword] = useState("");
   const [newName, setNewName] = useState("");
   const [newRole, setNewRole] = useState<"ADMIN" | "MEMBER">("MEMBER");
+  const [searchDraft, setSearchDraft] = useState("");
+  const [keyword, setKeyword] = useState("");
 
   const isSuperAdmin = role === "SUPER_ADMIN";
   const isAdmin = role === "ADMIN";
 
-  async function load() {
+  const load = useCallback(async () => {
     const meRes = await fetch("/api/auth/me", { credentials: "include" });
     if (!meRes.ok) {
       setLoading(false);
@@ -48,7 +59,10 @@ export default function AdminAccountsPage() {
     setRole(me.role ?? null);
     setCanManageMembers(me.canManageMembers === true);
 
-    const res = await fetch("/api/admin/members", { credentials: "include" });
+    const params = new URLSearchParams();
+    if (keyword.trim()) params.set("q", keyword.trim());
+    const query = params.toString() ? `?${params.toString()}` : "";
+    const res = await fetch(`/api/admin/members${query}`, { credentials: "include" });
     if (res.ok) {
       const data = await res.json();
       if (me.role === "SUPER_ADMIN") {
@@ -58,11 +72,11 @@ export default function AdminAccountsPage() {
       }
     }
     setLoading(false);
-  }
+  }, [keyword]);
 
   useEffect(() => {
-    load();
-  }, []);
+    void load();
+  }, [load]);
 
   const sortedMembers = useMemo(
     () => [...members].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
@@ -174,13 +188,50 @@ export default function AdminAccountsPage() {
         <h1 className="font-serif text-xl font-bold text-primary">账号一览</h1>
         <p className="text-sm text-muted mt-1">
           {isSuperAdmin
-            ? "用于创建/维护管理员与会员账号。权限开关已迁移到“权限管理”页面。"
+            ? "用于创建/维护管理员与会员账号。支持按会员、企业名称或品牌名称快速搜索。"
             : canManageMembers
-              ? "你可创建会员账号；如需权限调整请联系主管理员。"
+              ? "你可创建会员账号，并可通过企业或品牌名称快速定位账号。"
               : "你当前无新增账号权限。"}
         </p>
         {message && <p className="text-sm text-accent mt-2">{message}</p>}
       </header>
+
+      <section className="rounded-xl border border-border bg-surface-elevated p-4">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            setKeyword(searchDraft.trim());
+          }}
+          className="flex flex-col gap-3 md:flex-row md:items-end"
+        >
+          <label className="flex-1 flex flex-col gap-1">
+            <span className="text-xs text-muted">搜索会员 / 企业 / 品牌</span>
+            <input
+              value={searchDraft}
+              onChange={(e) => setSearchDraft(e.target.value)}
+              placeholder="输入账号、会员名称、企业名称或品牌名称"
+              className="px-3 py-2 border border-border rounded bg-surface text-sm"
+            />
+          </label>
+          <div className="flex gap-3">
+            <button type="submit" className="px-4 py-2 rounded bg-accent text-white text-sm">
+              搜索
+            </button>
+            {keyword ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setKeyword("");
+                  setSearchDraft("");
+                }}
+                className="px-4 py-2 rounded border border-border bg-white text-sm text-primary"
+              >
+                清空
+              </button>
+            ) : null}
+          </div>
+        </form>
+      </section>
 
       <section className="rounded-xl border border-border bg-surface-elevated p-4">
         <h2 className="text-sm font-medium text-primary mb-3">修改我的密码</h2>
@@ -234,7 +285,16 @@ export default function AdminAccountsPage() {
             <ul className="space-y-2">
               {visibleRows.map((row) => (
                 <li key={row.id} className="text-sm text-primary border-b border-border pb-2 last:border-0">
-                  {row.displayName}（{row.role === "ADMIN" ? "子管理员" : "会员"} / {row.memberType}）
+                  <Link href={`/membership/admin/accounts/${row.id}`} className="hover:text-accent hover:underline">
+                    {row.displayName}
+                  </Link>
+                  {(row.enterpriseName || row.brandName) ? (
+                    <span className="ml-2 text-xs text-muted">
+                      {row.enterpriseName || "未绑定企业"}
+                      {row.brandName ? ` / ${row.brandName}` : ""}
+                    </span>
+                  ) : null}
+                  <span className="ml-2">（{row.role === "ADMIN" ? "子管理员" : "会员"} / {row.memberType}）</span>
                 </li>
               ))}
             </ul>
@@ -285,8 +345,18 @@ export default function AdminAccountsPage() {
               {sortedMembers.map((m) => (
                 <tr key={m.id} className="border-b border-border last:border-0">
                   <td className="py-2 pr-4">
-                    <div className="text-primary">{m.account}</div>
+                    <div>
+                      <Link href={`/membership/admin/accounts/${m.id}`} className="text-primary hover:text-accent hover:underline">
+                        {m.account}
+                      </Link>
+                    </div>
                     <div className="text-xs text-muted">{m.name || "未命名"}</div>
+                    {m.enterprise ? (
+                      <div className="text-xs text-muted">
+                        {m.enterprise.companyShortName || m.enterprise.companyName || "未绑定企业"}
+                        {m.enterprise.brand?.name ? ` / ${m.enterprise.brand.name}` : ""}
+                      </div>
+                    ) : null}
                   </td>
                   <td className="py-2 pr-4 text-muted">{m.role === "SUPER_ADMIN" ? "主管理员" : m.role === "ADMIN" ? "子管理员" : "会员"}</td>
                   <td className="py-2 pr-4 text-muted">{m.memberType}</td>
