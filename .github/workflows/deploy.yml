@@ -27,6 +27,8 @@ jobs:
           diag=$(ssh -o BatchMode=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "bash -s" <<'EOF'
             set -e
 
+            host_name=$(hostname 2>/dev/null || true)
+            host_ips=$(hostname -I 2>/dev/null | tr '\n' ';' || true)
             web1_detail=$(systemctl show web1 --no-pager -p Id -p ActiveState -p FragmentPath -p WorkingDirectory -p ExecStart -p EnvironmentFile 2>/dev/null | tr '\n' ';')
             services=$(systemctl list-units --type=service --all --no-pager | grep -Ei 'web1|node|next|pm2|cnzhengmu' | tr -s ' ' | tr '\n' ';' || true)
             ports=$(sudo ss -ltnp | grep -E ':80 |:443 |:3000 |:3001 |:3002 |:3010 |:3011 ' | tr '\n' ';' || true)
@@ -53,6 +55,8 @@ jobs:
               db_target="db_url_not_found"
             fi
 
+            echo "HOST_NAME=$host_name"
+            echo "HOST_IPS=$host_ips"
             echo "WEB1_DETAIL=$web1_detail"
             echo "SERVICES=$services"
             echo "PORTS=$ports"
