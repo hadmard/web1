@@ -95,22 +95,6 @@ function buildLocationLabel(region?: string | null, area?: string | null) {
   return normalizedRegion || normalizedArea || "全国";
 }
 
-function buildHeroTags(input: {
-  region?: string | null;
-  area?: string | null;
-  productSystem?: string | null;
-  craftLevel?: string | null;
-}) {
-  return Array.from(
-    new Set(
-      [
-        shortText(input.productSystem, 12),
-        shortText(input.craftLevel, 12),
-      ].filter(Boolean) as string[],
-    ),
-  ).slice(0, 3);
-}
-
 function buildHeroSubtitle(name: string, input: { positioning?: string | null; intro?: string | null }) {
   return (
     toSummaryText(input.positioning, 24) ||
@@ -423,12 +407,6 @@ export default async function EnterprisePage({ params }: Props) {
     productSystem: ent.productSystem,
     region: ent.region,
   });
-  const heroTags = buildHeroTags({
-    region: ent.region,
-    area: ent.area,
-    productSystem: ent.productSystem,
-    craftLevel: ent.craftLevel,
-  });
   const heroSubtitle = buildHeroSubtitle(name, { positioning: ent.positioning, intro: ent.intro });
   const aboutBlocks = buildAboutBlocks(name, {
     positioning: ent.positioning,
@@ -471,17 +449,7 @@ export default async function EnterprisePage({ params }: Props) {
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(216,182,136,0.22),transparent_24%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.05),transparent_20%)]" />
           <div className="relative z-10 px-6 py-12 sm:px-10 sm:py-16 lg:px-14 lg:py-20">
             <div className="max-w-3xl">
-              <div className="flex flex-wrap items-center gap-3">
-                {heroTags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-full border border-[rgba(232,208,175,0.38)] bg-[rgba(38,27,19,0.58)] px-4 py-1.5 text-xs font-medium text-white shadow-[0_8px_24px_rgba(0,0,0,0.28)]"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-              <h1 className="mt-12 max-w-4xl font-serif text-5xl leading-[1.02] text-white sm:text-6xl lg:text-[80px]">{name}</h1>
+              <h1 className="max-w-4xl font-serif text-5xl leading-[1.02] text-white sm:text-6xl lg:text-[80px]">{name}</h1>
               <p className="mt-5 max-w-2xl text-2xl font-medium leading-tight text-white drop-shadow-[0_4px_18px_rgba(0,0,0,0.38)] sm:text-[32px]">
                 {heroSubtitle}
               </p>
