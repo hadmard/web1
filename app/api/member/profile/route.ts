@@ -2,6 +2,7 @@
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { writeOperationLog } from "@/lib/operation-log";
+import { revalidatePath } from "next/cache";
 
 function trimOrNull(v: unknown) {
   return typeof v === "string" ? v.trim() || null : null;
@@ -79,6 +80,10 @@ export async function PATCH(request: NextRequest) {
     targetId: enterprise.id,
     detail: JSON.stringify({ memberType: session.memberType }),
   });
+
+  revalidatePath(`/enterprise/${enterprise.id}`);
+  revalidatePath("/brands");
+  revalidatePath("/brands/all");
 
   return NextResponse.json(enterprise);
 }

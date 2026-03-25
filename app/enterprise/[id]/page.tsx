@@ -6,7 +6,8 @@ import { prisma } from "@/lib/prisma";
 import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
 import { getMemberSiteSettings } from "@/lib/member-site-settings";
 
-export const revalidate = 300;
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 type Props = { params: Promise<{ id: string }> };
 
