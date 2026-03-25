@@ -120,26 +120,26 @@ function buildCapabilityFallbacks(enterprise: EnterpriseBase) {
   return [
     {
       title: "整木系统定制",
-      description: compactSentence(enterprise.productSystem, 32) || "覆盖柜体、墙板、门系统等整木空间方案。",
+      description: compactSentence(enterprise.productSystem, 22) || "覆盖柜体、墙板与门系统的整体方案。",
       iconKey: "product",
     },
     {
       title: "高端空间适配",
       description:
-        compactSentence(enterprise.positioning, 32) ||
+        compactSentence(enterprise.positioning, 22) ||
         "适用于住宅、会所、商业空间等多类整木项目场景。",
       iconKey: "scene",
     },
     {
-      title: "工艺与细节控制",
+      title: "精细工艺呈现",
       description: enterprise.craftLevel
-        ? `围绕${toSummaryText(enterprise.craftLevel, 18)}建立更稳定的工艺表达与落地控制。`
-        : "注重材质统一、细节衔接与整体空间质感呈现。",
+        ? `围绕${toSummaryText(enterprise.craftLevel, 12)}强化细节呈现。`
+        : "注重材质统一与细节表达。",
       iconKey: "craft",
     },
     {
       title: "一体化落地服务",
-      description: compactLocation(enterprise.region, enterprise.area) || "支持从方案沟通到项目落地的全过程协同。",
+      description: "从方案到施工交付，全流程支持。",
       iconKey: "delivery",
     },
   ].slice(0, 4);

@@ -220,24 +220,6 @@ function buildAboutBlocks(
   ];
 }
 
-function buildAboutPreview(
-  name: string,
-  input: {
-    positioning?: string | null;
-    introPlain: string;
-    productSystem?: string | null;
-  },
-) {
-  const primary =
-    toSummaryText(input.positioning || input.introPlain, 96) ||
-    `${name}围绕整木空间方案与项目表达，持续完善品牌展示与落地服务。`;
-  const secondary =
-    toSummaryText(input.productSystem || input.introPlain, 72) ||
-    "覆盖方案沟通、空间呈现与项目协同等关键环节。";
-
-  return { primary, secondary };
-}
-
 export async function generateMetadata({ params }: Props) {
   const { id } = await params;
   const ent = await prisma.enterprise.findUnique({
@@ -408,19 +390,12 @@ export default async function EnterprisePage({ params }: Props) {
     region: ent.region,
   });
   const heroSubtitle = buildHeroSubtitle(name, { positioning: ent.positioning, intro: ent.intro });
-  const aboutBlocks = buildAboutBlocks(name, {
-    positioning: ent.positioning,
-    introPlain,
-    productSystem: ent.productSystem,
-    region: ent.region,
-    area: ent.area,
-  });
-  const aboutPreview = buildAboutPreview(name, {
-    positioning: ent.positioning,
-    introPlain,
-    productSystem: ent.productSystem,
-  });
-  const shouldRenderRichIntro = introRichText && chunkParagraphs(introPlain).length === 0;
+  const brandStatement =
+    toSummaryText(ent.positioning || ent.intro, 42) ||
+    `${name}专注高端整木空间定制与整体设计表达。`;
+  const brandDetail =
+    toSummaryText(ent.productSystem, 28) ||
+    "专注住宅与商业空间整体木作解决方案。";
 
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#f4f0ea_0%,#f8f6f2_22%,#fbfaf8_100%)] text-[#1f1b18]">
@@ -463,33 +438,21 @@ export default async function EnterprisePage({ params }: Props) {
         <div className="mt-16 space-y-16 sm:mt-20">
           <section className="rounded-[36px] border border-[rgba(180,154,107,0.16)] bg-[linear-gradient(180deg,rgba(255,255,255,0.95),rgba(247,241,233,0.9))] p-6 shadow-[0_20px_42px_rgba(35,26,18,0.05)] sm:p-8 lg:p-10">
             <div className="grid gap-8 lg:grid-cols-[0.84fr,1.16fr]">
-              <div className="space-y-4">
+              <div className="flex flex-col justify-between rounded-[30px] border border-[rgba(140,111,78,0.1)] bg-white/78 p-6 shadow-[0_16px_34px_rgba(35,26,18,0.04)] sm:p-7">
                 <div>
                   <p className="text-[11px] uppercase tracking-[0.28em] text-[#9f7a46]">Brand Story</p>
                   <h2 className="mt-3 font-serif text-3xl text-[#241c15] sm:text-4xl">关于品牌</h2>
+                  <p className="mt-6 text-xl leading-9 text-[#2f261f] sm:text-2xl sm:leading-10">{brandStatement}</p>
+                  <p className="mt-4 max-w-md text-sm leading-7 text-[#6a5949]">{brandDetail}</p>
                 </div>
-                <div className="rounded-[28px] border border-[rgba(140,111,78,0.12)] bg-white/86 p-6 shadow-[0_16px_34px_rgba(35,26,18,0.04)]">
-                  <p className="text-[15px] leading-8 text-[#3f3328]">{aboutPreview.primary}</p>
-                  <p className="mt-4 text-sm leading-7 text-[#6a5949]">{aboutPreview.secondary}</p>
-                  <div className="mt-5 inline-flex items-center rounded-full border border-[rgba(180,154,107,0.16)] bg-[rgba(255,249,240,0.8)] px-3 py-1.5 text-xs tracking-[0.12em] text-[#9f7a46]">
-                    更多
-                  </div>
+                <div className="mt-8">
+                  <a
+                    href="#contact-panel"
+                    className="inline-flex items-center rounded-full border border-[rgba(180,154,107,0.18)] bg-[rgba(255,249,240,0.92)] px-5 py-2.5 text-sm font-medium text-[#9f7a46] transition hover:bg-white"
+                  >
+                    了解更多
+                  </a>
                 </div>
-                <div className="grid gap-3">
-                  {aboutBlocks.slice(0, 2).map((paragraph, index) => (
-                    <div
-                      key={`${index}-${paragraph.slice(0, 12)}`}
-                      className="rounded-[22px] border border-[rgba(140,111,78,0.1)] bg-white/82 px-5 py-4 text-sm leading-8 text-[#4b3d31] shadow-[0_12px_28px_rgba(35,26,18,0.04)]"
-                    >
-                      {paragraph}
-                    </div>
-                  ))}
-                </div>
-                {shouldRenderRichIntro ? (
-                  <div className="rounded-[24px] border border-[rgba(140,111,78,0.1)] bg-white/90 p-5 shadow-[0_14px_30px_rgba(35,26,18,0.04)]">
-                    <RichContent html={introRichText} className="text-[15px] leading-8 text-[#3c3128]" />
-                  </div>
-                ) : null}
               </div>
 
               <div>
@@ -501,10 +464,10 @@ export default async function EnterprisePage({ params }: Props) {
                   {capabilityCards.map((item) => (
                     <div
                       key={item.title}
-                      className="min-h-[180px] rounded-[28px] border border-[rgba(140,111,78,0.12)] bg-white/88 p-6 shadow-[0_18px_40px_rgba(35,26,18,0.06)] backdrop-blur"
+                      className="min-h-[150px] rounded-[28px] border border-[rgba(140,111,78,0.12)] bg-white/88 p-6 shadow-[0_18px_40px_rgba(35,26,18,0.06)] backdrop-blur"
                     >
-                      <p className="text-sm font-medium tracking-[0.04em] text-[#a47b45]">{item.title}</p>
-                      <p className="mt-4 text-sm leading-7 text-[#4b3d31]">{item.description}</p>
+                      <p className="text-base font-medium tracking-[0.02em] text-[#a47b45]">{item.title}</p>
+                      <p className="mt-4 line-clamp-1 text-sm leading-7 text-[#4b3d31]">{item.description}</p>
                     </div>
                   ))}
                 </div>
