@@ -516,23 +516,26 @@ export default async function EnterprisePage({ params }: Props) {
                   </div>
                 </div>
 
-                <div className="grid gap-4 lg:grid-cols-[1fr,220px]">
-                  <div className="rounded-[28px] border border-[rgba(180,154,107,0.16)] bg-white/74 p-6 shadow-[0_16px_32px_rgba(35,26,18,0.05)]">
-                    <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr),220px]">
+                  <div className="rounded-[28px] border border-[rgba(180,154,107,0.14)] bg-[linear-gradient(180deg,rgba(255,255,255,0.84),rgba(255,251,245,0.72))] p-6 shadow-[0_18px_36px_rgba(35,26,18,0.05)]">
+                    <div className="space-y-4">
                       {contactView.items.map((item) => (
-                        <div key={item.label} className="border-b border-[rgba(180,154,107,0.12)] pb-4 last:border-b-0 last:pb-0">
+                        <div
+                          key={item.label}
+                          className="rounded-[22px] border border-[rgba(180,154,107,0.12)] bg-white/88 px-5 py-4 shadow-[0_10px_24px_rgba(35,26,18,0.03)]"
+                        >
                           <p className="text-[11px] uppercase tracking-[0.18em] text-[#9f7a46]">{item.label}</p>
                           {item.href ? (
                             <a
                               href={item.href}
                               target={item.href.startsWith("http") ? "_blank" : undefined}
                               rel={item.href.startsWith("http") ? "noreferrer" : undefined}
-                              className="mt-2 block text-base leading-7 text-[#231b15] underline-offset-4 hover:text-[#a47b45] hover:underline"
+                              className="mt-2 block text-lg leading-7 text-[#231b15] underline-offset-4 hover:text-[#a47b45] hover:underline"
                             >
                               {item.value}
                             </a>
                           ) : (
-                            <p className="mt-2 text-base leading-7 text-[#231b15]">{item.value}</p>
+                            <p className="mt-2 text-lg leading-7 text-[#231b15]">{item.value}</p>
                           )}
                         </div>
                       ))}

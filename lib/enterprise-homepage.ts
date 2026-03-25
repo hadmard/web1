@@ -176,6 +176,7 @@ export function resolveEnterpriseHomepageContact(
   const websiteUrl = pickFirst(siteSettings.contact.websiteUrl, enterprise.website);
   const city = pickFirst(siteSettings.contact.city, enterprise.area, enterprise.region);
   const address = pickFirst(siteSettings.contact.address, enterprise.address);
+  const displayAddress = address || city;
   const wechatId = pickFirst(siteSettings.contact.wechatId);
   const wechatQrImageUrl = pickFirst(siteSettings.contact.wechatQrImageUrl);
   const contactFormUrl = pickFirst(siteSettings.contact.contactFormUrl);
@@ -187,9 +188,7 @@ export function resolveEnterpriseHomepageContact(
     contactPerson ? { label: "联系人", value: contactPerson } : null,
     contactPhone ? { label: "联系电话", value: contactPhone, href: buildContactHref(contactPhone) } : null,
     wechatId ? { label: "微信号", value: wechatId } : null,
-    websiteUrl ? { label: "官网地址", value: websiteUrl, href: buildContactHref(websiteUrl) } : null,
-    city ? { label: "所在城市", value: city } : null,
-    address ? { label: "联系地址", value: address } : null,
+    displayAddress ? { label: "联系地址", value: displayAddress } : null,
   ].filter(Boolean) as Array<{ label: string; value: string; href?: string | null }>;
 
   return {
