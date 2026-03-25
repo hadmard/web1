@@ -132,6 +132,7 @@ model Enterprise {
   memberId        String   @unique
   member          Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
   brand           Brand?
+  inquiries       EnterpriseInquiry[]
   companyName     String?
   companyShortName String?
   contactPerson   String?
@@ -162,6 +163,29 @@ model Enterprise {
   updatedAt       DateTime @updatedAt
 
   @@map("enterprises")
+}
+
+model EnterpriseInquiry {
+  id            String     @id @default(cuid())
+  enterpriseId  String
+  enterprise    Enterprise @relation(fields: [enterpriseId], references: [id], onDelete: Cascade)
+  visitorName   String
+  phone         String
+  city          String?
+  wechat        String?
+  company       String?
+  demand        String
+  sourcePage    String?
+  status        String     @default("new") // new | contacted | closed
+  adminNote     String?
+  handledAt     DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@index([enterpriseId, status])
+  @@index([createdAt])
+  @@index([status])
+  @@map("enterprise_inquiries")
 }
 
 model EnterpriseVerification {

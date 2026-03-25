@@ -26,6 +26,33 @@ function pickFirst(...values: Array<string | null | undefined>) {
   return values.map((value) => (value || "").trim()).find(Boolean) || "";
 }
 
+function compactTag(value: string | null | undefined, maxLength = 12) {
+  const text = htmlToPlainText(value);
+  if (!text) return null;
+  const normalized = text.replace(/\s+/g, " ").trim();
+  if (!normalized || /^[-|/\\·,.，。]+$/.test(normalized)) return null;
+  return normalized.length > maxLength ? `${normalized.slice(0, Math.max(0, maxLength - 1)).trim()}…` : normalized;
+}
+
+function compactSentence(value: string | null | undefined, maxLength = 32) {
+  const text = htmlToPlainText(value);
+  if (!text) return null;
+  const normalized = text.replace(/\s+/g, " ").trim();
+  if (!normalized || /^[-|/\\·,.，。]+$/.test(normalized)) return null;
+  return normalized.length > maxLength ? `${normalized.slice(0, Math.max(0, maxLength - 1)).trim()}…` : normalized;
+}
+
+function compactLocation(region?: string | null, area?: string | null) {
+  const normalizedRegion = compactTag(region, 10);
+  const normalizedArea = compactTag(area, 10);
+  if (normalizedRegion && normalizedArea) {
+    if (normalizedArea.includes(normalizedRegion)) return normalizedArea;
+    if (normalizedRegion.includes(normalizedArea)) return normalizedRegion;
+    return `${normalizedRegion} · ${normalizedArea}`;
+  }
+  return normalizedRegion || normalizedArea || null;
+}
+
 function buildContactHref(value: string | null | undefined) {
   const input = (value || "").trim();
   if (!input) return null;
@@ -37,17 +64,16 @@ function buildContactHref(value: string | null | undefined) {
 
 export function normalizeHomepageTags(
   configuredTags: string[],
-  enterprise: Pick<EnterpriseBase, "productSystem" | "craftLevel" | "region" | "positioning">,
+  enterprise: Pick<EnterpriseBase, "productSystem" | "craftLevel" | "region" | "area" | "positioning">,
 ) {
   if (configuredTags.length > 0) return configuredTags.slice(0, 6);
 
   return Array.from(
     new Set(
       [
-        enterprise.productSystem,
-        enterprise.craftLevel,
-        enterprise.region ? `${enterprise.region}服务` : null,
-        enterprise.positioning ? toSummaryText(enterprise.positioning, 16) : null,
+        compactLocation(enterprise.region, enterprise.area),
+        compactTag(enterprise.craftLevel, 10),
+        compactTag(enterprise.productSystem, 10),
       ].filter(Boolean) as string[],
     ),
   ).slice(0, 3);
@@ -91,48 +117,30 @@ export function resolveEnterpriseHomepageHero(
 }
 
 function buildCapabilityFallbacks(enterprise: EnterpriseBase) {
-  const cards = [
-    enterprise.productSystem
-      ? {
-          title: "主营产品 / 服务",
-          description: enterprise.productSystem,
-          iconKey: "product",
-        }
-      : null,
-    enterprise.craftLevel
-      ? {
-          title: "工艺能力",
-          description: `围绕${enterprise.craftLevel}建立更稳定的落地与交付能力。`,
-          iconKey: "craft",
-        }
-      : null,
-    enterprise.positioning
-      ? {
-          title: "应用场景",
-          description: toSummaryText(enterprise.positioning, 40) || enterprise.positioning,
-          iconKey: "scene",
-        }
-      : null,
-    enterprise.region || enterprise.area
-      ? {
-          title: "服务范围",
-          description: [enterprise.region, enterprise.area].filter(Boolean).join(" / "),
-          iconKey: "region",
-        }
-      : null,
-  ].filter(Boolean) as Array<{ title: string; description: string; iconKey: string }>;
-
   return [
-    ...cards,
     {
-      title: "方案交付",
-      description: "支持从前期沟通、需求梳理到后续落地的完整协同。",
-      iconKey: "delivery",
+      title: "整木系统定制",
+      description: compactSentence(enterprise.productSystem, 32) || "覆盖柜体、墙板、门系统等整木空间方案。",
+      iconKey: "product",
     },
     {
-      title: "品牌表达",
-      description: "兼顾品牌展示、项目说服力与合作转化效率。",
-      iconKey: "brand",
+      title: "高端空间适配",
+      description:
+        compactSentence(enterprise.positioning, 32) ||
+        "适用于住宅、会所、商业空间等多类整木项目场景。",
+      iconKey: "scene",
+    },
+    {
+      title: "工艺与细节控制",
+      description: enterprise.craftLevel
+        ? `围绕${toSummaryText(enterprise.craftLevel, 18)}建立更稳定的工艺表达与落地控制。`
+        : "注重材质统一、细节衔接与整体空间质感呈现。",
+      iconKey: "craft",
+    },
+    {
+      title: "一体化落地服务",
+      description: compactLocation(enterprise.region, enterprise.area) || "支持从方案沟通到项目落地的全过程协同。",
+      iconKey: "delivery",
     },
   ].slice(0, 4);
 }
@@ -173,7 +181,7 @@ export function resolveEnterpriseHomepageContact(
   const contactFormUrl = pickFirst(siteSettings.contact.contactFormUrl);
   const contactIntro =
     pickFirst(siteSettings.contact.contactIntro) ||
-    "欢迎通过电话、官网或平台需求入口与企业建立联系，我们会协助你更快完成对接。";
+    "提交您的需求，我们将为您提供专属整木空间解决方案，从设计到落地，全流程支持。";
 
   const items = [
     contactPerson ? { label: "联系人", value: contactPerson } : null,

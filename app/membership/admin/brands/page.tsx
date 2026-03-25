@@ -102,6 +102,7 @@ export default function AdminBrandsPage() {
     recommendedTotal: 0,
     needsAttentionTotal: 0,
   });
+  const selectedCount = selectedBrandIds.length;
 
   const load = useCallback(async (search = "", quality = "needs_attention", nextPage = 1) => {
     setLoading(true);
@@ -153,6 +154,10 @@ export default function AdminBrandsPage() {
   }, [load]);
 
   const currentPageVisibleCount = useMemo(() => items.filter((item) => item.isBrandVisible).length, [items]);
+  const currentPageSelectedCount = useMemo(
+    () => items.filter((item) => selectedBrandIds.includes(item.id)).length,
+    [items, selectedBrandIds],
+  );
 
   async function updateBrand(id: string, patch: Partial<BrandRow>) {
     const currentItem = items.find((item) => item.id === id) ?? null;
@@ -197,9 +202,10 @@ export default function AdminBrandsPage() {
 
   async function runBatchAction(
     patch: Pick<BrandRow, "isBrandVisible"> | Pick<BrandRow, "isRecommend">,
-    scope: "page" | "filter",
+    scope: "selected" | "page" | "filter",
     successMessage: string,
   ) {
+    if (scope === "selected" && selectedBrandIds.length === 0) return;
     if (scope === "page" && items.length === 0) return;
     setBatchSaving(true);
     setMessage("");
@@ -208,8 +214,8 @@ export default function AdminBrandsPage() {
       credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        scope,
-        ids: scope === "page" ? items.map((item) => item.id) : [],
+        scope: scope === "filter" ? "filter" : "page",
+        ids: scope === "selected" ? selectedBrandIds : scope === "page" ? items.map((item) => item.id) : [],
         filters: {
           q,
           quality: qualityFilter !== "all" ? qualityFilter : undefined,
@@ -224,32 +230,48 @@ export default function AdminBrandsPage() {
       return;
     }
 
-    if (scope === "page") {
+    if (scope === "selected" || scope === "page") {
+      const targetIds = scope === "selected" ? new Set(selectedBrandIds) : new Set(items.map((item) => item.id));
+      const targetItems = items.filter((item) => targetIds.has(item.id));
       const visibleChanged =
         "isBrandVisible" in patch
           ? patch.isBrandVisible
-            ? items.filter((item) => !item.isBrandVisible).length
-            : -items.filter((item) => item.isBrandVisible).length
+            ? targetItems.filter((item) => !item.isBrandVisible).length
+            : -targetItems.filter((item) => item.isBrandVisible).length
           : 0;
       const recommendedChanged =
         "isRecommend" in patch
           ? patch.isRecommend
-            ? items.filter((item) => !item.isRecommend).length
-            : -items.filter((item) => item.isRecommend).length
+            ? targetItems.filter((item) => !item.isRecommend).length
+            : -targetItems.filter((item) => item.isRecommend).length
           : 0;
 
-      setItems((prev) => prev.map((item) => ({ ...item, ...patch })));
+      setItems((prev) => prev.map((item) => (targetIds.has(item.id) ? { ...item, ...patch } : item)));
       setStats((prev) => applyStatsDelta(prev, patch, { visibleChanged, recommendedChanged }));
     } else {
       await load(q, qualityFilter, page);
     }
 
+    if (scope === "selected") {
+      setSelectedBrandIds([]);
+    }
     setMessage(`${successMessage}${typeof data.count === "number" ? ` 本次处理 ${data.count} 家。` : ""}`);
     setBatchSaving(false);
   }
 
   function toggleSelectedBrand(id: string) {
     setSelectedBrandIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
+  }
+
+  function toggleSelectCurrentPage() {
+    const currentIds = items.map((item) => item.id);
+    const allSelected = currentIds.every((id) => selectedBrandIds.includes(id));
+    setSelectedBrandIds((prev) => {
+      if (allSelected) {
+        return prev.filter((id) => !currentIds.includes(id));
+      }
+      return Array.from(new Set([...prev, ...currentIds]));
+    });
   }
 
   function jumpToPage() {
@@ -326,6 +348,38 @@ export default function AdminBrandsPage() {
           后台列表每页展示 20 家，排序优先级为：前台显示中的企业优先、推荐品牌优先、人工排序值优先、会员权重优先。支持按缺 Logo、缺摘要、缺联系、简介过短、内容待清洗筛查；下面“本页”按钮只作用当前 20 条，要批量处理全部筛选结果请用“当前筛选结果”按钮。
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={batchSaving || loading || items.length === 0}
+            onClick={toggleSelectCurrentPage}
+            className="rounded-full border border-border px-4 py-2 text-sm text-primary transition hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {currentPageSelectedCount === items.length && items.length > 0 ? "取消本页全选" : "本页全选"}
+          </button>
+          <button
+            type="button"
+            disabled={batchSaving || loading || selectedCount === 0}
+            onClick={() => void runBatchAction({ isBrandVisible: true }, "selected", "已选品牌已设为前台显示。")}
+            className="rounded-full border border-[rgba(181,157,121,0.24)] bg-[rgba(255,249,238,0.92)] px-4 py-2 text-sm text-accent transition hover:bg-[rgba(255,244,227,0.95)] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            设为显示（已选 {selectedCount}）
+          </button>
+          <button
+            type="button"
+            disabled={batchSaving || loading || selectedCount === 0}
+            onClick={() => void runBatchAction({ isBrandVisible: false }, "selected", "已选品牌已隐藏。")}
+            className="rounded-full border border-[rgba(181,157,121,0.24)] bg-[rgba(255,249,238,0.92)] px-4 py-2 text-sm text-accent transition hover:bg-[rgba(255,244,227,0.95)] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            设为隐藏（已选 {selectedCount}）
+          </button>
+          <button
+            type="button"
+            disabled={batchSaving || loading || selectedCount === 0}
+            onClick={() => void runBatchAction({ isRecommend: true }, "selected", "已选品牌已设为推荐。")}
+            className="rounded-full border border-[rgba(181,157,121,0.24)] bg-[rgba(255,249,238,0.92)] px-4 py-2 text-sm text-accent transition hover:bg-[rgba(255,244,227,0.95)] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            设为推荐（已选 {selectedCount}）
+          </button>
           <button
             type="button"
             disabled={batchSaving || loading || items.length === 0}
@@ -413,22 +467,21 @@ export default function AdminBrandsPage() {
                         aria-label={item.enterprise ? `选中 ${item.frontDisplay.name}` : `选中 ${item.name}`}
                         title={item.enterprise ? "选中企业" : "选中品牌"}
                         onClick={() => toggleSelectedBrand(item.id)}
-                        className={`relative inline-flex h-10 w-10 items-center justify-center rounded-full border transition ${
+                        className={`relative inline-flex h-10 w-10 items-center justify-center rounded-[12px] border transition ${
                           selectedBrandIds.includes(item.id)
                             ? "border-accent bg-[rgba(186,158,108,0.12)] shadow-[0_10px_24px_rgba(180,154,107,0.14)]"
                             : "border-border bg-white hover:border-accent/40 hover:bg-surface"
                         }`}
                       >
                         <span
-                          className={`h-4 w-4 rounded-full border transition ${
+                          className={`flex h-4 w-4 items-center justify-center rounded-[4px] border text-[11px] leading-none transition ${
                             selectedBrandIds.includes(item.id)
-                              ? "border-accent bg-accent"
-                              : "border-[rgba(148,163,184,0.6)] bg-white"
+                              ? "border-accent bg-accent text-white"
+                              : "border-[rgba(148,163,184,0.6)] bg-white text-transparent"
                           }`}
-                        />
-                        {selectedBrandIds.includes(item.id) ? (
-                          <span className="pointer-events-none absolute h-1.5 w-1.5 rounded-full bg-white" />
-                        ) : null}
+                        >
+                          ✓
+                        </span>
                       </button>
                     </div>
                     <div className="text-sm font-medium text-muted">{rowNumber}</div>
@@ -501,7 +554,7 @@ export default function AdminBrandsPage() {
       <footer className="space-y-3 text-sm text-muted">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <span>当前第 {page} / {totalPages} 页，本页前台显示 {currentPageVisibleCount} 家。</span>
-          <span>推荐品牌共 {stats.recommendedTotal} 家，管理员可直接在列表中控制前台显示与推荐状态。</span>
+          <span>已选择 {selectedCount} 家，推荐品牌共 {stats.recommendedTotal} 家。</span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button
