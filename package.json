@@ -14,6 +14,7 @@
     "fetch:legacy-companies": "powershell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts/fetch-legacy-company-export.ps1",
     "backup:db": "powershell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts/backup-postgres-db.ps1",
     "run:company-migration": "powershell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts/run-company-migration.ps1",
+    "run:company-rollout": "powershell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts/run-company-rollout.ps1",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",

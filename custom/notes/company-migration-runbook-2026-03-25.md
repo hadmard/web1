@@ -146,6 +146,13 @@ Before production apply:
    - 3 enterprise detail pages
    - `/membership/admin/brands`
 
-## Current Blocker
+## Current Status
 
-The code path is ready, but the real legacy `/company` export JSON is not yet present in this repository.
+The real legacy `/company` export JSON is now present in this repository:
+
+- `custom/data/legacy-companies-export.json`
+
+The remaining decision is operational rather than technical:
+
+- whether to run `apply` mode against the current database
+- whether an explicit member map is needed before apply
