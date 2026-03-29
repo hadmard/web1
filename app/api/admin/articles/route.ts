@@ -6,6 +6,7 @@ import { resolveTagSlugs } from "@/lib/tag-suggest";
 import { generateUniqueArticleSlug } from "@/lib/slug";
 import { isContentReviewRequired } from "@/lib/app-settings";
 import { isValidTermStructuredContent, normalizeTermContent } from "@/lib/term-structured";
+import { findDuplicateArticleByTitle, normalizeArticleTitle } from "@/lib/article-title";
 
 export const dynamic = "force-dynamic";
 
@@ -132,6 +133,11 @@ export async function POST(request: NextRequest) {
     if (!title || typeof title !== "string") {
       return NextResponse.json({ error: "标题必填" }, { status: 400 });
     }
+    const normalizedTitle = normalizeArticleTitle(title);
+    const existingTitle = await findDuplicateArticleByTitle(normalizedTitle);
+    if (existingTitle) {
+      return NextResponse.json({ error: "标题已存在，请更换一个新的标题" }, { status: 400 });
+    }
     const isDictionary =
       (typeof categoryHref === "string" && categoryHref.startsWith("/dictionary")) ||
       (typeof subHref === "string" && subHref.startsWith("/dictionary"));
@@ -143,7 +149,7 @@ export async function POST(request: NextRequest) {
       }
     }
     const customSlug = typeof slug === "string" ? slug.trim() : "";
-    const slugTrim = await generateUniqueArticleSlug(customSlug || title);
+    const slugTrim = await generateUniqueArticleSlug(customSlug || normalizedTitle);
 
     const reviewRequired = await isContentReviewRequired();
     const safeStatus = isSuperAdmin(session)
@@ -174,7 +180,7 @@ export async function POST(request: NextRequest) {
 
     const article = await prisma.article.create({
       data: {
-        title: String(title).trim(),
+        title: normalizedTitle,
         slug: slugTrim,
         source: typeof source === "string" ? source.trim() || null : null,
         sourceUrl: typeof sourceUrl === "string" ? sourceUrl.trim() || null : null,

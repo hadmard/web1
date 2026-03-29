@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { writeOperationLog } from "@/lib/operation-log";
 import { canChangeReviewStatus, canDirectlyDeleteArticle, canDirectlyEditArticle, canReviewSubmissions } from "@/lib/content-permissions";
 import { isValidTermStructuredContent, normalizeTermContent } from "@/lib/term-structured";
+import { findDuplicateArticleByTitle, normalizeArticleTitle } from "@/lib/article-title";
 
 function isAdmin(session: { role: string | null } | null) {
   return session?.role === "SUPER_ADMIN" || session?.role === "ADMIN";
@@ -92,7 +93,7 @@ export async function PATCH(
   } = body;
 
   const data: Record<string, unknown> = {};
-  if (typeof title === "string") data.title = title.trim();
+  if (typeof title === "string") data.title = normalizeArticleTitle(title);
   if (typeof slug === "string") {
     const s = slug.trim();
     if (s) {
@@ -141,6 +142,12 @@ export async function PATCH(
     }
   }
   if (typeof reviewNote === "string") data.reviewNote = reviewNote.trim() || null;
+  if (typeof data.title === "string") {
+    const existingTitle = await findDuplicateArticleByTitle(data.title, id);
+    if (existingTitle) {
+      return NextResponse.json({ error: "标题已存在，请更换一个新的标题" }, { status: 400 });
+    }
+  }
 
   const nextCategoryHref =
     typeof data.categoryHref === "string" ? (data.categoryHref as string) : target.categoryHref;

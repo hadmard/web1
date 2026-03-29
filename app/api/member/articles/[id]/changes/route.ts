@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { buildArticleDiffSummary, buildArticlePatchData } from "@/lib/article-change";
 import { writeOperationLog } from "@/lib/operation-log";
 import { isValidTermStructuredContent, normalizeTermContent } from "@/lib/term-structured";
+import { findDuplicateArticleByTitle, normalizeArticleTitle } from "@/lib/article-title";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +33,7 @@ export async function POST(
 
   const body = await request.json().catch(() => ({}));
   const patch = buildArticlePatchData({
-    title: body.title,
+    title: typeof body.title === "string" ? normalizeArticleTitle(body.title) : body.title,
     slug: body.slug,
     excerpt: body.excerpt,
     content:
@@ -52,6 +53,13 @@ export async function POST(
   const hasPatch = Object.values(patch).some((v) => v !== null && String(v).trim() !== "");
   if (!hasPatch) {
     return NextResponse.json({ error: "请至少提交一个修改字段" }, { status: 400 });
+  }
+
+  if (typeof patch.patchTitle === "string") {
+    const existingTitle = await findDuplicateArticleByTitle(patch.patchTitle, article.id);
+    if (existingTitle) {
+      return NextResponse.json({ error: "标题已存在，请更换一个新的标题" }, { status: 400 });
+    }
   }
 
   const isDictionary =

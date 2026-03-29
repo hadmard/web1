@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { buildArticleDiffSummary, buildArticlePatchData } from "@/lib/article-change";
 import { writeOperationLog } from "@/lib/operation-log";
 import { isValidTermStructuredContent, normalizeTermContent } from "@/lib/term-structured";
+import { findDuplicateArticleByTitle, normalizeArticleTitle } from "@/lib/article-title";
 
 function canDirectlyEdit(session: NonNullable<Awaited<ReturnType<typeof getSession>>>, authorMemberId: string | null) {
   if (session.role === "SUPER_ADMIN") return true;
@@ -77,7 +78,7 @@ export async function PATCH(
   if (!article) return NextResponse.json({ error: "词条不存在" }, { status: 404 });
 
   const body = await request.json().catch(() => ({}));
-  const title = typeof body.title === "string" ? body.title.trim() : "";
+  const title = typeof body.title === "string" ? normalizeArticleTitle(body.title) : "";
   const hasExcerptField = typeof body.excerpt === "string";
   const excerpt = hasExcerptField ? body.excerpt : "";
   const content = typeof body.content === "string" ? normalizeTermContent(body.content) : "";
@@ -85,6 +86,10 @@ export async function PATCH(
 
   if (!title || !content.trim()) {
     return NextResponse.json({ error: "标题和正文不能为空" }, { status: 400 });
+  }
+  const existingTitle = await findDuplicateArticleByTitle(title, article.id);
+  if (existingTitle) {
+    return NextResponse.json({ error: "标题已存在，请更换一个新的标题" }, { status: 400 });
   }
   if (!hasExcerptField) {
     return NextResponse.json({ error: "词库修改需按固定格式提交：标题/摘要/小标题正文" }, { status: 400 });

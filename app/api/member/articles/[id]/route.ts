@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { isValidTermStructuredContent, normalizeTermContent } from "@/lib/term-structured";
+import { findDuplicateArticleByTitle, normalizeArticleTitle } from "@/lib/article-title";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +42,7 @@ export async function PATCH(
 
   const body = await request.json().catch(() => ({}));
   const data: Record<string, unknown> = {};
-  if (typeof body.title === "string") data.title = body.title.trim();
+  if (typeof body.title === "string") data.title = normalizeArticleTitle(body.title);
   if (typeof body.excerpt === "string") data.excerpt = body.excerpt.trim() || null;
   if (typeof body.content === "string") data.content = body.content;
   if (typeof body.coverImage === "string") data.coverImage = body.coverImage.trim() || null;
@@ -49,6 +50,12 @@ export async function PATCH(
   if (typeof body.categoryHref === "string") data.categoryHref = body.categoryHref.trim() || null;
   if (typeof body.isPinned === "boolean" && (session.role === "SUPER_ADMIN" || session.role === "ADMIN")) {
     data.isPinned = body.isPinned;
+  }
+  if (typeof data.title === "string") {
+    const existingTitle = await findDuplicateArticleByTitle(data.title, id);
+    if (existingTitle) {
+      return NextResponse.json({ error: "标题已存在，请更换一个新的标题" }, { status: 400 });
+    }
   }
 
   const nextCategoryHref =

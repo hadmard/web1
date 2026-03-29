@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { applyArticlePatch } from "@/lib/article-change";
 import { canChangeReviewStatus } from "@/lib/content-permissions";
 import { writeOperationLog } from "@/lib/operation-log";
+import { findDuplicateArticleByTitle } from "@/lib/article-title";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +38,12 @@ export async function PATCH(
   if (status === "approved") {
     const patchData = applyArticlePatch(req.article, req);
     if (Object.keys(patchData).length > 0) {
+      if (typeof patchData.title === "string") {
+        const existingTitle = await findDuplicateArticleByTitle(patchData.title, req.articleId);
+        if (existingTitle) {
+          return NextResponse.json({ error: "标题已存在，请更换一个新的标题" }, { status: 400 });
+        }
+      }
       if (typeof patchData.slug === "string") {
         const existing = await prisma.article.findFirst({
           where: { slug: patchData.slug, NOT: { id: req.articleId } },
