@@ -3,6 +3,7 @@ import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { buildArticleDiffSummary, buildArticlePatchData } from "@/lib/article-change";
 import { writeOperationLog } from "@/lib/operation-log";
+import { isValidTermStructuredContent, normalizeTermContent } from "@/lib/term-structured";
 
 function canDirectlyEdit(session: NonNullable<Awaited<ReturnType<typeof getSession>>>, authorMemberId: string | null) {
   if (session.role === "SUPER_ADMIN") return true;
@@ -79,7 +80,7 @@ export async function PATCH(
   const title = typeof body.title === "string" ? body.title.trim() : "";
   const hasExcerptField = typeof body.excerpt === "string";
   const excerpt = hasExcerptField ? body.excerpt : "";
-  const content = typeof body.content === "string" ? body.content : "";
+  const content = typeof body.content === "string" ? normalizeTermContent(body.content) : "";
   const reason = typeof body.reason === "string" ? body.reason.trim() : "";
 
   if (!title || !content.trim()) {

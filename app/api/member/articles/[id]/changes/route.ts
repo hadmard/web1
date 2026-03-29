@@ -3,19 +3,9 @@ import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { buildArticleDiffSummary, buildArticlePatchData } from "@/lib/article-change";
 import { writeOperationLog } from "@/lib/operation-log";
+import { isValidTermStructuredContent, normalizeTermContent } from "@/lib/term-structured";
 
 export const dynamic = "force-dynamic";
-
-function isDictionaryPath(input: string | null | undefined) {
-  return typeof input === "string" && input.startsWith("/dictionary");
-}
-
-function isValidTermStructuredContent(input: string) {
-  const sectionCount = (input.match(/<section>/g) ?? []).length;
-  const headingCount = (input.match(/<h3>/g) ?? []).length;
-  const paragraphCount = (input.match(/<p>/g) ?? []).length;
-  return sectionCount > 0 && sectionCount === headingCount && sectionCount === paragraphCount;
-}
 
 export async function POST(
   request: NextRequest,
@@ -45,7 +35,11 @@ export async function POST(
     title: body.title,
     slug: body.slug,
     excerpt: body.excerpt,
-    content: body.content,
+    content:
+      (article.categoryHref?.startsWith("/dictionary") || article.subHref?.startsWith("/dictionary")) &&
+      typeof body.content === "string"
+        ? normalizeTermContent(body.content)
+        : body.content,
     coverImage: body.coverImage,
     subHref: body.subHref,
     categoryHref: body.categoryHref,
@@ -60,7 +54,8 @@ export async function POST(
     return NextResponse.json({ error: "请至少提交一个修改字段" }, { status: 400 });
   }
 
-  const isDictionary = isDictionaryPath(article.categoryHref) || isDictionaryPath(article.subHref);
+  const isDictionary =
+    article.categoryHref?.startsWith("/dictionary") || article.subHref?.startsWith("/dictionary");
   if (isDictionary) {
     if (!patch.patchTitle || !patch.patchContent) {
       return NextResponse.json({ error: "词库修改需按固定格式提交：标题/摘要/小标题正文" }, { status: 400 });

@@ -1,19 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
+import { isValidTermStructuredContent, normalizeTermContent } from "@/lib/term-structured";
 
 export const dynamic = "force-dynamic";
-
-function isDictionaryPath(input: string | null | undefined) {
-  return typeof input === "string" && input.startsWith("/dictionary");
-}
-
-function isValidTermStructuredContent(input: string) {
-  const sectionCount = (input.match(/<section>/g) ?? []).length;
-  const headingCount = (input.match(/<h3>/g) ?? []).length;
-  const paragraphCount = (input.match(/<p>/g) ?? []).length;
-  return sectionCount > 0 && sectionCount === headingCount && sectionCount === paragraphCount;
-}
 
 export async function GET(
   _request: NextRequest,
@@ -65,7 +55,11 @@ export async function PATCH(
     typeof data.categoryHref === "string" ? (data.categoryHref as string) : article.categoryHref;
   const nextSubHref =
     typeof data.subHref === "string" ? (data.subHref as string) : article.subHref;
-  const isDictionary = isDictionaryPath(nextCategoryHref) || isDictionaryPath(nextSubHref);
+  const isDictionary =
+    nextCategoryHref?.startsWith("/dictionary") || nextSubHref?.startsWith("/dictionary");
+  if (isDictionary && typeof data.content === "string") {
+    data.content = normalizeTermContent(data.content);
+  }
   if (isDictionary && typeof data.content === "string" && !isValidTermStructuredContent(data.content)) {
     return NextResponse.json({ error: "词库内容必须按固定小标题分节格式提交" }, { status: 400 });
   }

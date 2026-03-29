@@ -51,11 +51,14 @@ import {
   stringifyDocumentMetadata,
   type DocumentMetadata,
 } from "@/lib/document-metadata";
+import {
+  formatTermContentForEditing,
+  normalizeTermContent,
+} from "@/lib/term-structured";
 import { InlinePageBackLink } from "@/components/InlinePageBackLink";
 
 type Status = "draft" | "pending" | "approved" | "rejected";
 type Mode = "publish" | "manage" | "review";
-type TermSection = { id: string; heading: string; body: string };
 type SubmitPreview = { title: string; href: string | null; status: Status };
 
 type SessionInfo = {
@@ -131,61 +134,6 @@ const STATUS_TEXT: Record<Status, string> = {
   approved: "已发布",
   rejected: "已驳回",
 };
-
-const DEFAULT_TERM_SECTIONS: Omit<TermSection, "id">[] = [
-  { heading: "发展背景", body: "伴随消费升级与整装需求兴起，整木概念由定制木作逐步发展为系统化解决方案。" },
-  { heading: "核心特征", body: "强调一体化、可定制、风格统一，覆盖设计、选材、制造与安装。" },
-  { heading: "技术结构", body: "由门、墙板、柜体、线条、装饰件等模块协同组合，兼顾工艺与交付效率。" },
-  { heading: "行业意义", body: "推动木作产业从单品竞争转向系统能力竞争，提升高端定制与品牌化水平。" },
-];
-
-function createDefaultTermSections(): TermSection[] {
-  return DEFAULT_TERM_SECTIONS.map((x, i) => ({ id: `default-${i + 1}`, heading: x.heading, body: x.body }));
-}
-
-function buildTermContentHtml(sections: TermSection[]) {
-  const escapeHtml = (s: string) =>
-    s
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/\"/g, "&quot;")
-      .replace(/'/g, "&#39;");
-  return sections
-    .map((s) => {
-      const h = escapeHtml(s.heading.trim());
-      const p = escapeHtml(s.body.trim()).replace(/\n/g, "<br />");
-      if (!h && !p) return "";
-      return `<section><h3>${h || "未命名小标题"}</h3><p>${p || "暂无说明"}</p></section>`;
-    })
-    .filter(Boolean)
-    .join("");
-}
-
-function extractTermBody(node: Element | null) {
-  if (!node) return "";
-  const html = node.innerHTML.replace(/<br\s*\/?>/gi, "\n");
-  const temp = document.createElement("div");
-  temp.innerHTML = html;
-  return (temp.textContent || "").trim();
-}
-
-function parseTermContentSections(html: string): TermSection[] {
-  try {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html || "", "text/html");
-    const blocks = Array.from(doc.querySelectorAll("section"));
-    const fromSections = blocks
-      .map((node, idx) => {
-        const heading = (node.querySelector("h1,h2,h3,h4,h5,h6")?.textContent || "").trim();
-        const body = extractTermBody(node.querySelector("p")) || (node.textContent || "").trim();
-        return { id: `parsed-${idx + 1}`, heading, body };
-      })
-      .filter((x) => x.heading || x.body);
-    if (fromSections.length > 0) return fromSections;
-  } catch {}
-  return createDefaultTermSections();
-}
 
 function parseMode(raw: string | null): Mode {
   return raw === "manage" || raw === "review" || raw === "publish" ? raw : "publish";
@@ -273,7 +221,6 @@ export default function AdminContentPage() {
   const [displayAuthor, setDisplayAuthor] = useState("");
   const [excerpt, setExcerpt] = useState("");
   const [content, setContent] = useState("");
-  const [termSections, setTermSections] = useState<TermSection[]>(createDefaultTermSections());
   const [brandStructured, setBrandStructured] = useState<BrandStructuredData>(createDefaultBrandStructuredData());
   const [standardStructured, setStandardStructured] = useState<StandardStructuredData>(createDefaultStandardStructuredData());
   const [dataStructured, setDataStructured] = useState<DataStructuredData>(createDefaultDataStructuredData());
@@ -293,7 +240,6 @@ export default function AdminContentPage() {
   const [editDisplayAuthor, setEditDisplayAuthor] = useState("");
   const [editExcerpt, setEditExcerpt] = useState("");
   const [editContent, setEditContent] = useState("");
-  const [editTermSections, setEditTermSections] = useState<TermSection[]>(createDefaultTermSections());
   const [editBrandStructured, setEditBrandStructured] = useState<BrandStructuredData>(createDefaultBrandStructuredData());
   const [editStandardStructured, setEditStandardStructured] = useState<StandardStructuredData>(createDefaultStandardStructuredData());
   const [editDataStructured, setEditDataStructured] = useState<DataStructuredData>(createDefaultDataStructuredData());
@@ -324,7 +270,6 @@ export default function AdminContentPage() {
   }, [tab, subHref, subOptions]);
 
   useEffect(() => {
-    if (tab === "terms") setTermSections(createDefaultTermSections());
     if (tab === "brands") setBrandStructured(createDefaultBrandStructuredData());
     if (tab === "standards") setStandardStructured(createDefaultStandardStructuredData());
     if (tab === "industry-data") setDataStructured(createDefaultDataStructuredData());
@@ -337,30 +282,6 @@ export default function AdminContentPage() {
     setDisplayAuthor("");
     setDocumentMeta(createEmptyDocumentMetadata());
   }, [tab]);
-
-  function updateTermSection(id: string, patch: Partial<Omit<TermSection, "id">>) {
-    setTermSections((prev) => prev.map((x) => (x.id === id ? { ...x, ...patch } : x)));
-  }
-
-  function addTermSection() {
-    setTermSections((prev) => [...prev, { id: `section-${Date.now()}`, heading: "", body: "" }]);
-  }
-
-  function removeTermSection(id: string) {
-    setTermSections((prev) => prev.filter((x) => x.id !== id));
-  }
-
-  function updateEditTermSection(id: string, patch: Partial<Omit<TermSection, "id">>) {
-    setEditTermSections((prev) => prev.map((x) => (x.id === id ? { ...x, ...patch } : x)));
-  }
-
-  function addEditTermSection() {
-    setEditTermSections((prev) => [...prev, { id: `edit-section-${Date.now()}`, heading: "", body: "" }]);
-  }
-
-  function removeEditTermSection(id: string) {
-    setEditTermSections((prev) => prev.filter((x) => x.id !== id));
-  }
 
   function replacePreviewUrl(kind: "publish" | "edit", nextUrl: string) {
     const targetRef = kind === "publish" ? publishObjectUrlRef : editObjectUrlRef;
@@ -579,10 +500,7 @@ export default function AdminContentPage() {
       tab === "brands"
           ? brandStructuredToSearchText(brandStructured)
           : tab === "terms"
-            ? termSections
-                .map((section) => [section.heading.trim(), section.body.trim()].filter(Boolean).join("\n"))
-                .filter(Boolean)
-                .join("\n\n")
+            ? content
           : tab === "standards"
             ? content
             : tab === "industry-data"
@@ -598,10 +516,7 @@ export default function AdminContentPage() {
       tab === "brands"
           ? brandStructuredToSearchText(editBrandStructured)
           : tab === "terms"
-            ? editTermSections
-                .map((section) => [section.heading.trim(), section.body.trim()].filter(Boolean).join("\n"))
-                .filter(Boolean)
-                .join("\n\n")
+            ? editContent
           : tab === "standards"
             ? editContent
             : tab === "industry-data"
@@ -643,7 +558,7 @@ export default function AdminContentPage() {
       tab === "brands"
           ? buildBrandStructuredHtml(brandStructured)
           : tab === "terms"
-            ? buildTermContentHtml(termSections)
+            ? normalizeTermContent(content)
           : tab === "standards"
             ? content
             : tab === "industry-data"
@@ -707,7 +622,6 @@ export default function AdminContentPage() {
     setTagSlugs("");
     setIsPinned(false);
     setDocumentMeta(createEmptyDocumentMetadata());
-    setTermSections(createDefaultTermSections());
     setBrandStructured(createDefaultBrandStructuredData());
     setStandardStructured(createDefaultStandardStructuredData());
     setDataStructured(createDefaultDataStructuredData());
@@ -726,8 +640,7 @@ export default function AdminContentPage() {
     setEditSource(item.source ?? "");
     setEditDisplayAuthor(item.displayAuthor ?? "");
     setEditExcerpt(item.excerpt ?? "");
-    setEditContent(item.content);
-    setEditTermSections(tab === "terms" ? parseTermContentSections(item.content) : createDefaultTermSections());
+    setEditContent(tab === "terms" ? formatTermContentForEditing(item.content) : item.content);
     setEditBrandStructured(
       tab === "brands"
         ? parseBrandStructuredHtml(item.content) ?? createDefaultBrandStructuredData()
@@ -765,8 +678,7 @@ export default function AdminContentPage() {
     setEditSource(item.article.source ?? "");
     setEditDisplayAuthor(item.article.displayAuthor ?? "");
     setEditExcerpt(item.patchExcerpt ?? item.article.excerpt ?? "");
-    setEditContent(nextContent);
-    setEditTermSections(tab === "terms" ? parseTermContentSections(nextContent) : createDefaultTermSections());
+    setEditContent(tab === "terms" ? formatTermContentForEditing(nextContent) : nextContent);
     setEditBrandStructured(
       tab === "brands"
         ? parseBrandStructuredHtml(nextContent) ?? createDefaultBrandStructuredData()
@@ -803,7 +715,7 @@ export default function AdminContentPage() {
       tab === "brands"
           ? buildBrandStructuredHtml(editBrandStructured)
           : tab === "terms"
-            ? buildTermContentHtml(editTermSections)
+            ? normalizeTermContent(editContent)
           : tab === "standards"
             ? editContent
             : tab === "industry-data"
@@ -1175,46 +1087,17 @@ export default function AdminContentPage() {
               </>
             )}
             {tab === "terms" && (
-              <div className="rounded-lg border border-border bg-surface p-3 space-y-3">
+              <div className="space-y-2">
                 <div className="flex items-center justify-between gap-3">
                   <label className="block text-sm text-muted">词条正文</label>
-                  <p className="text-xs text-muted">固定小标题结构</p>
+                  <p className="text-xs text-muted">可直接按普通文本输入，系统会自动识别“一、二、三”这类标题并整理为词条结构。</p>
                 </div>
-                {termSections.map((sec, idx) => (
-                  <div key={sec.id} className="rounded-md border border-border bg-surface-elevated p-3 space-y-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-xs text-muted">小节 {idx + 1}</p>
-                      <button
-                        type="button"
-                        onClick={() => removeTermSection(sec.id)}
-                        className="text-xs px-2 py-1 rounded border border-border hover:bg-surface"
-                        disabled={termSections.length <= 1}
-                      >
-                        删除
-                      </button>
-                    </div>
-                    <input
-                      className="w-full border border-border rounded px-3 py-2 bg-surface"
-                      placeholder="小标题"
-                      value={sec.heading}
-                      onChange={(e) => updateTermSection(sec.id, { heading: e.target.value })}
-                    />
-                    <textarea
-                      className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[90px]"
-                      placeholder="解释内容"
-                      value={sec.body}
-                      onChange={(e) => updateTermSection(sec.id, { body: e.target.value })}
-                    />
-                  </div>
-                ))}
-                <div className="flex gap-2">
-                  <button type="button" onClick={addTermSection} className="text-xs px-3 py-2 rounded border border-border hover:bg-surface">
-                    添加小标题
-                  </button>
-                  <button type="button" onClick={() => setTermSections(createDefaultTermSections())} className="text-xs px-3 py-2 rounded border border-border hover:bg-surface">
-                    恢复默认模板
-                  </button>
-                </div>
+                <textarea
+                  className="w-full min-h-[320px] rounded-2xl border border-border bg-surface px-3 py-3 text-sm leading-7 text-primary"
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  placeholder={"示例：\n一、概述\n全屋整木定制是在整木定制基础上，实现全空间覆盖的系统化木作解决方案。\n\n二、基本信息\n覆盖范围：全屋\n核心：整体设计"}
+                />
               </div>
             )}
 
@@ -1489,46 +1372,17 @@ export default function AdminContentPage() {
               </>
             )}
             {tab === "terms" ? (
-              <div className="rounded-lg border border-border bg-surface p-3 space-y-3">
+              <div className="space-y-2">
                 <div className="flex items-center justify-between gap-3">
                   <label className="block text-sm text-muted">词条正文</label>
-                  <p className="text-xs text-muted">固定小标题结构</p>
+                  <p className="text-xs text-muted">可直接按普通文本修改，系统会自动整理结构。</p>
                 </div>
-                {editTermSections.map((sec, idx) => (
-                  <div key={sec.id} className="rounded-md border border-border bg-surface-elevated p-3 space-y-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-xs text-muted">小节 {idx + 1}</p>
-                      <button
-                        type="button"
-                        onClick={() => removeEditTermSection(sec.id)}
-                        className="text-xs px-2 py-1 rounded border border-border hover:bg-surface"
-                        disabled={editTermSections.length <= 1}
-                      >
-                        删除
-                      </button>
-                    </div>
-                    <input
-                      className="w-full border border-border rounded px-3 py-2 bg-surface"
-                      placeholder="小标题"
-                      value={sec.heading}
-                      onChange={(e) => updateEditTermSection(sec.id, { heading: e.target.value })}
-                    />
-                    <textarea
-                      className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[90px]"
-                      placeholder="解释内容"
-                      value={sec.body}
-                      onChange={(e) => updateEditTermSection(sec.id, { body: e.target.value })}
-                    />
-                  </div>
-                ))}
-                <div className="flex gap-2">
-                  <button type="button" onClick={addEditTermSection} className="text-xs px-3 py-2 rounded border border-border hover:bg-surface">
-                    添加小标题
-                  </button>
-                  <button type="button" onClick={() => setEditTermSections(createDefaultTermSections())} className="text-xs px-3 py-2 rounded border border-border hover:bg-surface">
-                    恢复默认模板
-                  </button>
-                </div>
+                <textarea
+                  className="w-full min-h-[320px] rounded-2xl border border-border bg-surface px-3 py-3 text-sm leading-7 text-primary"
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  placeholder={"示例：\n一、概述\n全屋整木定制是在整木定制基础上，实现全空间覆盖的系统化木作解决方案。\n\n二、基本信息\n覆盖范围：全屋\n核心：整体设计"}
+                />
               </div>
             ) : tab === "standards" ? (
               <>

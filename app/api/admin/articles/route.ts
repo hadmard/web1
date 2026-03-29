@@ -5,6 +5,7 @@ import { defaultContentStatusForSubmission } from "@/lib/member-access";
 import { resolveTagSlugs } from "@/lib/tag-suggest";
 import { generateUniqueArticleSlug } from "@/lib/slug";
 import { isContentReviewRequired } from "@/lib/app-settings";
+import { isValidTermStructuredContent, normalizeTermContent } from "@/lib/term-structured";
 
 export const dynamic = "force-dynamic";
 
@@ -14,17 +15,6 @@ function isAdmin(session: { role: string | null } | null) {
 
 function isSuperAdmin(session: { role: string | null } | null) {
   return session?.role === "SUPER_ADMIN";
-}
-
-function isDictionaryPath(input: string | null | undefined) {
-  return typeof input === "string" && input.startsWith("/dictionary");
-}
-
-function isValidTermStructuredContent(input: string) {
-  const sectionCount = (input.match(/<section>/g) ?? []).length;
-  const headingCount = (input.match(/<h3>/g) ?? []).length;
-  const paragraphCount = (input.match(/<p>/g) ?? []).length;
-  return sectionCount > 0 && sectionCount === headingCount && sectionCount === paragraphCount;
 }
 
 export async function GET(request: NextRequest) {
@@ -142,8 +132,13 @@ export async function POST(request: NextRequest) {
     if (!title || typeof title !== "string") {
       return NextResponse.json({ error: "标题必填" }, { status: 400 });
     }
-    if (isDictionaryPath(categoryHref) || isDictionaryPath(subHref)) {
-      if (typeof content !== "string" || !isValidTermStructuredContent(content)) {
+    const isDictionary =
+      (typeof categoryHref === "string" && categoryHref.startsWith("/dictionary")) ||
+      (typeof subHref === "string" && subHref.startsWith("/dictionary"));
+    const normalizedContent =
+      isDictionary && typeof content === "string" ? normalizeTermContent(content) : typeof content === "string" ? content : "";
+    if (isDictionary) {
+      if (!isValidTermStructuredContent(normalizedContent)) {
         return NextResponse.json({ error: "词库内容必须按固定小标题分节格式提交" }, { status: 400 });
       }
     }
@@ -185,7 +180,7 @@ export async function POST(request: NextRequest) {
         sourceUrl: typeof sourceUrl === "string" ? sourceUrl.trim() || null : null,
         displayAuthor: typeof displayAuthor === "string" ? displayAuthor.trim() || null : null,
         excerpt: typeof excerpt === "string" ? excerpt.trim() || null : null,
-        content: typeof content === "string" ? content : "",
+        content: normalizedContent,
         coverImage: typeof coverImage === "string" ? coverImage.trim() || null : null,
         subHref: typeof subHref === "string" ? subHref.trim() || null : null,
         categoryHref: typeof categoryHref === "string" ? categoryHref.trim() || null : null,

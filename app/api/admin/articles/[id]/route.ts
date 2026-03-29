@@ -4,6 +4,7 @@ import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { writeOperationLog } from "@/lib/operation-log";
 import { canChangeReviewStatus, canDirectlyDeleteArticle, canDirectlyEditArticle, canReviewSubmissions } from "@/lib/content-permissions";
+import { isValidTermStructuredContent, normalizeTermContent } from "@/lib/term-structured";
 
 function isAdmin(session: { role: string | null } | null) {
   return session?.role === "SUPER_ADMIN" || session?.role === "ADMIN";
@@ -11,13 +12,6 @@ function isAdmin(session: { role: string | null } | null) {
 
 function isDictionaryPath(input: string | null | undefined) {
   return typeof input === "string" && input.startsWith("/dictionary");
-}
-
-function isValidTermStructuredContent(input: string) {
-  const sectionCount = (input.match(/<section>/g) ?? []).length;
-  const headingCount = (input.match(/<h3>/g) ?? []).length;
-  const paragraphCount = (input.match(/<p>/g) ?? []).length;
-  return sectionCount > 0 && sectionCount === headingCount && sectionCount === paragraphCount;
 }
 
 function revalidateArticlePaths(article: {
@@ -28,7 +22,7 @@ function revalidateArticlePaths(article: {
 }) {
   const segment = (article.slug || article.title || "").trim();
   const isDictionary =
-    isDictionaryPath(article.categoryHref) || isDictionaryPath(article.subHref);
+    article.categoryHref?.startsWith("/dictionary") || article.subHref?.startsWith("/dictionary");
 
   if (isDictionary) {
     revalidatePath("/dictionary");
@@ -111,7 +105,7 @@ export async function PATCH(
   if (typeof source === "string") data.source = source.trim() || null;
   if (typeof sourceUrl === "string") data.sourceUrl = sourceUrl.trim() || null;
   if (typeof displayAuthor === "string") data.displayAuthor = displayAuthor.trim() || null;
-  if (typeof content === "string") data.content = content;
+  if (typeof content === "string") data.content = normalizeTermContent(content);
   if (typeof coverImage === "string") data.coverImage = coverImage.trim() || null;
   if (typeof subHref === "string") data.subHref = subHref.trim() || null;
   if (typeof categoryHref === "string") data.categoryHref = categoryHref.trim() || null;
