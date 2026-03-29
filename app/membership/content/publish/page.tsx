@@ -1120,7 +1120,7 @@ function PublishCenterPageInner() {
                 当前栏目共 {filteredItems.length} 条，已通过 {filteredStatusSummary.approved} 条，待审核 {filteredStatusSummary.pending} 条。
               </p>
               <p className="mt-2 text-xs leading-6 text-muted">
-                每页展示 20 条，不显示阅读量。点击后可查看全部历史内容、预览已通过稿件，或继续修改、删除。
+                每页展示 20 条，不显示阅读量。点击后可查看全部历史内容、预览已通过稿件，或继续修改。
               </p>
               <Link
                 href={`/membership/content/submissions?tab=${encodeURIComponent(safeTab)}`}
