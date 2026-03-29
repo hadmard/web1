@@ -481,7 +481,12 @@ function PublishCenterPageInner() {
     return (
       safeTab === "brands"
           ? brandStructuredToSearchText(brandStructured)
-          : safeTab === "standards" || safeTab === "terms"
+          : safeTab === "terms"
+            ? termSections
+                .map((section) => [section.heading.trim(), section.body.trim()].filter(Boolean).join("\n"))
+                .filter(Boolean)
+                .join("\n\n")
+          : safeTab === "standards"
             ? content
             : safeTab === "industry-data"
               ? dataStructuredToSearchText(dataStructured)
@@ -495,7 +500,12 @@ function PublishCenterPageInner() {
     return (
       safeTab === "brands"
           ? brandStructuredToSearchText(editBrandStructured)
-          : safeTab === "standards" || safeTab === "terms"
+          : safeTab === "terms"
+            ? editTermSections
+                .map((section) => [section.heading.trim(), section.body.trim()].filter(Boolean).join("\n"))
+                .filter(Boolean)
+                .join("\n\n")
+          : safeTab === "standards"
             ? editContent
             : safeTab === "industry-data"
               ? dataStructuredToSearchText(editDataStructured)
@@ -623,7 +633,9 @@ function PublishCenterPageInner() {
     const composedContent =
       safeTab === "brands"
           ? buildBrandStructuredHtml(brandStructured)
-          : safeTab === "standards" || safeTab === "terms"
+          : safeTab === "terms"
+            ? buildTermContentHtml(termSections)
+          : safeTab === "standards"
             ? content.trim()
             : safeTab === "industry-data"
               ? buildDataStructuredHtml(dataStructured)
@@ -794,7 +806,9 @@ function PublishCenterPageInner() {
     const composedEditContent =
       safeTab === "brands"
           ? buildBrandStructuredHtml(editBrandStructured)
-          : safeTab === "standards" || safeTab === "terms"
+          : safeTab === "terms"
+            ? buildTermContentHtml(editTermSections)
+          : safeTab === "standards"
             ? editContent.trim()
             : safeTab === "industry-data"
               ? buildDataStructuredHtml(editDataStructured)
@@ -897,14 +911,58 @@ function PublishCenterPageInner() {
   function renderCategoryFeatureFields(currentTab: ContentTabKey) {
     return (
       <>
-        {(currentTab === "terms" || currentTab === "standards") && (
+        {currentTab === "terms" && (
+          <div className="space-y-3 rounded-2xl border border-border bg-surface p-4">
+            <div className="flex items-center justify-between gap-3">
+              <label className="block text-sm text-muted">词条正文</label>
+              <p className="text-xs text-muted">固定小标题结构</p>
+            </div>
+            {termSections.map((sec, idx) => (
+              <div key={sec.id} className="rounded-md border border-border bg-surface-elevated p-3 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs text-muted">小节 {idx + 1}</p>
+                  <button
+                    type="button"
+                    onClick={() => removeTermSection(sec.id)}
+                    className="text-xs px-2 py-1 rounded border border-border hover:bg-surface"
+                    disabled={termSections.length <= 1}
+                  >
+                    删除
+                  </button>
+                </div>
+                <input
+                  className="w-full border border-border rounded px-3 py-2 bg-surface"
+                  placeholder="小标题"
+                  value={sec.heading}
+                  onChange={(e) => updateTermSection(sec.id, { heading: e.target.value })}
+                />
+                <textarea
+                  className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[90px]"
+                  placeholder="解释内容"
+                  value={sec.body}
+                  onChange={(e) => updateTermSection(sec.id, { body: e.target.value })}
+                />
+              </div>
+            ))}
+            <div className="flex gap-2">
+              <button type="button" onClick={addTermSection} className="text-xs px-3 py-2 rounded border border-border hover:bg-surface">
+                添加小标题
+              </button>
+              <button type="button" onClick={() => setTermSections(createDefaultTermSections())} className="text-xs px-3 py-2 rounded border border-border hover:bg-surface">
+                恢复默认模板
+              </button>
+            </div>
+          </div>
+        )}
+
+        {currentTab === "standards" && (
           <div className="space-y-2">
-            <label className="block text-sm text-muted">{currentTab === "terms" ? "词条正文" : "标准正文"}</label>
+            <label className="block text-sm text-muted">标准正文</label>
             <RichEditor
               value={content}
               onChange={setContent}
               minHeight={360}
-              placeholder={currentTab === "terms" ? "支持标题、列表、表格、引用、图片的词条正文编辑。" : "支持标题分级、表格、图片和条款结构的标准正文编辑。"}
+              placeholder="支持标题分级、表格、图片和条款结构的标准正文编辑。"
             />
           </div>
         )}
