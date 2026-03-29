@@ -2,7 +2,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import type { Metadata } from "next";
 import { findNewsArticleBySegment, resolveArticleShareImage } from "@/lib/news-sharing";
 import { buildPageMetadata } from "@/lib/seo";
-import { buildNewsPath, SHARE_CACHE_VERSION } from "@/lib/share-config";
+import { buildArticleShareVersion, buildNewsShareEntryUrl } from "@/lib/share-config";
 import { previewText } from "@/lib/text";
 
 export const revalidate = 300;
@@ -13,10 +13,6 @@ const SHARE_SITE_NAME = "中华整木网";
 type Props = {
   params: Promise<{ slug: string }>;
 };
-
-function buildArticleTargetPath(id: string) {
-  return `${buildNewsPath(id)}?sharev=${encodeURIComponent(SHARE_CACHE_VERSION)}`;
-}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
@@ -31,12 +27,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const description = previewText(article.excerpt ?? article.content, 160);
   const image = resolveArticleShareImage(article);
+  const shareVersion = buildArticleShareVersion(article.updatedAt ?? article.publishedAt ?? article.id);
 
   return {
     ...buildPageMetadata({
       title: article.title,
       description,
-      path: `/share/news/${article.id}`,
+      path: `/share/news/${article.id}?sharev=${encodeURIComponent(shareVersion)}`,
       type: "article",
       siteName: SHARE_SITE_NAME,
       image,
@@ -53,5 +50,6 @@ export default async function ShareNewsPage({ params }: Props) {
     notFound();
   }
 
-  permanentRedirect(buildArticleTargetPath(article.id));
+  const shareVersion = buildArticleShareVersion(article.updatedAt ?? article.publishedAt ?? article.id);
+  permanentRedirect(buildNewsShareEntryUrl(article.id, shareVersion));
 }

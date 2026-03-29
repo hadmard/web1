@@ -9,7 +9,7 @@ import { NewsViewTracker } from "./NewsViewTracker";
 import { NewsUrlSync } from "./NewsUrlSync";
 import { buildPageMetadata } from "@/lib/seo";
 import { ArticleShareActions } from "@/components/ArticleShareActions";
-import { buildNewsPath, buildNewsShareEntryUrl, buildPublicNewsUrl } from "@/lib/share-config";
+import { buildArticleShareVersion, buildNewsPath, buildNewsShareEntryUrl, buildPublicNewsUrl } from "@/lib/share-config";
 import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
 import { DEFAULT_NEWS_SHARE_IMAGE, findNewsArticleBySegment, normalizeNewsSegment, resolveArticleShareImage } from "@/lib/news-sharing";
 import { prisma } from "@/lib/prisma";
@@ -270,7 +270,8 @@ export default async function ArticlePage({ params, searchParams }: Props) {
   }
 
   const articleUrl = buildPublicNewsUrl(article.id);
-  const shareEntryUrl = buildNewsShareEntryUrl(article.id);
+  const shareVersion = buildArticleShareVersion(article.updatedAt ?? article.publishedAt ?? article.id);
+  const shareEntryUrl = buildNewsShareEntryUrl(article.id, shareVersion);
   const publicBaseUrl = articleUrl.replace(/\/news\/.*$/, "");
   const articleShareImage = resolveArticleShareImage(article);
   const articleSection = resolveNewsSectionLabel(article.subHref, article.categoryHref);
@@ -315,7 +316,7 @@ export default async function ArticlePage({ params, searchParams }: Props) {
 
   return (
     <article id="news-reading-article" className="mx-auto max-w-6xl px-4 pb-6 pt-2 sm:px-6 sm:py-12">
-      <NewsUrlSync canonicalPath={buildNewsPath(article.id)} />
+      <NewsUrlSync canonicalPath={buildNewsPath(article.id)} shareVersion={shareVersion} />
       <NewsViewTracker slug={article.slug} />
       <JsonLd data={articleSchema} />
       <JsonLd data={breadcrumbSchema} />
