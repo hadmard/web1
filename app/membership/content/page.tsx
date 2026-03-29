@@ -66,7 +66,7 @@ const PRIMARY_ACTIONS = [
 
 const SECONDARY_ACTIONS = [
   { href: "/membership/content/status", label: "审核记录" },
-  { href: "/membership/content/news", label: "资讯管理" },
+  { href: "/membership/content/submissions", label: "已发内容" },
   { href: "/membership/content/gallery", label: "图库入口" },
 ];
 

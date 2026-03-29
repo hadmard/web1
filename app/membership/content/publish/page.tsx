@@ -139,13 +139,6 @@ type Row = {
   createdAt: string;
 };
 
-const STATUS_TEXT: Record<Status, string> = {
-  draft: "草稿",
-  pending: "待审核",
-  approved: "已通过",
-  rejected: "已驳回",
-};
-
 const DEFAULT_TERM_SECTIONS: Omit<TermSection, "id">[] = [
   { heading: "发展背景", body: "伴随消费升级与整装需求兴起，整木概念由定制木作逐步发展为系统化解决方案。" },
   { heading: "核心特征", body: "强调一体化、可定制、风格统一，覆盖设计、选材、制造与安装。" },
@@ -232,17 +225,6 @@ function formatQuota(limit: number | null, remainingCount: number | null) {
   return `剩余 ${remain}/${limit}`;
 }
 
-function formatRecordTime(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat("zh-CN", {
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-}
-
 function tabFromHref(href: string): ContentTabKey {
   const hit = CONTENT_TAB_DEFS.find((x) => x.href === href);
   return hit?.key ?? "articles";
@@ -281,6 +263,7 @@ function PublishCenterPageInner() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const tab = parseTab(searchParams.get("tab"));
+  const editQueryId = searchParams.get("edit")?.trim() ?? "";
 
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [role, setRole] = useState<string | null>(null);
@@ -296,13 +279,13 @@ function PublishCenterPageInner() {
   const publishObjectUrlRef = useRef<string | null>(null);
   const editObjectUrlRef = useRef<string | null>(null);
   const suppressMessageScrollRef = useRef(false);
+  const autoOpenedEditIdRef = useRef("");
   const [loading, setLoading] = useState(false);
   const [lastSubmitted, setLastSubmitted] = useState<SubmitPreview | null>(null);
   const [pendingPreviewScroll, setPendingPreviewScroll] = useState<"publish" | "edit" | null>(null);
   const [cropTarget, setCropTarget] = useState<"publish" | "edit" | null>(null);
   const [latestVerification, setLatestVerification] = useState<VerificationSummary>(null);
   const [enterprise, setEnterprise] = useState<EnterpriseSummary>(null);
-  const [showAllRecords, setShowAllRecords] = useState(false);
 
   const [title, setTitle] = useState("");
   const [source, setSource] = useState("");
@@ -382,16 +365,6 @@ function PublishCenterPageInner() {
     () => items.filter((item) => resolveTabKeyFromHref(item.categoryHref, item.subHref) === safeTab),
     [items, safeTab]
   );
-  const sortedFilteredItems = useMemo(
-    () =>
-      [...filteredItems]
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
-    [filteredItems]
-  );
-  const visibleFilteredItems = useMemo(
-    () => (showAllRecords ? sortedFilteredItems : sortedFilteredItems.slice(0, 5)),
-    [showAllRecords, sortedFilteredItems]
-  );
   const filteredStatusSummary = useMemo(
     () =>
       filteredItems.reduce(
@@ -457,10 +430,6 @@ function PublishCenterPageInner() {
       setSubHref(enabledSubOptions[0].href);
     }
   }, [subOptions, subHref]);
-
-  useEffect(() => {
-    setShowAllRecords(false);
-  }, [safeTab]);
 
   useEffect(() => {
     if (!message) return;
@@ -560,22 +529,6 @@ function PublishCenterPageInner() {
     setMessage("已根据正文提炼摘要，结果更利于搜索抓取与页面概览。");
   }
 
-  const resetCategoryMeta = useCallback(() => {
-    setCoverImage("");
-    replacePreviewUrl("publish", "");
-    setSource("");
-    setDisplayAuthor("");
-    setConceptSummary("");
-    setApplicableScenarios("");
-    setVersionLabel("");
-    setRelatedTermSlugs("");
-    setRelatedStandardIds("");
-    setRelatedBrandIds("");
-    setTagSlugs("");
-    setSlug("");
-    setDocumentMeta(createEmptyDocumentMetadata());
-  }, []);
-
   function resetTermSections() {
     setTermSections(createDefaultTermSections());
   }
@@ -618,7 +571,7 @@ function PublishCenterPageInner() {
     setEditTermSections((prev) => prev.filter((x) => x.id !== id));
   }
 
-  function replacePreviewUrl(kind: "publish" | "edit", nextUrl: string) {
+  const replacePreviewUrl = useCallback((kind: "publish" | "edit", nextUrl: string) => {
     const targetRef = kind === "publish" ? publishObjectUrlRef : editObjectUrlRef;
     const setPreview = kind === "publish" ? setCoverPreviewSrc : setEditCoverPreviewSrc;
     if (targetRef.current?.startsWith("blob:")) {
@@ -626,15 +579,27 @@ function PublishCenterPageInner() {
     }
     targetRef.current = nextUrl.startsWith("blob:") ? nextUrl : null;
     setPreview(nextUrl);
-  }
+  }, []);
 
   function queuePreviewScroll(target: "publish" | "edit") {
     setPendingPreviewScroll(target);
   }
 
   useEffect(() => {
-    resetCategoryMeta();
-  }, [safeTab, resetCategoryMeta]);
+    setCoverImage("");
+    replacePreviewUrl("publish", "");
+    setSource("");
+    setDisplayAuthor("");
+    setConceptSummary("");
+    setApplicableScenarios("");
+    setVersionLabel("");
+    setRelatedTermSlugs("");
+    setRelatedStandardIds("");
+    setRelatedBrandIds("");
+    setTagSlugs("");
+    setSlug("");
+    setDocumentMeta(createEmptyDocumentMetadata());
+  }, [safeTab, replacePreviewUrl]);
 
   useEffect(() => {
     if (safeTab === "terms") resetTermSections();
@@ -736,13 +701,24 @@ function PublishCenterPageInner() {
     resetStandardStructured();
     resetDataStructured();
     resetAwardStructured();
-    resetCategoryMeta();
+    setCoverImage("");
+    replacePreviewUrl("publish", "");
+    setSource("");
+    setDisplayAuthor("");
+    setConceptSummary("");
+    setApplicableScenarios("");
+    setVersionLabel("");
+    setRelatedTermSlugs("");
+    setRelatedStandardIds("");
+    setRelatedBrandIds("");
+    setTagSlugs("");
+    setDocumentMeta(createEmptyDocumentMetadata());
     setIsPinned(false);
     await load();
     setLoading(false);
   }
 
-  function openEditRequest(item: Row) {
+  const openEditRequest = useCallback((item: Row) => {
     setEditingId(item.id);
     setEditSlug(item.slug ?? "");
     setEditTitle(item.title ?? "");
@@ -773,7 +749,44 @@ function PublishCenterPageInner() {
     replacePreviewUrl("edit", item.coverImage ?? "");
     setEditReason("");
     setEditDocumentMeta(parseDocumentMetadata(item.faqJson));
-  }
+  }, [safeTab, replacePreviewUrl]);
+
+  useEffect(() => {
+    if (!editQueryId) {
+      autoOpenedEditIdRef.current = "";
+      return;
+    }
+    if (autoOpenedEditIdRef.current === editQueryId) return;
+
+    const currentItem = items.find((item) => item.id === editQueryId);
+    if (currentItem) {
+      openEditRequest(currentItem);
+      autoOpenedEditIdRef.current = editQueryId;
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadEditItem() {
+      const response = await fetch(`/api/member/articles/${editQueryId}`, {
+        credentials: "include",
+        cache: "no-store",
+      });
+      if (!response.ok) return;
+
+      const item = (await response.json().catch(() => null)) as Row | null;
+      if (!item || cancelled) return;
+
+      setItems((current) => (current.some((entry) => entry.id === item.id) ? current : [item, ...current]));
+      openEditRequest(item);
+      autoOpenedEditIdRef.current = editQueryId;
+    }
+
+    void loadEditItem();
+    return () => {
+      cancelled = true;
+    };
+  }, [editQueryId, items, openEditRequest]);
 
   async function submitEditRequest(e: FormEvent) {
     e.preventDefault();
@@ -1098,10 +1111,25 @@ function PublishCenterPageInner() {
               );
             })}
           </ul>
-          <div className="mt-4 rounded-2xl border border-border bg-surface px-3 py-3 text-xs text-muted">
-            当前栏目：<span className="text-primary">{selectedTabDef.label}</span>
-          </div>
-        </aside>
+            <div className="mt-4 rounded-2xl border border-border bg-surface px-3 py-3 text-xs text-muted">
+              当前栏目：<span className="text-primary">{selectedTabDef.label}</span>
+            </div>
+            <div className="mt-4 rounded-2xl border border-border bg-[linear-gradient(180deg,rgba(255,253,249,0.98),rgba(248,243,236,0.94))] p-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">已发内容</p>
+              <p className="mt-2 text-sm text-primary">
+                当前栏目共 {filteredItems.length} 条，已通过 {filteredStatusSummary.approved} 条，待审核 {filteredStatusSummary.pending} 条。
+              </p>
+              <p className="mt-2 text-xs leading-6 text-muted">
+                每页展示 20 条，不显示阅读量。点击后可查看全部历史内容、预览已通过稿件，或继续修改、删除。
+              </p>
+              <Link
+                href={`/membership/content/submissions?tab=${encodeURIComponent(safeTab)}`}
+                className="mt-3 inline-flex rounded-full border border-border bg-white/85 px-3 py-2 text-xs font-medium text-primary transition hover:bg-white hover:text-accent"
+              >
+                查看当前栏目内容
+              </Link>
+            </div>
+          </aside>
 
         <div className="space-y-4">
         <form onSubmit={submit} className="rounded-[28px] border border-border bg-surface-elevated p-5 shadow-[0_16px_40px_rgba(15,23,42,0.06)] space-y-4">
@@ -1385,66 +1413,6 @@ function PublishCenterPageInner() {
           </button>
         </form>
 
-      <section className="rounded-[28px] border border-border bg-surface-elevated p-5 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <h2 className="text-sm font-medium text-primary">投稿概览（{selectedTabDef.label}）</h2>
-            <p className="mt-2 text-sm text-muted">
-              当前栏目共 {filteredItems.length} 条记录，默认先展示最近 5 条；你可以在这里展开查看全部，不需要离开投稿页。
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2 text-xs text-muted">
-            <span className="rounded-full border border-border bg-surface px-3 py-1">待审核 {filteredStatusSummary.pending}</span>
-            <span className="rounded-full border border-border bg-surface px-3 py-1">已通过 {filteredStatusSummary.approved}</span>
-            <span className="rounded-full border border-border bg-surface px-3 py-1">草稿 {filteredStatusSummary.draft}</span>
-            <span className="rounded-full border border-border bg-surface px-3 py-1">已驳回 {filteredStatusSummary.rejected}</span>
-          </div>
-        </div>
-        {filteredItems.length === 0 ? (
-          <p className="mt-4 text-sm text-muted">当前栏目暂无投稿记录。</p>
-        ) : (
-          <div className="mt-4 space-y-3">
-            {visibleFilteredItems.map((item) => (
-              <article key={item.id} className="rounded-2xl border border-border bg-surface px-4 py-4">
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="truncate text-sm font-medium text-primary">{item.title}</p>
-                      {item.isPinned && (
-                        <span className="text-[11px] rounded-full border border-accent/40 px-2 py-0.5 text-accent">置顶</span>
-                      )}
-                    </div>
-                    <p className="mt-2 text-xs text-muted">
-                      {STATUS_TEXT[item.status]} · {formatRecordTime(item.createdAt)}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="rounded-full border border-border bg-white/80 px-3 py-1 text-xs text-muted">{STATUS_TEXT[item.status]}</span>
-                    <button
-                      type="button"
-                      onClick={() => openEditRequest(item)}
-                      className="rounded-lg border border-border px-3 py-1.5 text-xs text-primary transition hover:bg-surface"
-                    >
-                      提交修改申请
-                    </button>
-                  </div>
-                </div>
-              </article>
-            ))}
-            {filteredItems.length > 5 ? (
-              <div className="flex justify-center pt-1">
-                <button
-                  type="button"
-                  onClick={() => setShowAllRecords((value) => !value)}
-                  className="rounded-full border border-border bg-white/85 px-4 py-2 text-xs text-primary transition hover:bg-surface"
-                >
-                  {showAllRecords ? "收起列表" : `查看全部 ${filteredItems.length} 条记录`}
-                </button>
-              </div>
-            ) : null}
-          </div>
-        )}
-      </section>
       </div>
       </div>
 

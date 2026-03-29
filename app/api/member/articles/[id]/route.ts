@@ -4,6 +4,23 @@ import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "未登录" }, { status: 401 });
+
+  const { id } = await params;
+  const article = await prisma.article.findUnique({ where: { id } });
+  if (!article) return NextResponse.json({ error: "资讯不存在" }, { status: 404 });
+  if (article.authorMemberId !== session.sub) {
+    return NextResponse.json({ error: "仅可查看自己的资讯" }, { status: 403 });
+  }
+
+  return NextResponse.json(article);
+}
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

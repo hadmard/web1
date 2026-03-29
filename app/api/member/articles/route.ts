@@ -3,7 +3,11 @@ import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { defaultContentStatusForSubmission } from "@/lib/member-access";
 import { writeOperationLog } from "@/lib/operation-log";
-import { MEMBER_ALLOWED_CATEGORY_HREFS, MEMBER_PUBLISH_CATEGORY_OPTIONS } from "@/lib/content-taxonomy";
+import {
+  MEMBER_ALLOWED_CATEGORY_HREFS,
+  MEMBER_PUBLISH_CATEGORY_OPTIONS,
+  type ContentTabKey,
+} from "@/lib/content-taxonomy";
 import { resolveTagSlugs } from "@/lib/tag-suggest";
 import { generateUniqueArticleSlug } from "@/lib/slug";
 import { isContentReviewRequired } from "@/lib/app-settings";
@@ -12,6 +16,50 @@ import {
   findEffectiveSubcategoryAccess,
   getEffectiveMemberAccessForMember,
 } from "@/lib/member-access-resolver";
+
+const MEMBER_CONTENT_STATUSES = new Set(["draft", "pending", "approved", "rejected"]);
+
+function buildTabWhere(tab: string | null) {
+  const normalized = (tab || "").trim() as ContentTabKey | "";
+  if (!normalized) return null;
+
+  if (normalized === "articles") {
+    return {
+      OR: [{ categoryHref: { startsWith: "/news" } }, { subHref: { startsWith: "/news" } }],
+    };
+  }
+
+  if (normalized === "brands") {
+    return {
+      OR: [{ categoryHref: { startsWith: "/brands" } }, { subHref: { startsWith: "/brands" } }],
+    };
+  }
+
+  if (normalized === "terms") {
+    return {
+      OR: [{ categoryHref: { startsWith: "/dictionary" } }, { subHref: { startsWith: "/dictionary" } }],
+    };
+  }
+
+  if (normalized === "standards") {
+    return {
+      OR: [{ categoryHref: { startsWith: "/standards" } }, { subHref: { startsWith: "/standards" } }],
+    };
+  }
+
+  if (normalized === "awards") {
+    return {
+      OR: [
+        { categoryHref: { startsWith: "/awards" } },
+        { subHref: { startsWith: "/awards" } },
+        { categoryHref: { startsWith: "/huadianbang" } },
+        { subHref: { startsWith: "/huadianbang" } },
+      ],
+    };
+  }
+
+  return null;
+}
 
 export async function GET(request: NextRequest) {
   const session = await getSession();
@@ -22,10 +70,22 @@ export async function GET(request: NextRequest) {
   const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") ?? "20", 10)));
   const skip = (page - 1) * limit;
   const q = searchParams.get("q")?.trim();
+  const status = searchParams.get("status")?.trim() ?? "";
+  const tab = searchParams.get("tab")?.trim() ?? "";
 
   const where: any = { authorMemberId: session.sub };
+  if (status && MEMBER_CONTENT_STATUSES.has(status)) {
+    where.status = status;
+  }
+
+  const tabWhere = buildTabWhere(tab);
+  if (tabWhere) {
+    where.AND = [...(where.AND ?? []), tabWhere];
+  }
+
   if (q) {
     where.AND = [
+      ...(where.AND ?? []),
       {
         OR: [
           { title: { contains: q, mode: "insensitive" } },
