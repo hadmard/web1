@@ -43,27 +43,19 @@ export default async function BrandsPage() {
     <CategoryHome basePath="/brands" category={category} searchHref="/brands/all">
       <section className="mt-8 space-y-6">
         <article className="overflow-hidden rounded-[36px] border border-[rgba(181,157,121,0.18)] bg-[radial-gradient(circle_at_top_left,rgba(213,183,131,0.15),transparent_32%),linear-gradient(180deg,rgba(255,255,255,0.98),rgba(247,242,235,0.92))] shadow-[0_24px_76px_rgba(34,31,26,0.08)]">
-          <div className="grid gap-0 xl:grid-cols-[1.08fr,0.92fr]">
-            <div className="p-7 sm:p-9">
-              <p className="text-xs uppercase tracking-[0.3em] text-[#9d7e4d]">Brand Gallery</p>
-              <h2 className="mt-4 font-serif text-3xl text-primary sm:text-[2.9rem] sm:leading-[1.08]">整木品牌橱窗</h2>
-              <p className="mt-5 max-w-2xl text-sm leading-8 text-muted">
-                用更克制、更有层级的图文结构展示品牌定位、服务方向与合作入口。现有资料不完整也会走统一兜底规则，保证前台像正式品牌页，而不是数据堆砌页。
-              </p>
-              <div className="mt-7 flex flex-wrap gap-3">
+          <div className="p-7 sm:p-9">
+            <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+              <div className="max-w-2xl">
+                <p className="text-xs uppercase tracking-[0.3em] text-[#9d7e4d]">Brand Gallery</p>
+                <h2 className="mt-4 font-serif text-3xl text-primary sm:text-[2.9rem] sm:leading-[1.08]">整木品牌橱窗</h2>
+              </div>
+              <div className="flex flex-wrap gap-3">
                 <Link href="/brands/all" className="inline-flex items-center justify-center rounded-full bg-accent px-5 py-3 text-sm font-medium text-white transition hover:opacity-92">
                   浏览全部品牌
                 </Link>
                 <Link href="/brands/all" className="inline-flex items-center justify-center rounded-full border border-border bg-white px-5 py-3 text-sm font-medium text-primary transition hover:bg-surface">
                   按地区筛选
                 </Link>
-              </div>
-            </div>
-            <div className="border-t border-[rgba(181,157,121,0.16)] p-6 sm:p-8 xl:border-l xl:border-t-0">
-              <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
-                <GlassNote title="展示规则" body="摘要、Logo、地区与联系方式优先读取企业实时字段，列表页与详情页展示口径保持一致。" />
-                <GlassNote title="品牌体验" body="即使资料不完整，也用统一卡片结构、留白和标签体系保持品牌感与阅读节奏。" />
-                <GlassNote title="咨询转化" body="首屏和卡片都保留咨询入口，让用户快速理解品牌并继续沟通。" />
               </div>
             </div>
           </div>
@@ -195,14 +187,5 @@ export default async function BrandsPage() {
         </article>
       </section>
     </CategoryHome>
-  );
-}
-
-function GlassNote({ title, body }: { title: string; body: string }) {
-  return (
-    <div className="rounded-[24px] border border-[rgba(180,154,107,0.18)] bg-white/88 px-4 py-4 shadow-[0_14px_36px_rgba(15,23,42,0.05)]">
-      <p className="text-[11px] uppercase tracking-[0.2em] text-[#8d7a5a]">{title}</p>
-      <p className="mt-3 text-sm leading-7 text-primary">{body}</p>
-    </div>
   );
 }

@@ -90,6 +90,7 @@ model Member {
   id                  String             @id @default(cuid())
   name                String?
   email               String             @unique
+  recoveryEmail       String?
   role                String?
   membershipLevel     String?
   memberType          String             @default("personal") // enterprise_basic | personal | enterprise_advanced
@@ -106,6 +107,9 @@ model Member {
   rankingWeight       Int                @default(0)
   passwordHash        String
   passwordPlaintext   String?
+  passwordResetTokenHash String?
+  passwordResetExpiresAt DateTime?
+  passwordResetRequestedAt DateTime?
   failedLoginCount    Int                @default(0)
   lockedUntil         DateTime?
   lastLoginAt         DateTime?
@@ -121,10 +125,37 @@ model Member {
   submittedArticleChanges ArticleChangeRequest[] @relation("ArticleChangeSubmitter")
   reviewedArticleChanges  ArticleChangeRequest[] @relation("ArticleChangeReviewer")
   reviewedEnterpriseVerifications EnterpriseVerification[] @relation("EnterpriseVerificationReviewer")
+  passwordRecoveryRequests PasswordRecoveryRequest[] @relation("PasswordRecoveryRequestMember")
+  handledPasswordRecoveryRequests PasswordRecoveryRequest[] @relation("PasswordRecoveryRequestHandler")
 
   @@index([memberType])
   @@index([memberTypeExpiresAt])
+  @@index([recoveryEmail])
+  @@index([passwordResetTokenHash])
   @@map("members")
+}
+
+model PasswordRecoveryRequest {
+  id                    String   @id @default(cuid())
+  memberId              String?
+  member                Member?  @relation("PasswordRecoveryRequestMember", fields: [memberId], references: [id], onDelete: SetNull)
+  account               String
+  status                String   @default("pending") // pending | processing | sent | resolved | rejected
+  requestNote           String?
+  contactInfo           String?
+  recoveryEmailSnapshot String?
+  adminNote             String?
+  handledById           String?
+  handledBy             Member?  @relation("PasswordRecoveryRequestHandler", fields: [handledById], references: [id], onDelete: SetNull)
+  handledAt             DateTime?
+  lastSentAt            DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([memberId, status])
+  @@index([status, createdAt])
+  @@index([handledById])
+  @@map("password_recovery_requests")
 }
 
 model Enterprise {

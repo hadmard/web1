@@ -1,23 +1,30 @@
-const { PrismaClient } = require("@prisma/client");
+﻿const { PrismaClient } = require("@prisma/client");
 const bcrypt = require("bcryptjs");
 
 const prisma = new PrismaClient();
 
-const DEFAULT_ADMIN_ACCOUNT = "yfcccc";
 const DEFAULT_ADMIN_PASSWORD = "admin";
-const DEFAULT_ADMIN_NAME = "admin";
+const PRIMARY_ADMIN = {
+  account: process.env.ADMIN_ACCOUNT?.trim() || "yfcccc",
+  password: process.env.ADMIN_PASSWORD?.trim() || DEFAULT_ADMIN_PASSWORD,
+  name: process.env.ADMIN_NAME?.trim() || "yfcccc",
+};
 
-const ADMIN_ACCOUNT = process.env.ADMIN_ACCOUNT?.trim() || DEFAULT_ADMIN_ACCOUNT;
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD?.trim() || DEFAULT_ADMIN_PASSWORD;
-const ADMIN_NAME = process.env.ADMIN_NAME?.trim() || DEFAULT_ADMIN_NAME;
+const LEGACY_ADMINS = [
+  {
+    account: "admin",
+    password: DEFAULT_ADMIN_PASSWORD,
+    name: "Admin",
+  },
+].filter((item) => item.account !== PRIMARY_ADMIN.account);
 
-async function main() {
-  const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 10);
+async function ensureAdmin(config) {
+  const passwordHash = await bcrypt.hash(config.password, 10);
 
-  const admin = await prisma.member.upsert({
-    where: { email: ADMIN_ACCOUNT },
+  return prisma.member.upsert({
+    where: { email: config.account },
     update: {
-      name: ADMIN_NAME,
+      name: config.name,
       passwordHash,
       role: "SUPER_ADMIN",
       membershipLevel: "admin",
@@ -34,8 +41,8 @@ async function main() {
       lockedUntil: null,
     },
     create: {
-      email: ADMIN_ACCOUNT,
-      name: ADMIN_NAME,
+      email: config.account,
+      name: config.name,
       passwordHash,
       role: "SUPER_ADMIN",
       membershipLevel: "admin",
@@ -52,8 +59,16 @@ async function main() {
       lockedUntil: null,
     },
   });
+}
 
-  console.log(`管理员账号已准备完成：${admin.email} / 默认密码已恢复`);
+async function main() {
+  const prepared = [];
+  for (const config of [PRIMARY_ADMIN, ...LEGACY_ADMINS]) {
+    const admin = await ensureAdmin(config);
+    prepared.push(admin.email);
+  }
+
+  console.log(`管理员账号已准备完成：${prepared.join(", ")} / 默认密码已恢复`);
 }
 
 main()

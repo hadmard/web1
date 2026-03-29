@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { getSession } from "@/lib/session";
+import { normalizeRecoveryEmail } from "@/lib/password-recovery";
 import { prisma } from "@/lib/prisma";
 import { writeOperationLog } from "@/lib/operation-log";
 import { mergeEffectivePermissionFlags, resolvePermissionFlags } from "@/lib/member-permissions";
@@ -19,6 +20,7 @@ function serializeMember(
   member: {
     id: string;
     email: string;
+    recoveryEmail?: string | null;
     name: string | null;
     role: string | null;
     memberType: string;
@@ -45,6 +47,7 @@ function serializeMember(
   return {
     ...merged,
     account: member.email,
+    recoveryEmail: member.recoveryEmail ?? null,
     enterprise: member.enterprise ?? null,
   };
 }
@@ -63,6 +66,7 @@ export async function GET(request: NextRequest) {
       ? {
           OR: [
             { email: { contains: q } },
+            { recoveryEmail: { contains: q } },
             { name: { contains: q } },
             { enterprise: { companyName: { contains: q } } },
             { enterprise: { companyShortName: { contains: q } } },
@@ -73,6 +77,7 @@ export async function GET(request: NextRequest) {
     select: {
       id: true,
       email: true,
+      recoveryEmail: true,
       name: true,
       role: true,
       memberType: true,
@@ -115,6 +120,7 @@ export async function GET(request: NextRequest) {
       .map((m) => ({
         id: m.id,
         displayName: m.name?.trim() || m.email,
+        recoveryEmail: m.recoveryEmail ?? null,
         role: m.role,
         memberType: m.memberType,
         enterpriseId: m.enterprise?.id || null,
@@ -132,7 +138,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const { account, email, password, name, role, memberType, memberTypeExpiresAt, rankingWeight } = body;
+    const { account, email, password, name, role, memberType, memberTypeExpiresAt, rankingWeight, recoveryEmail } = body;
 
     const accountValue = typeof account === "string" ? account : typeof email === "string" ? email : "";
     if (!accountValue || !password || typeof password !== "string") {
@@ -156,6 +162,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "该账号已存在" }, { status: 400 });
     }
 
+    const safeRecoveryEmail =
+      typeof recoveryEmail === "string" && recoveryEmail.trim()
+        ? normalizeRecoveryEmail(recoveryEmail)
+        : null;
+    if (typeof recoveryEmail === "string" && recoveryEmail.trim() && !safeRecoveryEmail) {
+      return NextResponse.json({ error: "找回邮箱格式不正确" }, { status: 400 });
+    }
+
     const safeMemberType =
       memberType === "enterprise_basic" || memberType === "enterprise_advanced" || memberType === "personal"
         ? memberType
@@ -170,7 +184,6 @@ export async function POST(request: NextRequest) {
       typeof rankingWeight === "number" && Number.isFinite(rankingWeight) ? Math.max(0, rankingWeight) : 0;
 
     const passwordHash = await bcrypt.hash(String(password), 10);
-
     const permissionData = resolvePermissionFlags({ role: safeRole });
 
     const member = await prisma.member.create({
@@ -178,6 +191,7 @@ export async function POST(request: NextRequest) {
         email: normalizedEmail,
         passwordHash,
         name: typeof name === "string" ? name.trim() || null : null,
+        recoveryEmail: safeRecoveryEmail,
         role: safeRole,
         membershipLevel: safeRole === "ADMIN" ? "admin" : "member",
         memberType: safeMemberType,
@@ -188,6 +202,7 @@ export async function POST(request: NextRequest) {
       select: {
         id: true,
         email: true,
+        recoveryEmail: true,
         name: true,
         role: true,
         memberType: true,
@@ -211,7 +226,7 @@ export async function POST(request: NextRequest) {
       action: "member_account_create",
       targetType: "member",
       targetId: member.id,
-      detail: JSON.stringify({ role: member.role }),
+      detail: JSON.stringify({ role: member.role, recoveryEmail: member.recoveryEmail }),
     });
 
     return NextResponse.json(serializeMember(member));

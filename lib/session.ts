@@ -1,4 +1,4 @@
-import { cookies } from "next/headers";
+﻿import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { asMemberType, ensureEffectiveMemberType, type MemberType } from "@/lib/member-access";
@@ -131,13 +131,14 @@ export async function getSession(): Promise<Session | null> {
   });
 
   const isAdminRole = resolvedRole === "SUPER_ADMIN" || resolvedRole === "ADMIN";
+  const accountLabel = dbMember.email.split("@")[0]?.trim() || dbMember.email.trim();
   const displayName = isAdminRole
-    ? dbMember.name?.trim() || dbMember.email.split("@")[0]?.trim() || "管理员"
+    ? accountLabel || dbMember.name?.trim() || "管理员"
     : dbMember.enterprise?.companyShortName?.trim() ||
       dbMember.enterprise?.companyName?.trim() ||
       dbMember.name?.trim() ||
       dbMember.enterprise?.contactPerson?.trim() ||
-      dbMember.email.split("@")[0]?.trim() ||
+      accountLabel ||
       "会员";
 
   return {

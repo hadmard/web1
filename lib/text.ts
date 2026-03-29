@@ -1,4 +1,4 @@
-import { INDUSTRY_TAG_RULES } from "@/lib/industry-tag-lexicon";
+﻿import { INDUSTRY_TAG_RULES } from "@/lib/industry-tag-lexicon";
 
 export function stripHtml(input: string): string {
   return input
@@ -36,6 +36,10 @@ function normalizeForMatch(input: string): string {
     .trim();
 }
 
+function escapeRegExp(input: string): string {
+  return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function uniqueValues(values: string[]) {
   return Array.from(new Set(values.map((item) => item.trim()).filter(Boolean)));
 }
@@ -43,7 +47,7 @@ function uniqueValues(values: string[]) {
 function extractTitleKeywords(title: string) {
   return uniqueValues(
     stripHtml(title)
-      .split(/[：:｜|、，,\s\-_/]+/)
+      .split(/[、，,。\s\-_/]+/)
       .map((item) => item.trim())
       .filter((item) => item.length >= 2)
   );
@@ -87,7 +91,7 @@ function scoreSentence(sentence: string, titleKeywords: string[], industryKeywor
   }
 
   if (/\d/.test(sentence)) score += 2;
-  if (/(发布|亮相|推出|聚焦|覆盖|升级|落地|推动|实现|提出|打造|链接|加速|布局)/.test(sentence)) score += 3;
+  if (/(发布|亮相|推出|聚焦|覆盖|升级|落地|推动|实现|提出|打造|链接|布局)/.test(sentence)) score += 3;
   if (sentence.length >= 18 && sentence.length <= 72) score += 3;
 
   return score;
@@ -130,9 +134,8 @@ export function buildGeoExcerpt(title: string, input: string, max = 120): string
     summary = previewText(plain, max);
   }
 
-  if (cleanTitle && !summary.includes(cleanTitle)) {
-    const withTitle = `${cleanTitle}：${summary}`;
-    return withTitle.length <= max ? withTitle : previewText(withTitle, max);
+  if (cleanTitle) {
+    summary = summary.replace(new RegExp(`^${escapeRegExp(cleanTitle)}[：:，,\\s-]*`), "").trim();
   }
 
   return summary.length <= max ? summary : previewText(summary, max);

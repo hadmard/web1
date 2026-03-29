@@ -1,5 +1,6 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import { normalizeRecoveryEmail } from "@/lib/password-recovery";
 import { prisma } from "@/lib/prisma";
 import { signToken } from "@/lib/auth";
 import { writeOperationLog } from "@/lib/operation-log";
@@ -16,9 +17,11 @@ export async function POST(request: NextRequest) {
     const accountRaw = typeof body?.account === "string" ? body.account : "";
     const password = typeof body?.password === "string" ? body.password : "";
     const nameRaw = typeof body?.name === "string" ? body.name : "";
+    const recoveryEmailRaw = typeof body?.recoveryEmail === "string" ? body.recoveryEmail : "";
 
     const account = normalizeAccount(accountRaw);
     const name = nameRaw.trim();
+    const recoveryEmail = recoveryEmailRaw.trim() ? normalizeRecoveryEmail(recoveryEmailRaw) : null;
 
     if (!account || !password) {
       return NextResponse.json({ error: "账号与密码必填" }, { status: 400 });
@@ -36,6 +39,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "密码至少 6 位" }, { status: 400 });
     }
 
+    if (recoveryEmailRaw.trim() && !recoveryEmail) {
+      return NextResponse.json({ error: "找回邮箱格式不正确" }, { status: 400 });
+    }
+
     const existing = await prisma.member.findUnique({
       where: { email: account },
       select: { id: true },
@@ -49,6 +56,7 @@ export async function POST(request: NextRequest) {
       data: {
         email: account,
         name: name || null,
+        recoveryEmail,
         role: "MEMBER",
         membershipLevel: "member",
         memberType: "personal",

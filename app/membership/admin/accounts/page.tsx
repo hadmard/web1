@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 type MemberRow = {
   id: string;
   account: string;
+  recoveryEmail?: string | null;
   name: string | null;
   role: string | null;
   memberType: string;
@@ -22,6 +23,7 @@ type MemberRow = {
 type AdminVisibleRow = {
   id: string;
   displayName: string;
+  recoveryEmail?: string | null;
   role: string | null;
   memberType: string;
   enterpriseId?: string | null;
@@ -39,8 +41,10 @@ export default function AdminAccountsPage() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [myNewPassword, setMyNewPassword] = useState("");
   const [myNewPasswordConfirm, setMyNewPasswordConfirm] = useState("");
+  const [myRecoveryEmail, setMyRecoveryEmail] = useState("");
 
   const [newAccount, setNewAccount] = useState("");
+  const [newRecoveryEmail, setNewRecoveryEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [newName, setNewName] = useState("");
   const [newRole, setNewRole] = useState<"ADMIN" | "MEMBER">("MEMBER");
@@ -59,6 +63,12 @@ export default function AdminAccountsPage() {
     const me = await meRes.json();
     setRole(me.role ?? null);
     setCanManageMembers(me.canManageMembers === true);
+
+    const recoveryRes = await fetch("/api/auth/recovery-email", { credentials: "include" });
+    if (recoveryRes.ok) {
+      const recoveryData = await recoveryRes.json().catch(() => ({}));
+      setMyRecoveryEmail(typeof recoveryData.recoveryEmail === "string" ? recoveryData.recoveryEmail : "");
+    }
 
     const params = new URLSearchParams();
     if (keyword.trim()) params.set("q", keyword.trim());
@@ -94,6 +104,7 @@ export default function AdminAccountsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         account: newAccount.trim(),
+        recoveryEmail: newRecoveryEmail.trim() || undefined,
         password: newPassword,
         name: newName.trim() || undefined,
         role: newRole,
@@ -110,6 +121,7 @@ export default function AdminAccountsPage() {
       setMembers((prev) => [{ ...data, account: data.account ?? data.email ?? "" }, ...prev]);
     }
     setNewAccount("");
+    setNewRecoveryEmail("");
     setNewPassword("");
     setNewName("");
     setMessage(newRole === "ADMIN" ? "子管理员已创建" : "会员账号已创建");
@@ -177,6 +189,25 @@ export default function AdminAccountsPage() {
     setMessage("我的密码已更新");
   }
 
+  async function saveRecoveryEmail(e: React.FormEvent) {
+    e.preventDefault();
+    setMessage("");
+
+    const res = await fetch("/api/auth/recovery-email", {
+      method: "PATCH",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ recoveryEmail: myRecoveryEmail }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setMessage(data.error ?? "保存找回邮箱失败");
+      return;
+    }
+    setMyRecoveryEmail(typeof data.recoveryEmail === "string" ? data.recoveryEmail : "");
+    setMessage(data.recoveryEmail ? "找回邮箱已保存" : "找回邮箱已清空");
+  }
+
   if (loading) return <p className="text-muted">加载中...</p>;
 
   if (!isSuperAdmin && !isAdmin) {
@@ -193,6 +224,13 @@ export default function AdminAccountsPage() {
             : canManageMembers
               ? "你可创建会员账号，并可通过企业或品牌名称快速定位账号。"
               : "你当前无新增账号权限。"}
+        </p>
+        <p className="mt-2 text-xs text-muted">
+          未绑定找回邮箱的老账号，可在
+          <Link href="/membership/admin/password-recovery-requests" className="mx-1 text-accent hover:underline">
+            密码找回申请
+          </Link>
+          中集中处理。
         </p>
         {message && <p className="text-sm text-accent mt-2">{message}</p>}
       </header>
@@ -277,6 +315,27 @@ export default function AdminAccountsPage() {
         </form>
       </section>
 
+      <section className="rounded-xl border border-border bg-surface-elevated p-4">
+        <h2 className="text-sm font-medium text-primary mb-3">我的找回邮箱</h2>
+        <form onSubmit={saveRecoveryEmail} className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-muted">找回邮箱</span>
+            <input
+              type="email"
+              value={myRecoveryEmail}
+              onChange={(e) => setMyRecoveryEmail(e.target.value)}
+              placeholder="建议填写常用邮箱，用于密码找回"
+              className="px-3 py-2 border border-border rounded bg-surface text-sm"
+            />
+          </label>
+          <div>
+            <button type="submit" className="px-4 py-2 rounded bg-accent text-white text-sm">
+              保存找回邮箱
+            </button>
+          </div>
+        </form>
+      </section>
+
       {isAdmin && !canManageMembers && (
         <section className="rounded-xl border border-border bg-surface-elevated p-4">
           <h2 className="text-sm font-medium text-primary mb-3">可见账号</h2>
@@ -294,11 +353,12 @@ export default function AdminAccountsPage() {
                     <span>{row.displayName}</span>
                   )}
                   {(row.enterpriseName || row.brandName) ? (
-                    <span className="ml-2 text-xs text-muted">
-                      {row.enterpriseName || "未绑定企业"}
-                      {row.brandName ? ` / ${row.brandName}` : ""}
-                    </span>
-                  ) : null}
+                      <span className="ml-2 text-xs text-muted">
+                        {row.enterpriseName || "未绑定企业"}
+                        {row.brandName ? ` / ${row.brandName}` : ""}
+                      </span>
+                    ) : null}
+                  {row.recoveryEmail ? <span className="ml-2 text-xs text-muted">找回邮箱：{row.recoveryEmail}</span> : null}
                   <span className="ml-2">（{row.role === "ADMIN" ? "子管理员" : "会员"} / {row.memberType}）</span>
                 </li>
               ))}
@@ -308,7 +368,7 @@ export default function AdminAccountsPage() {
       )}
 
       {(isSuperAdmin || canManageMembers) && (
-        <form onSubmit={addAccount} className="rounded-xl border border-border bg-surface-elevated p-4 grid md:grid-cols-4 gap-3 items-end">
+        <form onSubmit={addAccount} className="rounded-xl border border-border bg-surface-elevated p-4 grid md:grid-cols-5 gap-3 items-end">
           <label className="flex flex-col gap-1">
             <span className="text-xs text-muted">账号类型</span>
             <select value={newRole} onChange={(e) => setNewRole(e.target.value as "ADMIN" | "MEMBER")} className="px-3 py-2 border border-border rounded bg-surface text-sm" disabled={isAdmin}>
@@ -319,6 +379,10 @@ export default function AdminAccountsPage() {
           <label className="flex flex-col gap-1">
             <span className="text-xs text-muted">账号</span>
             <input value={newAccount} onChange={(e) => setNewAccount(e.target.value)} required className="px-3 py-2 border border-border rounded bg-surface text-sm" />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-muted">找回邮箱</span>
+            <input type="email" value={newRecoveryEmail} onChange={(e) => setNewRecoveryEmail(e.target.value)} className="px-3 py-2 border border-border rounded bg-surface text-sm" />
           </label>
           <label className="flex flex-col gap-1">
             <span className="text-xs text-muted">密码</span>
@@ -339,11 +403,12 @@ export default function AdminAccountsPage() {
           <h2 className="text-sm font-medium text-primary mb-3">账号列表</h2>
           <table className="w-full text-sm border-collapse">
             <thead>
-              <tr className="border-b border-border">
-                <th className="text-left py-2">账号</th>
-                <th className="text-left py-2">角色</th>
-                <th className="text-left py-2">会员类型</th>
-                <th className="text-left py-2">操作</th>
+                <tr className="border-b border-border">
+                  <th className="text-left py-2">账号</th>
+                  <th className="text-left py-2">找回邮箱</th>
+                  <th className="text-left py-2">角色</th>
+                  <th className="text-left py-2">会员类型</th>
+                  <th className="text-left py-2">操作</th>
               </tr>
             </thead>
             <tbody>
@@ -367,10 +432,22 @@ export default function AdminAccountsPage() {
                       </div>
                     ) : null}
                   </td>
+                  <td className="py-2 pr-4 text-muted">{m.recoveryEmail || "未设置"}</td>
                   <td className="py-2 pr-4 text-muted">{m.role === "SUPER_ADMIN" ? "主管理员" : m.role === "ADMIN" ? "子管理员" : "会员"}</td>
                   <td className="py-2 pr-4 text-muted">{m.memberType}</td>
                   <td className="py-2 pr-4">
                     <div className="flex gap-3">
+                      <button
+                        className="apple-inline-link"
+                        type="button"
+                        onClick={() => {
+                          const recoveryEmail = prompt("输入找回邮箱（留空表示清空）", m.recoveryEmail || "");
+                          if (recoveryEmail === null) return;
+                          updateMember(m.id, { recoveryEmail });
+                        }}
+                      >
+                        找回邮箱
+                      </button>
                       <button
                         className="apple-inline-link"
                         type="button"

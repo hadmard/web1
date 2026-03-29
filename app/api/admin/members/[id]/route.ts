@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { getSession } from "@/lib/session";
+import { normalizeRecoveryEmail } from "@/lib/password-recovery";
 import { prisma } from "@/lib/prisma";
 import { writeOperationLog } from "@/lib/operation-log";
 import { mergeEffectivePermissionFlags, resolvePermissionFlags } from "@/lib/member-permissions";
@@ -13,6 +14,7 @@ function serializeMember(
   member: {
     id: string;
     email: string;
+    recoveryEmail?: string | null;
     name: string | null;
     role: string | null;
     memberType: string;
@@ -32,6 +34,7 @@ function serializeMember(
   return {
     ...mergeEffectivePermissionFlags(member),
     account: member.email,
+    recoveryEmail: member.recoveryEmail ?? null,
   };
 }
 
@@ -52,6 +55,7 @@ export async function PATCH(
   const {
     name,
     password,
+    recoveryEmail,
     memberType,
     memberTypeExpiresAt,
     rankingWeight,
@@ -69,6 +73,7 @@ export async function PATCH(
   const data: {
     name?: string | null;
     passwordHash?: string;
+    recoveryEmail?: string | null;
     membershipLevel?: string;
     memberType?: string;
     memberTypeExpiresAt?: Date | null;
@@ -87,6 +92,16 @@ export async function PATCH(
   if (typeof name === "string") data.name = name.trim() || null;
   if (typeof password === "string" && password.length > 0) {
     data.passwordHash = await bcrypt.hash(password, 10);
+  }
+  if (recoveryEmail !== undefined) {
+    const safeRecoveryEmail =
+      typeof recoveryEmail === "string" && recoveryEmail.trim()
+        ? normalizeRecoveryEmail(recoveryEmail)
+        : null;
+    if (typeof recoveryEmail === "string" && recoveryEmail.trim() && !safeRecoveryEmail) {
+      return NextResponse.json({ error: "找回邮箱格式不正确" }, { status: 400 });
+    }
+    data.recoveryEmail = safeRecoveryEmail;
   }
   if (
     typeof memberType === "string" &&
@@ -169,6 +184,7 @@ export async function PATCH(
     select: {
       id: true,
       email: true,
+      recoveryEmail: true,
       name: true,
       role: true,
       memberType: true,
@@ -192,7 +208,10 @@ export async function PATCH(
     action: "member_account_update",
     targetType: "member",
     targetId: id,
-    detail: JSON.stringify(data),
+    detail: JSON.stringify({
+      ...data,
+      passwordHash: data.passwordHash ? "[updated]" : undefined,
+    }),
   });
 
   return NextResponse.json(serializeMember(updated));

@@ -611,7 +611,7 @@ export default function AdminContentPage() {
     }
     setExcerpt(nextExcerpt);
     suppressMessageScrollRef.current = true;
-    setMessage("已根据标题与正文提炼摘要，结果更利于搜索抓取与页面概览。");
+    setMessage("已根据正文提炼摘要，结果更利于搜索抓取与页面概览。");
   }
 
   function autoFillEditExcerpt() {
@@ -623,7 +623,7 @@ export default function AdminContentPage() {
     }
     setEditExcerpt(nextExcerpt);
     suppressMessageScrollRef.current = true;
-    setMessage("已根据标题与正文提炼摘要，结果更利于搜索抓取与页面概览。");
+    setMessage("已根据正文提炼摘要，结果更利于搜索抓取与页面概览。");
   }
 
   async function submitPublish(e: FormEvent) {

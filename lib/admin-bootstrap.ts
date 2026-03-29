@@ -1,33 +1,27 @@
-/**
- * 文件说明：该文件封装主管理员账号的运行时引导逻辑。
- * 功能说明：在未额外配置服务器环境变量时，仍可用固定默认主管理员账号完成登录和恢复；若环境变量存在，则优先使用环境变量。
- *
- * 结构概览：
- *   第一部分：默认主管理员配置
- *   第二部分：运行时配置读取
- *   第三部分：主管理员账号引导
- */
-
-import bcrypt from "bcryptjs";
+﻿import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 
-type PrimaryAdminConfig = {
+type SuperAdminConfig = {
   account: string;
   password: string;
   name: string;
 };
 
-// ========== 第一部分：默认主管理员配置 ==========
-
-const DEFAULT_PRIMARY_ADMIN: PrimaryAdminConfig = {
+const DEFAULT_PRIMARY_ADMIN: SuperAdminConfig = {
   account: "yfcccc",
   password: "admin",
-  name: "admin",
+  name: "yfcccc",
 };
 
-// ========== 第二部分：运行时配置读取 ==========
+const LEGACY_SUPER_ADMINS: SuperAdminConfig[] = [
+  {
+    account: "admin",
+    password: "admin",
+    name: "Admin",
+  },
+];
 
-export function getPrimaryAdminConfig(): PrimaryAdminConfig {
+export function getPrimaryAdminConfig(): SuperAdminConfig {
   return {
     account: process.env.ADMIN_ACCOUNT?.trim() || DEFAULT_PRIMARY_ADMIN.account,
     password: process.env.ADMIN_PASSWORD?.trim() || DEFAULT_PRIMARY_ADMIN.password,
@@ -35,11 +29,17 @@ export function getPrimaryAdminConfig(): PrimaryAdminConfig {
   };
 }
 
-// ========== 第三部分：主管理员账号引导 ==========
+function getSupportedSuperAdminConfigs(): SuperAdminConfig[] {
+  const primary = getPrimaryAdminConfig();
+  return [
+    primary,
+    ...LEGACY_SUPER_ADMINS.filter((item) => item.account !== primary.account),
+  ];
+}
 
 export async function ensurePrimaryAdminAccount(account: string) {
-  const config = getPrimaryAdminConfig();
-  if (config.account !== account) return;
+  const config = getSupportedSuperAdminConfigs().find((item) => item.account === account);
+  if (!config) return;
 
   const existing = await prisma.member.findUnique({
     where: { email: config.account },
@@ -93,7 +93,7 @@ export async function ensurePrimaryAdminAccount(account: string) {
   }
 
   const needsUpdate =
-    existing.name !== config.name ||
+    (existing.name?.trim() || "") !== targetData.name ||
     !(await bcrypt.compare(config.password, existing.passwordHash)) ||
     existing.role !== "SUPER_ADMIN" ||
     existing.membershipLevel !== "admin" ||

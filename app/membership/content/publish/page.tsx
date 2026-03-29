@@ -545,7 +545,7 @@ function PublishCenterPageInner() {
     }
     setExcerpt(nextExcerpt);
     suppressMessageScrollRef.current = true;
-    setMessage("已根据标题与正文提炼摘要，结果更利于搜索抓取与页面概览。");
+    setMessage("已根据正文提炼摘要，结果更利于搜索抓取与页面概览。");
   }
 
   function autoFillEditExcerpt() {
@@ -557,7 +557,7 @@ function PublishCenterPageInner() {
     }
     setEditExcerpt(nextExcerpt);
     suppressMessageScrollRef.current = true;
-    setMessage("已根据标题与正文提炼摘要，结果更利于搜索抓取与页面概览。");
+    setMessage("已根据正文提炼摘要，结果更利于搜索抓取与页面概览。");
   }
 
   const resetCategoryMeta = useCallback(() => {
@@ -1001,6 +1001,9 @@ function PublishCenterPageInner() {
             </div>
             <div className="flex flex-wrap gap-3">
               <InlinePageBackLink href="/membership" label="返回会员系统" />
+              <Link href="/membership/account-security" className="apple-inline-link">
+                账号安全
+              </Link>
               <Link href={verificationActionHref} className="apple-inline-link">
                 {verificationActionLabel}
               </Link>

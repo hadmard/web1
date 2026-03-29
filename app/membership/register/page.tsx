@@ -8,6 +8,7 @@ export default function RegisterPage() {
   const router = useRouter();
   const [name, setName] = useState("");
   const [account, setAccount] = useState("");
+  const [recoveryEmail, setRecoveryEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
@@ -33,6 +34,7 @@ export default function RegisterPage() {
         body: JSON.stringify({
           name: name.trim(),
           account: account.trim(),
+          recoveryEmail: recoveryEmail.trim(),
           password,
         }),
       });
@@ -86,6 +88,21 @@ export default function RegisterPage() {
             onChange={(e) => setAccount(e.target.value)}
             required
             placeholder="至少 4 位，仅支持小写字母/数字/._-"
+            className="w-full rounded border border-border bg-surface px-3 py-2 text-primary"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="recoveryEmail" className="mb-1 block text-sm font-medium text-muted">
+            找回邮箱
+          </label>
+          <input
+            id="recoveryEmail"
+            type="email"
+            autoComplete="email"
+            value={recoveryEmail}
+            onChange={(e) => setRecoveryEmail(e.target.value)}
+            placeholder="建议填写常用邮箱，用于重置密码"
             className="w-full rounded border border-border bg-surface px-3 py-2 text-primary"
           />
         </div>

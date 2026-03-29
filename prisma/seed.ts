@@ -8,7 +8,7 @@ function getRequiredEnv(name: string) {
   const defaults: Record<string, string> = {
     ADMIN_ACCOUNT: "yfcccc",
     ADMIN_PASSWORD: "admin",
-    ADMIN_NAME: "admin",
+    ADMIN_NAME: "yfcccc",
   };
   return process.env[name]?.trim() || defaults[name] || "";
 }
