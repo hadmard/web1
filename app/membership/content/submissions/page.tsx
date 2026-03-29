@@ -348,7 +348,7 @@ export default function MemberContentSubmissionsPage() {
       </section>
 
       <section className="overflow-hidden rounded-[28px] border border-border bg-surface-elevated shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
-        <div className="hidden grid-cols-[minmax(0,2.4fr)_1.2fr_0.8fr_1fr_1fr_1.25fr] gap-4 border-b border-border bg-[rgba(255,255,255,0.74)] px-5 py-4 text-xs font-semibold uppercase tracking-[0.12em] text-muted lg:grid">
+        <div className="hidden grid-cols-[minmax(0,2.8fr)_minmax(0,1.2fr)_0.8fr_0.95fr_0.95fr_1.1fr] gap-4 border-b border-border bg-[rgba(255,255,255,0.74)] px-5 py-4 text-xs font-semibold uppercase tracking-[0.12em] text-muted lg:grid">
           <span>标题</span>
           <span>栏目</span>
           <span>状态</span>
@@ -368,14 +368,22 @@ export default function MemberContentSubmissionsPage() {
               const editHref = buildEditHref(item);
               return (
                 <article key={item.id} className="px-5 py-4">
-                  <div className="hidden grid-cols-[minmax(0,2.4fr)_1.2fr_0.8fr_1fr_1fr_1.25fr] items-center gap-4 lg:grid">
+                  <div className="hidden grid-cols-[minmax(0,2.8fr)_minmax(0,1.2fr)_0.8fr_0.95fr_0.95fr_1.1fr] items-start gap-4 lg:grid">
                     <div className="min-w-0">
                       {previewHref ? (
-                        <Link href={previewHref} target="_blank" rel="noreferrer" className="truncate text-sm font-medium text-primary hover:text-accent hover:underline">
+                        <Link
+                          href={previewHref}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="block break-words text-sm font-medium leading-6 text-primary hover:text-accent hover:underline"
+                        >
                           {item.title}
                         </Link>
                       ) : (
-                        <Link href={editHref} className="truncate text-sm font-medium text-primary hover:text-accent hover:underline">
+                        <Link
+                          href={editHref}
+                          className="block break-words text-sm font-medium leading-6 text-primary hover:text-accent hover:underline"
+                        >
                           {item.title}
                         </Link>
                       )}
@@ -384,14 +392,14 @@ export default function MemberContentSubmissionsPage() {
                         {item.isPinned ? <span className="rounded-full border border-accent/40 px-2 py-0.5 text-accent">置顶</span> : null}
                       </div>
                     </div>
-                    <div className="text-sm text-muted">{getCategoryLabel(item.categoryHref, item.subHref)}</div>
+                    <div className="min-w-0 break-words text-sm leading-6 text-muted">{getCategoryLabel(item.categoryHref, item.subHref)}</div>
                     <div>
                       <span className="rounded-full border border-border bg-white/85 px-3 py-1 text-xs text-muted">
                         {STATUS_TEXT[item.status]}
                       </span>
                     </div>
-                    <div className="text-sm text-muted">{formatRecordDate(item.createdAt)}</div>
-                    <div className="text-sm text-muted">{formatRecordDate(item.updatedAt ?? item.createdAt)}</div>
+                    <div className="whitespace-nowrap text-sm text-muted">{formatRecordDate(item.createdAt)}</div>
+                    <div className="whitespace-nowrap text-sm text-muted">{formatRecordDate(item.updatedAt ?? item.createdAt)}</div>
                     <div className="flex flex-wrap gap-2">
                       {previewHref ? (
                         <Link href={previewHref} target="_blank" rel="noreferrer" className="rounded-lg border border-border px-3 py-1.5 text-xs text-primary transition hover:bg-surface">
