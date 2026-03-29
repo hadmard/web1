@@ -142,14 +142,84 @@ export async function GET() {
           >
             <div
               style={{
-                width: 158,
-                height: 158,
-                borderRadius: 999,
+                width: 190,
+                height: 190,
+                borderRadius: 32,
+                overflow: "hidden",
                 border: "1px solid rgba(148,163,184,0.24)",
-                background:
-                  "radial-gradient(circle at 35% 35%, rgba(180,154,107,0.18), transparent 46%), linear-gradient(180deg, #faf7f2 0%, #efe6d7 100%)",
+                background: "linear-gradient(145deg, rgba(247,241,231,1) 0%, rgba(232,222,203,1) 100%)",
+                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.78)",
+                display: "flex",
+                position: "relative",
               }}
-            />
+            >
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  background:
+                    "radial-gradient(circle at 22% 18%, rgba(255,255,255,0.72), transparent 28%), radial-gradient(circle at 78% 28%, rgba(180,154,107,0.24), transparent 26%), linear-gradient(180deg, rgba(248,244,236,0.96), rgba(232,222,203,0.98))",
+                }}
+              />
+              <div
+                style={{
+                  position: "absolute",
+                  left: 18,
+                  right: 18,
+                  bottom: 18,
+                  height: 68,
+                  borderRadius: 22,
+                  background: "rgba(255,255,255,0.78)",
+                  border: "1px solid rgba(148,163,184,0.2)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 24,
+                  fontWeight: 600,
+                  color: "#7a6645",
+                  letterSpacing: "0.12em",
+                }}
+              >
+                木作现场
+              </div>
+              <div
+                style={{
+                  position: "absolute",
+                  left: 24,
+                  top: 30,
+                  width: 88,
+                  height: 88,
+                  borderRadius: 999,
+                  background:
+                    "radial-gradient(circle at 35% 35%, rgba(255,255,255,0.82), rgba(214,195,158,0.96))",
+                  border: "1px solid rgba(138,115,77,0.18)",
+                }}
+              />
+              <div
+                style={{
+                  position: "absolute",
+                  right: 26,
+                  top: 28,
+                  width: 56,
+                  height: 108,
+                  borderRadius: 18,
+                  background:
+                    "linear-gradient(180deg, rgba(150,127,83,0.94), rgba(111,92,57,0.94))",
+                }}
+              />
+              <div
+                style={{
+                  position: "absolute",
+                  right: 92,
+                  top: 54,
+                  width: 54,
+                  height: 70,
+                  borderRadius: 16,
+                  background:
+                    "linear-gradient(180deg, rgba(197,180,146,0.96), rgba(163,142,103,0.94))",
+                }}
+              />
+            </div>
             <div style={{ fontSize: 30, fontWeight: 700, color: "#111827" }}>整木资讯</div>
             <div style={{ fontSize: 22, color: "#475569", textAlign: "center", lineHeight: 1.4 }}>
               分享来自整木网的行业内容与趋势观察

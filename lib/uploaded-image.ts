@@ -40,13 +40,13 @@ export function resolveUploadedImageShareUrl(input: string | null | undefined): 
     return "";
   }
   if (value.startsWith(UPLOAD_PROXY_PREFIX)) {
-    const encodedSrc = value.slice(UPLOAD_PROXY_PREFIX.length);
-    if (!encodedSrc) return value;
-    try {
-      return decodeURIComponent(encodedSrc);
-    } catch {
-      return value;
-    }
+    return value;
+  }
+  if (isLegacyUploadUrl(value)) {
+    return `${UPLOAD_PROXY_PREFIX}${encodeURIComponent(value)}`;
+  }
+  if (value.startsWith(UPLOAD_PREFIX)) {
+    return `${UPLOAD_PROXY_PREFIX}${encodeURIComponent(value)}`;
   }
   if (value.startsWith("http://") || value.startsWith("https://")) {
     return value;
