@@ -578,7 +578,12 @@ export default function AdminContentPage() {
     return (
       tab === "brands"
           ? brandStructuredToSearchText(brandStructured)
-          : tab === "terms" || tab === "standards"
+          : tab === "terms"
+            ? termSections
+                .map((section) => [section.heading.trim(), section.body.trim()].filter(Boolean).join("\n"))
+                .filter(Boolean)
+                .join("\n\n")
+          : tab === "standards"
             ? content
             : tab === "industry-data"
               ? dataStructuredToSearchText(dataStructured)
@@ -592,7 +597,12 @@ export default function AdminContentPage() {
     return (
       tab === "brands"
           ? brandStructuredToSearchText(editBrandStructured)
-          : tab === "terms" || tab === "standards"
+          : tab === "terms"
+            ? editTermSections
+                .map((section) => [section.heading.trim(), section.body.trim()].filter(Boolean).join("\n"))
+                .filter(Boolean)
+                .join("\n\n")
+          : tab === "standards"
             ? editContent
             : tab === "industry-data"
               ? dataStructuredToSearchText(editDataStructured)
@@ -632,7 +642,9 @@ export default function AdminContentPage() {
     const composedContent =
       tab === "brands"
           ? buildBrandStructuredHtml(brandStructured)
-          : tab === "terms" || tab === "standards"
+          : tab === "terms"
+            ? buildTermContentHtml(termSections)
+          : tab === "standards"
             ? content
             : tab === "industry-data"
               ? buildDataStructuredHtml(dataStructured)
@@ -790,7 +802,9 @@ export default function AdminContentPage() {
     const composedEditContent =
       tab === "brands"
           ? buildBrandStructuredHtml(editBrandStructured)
-          : tab === "terms" || tab === "standards"
+          : tab === "terms"
+            ? buildTermContentHtml(editTermSections)
+          : tab === "standards"
             ? editContent
             : tab === "industry-data"
               ? buildDataStructuredHtml(editDataStructured)
@@ -1160,14 +1174,58 @@ export default function AdminContentPage() {
                 )}
               </>
             )}
-            {(tab === "terms" || tab === "standards") && (
+            {tab === "terms" && (
+              <div className="rounded-lg border border-border bg-surface p-3 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <label className="block text-sm text-muted">词条正文</label>
+                  <p className="text-xs text-muted">固定小标题结构</p>
+                </div>
+                {termSections.map((sec, idx) => (
+                  <div key={sec.id} className="rounded-md border border-border bg-surface-elevated p-3 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs text-muted">小节 {idx + 1}</p>
+                      <button
+                        type="button"
+                        onClick={() => removeTermSection(sec.id)}
+                        className="text-xs px-2 py-1 rounded border border-border hover:bg-surface"
+                        disabled={termSections.length <= 1}
+                      >
+                        删除
+                      </button>
+                    </div>
+                    <input
+                      className="w-full border border-border rounded px-3 py-2 bg-surface"
+                      placeholder="小标题"
+                      value={sec.heading}
+                      onChange={(e) => updateTermSection(sec.id, { heading: e.target.value })}
+                    />
+                    <textarea
+                      className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[90px]"
+                      placeholder="解释内容"
+                      value={sec.body}
+                      onChange={(e) => updateTermSection(sec.id, { body: e.target.value })}
+                    />
+                  </div>
+                ))}
+                <div className="flex gap-2">
+                  <button type="button" onClick={addTermSection} className="text-xs px-3 py-2 rounded border border-border hover:bg-surface">
+                    添加小标题
+                  </button>
+                  <button type="button" onClick={() => setTermSections(createDefaultTermSections())} className="text-xs px-3 py-2 rounded border border-border hover:bg-surface">
+                    恢复默认模板
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {tab === "standards" && (
               <>
-                <label className="block text-sm text-muted">{tab === "terms" ? "词条正文" : "标准正文"}</label>
+                <label className="block text-sm text-muted">标准正文</label>
                 <RichEditor
                   value={content}
                   onChange={setContent}
                   minHeight={360}
-                  placeholder={tab === "terms" ? "支持标题、列表、表格、引用、图片的词条正文编辑。" : "支持标题分级、表格、图片和条款结构的标准正文编辑。"}
+                  placeholder="支持标题分级、表格、图片和条款结构的标准正文编辑。"
                   allowClipboardImagePaste
                 />
               </>
@@ -1430,14 +1488,56 @@ export default function AdminContentPage() {
                 )}
               </>
             )}
-            {(tab === "terms" || tab === "standards") ? (
+            {tab === "terms" ? (
+              <div className="rounded-lg border border-border bg-surface p-3 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <label className="block text-sm text-muted">词条正文</label>
+                  <p className="text-xs text-muted">固定小标题结构</p>
+                </div>
+                {editTermSections.map((sec, idx) => (
+                  <div key={sec.id} className="rounded-md border border-border bg-surface-elevated p-3 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs text-muted">小节 {idx + 1}</p>
+                      <button
+                        type="button"
+                        onClick={() => removeEditTermSection(sec.id)}
+                        className="text-xs px-2 py-1 rounded border border-border hover:bg-surface"
+                        disabled={editTermSections.length <= 1}
+                      >
+                        删除
+                      </button>
+                    </div>
+                    <input
+                      className="w-full border border-border rounded px-3 py-2 bg-surface"
+                      placeholder="小标题"
+                      value={sec.heading}
+                      onChange={(e) => updateEditTermSection(sec.id, { heading: e.target.value })}
+                    />
+                    <textarea
+                      className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[90px]"
+                      placeholder="解释内容"
+                      value={sec.body}
+                      onChange={(e) => updateEditTermSection(sec.id, { body: e.target.value })}
+                    />
+                  </div>
+                ))}
+                <div className="flex gap-2">
+                  <button type="button" onClick={addEditTermSection} className="text-xs px-3 py-2 rounded border border-border hover:bg-surface">
+                    添加小标题
+                  </button>
+                  <button type="button" onClick={() => setEditTermSections(createDefaultTermSections())} className="text-xs px-3 py-2 rounded border border-border hover:bg-surface">
+                    恢复默认模板
+                  </button>
+                </div>
+              </div>
+            ) : tab === "standards" ? (
               <>
-                <label className="block text-sm text-muted">{tab === "terms" ? "词条正文" : "标准正文"}</label>
+                <label className="block text-sm text-muted">标准正文</label>
                 <RichEditor
                   value={editContent}
                   onChange={setEditContent}
                   minHeight={360}
-                  placeholder={tab === "terms" ? "支持标题、列表、表格、引用、图片的词条正文编辑。" : "支持标题分级、表格、图片和条款结构的标准正文编辑。"}
+                  placeholder="支持标题分级、表格、图片和条款结构的标准正文编辑。"
                   allowClipboardImagePaste
                 />
               </>

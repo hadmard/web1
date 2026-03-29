@@ -19,6 +19,17 @@ import {
 
 const MEMBER_CONTENT_STATUSES = new Set(["draft", "pending", "approved", "rejected"]);
 
+function isDictionaryPath(input: string | null | undefined) {
+  return typeof input === "string" && input.startsWith("/dictionary");
+}
+
+function isValidTermStructuredContent(input: string) {
+  const sectionCount = (input.match(/<section>/g) ?? []).length;
+  const headingCount = (input.match(/<h3>/g) ?? []).length;
+  const paragraphCount = (input.match(/<p>/g) ?? []).length;
+  return sectionCount > 0 && sectionCount === headingCount && sectionCount === paragraphCount;
+}
+
 function buildTabWhere(tab: string | null) {
   const normalized = (tab || "").trim() as ContentTabKey | "";
   if (!normalized) return null;
@@ -191,6 +202,11 @@ export async function POST(request: NextRequest) {
 
   if (!title || typeof title !== "string") {
     return NextResponse.json({ error: "标题必填" }, { status: 400 });
+  }
+  if (isDictionaryPath(categoryHrefTrim) || isDictionaryPath(normalizedSubHref)) {
+    if (typeof content !== "string" || !isValidTermStructuredContent(content)) {
+      return NextResponse.json({ error: "词库内容必须按固定小标题分节格式提交" }, { status: 400 });
+    }
   }
   const customSlug = typeof slug === "string" ? slug.trim() : "";
   const slugTrim = await generateUniqueArticleSlug(customSlug || title);
