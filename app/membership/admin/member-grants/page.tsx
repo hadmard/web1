@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { InlinePageBackLink } from "@/components/InlinePageBackLink";
 import { MEMBER_PUBLISH_CATEGORY_OPTIONS } from "@/lib/content-taxonomy";
 
@@ -48,6 +48,8 @@ const FEATURE_ITEMS: Array<[string, string]> = [
 export default function AdminMemberGrantsPage() {
   const [members, setMembers] = useState<MemberSummary[]>([]);
   const [selectedId, setSelectedId] = useState("");
+  const [searchDraft, setSearchDraft] = useState("");
+  const [keyword, setKeyword] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
@@ -55,6 +57,10 @@ export default function AdminMemberGrantsPage() {
   const [defaultRule, setDefaultRule] = useState<Rule | null>(null);
   const [savedSnapshot, setSavedSnapshot] = useState("");
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const resultsRef = useRef<HTMLDivElement | null>(null);
+  const editorRef = useRef<HTMLElement | null>(null);
+  const shouldScrollToResultsRef = useRef(false);
+  const shouldScrollToEditorRef = useRef(false);
 
   useEffect(() => {
     (async () => {
@@ -89,8 +95,55 @@ export default function AdminMemberGrantsPage() {
   }, [selectedId]);
 
   const selectedMember = useMemo(() => members.find((item) => item.id === selectedId) ?? null, [members, selectedId]);
+  const filteredMembers = useMemo(() => {
+    const q = keyword.trim().toLowerCase();
+    if (!q) return members;
+    return members.filter((member) => {
+      const haystack = [member.name, member.account, member.memberType, member.role]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [keyword, members]);
   const grantSnapshot = useMemo(() => (grants ? JSON.stringify(grants) : ""), [grants]);
   const hasUnsavedChanges = Boolean(grants) && grantSnapshot !== savedSnapshot;
+
+  useEffect(() => {
+    if (!shouldScrollToResultsRef.current) return;
+    resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    shouldScrollToResultsRef.current = false;
+  }, [filteredMembers.length]);
+
+  useEffect(() => {
+    if (!shouldScrollToEditorRef.current || !grants) return;
+    editorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    shouldScrollToEditorRef.current = false;
+  }, [grants, selectedId]);
+
+  function selectMember(memberId: string) {
+    setSelectedId(memberId);
+    shouldScrollToEditorRef.current = true;
+  }
+
+  function applyMemberSearch(event?: FormEvent) {
+    event?.preventDefault();
+    const nextKeyword = searchDraft.trim();
+    setKeyword(nextKeyword);
+    shouldScrollToResultsRef.current = true;
+    const nextMembers = members.filter((member) => {
+      if (!nextKeyword) return true;
+      const haystack = [member.name, member.account, member.memberType, member.role]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(nextKeyword.toLowerCase());
+    });
+    if (nextMembers[0]?.id) {
+      setSelectedId(nextMembers[0].id);
+      shouldScrollToEditorRef.current = true;
+    }
+  }
 
   async function save() {
     if (!selectedId || !grants) return;
@@ -143,14 +196,75 @@ export default function AdminMemberGrantsPage() {
 
       <section className="grid gap-4 xl:grid-cols-[320px,1fr]">
         <aside className="rounded-2xl border border-border bg-surface-elevated p-4">
+          <form onSubmit={applyMemberSearch} className="mb-4 rounded-xl border border-border bg-surface p-3">
+            <label className="block text-sm">
+              <span className="text-primary">搜索会员</span>
+              <input
+                className="mt-1 w-full rounded-xl border border-border bg-white px-3 py-2 text-sm"
+                value={searchDraft}
+                onChange={(e) => setSearchDraft(e.target.value)}
+                placeholder="输入账号、姓名、角色或会员类型"
+              />
+            </label>
+            <div className="mt-3 flex gap-2">
+              <button type="submit" className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white">
+                搜索
+              </button>
+              {keyword ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setKeyword("");
+                    setSearchDraft("");
+                    if (members[0]?.id) setSelectedId(members[0].id);
+                  }}
+                  className="rounded-lg border border-border bg-white px-4 py-2 text-sm text-primary"
+                >
+                  清空
+                </button>
+              ) : null}
+            </div>
+          </form>
+
+          <div ref={resultsRef} className="mb-4 rounded-xl border border-border bg-surface p-3">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-medium text-primary">搜索结果</p>
+              <span className="text-xs text-muted">{filteredMembers.length} 位会员</span>
+            </div>
+            <div className="mt-3 max-h-64 space-y-2 overflow-y-auto pr-1">
+              {filteredMembers.length > 0 ? (
+                filteredMembers.map((member) => {
+                  const active = member.id === selectedId;
+                  return (
+                    <button
+                      key={member.id}
+                      type="button"
+                      onClick={() => selectMember(member.id)}
+                      className={`block w-full rounded-xl border px-3 py-2 text-left transition ${
+                        active
+                          ? "border-[rgba(180,154,107,0.3)] bg-[rgba(255,249,240,0.92)]"
+                          : "border-border bg-white hover:border-[rgba(180,154,107,0.22)] hover:bg-surface"
+                      }`}
+                    >
+                      <p className="text-sm font-medium text-primary">{member.name?.trim() || member.account}</p>
+                      <p className="mt-1 text-xs text-muted">{member.account} / {member.memberType}</p>
+                    </button>
+                  );
+                })
+              ) : (
+                <p className="text-sm text-muted">没有找到匹配会员，请换个关键词再试。</p>
+              )}
+            </div>
+          </div>
+
           <label className="block text-sm">
             <span className="text-primary">选择会员</span>
             <select
               className="mt-1 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm"
               value={selectedId}
-              onChange={(e) => setSelectedId(e.target.value)}
+              onChange={(e) => selectMember(e.target.value)}
             >
-              {members.map((member) => (
+              {filteredMembers.map((member) => (
                 <option key={member.id} value={member.id}>
                   {(member.name?.trim() || member.account) + " / " + member.memberType}
                 </option>
@@ -168,7 +282,7 @@ export default function AdminMemberGrantsPage() {
           ) : null}
         </aside>
 
-        <section className="space-y-4">
+        <section ref={editorRef} className="space-y-4">
           {grants ? (
             <>
               <article className="rounded-2xl border border-border bg-surface-elevated p-5">
