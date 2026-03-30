@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type MemberRow = {
   id: string;
@@ -50,6 +50,8 @@ export default function AdminAccountsPage() {
   const [newRole, setNewRole] = useState<"ADMIN" | "MEMBER">("MEMBER");
   const [searchDraft, setSearchDraft] = useState("");
   const [keyword, setKeyword] = useState("");
+  const resultsRef = useRef<HTMLElement | null>(null);
+  const shouldScrollToResultsRef = useRef(false);
 
   const isSuperAdmin = role === "SUPER_ADMIN";
   const isAdmin = role === "ADMIN";
@@ -88,6 +90,12 @@ export default function AdminAccountsPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (loading || !shouldScrollToResultsRef.current) return;
+    resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    shouldScrollToResultsRef.current = false;
+  }, [loading, members.length, visibleRows.length]);
 
   const sortedMembers = useMemo(
     () => [...members].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
@@ -253,6 +261,7 @@ export default function AdminAccountsPage() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
+            shouldScrollToResultsRef.current = true;
             setKeyword(searchDraft.trim());
           }}
           className="flex flex-col gap-3 md:flex-row md:items-end"
@@ -351,7 +360,7 @@ export default function AdminAccountsPage() {
       </section>
 
       {isAdmin && !canManageMembers && (
-        <section className="rounded-xl border border-border bg-surface-elevated p-4">
+        <section ref={resultsRef} className="rounded-xl border border-border bg-surface-elevated p-4">
           <h2 className="text-sm font-medium text-primary mb-3">可见账号</h2>
           {visibleRows.length === 0 ? (
             <p className="text-sm text-muted">暂无可见账号</p>
@@ -413,7 +422,7 @@ export default function AdminAccountsPage() {
       )}
 
       {isSuperAdmin && (
-        <section className="rounded-xl border border-border bg-surface-elevated p-4 overflow-x-auto">
+        <section ref={resultsRef} className="rounded-xl border border-border bg-surface-elevated p-4 overflow-x-auto">
           <h2 className="text-sm font-medium text-primary mb-3">账号列表</h2>
           <table className="w-full text-sm border-collapse">
             <thead>
