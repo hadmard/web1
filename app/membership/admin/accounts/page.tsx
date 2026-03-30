@@ -143,6 +143,20 @@ export default function AdminAccountsPage() {
     setMessage("已更新");
   }
 
+  async function renameMemberAccount(member: MemberRow) {
+    const nextAccount = prompt(
+      "输入新的登录账号\n仅支持小写字母、数字、点、下划线和短横线",
+      member.account || ""
+    );
+    if (nextAccount === null) return;
+    const trimmed = nextAccount.trim().toLowerCase();
+    if (!trimmed) {
+      setMessage("账号不能为空");
+      return;
+    }
+    await updateMember(member.id, { account: trimmed });
+  }
+
   async function removeMember(id: string) {
     if (!confirm("确认删除该账号？")) return;
     const res = await fetch(`/api/admin/members/${id}`, { method: "DELETE", credentials: "include" });
@@ -416,18 +430,20 @@ export default function AdminAccountsPage() {
                 <tr key={m.id} className="border-b border-border last:border-0">
                   <td className="py-2 pr-4">
                     <div>
-                      {m.enterprise?.id ? (
-                        <Link href={`/enterprise/${m.enterprise.id}`} className="text-primary hover:text-accent hover:underline">
-                          {m.account}
-                        </Link>
-                      ) : (
-                        <span className="text-primary">{m.account}</span>
-                      )}
+                      <Link href={`/membership/admin/accounts/${m.id}`} className="text-primary hover:text-accent hover:underline">
+                        {m.account}
+                      </Link>
                     </div>
                     <div className="text-xs text-muted">{m.name || "未命名"}</div>
                     {m.enterprise ? (
                       <div className="text-xs text-muted">
-                        {m.enterprise.companyShortName || m.enterprise.companyName || "未绑定企业"}
+                        {m.enterprise?.id ? (
+                          <Link href={`/enterprise/${m.enterprise.id}`} className="hover:text-accent hover:underline">
+                            {m.enterprise.companyShortName || m.enterprise.companyName || "未绑定企业"}
+                          </Link>
+                        ) : (
+                          <span>{m.enterprise.companyShortName || m.enterprise.companyName || "未绑定企业"}</span>
+                        )}
                         {m.enterprise.brand?.name ? ` / ${m.enterprise.brand.name}` : ""}
                       </div>
                     ) : null}
@@ -437,6 +453,13 @@ export default function AdminAccountsPage() {
                   <td className="py-2 pr-4 text-muted">{m.memberType}</td>
                   <td className="py-2 pr-4">
                     <div className="flex gap-3">
+                      <button
+                        className="apple-inline-link"
+                        type="button"
+                        onClick={() => renameMemberAccount(m)}
+                      >
+                        修改账号
+                      </button>
                       <button
                         className="apple-inline-link"
                         type="button"

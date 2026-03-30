@@ -17,7 +17,12 @@ import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-type Props = { params: Promise<{ id: string }> };
+type Props = {
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<{ newsPage?: string }>;
+};
+
+const ENTERPRISE_NEWS_PAGE_SIZE = 9;
 
 type NewsCard = {
   id: string;
@@ -260,8 +265,10 @@ export async function generateMetadata({ params }: Props) {
   };
 }
 
-export default async function EnterprisePage({ params }: Props) {
+export default async function EnterprisePage({ params, searchParams }: Props) {
   const { id } = await params;
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const currentNewsPage = Math.max(1, parseInt(resolvedSearchParams?.newsPage ?? "1", 10) || 1);
 
   const ent = await prisma.enterprise.findUnique({
     where: { id },
@@ -278,13 +285,10 @@ export default async function EnterprisePage({ params }: Props) {
   if (!ent?.member) notFound();
 
   const memberId = ent.member.id;
-  const [siteSettings, ownArticles, ownGallery, platformArticles, platformGallery] = await Promise.all([
+  const [siteSettings, ownArticleCount, ownGallery, platformArticles, platformGallery] = await Promise.all([
     getMemberSiteSettings(memberId),
-    prisma.article.findMany({
+    prisma.article.count({
       where: { authorMemberId: memberId, status: "approved" },
-      orderBy: articleOrderByPinnedLatest,
-      take: 6,
-      select: { id: true, title: true, slug: true, excerpt: true, createdAt: true, publishedAt: true },
     }),
     prisma.galleryImage.findMany({
       where: { authorMemberId: memberId, status: "approved" },
@@ -305,6 +309,15 @@ export default async function EnterprisePage({ params }: Props) {
       select: { id: true, title: true, imageUrl: true, category: true, createdAt: true },
     }),
   ]);
+  const totalNewsPages = Math.max(1, Math.ceil(ownArticleCount / ENTERPRISE_NEWS_PAGE_SIZE));
+  const normalizedNewsPage = Math.min(currentNewsPage, totalNewsPages);
+  const ownArticles = await prisma.article.findMany({
+    where: { authorMemberId: memberId, status: "approved" },
+    orderBy: articleOrderByPinnedLatest,
+    skip: (normalizedNewsPage - 1) * ENTERPRISE_NEWS_PAGE_SIZE,
+    take: ENTERPRISE_NEWS_PAGE_SIZE,
+    select: { id: true, title: true, slug: true, excerpt: true, createdAt: true, publishedAt: true },
+  });
 
   const name = ent.companyShortName || ent.companyName || ent.member.name || "企业";
   const introRichText = ent.intro || "";
@@ -340,11 +353,13 @@ export default async function EnterprisePage({ params }: Props) {
   }));
 
   const newsCards =
-    enterpriseNewsCards.length >= 3
-      ? enterpriseNewsCards.slice(0, 3)
+    ownArticleCount > 0
+      ? enterpriseNewsCards
       : enterpriseNewsCards.length > 0
         ? [...enterpriseNewsCards, ...platformNewsCards].slice(0, 3)
         : [...generatedNews, ...platformNewsCards].slice(0, 3);
+  const newsRangeStart = ownArticleCount > 0 ? (normalizedNewsPage - 1) * ENTERPRISE_NEWS_PAGE_SIZE + 1 : 0;
+  const newsRangeEnd = ownArticleCount > 0 ? Math.min(normalizedNewsPage * ENTERPRISE_NEWS_PAGE_SIZE, ownArticleCount) : 0;
 
   const ownGalleryCards: GalleryCard[] = ownGallery.map((image) => ({
     id: image.id,
@@ -483,12 +498,31 @@ export default async function EnterprisePage({ params }: Props) {
             </div>
           </Section>
 
-          <Section title="企业动态">
-            <div className="grid gap-4 lg:grid-cols-3">
+          <Section
+            id="enterprise-news"
+            title="企业动态"
+            eyebrow={ownArticleCount > 0 ? `共 ${ownArticleCount} 条动态` : "优先展示企业发布内容"}
+            description={
+              ownArticleCount > 0
+                ? `按时间倒序展示企业全部已发布内容，当前为第 ${normalizedNewsPage} 页。`
+                : "当前企业尚未发布动态，先展示平台精选与默认内容占位。"
+            }
+            aside={
+              ownArticleCount > 0 ? (
+                <div className="rounded-full border border-[rgba(181,157,121,0.18)] bg-white/76 px-4 py-2 text-xs tracking-[0.08em] text-[#8f7452]">
+                  {newsRangeStart}-{newsRangeEnd} / {ownArticleCount}
+                </div>
+              ) : null
+            }
+          >
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {newsCards.map((item) => (
                 <NewsItemCard key={item.id} item={item} />
               ))}
             </div>
+            {ownArticleCount > ENTERPRISE_NEWS_PAGE_SIZE ? (
+              <EnterpriseNewsPagination enterpriseId={id} currentPage={normalizedNewsPage} totalPages={totalNewsPages} />
+            ) : null}
           </Section>
 
           <section id="contact-panel">
@@ -576,17 +610,26 @@ function Section({
   title,
   children,
   id,
+  eyebrow,
+  description,
+  aside,
 }: {
   title: string;
   children: React.ReactNode;
   id?: string;
+  eyebrow?: string;
+  description?: string;
+  aside?: React.ReactNode;
 }) {
   return (
     <section id={id}>
       <div className="mb-7 flex items-end justify-between gap-4">
         <div>
+          {eyebrow ? <p className="text-[11px] uppercase tracking-[0.24em] text-[#9f7a46]">{eyebrow}</p> : null}
           <h2 className="mt-3 font-serif text-3xl text-[#241c15] sm:text-4xl">{title}</h2>
+          {description ? <p className="mt-3 max-w-2xl text-sm leading-7 text-[#6a5949]">{description}</p> : null}
         </div>
+        {aside}
       </div>
       {children}
     </section>
@@ -660,4 +703,87 @@ function NewsItemCard({
       <div className="mt-5 text-sm font-medium text-[#a47b45] transition group-hover:translate-x-0.5">继续阅读</div>
     </Link>
   );
+}
+
+function EnterpriseNewsPagination({
+  enterpriseId,
+  currentPage,
+  totalPages,
+}: {
+  enterpriseId: string;
+  currentPage: number;
+  totalPages: number;
+}) {
+  const pages = buildPageList(currentPage, totalPages);
+
+  return (
+    <div className="mt-8 flex flex-col items-center gap-4">
+      <div className="text-sm text-[#7f6b57]">第 {currentPage} / {totalPages} 页</div>
+      <div className="flex flex-wrap items-center justify-center gap-2">
+        <PaginationLink href={buildEnterpriseNewsPageHref(enterpriseId, Math.max(1, currentPage - 1))} disabled={currentPage <= 1}>
+          上一页
+        </PaginationLink>
+        {pages.map((page, index) =>
+          page === "ellipsis" ? (
+            <span key={`ellipsis-${index}`} className="px-2 text-sm text-[#9a866f]">
+              ...
+            </span>
+          ) : (
+            <PaginationLink key={page} href={buildEnterpriseNewsPageHref(enterpriseId, page)} active={page === currentPage}>
+              {page}
+            </PaginationLink>
+          )
+        )}
+        <PaginationLink href={buildEnterpriseNewsPageHref(enterpriseId, Math.min(totalPages, currentPage + 1))} disabled={currentPage >= totalPages}>
+          下一页
+        </PaginationLink>
+      </div>
+    </div>
+  );
+}
+
+function PaginationLink({
+  href,
+  children,
+  active = false,
+  disabled = false,
+}: {
+  href: string;
+  children: React.ReactNode;
+  active?: boolean;
+  disabled?: boolean;
+}) {
+  const className = active
+    ? "inline-flex min-w-10 items-center justify-center rounded-full border border-[#b9905f] bg-[#c79a62] px-4 py-2 text-sm font-medium text-white shadow-[0_12px_24px_rgba(167,120,69,0.18)]"
+    : "inline-flex min-w-10 items-center justify-center rounded-full border border-[rgba(181,157,121,0.2)] bg-white/84 px-4 py-2 text-sm font-medium text-[#5b4a3b] transition hover:border-[rgba(167,120,69,0.32)] hover:text-[#a47b45]";
+
+  if (disabled) {
+    return <span className={`${className} cursor-not-allowed opacity-45`}>{children}</span>;
+  }
+
+  return (
+    <Link href={href} className={className} scroll>
+      {children}
+    </Link>
+  );
+}
+
+function buildEnterpriseNewsPageHref(id: string, page: number) {
+  return page <= 1 ? `/enterprise/${id}#enterprise-news` : `/enterprise/${id}?newsPage=${page}#enterprise-news`;
+}
+
+function buildPageList(currentPage: number, totalPages: number): Array<number | "ellipsis"> {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+
+  if (currentPage <= 4) {
+    return [1, 2, 3, 4, 5, "ellipsis", totalPages];
+  }
+
+  if (currentPage >= totalPages - 3) {
+    return [1, "ellipsis", totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+  }
+
+  return [1, "ellipsis", currentPage - 1, currentPage, currentPage + 1, "ellipsis", totalPages];
 }

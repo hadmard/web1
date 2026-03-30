@@ -10,6 +10,10 @@ function isSuperAdmin(session: { role: string | null } | null) {
   return session?.role === "SUPER_ADMIN";
 }
 
+function normalizeAccount(value: string) {
+  return value.trim().toLowerCase();
+}
+
 function serializeMember(
   member: {
     id: string;
@@ -53,6 +57,8 @@ export async function PATCH(
 
   const body = await request.json().catch(() => ({}));
   const {
+    account,
+    email,
     name,
     password,
     recoveryEmail,
@@ -71,6 +77,7 @@ export async function PATCH(
   } = body;
 
   const data: {
+    email?: string;
     name?: string | null;
     passwordHash?: string;
     recoveryEmail?: string | null;
@@ -89,6 +96,30 @@ export async function PATCH(
     canEditAllContent?: boolean;
   } = {};
 
+  const accountValue = typeof account === "string" ? account : typeof email === "string" ? email : "";
+  if (typeof accountValue === "string" && accountValue.trim()) {
+    const normalizedAccount = normalizeAccount(accountValue);
+    if (normalizedAccount.length < 4) {
+      return NextResponse.json({ error: "账号至少 4 位" }, { status: 400 });
+    }
+    if (!/^[a-z0-9._-]+$/.test(normalizedAccount)) {
+      return NextResponse.json({ error: "账号仅支持小写字母、数字、点、下划线和短横线" }, { status: 400 });
+    }
+    const existing = await prisma.member.findFirst({
+      where: {
+        email: normalizedAccount,
+        id: { not: id },
+      },
+      select: { id: true },
+    });
+    if (existing) {
+      return NextResponse.json({ error: "该账号已存在" }, { status: 400 });
+    }
+    if (id === session.sub && normalizedAccount !== member.email) {
+      return NextResponse.json({ error: "不能修改当前登录主管理员账号" }, { status: 400 });
+    }
+    data.email = normalizedAccount;
+  }
   if (typeof name === "string") data.name = name.trim() || null;
   if (typeof password === "string" && password.length > 0) {
     data.passwordHash = await bcrypt.hash(password, 10);
@@ -210,6 +241,7 @@ export async function PATCH(
     targetId: id,
     detail: JSON.stringify({
       ...data,
+      email: data.email ?? undefined,
       passwordHash: data.passwordHash ? "[updated]" : undefined,
     }),
   });
