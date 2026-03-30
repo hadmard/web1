@@ -129,7 +129,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       region: displayRegion,
       area: displayArea,
       summary: normalizePlainTextField(summarySource) ?? "",
-      detailHref: brand.enterprise ? `/enterprise/${brand.enterprise.id}` : `/brands/${brand.slug}`,
+      detailHref: `/brands/${brand.slug}`,
     },
     qualityFlags: getBrandQualityFlags({
       brandLogoUrl: brand.logoUrl,

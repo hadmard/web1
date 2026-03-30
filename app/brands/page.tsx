@@ -67,7 +67,7 @@ export default async function BrandsPage() {
               <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
                 <div className="max-w-2xl">
                   <p className="text-xs uppercase tracking-[0.28em] text-[#9d7e4d]">Featured Brand</p>
-                  <Link href={lead.enterprise ? `/enterprise/${lead.enterprise.id}` : `/brands/${lead.slug}`} className="mt-3 inline-block font-serif text-3xl leading-tight text-primary transition hover:text-accent sm:text-[2.4rem]">
+                  <Link href={`/brands/${lead.slug}`} className="mt-3 inline-block font-serif text-3xl leading-tight text-primary transition hover:text-accent sm:text-[2.4rem]">
                     {lead.enterpriseName}
                   </Link>
                   <p className="mt-4 text-base leading-8 text-primary/88">{lead.headline}</p>
@@ -102,7 +102,7 @@ export default async function BrandsPage() {
                     <span className="rounded-full border border-[rgba(181,157,121,0.2)] bg-white px-4 py-2 text-accent">{lead.contactLabel}</span>
                   )}
                   <Link
-                    href={lead.enterprise ? `/enterprise/${lead.enterprise.id}` : `/brands/${lead.slug}`}
+                    href={`/brands/${lead.slug}`}
                     className="rounded-full border border-[rgba(181,157,121,0.2)] bg-white px-4 py-2 text-primary transition hover:bg-[rgba(255,249,238,0.92)]"
                   >
                     查看详情
@@ -113,7 +113,7 @@ export default async function BrandsPage() {
 
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
               {rest.map((item) => {
-                const href = item.enterprise ? `/enterprise/${item.enterprise.id}` : `/brands/${item.slug}`;
+                const href = `/brands/${item.slug}`;
                 return (
                   <Link key={item.id} href={href} className="group rounded-[28px] border border-[rgba(181,157,121,0.16)] bg-white/94 p-5 shadow-[0_16px_40px_rgba(15,23,42,0.05)] transition hover:-translate-y-1 hover:shadow-[0_22px_54px_rgba(15,23,42,0.08)]">
                     <div className="flex items-start gap-4">
@@ -151,7 +151,7 @@ export default async function BrandsPage() {
           ) : (
             <div className="mt-6 grid gap-4 lg:grid-cols-2">
               {brands.map((item) => {
-                const href = item.enterprise ? `/enterprise/${item.enterprise.id}` : `/brands/${item.slug}`;
+                const href = `/brands/${item.slug}`;
                 return (
                   <Link key={item.id} href={href} className="group block rounded-[28px] border border-[rgba(181,157,121,0.16)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(250,247,242,0.92))] p-5 shadow-[0_14px_34px_rgba(15,23,42,0.05)] transition hover:-translate-y-1 hover:border-[rgba(181,157,121,0.3)] hover:shadow-[0_22px_54px_rgba(15,23,42,0.08)]">
                     <div className="flex items-start gap-4">

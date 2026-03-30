@@ -101,6 +101,46 @@ type BrandRecord = {
   } | null;
 };
 
+type NormalizedBrand = ReturnType<typeof normalizeBrand>;
+
+function brandDedupKey(record: Pick<BrandRecord, "slug" | "enterprise">) {
+  return record.enterprise?.id ? `enterprise:${record.enterprise.id}` : `slug:${record.slug}`;
+}
+
+function brandCompletenessScore(record: BrandRecord) {
+  let score = 0;
+  if (record.enterprise) score += 100;
+  if (record.enterprise?.logoUrl || record.logoUrl) score += 20;
+  if (record.enterprise?.positioning || record.enterprise?.intro || record.tagline || record.positioning) score += 20;
+  if (record.enterprise?.contactPhone || record.enterprise?.website || record.enterprise?.contactInfo) score += 10;
+  if (record.enterprise?.productSystem || record.enterprise?.craftLevel) score += 8;
+  if (record.isBrandVisible) score += 6;
+  if (record.isRecommend) score += 4;
+  score += Math.max(0, record.sortOrder);
+  score += Math.max(0, record.rankingWeight);
+  return score;
+}
+
+function compareBrandRecords(a: BrandRecord, b: BrandRecord) {
+  const scoreDiff = brandCompletenessScore(b) - brandCompletenessScore(a);
+  if (scoreDiff !== 0) return scoreDiff;
+  const updatedDiff = b.updatedAt.getTime() - a.updatedAt.getTime();
+  if (updatedDiff !== 0) return updatedDiff;
+  return b.createdAt.getTime() - a.createdAt.getTime();
+}
+
+function dedupeBrandRecords(rows: BrandRecord[]) {
+  const bestByKey = new Map<string, BrandRecord>();
+  for (const row of rows) {
+    const key = brandDedupKey(row);
+    const current = bestByKey.get(key);
+    if (!current || compareBrandRecords(row, current) < 0) {
+      bestByKey.set(key, row);
+    }
+  }
+  return Array.from(bestByKey.values()).sort(compareBrandRecords);
+}
+
 function buildBrandWhere(filters: BrandDirectoryFilters = {}) {
   const q = filters.q?.trim();
   const region = filters.region?.trim();
@@ -241,11 +281,10 @@ export async function getBrandDirectoryList(limit = 10) {
   const rows = await prisma.brand.findMany({
     where: { isBrandVisible: true },
     orderBy: [{ isRecommend: "desc" }, { sortOrder: "desc" }, { rankingWeight: "desc" }, { updatedAt: "desc" }],
-    take: limit,
     select: brandCardSelect,
   });
 
-  return rows.map(normalizeBrand);
+  return dedupeBrandRecords(rows).slice(0, limit).map(normalizeBrand);
 }
 
 export async function getBrandDirectory(filters: BrandDirectoryFilters = {}) {
@@ -253,31 +292,32 @@ export async function getBrandDirectory(filters: BrandDirectoryFilters = {}) {
   const page = Math.max(1, filters.page ?? 1);
   const where = buildBrandWhere(filters);
 
-  const [recommendedRows, total, rows] = await Promise.all([
+  const [recommendedRows, rows] = await Promise.all([
     prisma.brand.findMany({
       where: buildBrandWhere({ ...filters, onlyRecommended: true }),
       orderBy: [{ sortOrder: "desc" }, { rankingWeight: "desc" }, { updatedAt: "desc" }],
-      take: 6,
       select: brandCardSelect,
     }),
-    prisma.brand.count({ where }),
     prisma.brand.findMany({
       where,
       orderBy: [{ isRecommend: "desc" }, { sortOrder: "desc" }, { rankingWeight: "desc" }, { updatedAt: "desc" }],
-      skip: (page - 1) * pageSize,
-      take: pageSize,
       select: brandCardSelect,
     }),
   ]);
 
-  const recommended = recommendedRows.map(normalizeBrand);
-  const items = rows.map(normalizeBrand);
+  const dedupedRecommended = dedupeBrandRecords(recommendedRows).slice(0, 6);
+  const dedupedRows = dedupeBrandRecords(rows);
+  const total = dedupedRows.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const pageRows = dedupedRows.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const recommended = dedupedRecommended.map(normalizeBrand);
+  const items = pageRows.map(normalizeBrand);
 
   return {
     total,
     totalPages,
-    page: Math.min(page, totalPages),
+    page: safePage,
     pageSize,
     recommended,
     items,

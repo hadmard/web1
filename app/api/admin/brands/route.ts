@@ -216,7 +216,7 @@ export async function GET(request: NextRequest) {
         region: displayRegion,
         area: displayArea,
         summary: toSummaryText(summarySource, 120),
-        detailHref: item.enterprise ? `/enterprise/${item.enterprise.id}` : `/brands/${item.slug}`,
+        detailHref: `/brands/${item.slug}`,
       },
       qualityFlags: getBrandQualityFlags({
         brandLogoUrl: item.logoUrl,

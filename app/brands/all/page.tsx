@@ -127,7 +127,7 @@ export default async function BrandsAllPage({ searchParams }: Props) {
               <div className="max-w-2xl">
                 <p className="text-xs uppercase tracking-[0.3em] text-[#9d7e4d]">Featured Brand</p>
                 <Link
-                  href={featured.enterprise ? `/enterprise/${featured.enterprise.id}` : `/brands/${featured.slug}`}
+                  href={`/brands/${featured.slug}`}
                   className="mt-4 inline-block font-serif text-3xl leading-tight text-primary transition hover:text-accent sm:text-[2.35rem]"
                 >
                   {featured.enterpriseName}
@@ -164,7 +164,7 @@ export default async function BrandsAllPage({ searchParams }: Props) {
                   <span className="rounded-full border border-[rgba(181,157,121,0.2)] bg-white px-4 py-2 text-accent">{featured.contactLabel}</span>
                 )}
                 <Link
-                  href={featured.enterprise ? `/enterprise/${featured.enterprise.id}` : `/brands/${featured.slug}`}
+                  href={`/brands/${featured.slug}`}
                   className="rounded-full border border-[rgba(181,157,121,0.2)] bg-white px-4 py-2 text-primary transition hover:bg-[rgba(255,249,238,0.92)]"
                 >
                   查看详情
@@ -175,7 +175,7 @@ export default async function BrandsAllPage({ searchParams }: Props) {
 
           <div className="grid gap-4">
             {featuredAside.map((item) => {
-              const href = item.enterprise ? `/enterprise/${item.enterprise.id}` : `/brands/${item.slug}`;
+              const href = `/brands/${item.slug}`;
               return (
                 <Link key={`featured-${item.id}`} href={href} className="group rounded-[28px] border border-[rgba(181,157,121,0.16)] bg-white/92 p-5 shadow-[0_16px_40px_rgba(15,23,42,0.05)] transition hover:-translate-y-1 hover:shadow-[0_22px_54px_rgba(15,23,42,0.08)]">
                   <div className="flex items-start gap-4">
@@ -213,7 +213,7 @@ export default async function BrandsAllPage({ searchParams }: Props) {
         ) : (
           <div className="grid gap-4 lg:grid-cols-2">
             {items.map((item) => {
-              const href = item.enterprise ? `/enterprise/${item.enterprise.id}` : `/brands/${item.slug}`;
+              const href = `/brands/${item.slug}`;
               const updated = item.updatedAt.toLocaleDateString("zh-CN");
               return (
                 <Link key={item.id} href={href} className="group block rounded-[30px] border border-[rgba(181,157,121,0.16)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(250,247,242,0.92))] p-5 shadow-[0_16px_40px_rgba(15,23,42,0.05)] transition hover:-translate-y-1 hover:border-[rgba(181,157,121,0.3)] hover:shadow-[0_22px_54px_rgba(15,23,42,0.08)] sm:p-6">

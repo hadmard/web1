@@ -1,12 +1,18 @@
 ﻿import Link from "next/link";
-import { notFound, permanentRedirect, redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { buildPageMetadata } from "@/lib/seo";
 import { RichContent } from "@/components/RichContent";
+import { EntityArticleList } from "@/components/entity-profile/EntityArticleList";
+import { EntityContactCard } from "@/components/entity-profile/EntityContactCard";
+import { EntityHero } from "@/components/entity-profile/EntityHero";
+import { EntityRelationCard } from "@/components/entity-profile/EntityRelationCard";
+import { EntitySummary } from "@/components/entity-profile/EntitySummary";
+import { ProfilePageTemplate } from "@/components/entity-profile/ProfilePageTemplate";
 import { getBrandDirectoryBySlug } from "@/lib/brand-directory";
-import { parseBrandStructuredHtml } from "@/lib/brand-structured";
-import { previewText } from "@/lib/text";
+import { articleOrderByPinnedLatest } from "@/lib/articles";
+import { mapEntityArticlesToListItems, mapEntityGalleryToListItems } from "@/lib/entity-profile-content";
 import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
 
 export const dynamic = "force-dynamic";
@@ -68,59 +74,6 @@ async function findBrandBySegment(segment: string) {
   return getBrandDirectoryBySlug(s);
 }
 
-async function findEnterpriseBySegment(segment: string) {
-  const s = normalizeSegment(segment);
-  if (!s) return null;
-
-  return prisma.enterprise.findFirst({
-    where: {
-      OR: [
-        { companyShortName: { equals: s, mode: "insensitive" } },
-        { companyName: { equals: s, mode: "insensitive" } },
-      ],
-    },
-    select: {
-      id: true,
-      companyName: true,
-      companyShortName: true,
-    },
-  });
-}
-
-async function findBrandArticleBySegment(segment: string) {
-  const s = normalizeSegment(segment);
-  if (!s) return null;
-
-  return prisma.article.findFirst({
-    where: {
-      status: "approved",
-      OR: [{ categoryHref: { startsWith: "/brands/brand" } }, { subHref: { startsWith: "/brands/brand" } }],
-      AND: [
-        {
-          OR: [
-            { slug: { equals: s, mode: "insensitive" } },
-            { title: { equals: s, mode: "insensitive" } },
-          ],
-        },
-      ],
-    },
-    select: {
-      id: true,
-      title: true,
-      slug: true,
-      excerpt: true,
-      content: true,
-      coverImage: true,
-      source: true,
-      sourceUrl: true,
-      displayAuthor: true,
-      tagSlugs: true,
-      publishedAt: true,
-      updatedAt: true,
-    },
-  });
-}
-
 async function getMarketFaqState() {
   const category = await prisma.category.findFirst({
     where: { href: "/brands" },
@@ -173,30 +126,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: `${brand.enterpriseName} | 中华整木网 · ${MARKET_TITLE}`,
       description: brand.summary,
       path: `/brands/${brand.slug}`,
+      image: brand.logoUrl ? resolveUploadedImageUrl(brand.logoUrl) : undefined,
+      imageAlt: brand.enterpriseName,
     });
   }
-
-  const enterprise = await findEnterpriseBySegment(segment);
-  if (enterprise) {
-    const enterpriseName = enterprise.companyShortName || enterprise.companyName || "企业";
-    return buildPageMetadata({
-      title: `${enterpriseName} | 中华整木网 · ${MARKET_TITLE}`,
-      description: "该品牌已关联企业资料，可查看企业详情、联系方式和展示内容。",
-      path: `/enterprise/${enterprise.id}`,
-    });
-  }
-
-  const article = await findBrandArticleBySegment(segment);
-  if (!article) return { title: "品牌内容" };
-
-  return buildPageMetadata({
-    title: `${article.title} | 中华整木网 · ${MARKET_TITLE}`,
-    description: previewText(article.excerpt ?? article.content, 160),
-    path: `/brands/${article.slug}`,
-    type: "article",
-    image: article.coverImage ? resolveUploadedImageUrl(article.coverImage) : undefined,
-    imageAlt: article.title,
-  });
+  return { title: "品牌内容" };
 }
 
 export default async function BrandDetailPage({ params }: Props) {
@@ -246,126 +180,157 @@ export default async function BrandDetailPage({ params }: Props) {
   }
 
   const brand = await findBrandBySegment(segment);
-  if (brand?.enterprise) {
-    redirect(`/enterprise/${brand.enterprise.id}`);
-  }
-  if (brand) {
-    notFound();
-  }
+  if (!brand) notFound();
 
-  const enterprise = await findEnterpriseBySegment(segment);
-  if (enterprise) {
-    redirect(`/enterprise/${enterprise.id}`);
-  }
+  const relatedMemberId = brand.enterprise?.memberId ?? null;
+  const [relatedArticles, relatedGallery] = relatedMemberId
+    ? await Promise.all([
+        prisma.article.findMany({
+          where: {
+            status: "approved",
+            OR: [{ authorMemberId: relatedMemberId }, { relatedBrandIds: { contains: brand.id } }],
+          },
+          orderBy: articleOrderByPinnedLatest,
+          take: 4,
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            excerpt: true,
+            categoryHref: true,
+            subHref: true,
+            publishedAt: true,
+            createdAt: true,
+          },
+        }),
+        prisma.galleryImage.findMany({
+          where: { authorMemberId: relatedMemberId, status: "approved" },
+          orderBy: [{ sortOrder: "desc" }, { createdAt: "desc" }],
+          take: 2,
+          select: {
+            id: true,
+            title: true,
+            category: true,
+            imageUrl: true,
+            createdAt: true,
+          },
+        }),
+      ])
+    : [[], []];
 
-  const article = await findBrandArticleBySegment(segment);
-  if (!article) notFound();
+  const contactItems = [
+    brand.contactPhone ? { label: "联系电话", value: brand.contactPhone, href: brand.contactHref } : null,
+    brand.website ? { label: "品牌官网", value: brand.website, href: brand.website } : null,
+    brand.contactInfo ? { label: "联系说明", value: brand.contactInfo } : null,
+  ].filter(Boolean) as Array<{ label: string; value: string; href?: string | null }>;
 
-  if (segment !== article.slug) {
-    permanentRedirect(`/brands/${encodeURIComponent(article.slug)}`);
-  }
+  const relationItems = [
+    { label: "品牌名称", value: brand.enterpriseName },
+    { label: "服务区域", value: brand.locationLabel },
+    { label: "主营方向", value: brand.serviceLine },
+    { label: "联系动作", value: brand.contactLabel },
+  ];
+  const enterpriseRelationItems = brand.enterprise
+    ? [
+        {
+          label: "所属企业",
+          value: brand.enterprise.companyShortName || brand.enterprise.companyName || brand.enterpriseName,
+          href: `/enterprise/${brand.enterprise.id}`,
+        },
+        {
+          label: "会员类型",
+          value: brand.memberType,
+        },
+      ]
+    : [
+        {
+          label: "所属企业",
+          value: "当前未绑定企业主体",
+        },
+        {
+          label: "展示模式",
+          value: "品牌独立展示",
+        },
+      ];
 
-  const structured = parseBrandStructuredHtml(article.content);
-  const keywords = Array.from(
-    new Set(
-      [article.title, ...(article.tagSlugs || "").split(",")]
-        .map((item) => item.trim())
-        .filter(Boolean),
-    ),
-  ).slice(0, 12);
+  const brandBlocks = [brand.summary, brand.serviceLine, brand.locationLabel]
+    .filter(Boolean)
+    .slice(0, 2);
+  const contentItems = [
+    ...mapEntityGalleryToListItems(relatedGallery, brand.enterprise ? `/enterprise/${brand.enterprise.id}#gallery-section` : `/brands/${brand.slug}`),
+    ...mapEntityArticlesToListItems(relatedArticles),
+  ].slice(0, 6);
 
   return (
-    <article className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-12">
-      <nav className="mb-6 flex flex-wrap items-center gap-x-2 gap-y-2 text-sm text-muted" aria-label="面包屑">
-        <Link href="/" className="hover:text-accent">首页</Link>
-        <span>/</span>
-        <Link href="/brands" className="hover:text-accent">{MARKET_TITLE}</Link>
-        <span>/</span>
-        <span className="text-primary">{article.title}</span>
-      </nav>
+    <ProfilePageTemplate
+      breadcrumbs={[
+        { label: "首页", href: "/" },
+        { label: MARKET_TITLE, href: "/brands" },
+        { label: brand.enterpriseName },
+      ]}
+      hero={
+        <EntityHero
+          eyebrow={`Brand Detail · ${brand.locationLabel}`}
+          title={brand.enterpriseName}
+          subtitle={brand.headline}
+          summary={brand.summary}
+          meta={[`更新于 ${new Date(brand.updatedAt).toLocaleDateString("zh-CN")}`, brand.serviceLine]}
+          badges={brand.highlights}
+          logoUrl={brand.logoUrl ? resolveUploadedImageUrl(brand.logoUrl) : null}
+          imageAlt={brand.enterpriseName}
+        />
+      }
+    >
+      <EntitySummary
+        eyebrow="Brand Story"
+        title="关于品牌"
+        statement={brand.headline}
+        summary={brand.summary}
+        blocks={brandBlocks}
+        aside={
+          <>
+            <EntityRelationCard
+              eyebrow="Brand Snapshot"
+              title="品牌概览"
+              description="统一展示品牌身份、服务范围与当前联系入口。"
+              items={relationItems}
+            />
+            <EntityRelationCard
+              eyebrow="Entity Relation"
+              title="关联信息"
+              description="品牌页只展示 Brand 主体，这里补充它与企业主体之间的正式关系。"
+              items={enterpriseRelationItems}
+            />
+          </>
+        }
+        detailTitle="展开完整品牌介绍"
+        detailContent={
+          brand.summaryRichText ? (
+            <RichContent html={brand.summaryRichText} className="prose prose-neutral max-w-none text-[#4f4134]" />
+          ) : (
+            <p className="text-sm leading-8 text-[#4f4134]">{brand.summary}</p>
+          )
+        }
+      />
 
-      <header className="rounded-[30px] border border-[rgba(181,157,121,0.16)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(247,242,235,0.92))] px-6 py-7 shadow-[0_18px_48px_rgba(15,23,42,0.06)] sm:px-8 sm:py-9">
-        <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.12em] text-[#9a8560]">
-          <span>品牌内容</span>
-          {structured?.serviceAreas ? <span>{structured.serviceAreas}</span> : null}
-          {structured?.headquarters ? <span>{structured.headquarters}</span> : null}
-        </div>
-        <h1 className="mt-4 font-serif text-[2.1rem] leading-[1.18] text-primary sm:text-[2.8rem]">{article.title}</h1>
-        {article.excerpt ? <p className="mt-4 max-w-3xl text-[15px] leading-8 text-muted sm:text-base">{article.excerpt}</p> : null}
-        <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-primary/56">
-          <span>{new Date(article.publishedAt ?? article.updatedAt).toLocaleDateString("zh-CN")}</span>
-          {article.displayAuthor ? <span>作者：{article.displayAuthor}</span> : null}
-          {article.source ? (
-            article.sourceUrl ? (
-              <a href={article.sourceUrl} target="_blank" rel="noreferrer" className="transition-colors hover:text-accent">
-                来源：{article.source}
-              </a>
-            ) : (
-              <span>来源：{article.source}</span>
-            )
-          ) : null}
-        </div>
-        {keywords.length > 0 ? (
-          <div className="mt-5 flex flex-wrap gap-2">
-            {keywords.map((keyword) => (
-              <span key={keyword} className="rounded-full border border-[rgba(181,157,121,0.18)] bg-[rgba(255,249,238,0.92)] px-3 py-1 text-xs text-accent">
-                {keyword}
-              </span>
-            ))}
-          </div>
-        ) : null}
-      </header>
-
-      {article.coverImage ? (
-        <div className="mt-8 overflow-hidden rounded-[28px] border border-[rgba(15,23,42,0.08)] bg-white p-3 shadow-[0_24px_52px_-40px_rgba(15,23,42,0.16)]">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={resolveUploadedImageUrl(article.coverImage)} alt={article.title} className="aspect-[16/9] w-full rounded-[22px] object-cover" />
-        </div>
+      {contentItems.length > 0 ? (
+        <EntityArticleList
+          title="品牌内容"
+          eyebrow="Content Feed"
+          description="统一聚合品牌相关的案例、新闻与动态，保持 Brand 主体展示不变。"
+          items={contentItems}
+        />
       ) : null}
 
-      {structured ? (
-        <section className="mt-8 rounded-[28px] border border-border bg-[rgba(255,255,255,0.92)] px-6 py-7 shadow-[0_18px_40px_-36px_rgba(15,23,42,0.16)] sm:px-8">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {structured.foundedYear ? <InfoCard label="成立时间" value={structured.foundedYear} /> : null}
-            {structured.headquarters ? <InfoCard label="总部地区" value={structured.headquarters} /> : null}
-            {structured.serviceAreas ? <InfoCard label="服务区域" value={structured.serviceAreas} /> : null}
-            {structured.mainProducts ? <InfoCard label="主营品类" value={structured.mainProducts} /> : null}
-          </div>
-          {(structured.slogan || structured.website || structured.contactPhone) ? (
-            <div className="mt-5 grid gap-4 lg:grid-cols-[1.2fr,0.8fr]">
-              {structured.slogan ? (
-                <div className="rounded-[22px] border border-border bg-surface p-5">
-                  <p className="text-xs uppercase tracking-[0.14em] text-muted">品牌主张</p>
-                  <p className="mt-3 text-sm leading-7 text-primary">{structured.slogan}</p>
-                </div>
-              ) : null}
-              {(structured.website || structured.contactPhone) ? (
-                <div className="rounded-[22px] border border-border bg-surface p-5">
-                  <p className="text-xs uppercase tracking-[0.14em] text-muted">联系信息</p>
-                  <div className="mt-3 space-y-2 text-sm leading-7 text-primary">
-                    {structured.website ? <p>官网：{structured.website}</p> : null}
-                    {structured.contactPhone ? <p>电话：{structured.contactPhone}</p> : null}
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-        </section>
+      {contactItems.length > 0 ? (
+        <EntityContactCard
+          title="联系品牌"
+          intro="如果你正在筛选品牌、咨询合作或了解更完整的品牌资料，可以通过下方方式继续沟通。"
+          items={contactItems}
+          note={brand.contactHref ? "支持电话或官网进一步了解品牌信息。" : "当前展示的是公开联系信息。"}
+        />
       ) : null}
-
-      <section className="mt-8 rounded-[28px] border border-[rgba(15,23,42,0.06)] bg-[rgba(255,255,255,0.94)] px-6 py-7 shadow-[0_22px_44px_-38px_rgba(15,23,42,0.12)] sm:px-8 sm:py-9">
-        <RichContent html={article.content} className="prose prose-neutral max-w-none" />
-      </section>
-    </article>
-  );
-}
-
-function InfoCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-[22px] border border-border bg-surface p-5">
-      <p className="text-xs uppercase tracking-[0.14em] text-muted">{label}</p>
-      <p className="mt-3 text-sm leading-7 text-primary">{value}</p>
-    </div>
+    </ProfilePageTemplate>
   );
 }
 

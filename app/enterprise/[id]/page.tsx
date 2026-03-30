@@ -2,10 +2,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { RichContent } from "@/components/RichContent";
+import { EntityArticleList } from "@/components/entity-profile/EntityArticleList";
+import { EntityContactCard } from "@/components/entity-profile/EntityContactCard";
+import { EntityHero } from "@/components/entity-profile/EntityHero";
+import { EntityRelationCard } from "@/components/entity-profile/EntityRelationCard";
+import { EntitySummary } from "@/components/entity-profile/EntitySummary";
+import { ProfilePageTemplate } from "@/components/entity-profile/ProfilePageTemplate";
 import { articleOrderByPinnedLatest } from "@/lib/articles";
 import { htmlToPlainText, toSummaryText } from "@/lib/brand-content";
 import {
-  resolveEnterpriseHomepageCapabilities,
   resolveEnterpriseHomepageContact,
   resolveEnterpriseHomepageHero,
   resolveEnterpriseHomepageSeo,
@@ -279,6 +284,13 @@ export default async function EnterprisePage({ params, searchParams }: Props) {
           name: true,
         },
       },
+      brand: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+        },
+      },
     },
   });
 
@@ -322,9 +334,7 @@ export default async function EnterprisePage({ params, searchParams }: Props) {
   const name = ent.companyShortName || ent.companyName || ent.member.name || "企业";
   const introRichText = ent.intro || "";
   const introPlain = htmlToPlainText(ent.intro || ent.positioning || "");
-  const introParagraphs = chunkParagraphs(introPlain);
   const heroView = resolveEnterpriseHomepageHero(ent, siteSettings, ownGallery);
-  const capabilityCards = resolveEnterpriseHomepageCapabilities(ent, siteSettings).slice(0, 4);
   const contactView = resolveEnterpriseHomepageContact(ent, siteSettings);
   const generatedNews = buildGeneratedNews(name, {
     productSystem: ent.productSystem,
@@ -411,84 +421,97 @@ export default async function EnterprisePage({ params, searchParams }: Props) {
   const brandDetail =
     toSummaryText(ent.productSystem, 28) ||
     "专注住宅与商业空间整体木作解决方案。";
+  const brandFactItems = [
+    {
+      label: "品牌定位",
+      value: toSummaryText(ent.positioning, 22) || null,
+    },
+    {
+      label: "主营方向",
+      value: toSummaryText(ent.productSystem, 22) || null,
+    },
+    {
+      label: "服务区域",
+      value: buildLocationLabel(ent.region, ent.area),
+    },
+    {
+      label: "合作方式",
+      value: contactView.hasRealContact ? "支持项目沟通与需求对接" : "支持线上咨询与意向沟通",
+    },
+  ].filter((item) => item.value) as Array<{ label: string; value: string }>;
+  const relationBrandItems = ent.brand
+    ? [
+        { label: "关联品牌", value: ent.brand.name, href: `/brands/${ent.brand.slug}` },
+        { label: "企业主页", value: "当前企业详情页" },
+      ]
+    : [
+        { label: "关联品牌", value: "当前未绑定品牌展示" },
+        { label: "企业主页", value: "当前企业详情页" },
+      ];
+  const aboutBlocks = buildAboutBlocks(name, {
+    positioning: ent.positioning,
+    introPlain,
+    productSystem: ent.productSystem,
+    region: ent.region,
+    area: ent.area,
+  });
 
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#f4f0ea_0%,#f8f6f2_22%,#fbfaf8_100%)] text-[#1f1b18]">
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
-        <nav className="mb-8 text-sm text-[#7f6b57]" aria-label="面包屑">
-          <Link href="/" className="transition hover:text-[#a47b45]">
-            首页
-          </Link>
-          <span className="mx-2">/</span>
-          <Link href="/brands" className="transition hover:text-[#a47b45]">
-            品牌栏目
-          </Link>
-          <span className="mx-2">/</span>
-          <span className="text-[#2c241d]">{name}</span>
-        </nav>
-
-        <section className="relative overflow-hidden rounded-[40px] border border-[rgba(140,111,78,0.14)] bg-[#171310] shadow-[0_30px_120px_rgba(32,24,17,0.22)]">
-          <Image
-            src={heroBackground}
-            alt={`${name} 品牌主视觉`}
-            fill
-            priority
-            className="object-cover"
+      <ProfilePageTemplate
+        breadcrumbs={[
+          { label: "首页", href: "/" },
+          { label: "品牌栏目", href: "/brands" },
+          { label: name },
+        ]}
+        hero={
+          <EntityHero
+            variant="dark"
+            eyebrow="Enterprise Profile"
+            title={name}
+            subtitle={heroSubtitle}
+            summary={heroSupplement}
+            backgroundImageUrl={heroBackground}
           />
-          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(8,6,5,0.94)_0%,rgba(14,10,8,0.82)_44%,rgba(20,15,11,0.56)_100%)]" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(216,182,136,0.22),transparent_24%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.05),transparent_20%)]" />
-          <div className="relative z-10 px-6 py-12 sm:px-10 sm:py-16 lg:px-14 lg:py-20">
-            <div className="max-w-3xl">
-              <h1 className="max-w-4xl font-serif text-5xl leading-[1.02] text-white sm:text-6xl lg:text-[80px]">{name}</h1>
-              <p className="mt-5 max-w-2xl text-2xl font-medium leading-tight text-white drop-shadow-[0_4px_18px_rgba(0,0,0,0.38)] sm:text-[32px]">
-                {heroSubtitle}
-              </p>
-              <p className="mt-5 max-w-lg text-base leading-7 text-white/88 drop-shadow-[0_3px_12px_rgba(0,0,0,0.3)]">
-                {heroSupplement}
-              </p>
-            </div>
-          </div>
-        </section>
-
-        <div className="mt-16 space-y-16 sm:mt-20">
-          <section className="rounded-[36px] border border-[rgba(180,154,107,0.16)] bg-[linear-gradient(180deg,rgba(255,255,255,0.95),rgba(247,241,233,0.9))] p-6 shadow-[0_20px_42px_rgba(35,26,18,0.05)] sm:p-8 lg:p-10">
-            <div className="grid gap-8 lg:grid-cols-[0.84fr,1.16fr]">
-              <div className="flex flex-col justify-between rounded-[30px] border border-[rgba(140,111,78,0.1)] bg-white/78 p-6 shadow-[0_16px_34px_rgba(35,26,18,0.04)] sm:p-7">
-                <div>
-                  <p className="text-[11px] uppercase tracking-[0.28em] text-[#9f7a46]">Brand Story</p>
-                  <h2 className="mt-3 font-serif text-3xl text-[#241c15] sm:text-4xl">关于品牌</h2>
-                  <p className="mt-6 text-xl leading-9 text-[#2f261f] sm:text-2xl sm:leading-10">{brandStatement}</p>
-                  <p className="mt-4 max-w-md text-sm leading-7 text-[#6a5949]">{brandDetail}</p>
-                </div>
-                <div className="mt-8">
-                  <a
-                    href="#contact-panel"
-                    className="inline-flex items-center rounded-full border border-[rgba(180,154,107,0.18)] bg-[rgba(255,249,240,0.92)] px-5 py-2.5 text-sm font-medium text-[#9f7a46] transition hover:bg-white"
-                  >
-                    了解更多
-                  </a>
-                </div>
+        }
+      >
+        <EntitySummary
+          eyebrow="Brand Story"
+          title="关于品牌"
+          statement={brandStatement}
+          summary={aboutSummary}
+          blocks={aboutBlocks}
+          aside={
+            <>
+              <EntityRelationCard
+                eyebrow="Brand Snapshot"
+                title="品牌概览"
+                description={brandDetail}
+                items={brandFactItems}
+              />
+              <EntityRelationCard
+                eyebrow="Entity Relation"
+                title="关联信息"
+                description="企业页只展示 Enterprise 主体，这里同步说明与 Brand 展示层的对应关系。"
+                items={relationBrandItems}
+              />
+            </>
+          }
+          detailTitle="展开完整品牌介绍"
+          detailContent={
+            introRichText ? (
+              <RichContent html={introRichText} className="prose prose-neutral max-w-none text-[#4f4134]" />
+            ) : (
+              <div className="space-y-4">
+                {aboutBlocks.map((item, index) => (
+                  <p key={`${index}-${item}`} className="text-sm leading-8 text-[#4f4134]">
+                    {item}
+                  </p>
+                ))}
               </div>
-
-              <div>
-                <div className="mb-5">
-                  <p className="text-[11px] uppercase tracking-[0.28em] text-[#9f7a46]">Core Value</p>
-                  <h3 className="mt-3 font-serif text-3xl text-[#241c15]">核心能力</h3>
-                </div>
-                <div className="grid gap-4 md:grid-cols-2">
-                  {capabilityCards.map((item) => (
-                    <div
-                      key={item.title}
-                      className="min-h-[150px] rounded-[28px] border border-[rgba(140,111,78,0.12)] bg-white/88 p-6 shadow-[0_18px_40px_rgba(35,26,18,0.06)] backdrop-blur"
-                    >
-                      <p className="text-base font-medium tracking-[0.02em] text-[#a47b45]">{item.title}</p>
-                      <p className="mt-4 line-clamp-1 text-sm leading-7 text-[#4b3d31]">{item.description}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </section>
+            )
+          }
+        />
 
           <Section id="gallery-section" title="精选案例">
             <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
@@ -498,7 +521,7 @@ export default async function EnterprisePage({ params, searchParams }: Props) {
             </div>
           </Section>
 
-          <Section
+          <EntityArticleList
             id="enterprise-news"
             title="企业动态"
             eyebrow={ownArticleCount > 0 ? `共 ${ownArticleCount} 条动态` : "优先展示企业发布内容"}
@@ -514,94 +537,48 @@ export default async function EnterprisePage({ params, searchParams }: Props) {
                 </div>
               ) : null
             }
-          >
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {newsCards.map((item) => (
-                <NewsItemCard key={item.id} item={item} />
-              ))}
-            </div>
-            {ownArticleCount > ENTERPRISE_NEWS_PAGE_SIZE ? (
+            items={newsCards.map((item) => ({
+              id: item.id,
+              title: item.title,
+              excerpt: item.excerpt,
+              meta: item.dateLabel,
+              href: item.href,
+              badge: item.badge,
+            }))}
+            footer={
+              ownArticleCount > ENTERPRISE_NEWS_PAGE_SIZE ? (
               <EnterpriseNewsPagination enterpriseId={id} currentPage={normalizedNewsPage} totalPages={totalNewsPages} />
-            ) : null}
-          </Section>
+              ) : null
+            }
+          />
 
-          <section id="contact-panel">
-            <div className="overflow-hidden rounded-[36px] border border-[rgba(180,154,107,0.18)] bg-[linear-gradient(135deg,rgba(255,252,247,0.98)_0%,rgba(245,238,229,0.96)_48%,rgba(234,223,209,0.94)_100%)] shadow-[0_28px_90px_rgba(32,24,17,0.08)]">
-              <div className="grid gap-8 px-6 py-9 sm:px-10 sm:py-10 lg:grid-cols-[0.88fr,1.12fr] lg:px-12">
-                <div className="flex flex-col justify-center">
-                  <p className="text-[11px] uppercase tracking-[0.32em] text-[#9f7a46]">Contact</p>
-                  <h2 className="mt-4 font-serif text-4xl leading-tight text-[#231b15] sm:text-5xl">获取专属方案</h2>
-                  <p className="mt-5 max-w-xl text-base leading-8 text-[#4e4033]">
-                    {contactView.contactIntro || "提交您的需求，我们将为您提供专属整木空间解决方案，从设计到落地，全流程支持。"}
-                  </p>
-                  <div className="mt-8 flex flex-wrap gap-4">
-                    <a
-                      href={contactPrimaryHref}
-                      className="inline-flex min-w-[148px] items-center justify-center rounded-full bg-[#c79a62] px-6 py-3.5 text-sm font-medium text-white transition hover:bg-[#b9894f]"
-                    >
-                      {contactPrimaryLabel}
-                    </a>
-                    <a
-                      href={secondaryWebsiteHref || "#gallery-section"}
-                      className="inline-flex min-w-[148px] items-center justify-center rounded-full border border-[rgba(165,132,87,0.26)] bg-white/78 px-6 py-3.5 text-sm font-medium text-[#2c221b] transition hover:bg-white"
-                    >
-                      {secondaryWebsiteHref ? "访问官网" : "查看案例"}
-                    </a>
-                  </div>
-                </div>
-
-                <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr),220px]">
-                  <div className="rounded-[28px] border border-[rgba(180,154,107,0.14)] bg-[linear-gradient(180deg,rgba(255,255,255,0.84),rgba(255,251,245,0.72))] p-6 shadow-[0_18px_36px_rgba(35,26,18,0.05)]">
-                    <div className="space-y-4">
-                      {contactView.items.map((item) => (
-                        <div
-                          key={item.label}
-                          className="rounded-[22px] border border-[rgba(180,154,107,0.12)] bg-white/88 px-5 py-4 shadow-[0_10px_24px_rgba(35,26,18,0.03)]"
-                        >
-                          <p className="text-[11px] uppercase tracking-[0.18em] text-[#9f7a46]">{item.label}</p>
-                          {item.href ? (
-                            <a
-                              href={item.href}
-                              target={item.href.startsWith("http") ? "_blank" : undefined}
-                              rel={item.href.startsWith("http") ? "noreferrer" : undefined}
-                              className="mt-2 block text-lg leading-7 text-[#231b15] underline-offset-4 hover:text-[#a47b45] hover:underline"
-                            >
-                              {item.value}
-                            </a>
-                          ) : (
-                            <p className="mt-2 text-lg leading-7 text-[#231b15]">{item.value}</p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                    {!contactView.hasRealContact ? (
-                      <p className="mt-5 text-sm leading-7 text-[#6d5d4f]">
-                        当前企业未公开完整联系方式，可通过左侧咨询按钮发起需求对接。
-                      </p>
-                    ) : null}
-                  </div>
-
-                  {contactView.wechatQrImageUrl ? (
-                    <div className="rounded-[28px] border border-[rgba(180,154,107,0.16)] bg-white/78 p-5 shadow-[0_16px_32px_rgba(35,26,18,0.05)]">
-                      <p className="text-[11px] uppercase tracking-[0.18em] text-[#9f7a46]">扫码联系</p>
-                      <div className="mt-4 flex items-center justify-center overflow-hidden rounded-[20px] border border-[rgba(180,154,107,0.14)] bg-white p-3">
-                        <Image
-                          src={resolveUploadedImageUrl(contactView.wechatQrImageUrl)}
-                          alt="联系二维码"
-                          width={220}
-                          height={220}
-                          className="h-full w-full object-contain"
-                        />
-                      </div>
-                      <p className="mt-3 text-sm leading-6 text-[#6d5d4f]">支持微信等渠道进一步沟通</p>
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-            </div>
-          </section>
-        </div>
-      </div>
+          <div id="contact-panel">
+            <EntityContactCard
+              title="获取专属方案"
+              intro={contactView.contactIntro || "提交您的需求，我们将为您提供专属整木空间解决方案，从设计到落地，全流程支持。"}
+              primaryAction={
+                <a
+                  href={contactPrimaryHref}
+                  className="inline-flex min-w-[148px] items-center justify-center rounded-full bg-[#c79a62] px-6 py-3.5 text-sm font-medium text-white transition hover:bg-[#b9894f]"
+                >
+                  {contactPrimaryLabel}
+                </a>
+              }
+              secondaryAction={
+                <a
+                  href={secondaryWebsiteHref || "#gallery-section"}
+                  className="inline-flex min-w-[148px] items-center justify-center rounded-full border border-[rgba(165,132,87,0.26)] bg-white/78 px-6 py-3.5 text-sm font-medium text-[#2c221b] transition hover:bg-white"
+                >
+                  {secondaryWebsiteHref ? "访问官网" : "查看案例"}
+                </a>
+              }
+              items={contactView.items}
+              note={!contactView.hasRealContact ? "当前企业未公开完整联系方式，可通过左侧咨询按钮发起需求对接。" : null}
+              qrImageUrl={contactView.wechatQrImageUrl ? resolveUploadedImageUrl(contactView.wechatQrImageUrl) : null}
+              qrDescription={contactView.wechatQrImageUrl ? "支持微信等渠道进一步沟通" : null}
+            />
+          </div>
+      </ProfilePageTemplate>
     </div>
   );
 }
@@ -633,15 +610,6 @@ function Section({
       </div>
       {children}
     </section>
-  );
-}
-
-function FeatureStrip({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-[26px] border border-white/12 bg-white/8 p-5 backdrop-blur">
-      <p className="text-[11px] uppercase tracking-[0.22em] text-white/52">{label}</p>
-      <p className="mt-3 text-sm leading-7 text-white/78">{value}</p>
-    </div>
   );
 }
 
@@ -680,29 +648,6 @@ function CaseCard({ item }: { item: GalleryCard }) {
   }
 
   return null;
-}
-
-function NewsItemCard({
-  item,
-}: {
-  item: NewsCard;
-}) {
-  return (
-    <Link
-      href={item.href}
-      className="group rounded-[24px] border border-[rgba(140,111,78,0.12)] bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,243,236,0.92))] px-5 py-5 shadow-[0_14px_32px_rgba(35,26,18,0.05)] transition hover:-translate-y-0.5"
-    >
-      <div className="flex items-center justify-between gap-3">
-        <span className="rounded-full border border-[rgba(181,157,121,0.2)] bg-[rgba(255,249,238,0.92)] px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-[#a47b45]">
-          {item.badge}
-        </span>
-        <span className="text-xs text-[#8c7b69]">{item.dateLabel}</span>
-      </div>
-      <p className="mt-4 text-xl font-medium leading-8 text-[#241c15]">{item.title}</p>
-      <p className="mt-3 text-sm leading-7 text-[#5c4d40]">{item.excerpt}</p>
-      <div className="mt-5 text-sm font-medium text-[#a47b45] transition group-hover:translate-x-0.5">继续阅读</div>
-    </Link>
-  );
 }
 
 function EnterpriseNewsPagination({

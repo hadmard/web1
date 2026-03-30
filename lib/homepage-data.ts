@@ -111,7 +111,7 @@ export async function getHomepageData() {
       image: visualSettings.backgrounds.homeStructureMarket,
       items: safeBrands.map((item) => ({
         label: item.enterpriseName,
-        href: item.enterprise ? `/enterprise/${item.enterprise.id}` : `/brands/${item.slug}`,
+        href: `/brands/${item.slug}`,
       })),
     },
     {
@@ -156,7 +156,7 @@ export async function getHomepageData() {
     headline: item.headline,
     locationLabel: item.locationLabel,
     logoUrl: item.logoUrl,
-    detailHref: item.enterprise ? `/enterprise/${item.enterprise.id}` : `/brands/${item.slug}`,
+    detailHref: `/brands/${item.slug}`,
     contactLabel: item.contactLabel,
   }));
 
