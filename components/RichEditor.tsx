@@ -28,6 +28,38 @@ type ImageAttrs = {
 
 type MenuMode = "text" | "image";
 
+function escapeHtml(input: string) {
+  return input
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function normalizeEditorContentInput(input: string) {
+  const raw = input.trim();
+  if (!raw) return "<p></p>";
+
+  const hasHtmlTag = /<\/?[a-z][^>]*>/i.test(raw);
+  if (!hasHtmlTag) {
+    return `<p>${escapeHtml(raw).replace(/\n{2,}/g, "</p><p>").replace(/\n/g, "<br>")}</p>`;
+  }
+
+  if (!raw.startsWith("<")) {
+    const firstTagIndex = raw.search(/<\/?[a-z][^>]*>/i);
+    if (firstTagIndex > 0) {
+      const leadingText = raw.slice(0, firstTagIndex).trim();
+      const trailingHtml = raw.slice(firstTagIndex).trim();
+      if (leadingText) {
+        return `<p>${escapeHtml(leadingText)}</p>${trailingHtml}`;
+      }
+    }
+  }
+
+  return raw;
+}
+
 function normalizePastedText(text: string) {
   return text.replace(/\u00a0/g, " ").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n");
 }
@@ -426,7 +458,7 @@ export function RichEditor({
       SpecialText,
       RichImage,
     ],
-    content: value || "<p></p>",
+    content: normalizeEditorContentInput(value),
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML());
     },
@@ -508,9 +540,10 @@ export function RichEditor({
 
   useEffect(() => {
     if (!editor) return;
+    const nextValue = normalizeEditorContentInput(value);
     const current = editor.getHTML();
-    if (value !== current) {
-      editor.commands.setContent(value || "<p></p>", { emitUpdate: false });
+    if (nextValue !== current) {
+      editor.commands.setContent(nextValue, { emitUpdate: false });
     }
   }, [editor, value]);
 
