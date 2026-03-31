@@ -3,7 +3,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { CONTENT_TAB_DEFS, MEMBER_PUBLISH_CATEGORY_OPTIONS, resolveTabKeyFromHref, type ContentTabKey } from "@/lib/content-taxonomy";
-import { ManageContentList } from "@/app/membership/admin/content/components/ManageContentList";
+import { ManageContentList } from "@/app/membership/admin/content/components/ManageContentListClean";
 import { ReviewPanels } from "@/app/membership/admin/content/components/ReviewPanels";
 import { ImageCropDialog } from "@/components/ImageCropDialog";
 import { RichEditor } from "@/components/RichEditor";

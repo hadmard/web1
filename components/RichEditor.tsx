@@ -37,9 +37,31 @@ function escapeHtml(input: string) {
     .replace(/'/g, "&#39;");
 }
 
+function decodeHtmlEntities(input: string) {
+  if (typeof window === "undefined") {
+    return input
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&amp;/g, "&");
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.innerHTML = input;
+  return textarea.value;
+}
+
 function normalizeEditorContentInput(input: string) {
-  const raw = input.trim();
+  let raw = input.trim();
   if (!raw) return "<p></p>";
+
+  const looksEscapedHtml = /&lt;\/?(p|h[1-6]|br|ul|ol|li|blockquote|img|a|div|section|article)[^&]*&gt;/i.test(raw);
+  if (looksEscapedHtml) {
+    raw = decodeHtmlEntities(raw).trim();
+  }
+
+  raw = raw.replace(/\r\n/g, "\n");
 
   const hasHtmlTag = /<\/?[a-z][^>]*>/i.test(raw);
   if (!hasHtmlTag) {
@@ -52,7 +74,13 @@ function normalizeEditorContentInput(input: string) {
       const leadingText = raw.slice(0, firstTagIndex).trim();
       const trailingHtml = raw.slice(firstTagIndex).trim();
       if (leadingText) {
-        return `<p>${escapeHtml(leadingText)}</p>${trailingHtml}`;
+        const normalizedLeading = leadingText
+          .split(/\n{2,}/)
+          .map((block) => block.trim())
+          .filter(Boolean)
+          .map((block) => `<p>${escapeHtml(block).replace(/\n/g, "<br>")}</p>`)
+          .join("");
+        return `${normalizedLeading}${trailingHtml}`;
       }
     }
   }
