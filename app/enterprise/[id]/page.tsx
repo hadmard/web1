@@ -1,11 +1,9 @@
 ﻿import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { RichContent } from "@/components/RichContent";
 import { articleOrderByPinnedLatest } from "@/lib/articles";
 import { htmlToPlainText, toSummaryText } from "@/lib/brand-content";
 import {
-  resolveEnterpriseHomepageCapabilities,
   resolveEnterpriseHomepageContact,
   resolveEnterpriseHomepageHero,
   resolveEnterpriseHomepageSeo,
@@ -88,6 +86,22 @@ function chunkParagraphs(value: string) {
     .slice(0, 4);
 }
 
+function splitSentences(value: string) {
+  return value
+    .split(/(?<=[。！？])/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function isBusinessScopeParagraph(value: string) {
+  const text = value.replace(/\s+/g, "");
+  if (!text) return false;
+  return (
+    /(加工|销售|制造|安装|维修|进出口|依法须经批准|经营活动)/.test(text) &&
+    /(木门|柜|衣柜|家具|护墙|木制|林木)/.test(text)
+  );
+}
+
 function shortText(value: string | null | undefined, maxLength = 18) {
   const text = htmlToPlainText(value);
   if (!text) return null;
@@ -110,7 +124,6 @@ function buildLocationLabel(region?: string | null, area?: string | null) {
 function buildHeroSubtitle(name: string, input: { positioning?: string | null; intro?: string | null }) {
   return (
     toSummaryText(input.positioning, 24) ||
-    toSummaryText(input.intro, 24) ||
     `${name}专注高端整木空间定制，覆盖住宅与商业场景`
   );
 }
@@ -232,6 +245,24 @@ function buildAboutBlocks(
   ];
 }
 
+function buildAboutParagraphs(introPlain: string, fallbackBlocks: string[]) {
+  const cleaned = chunkParagraphs(introPlain)
+    .map((item) =>
+      splitSentences(item)
+        .filter((sentence) => !isBusinessScopeParagraph(sentence))
+        .join("")
+        .replace(/\s+/g, " ")
+        .trim(),
+    )
+    .filter((item) => item && !isBusinessScopeParagraph(item));
+
+  if (cleaned.length > 0) {
+    return cleaned.slice(0, 2);
+  }
+
+  return fallbackBlocks.slice(0, 2);
+}
+
 export async function generateMetadata({ params }: Props) {
   const { id } = await params;
   const ent = await prisma.enterprise.findUnique({
@@ -328,11 +359,8 @@ export default async function EnterprisePage({ params, searchParams }: Props) {
   });
 
   const name = ent.companyShortName || ent.companyName || ent.member.name || "企业";
-  const introRichText = ent.intro || "";
   const introPlain = htmlToPlainText(ent.intro || ent.positioning || "");
-  const introParagraphs = chunkParagraphs(introPlain);
   const heroView = resolveEnterpriseHomepageHero(ent, siteSettings, ownGallery);
-  const capabilityCards = resolveEnterpriseHomepageCapabilities(ent, siteSettings).slice(0, 4);
   const contactView = resolveEnterpriseHomepageContact(ent, siteSettings);
   const generatedNews = buildGeneratedNews(name, {
     productSystem: ent.productSystem,
@@ -398,10 +426,6 @@ export default async function EnterprisePage({ params, searchParams }: Props) {
     (platformGalleryCards[0]?.imageUrl ? resolveUploadedImageUrl(platformGalleryCards[0].imageUrl) : null) ||
     DEFAULT_HERO_IMAGE;
 
-  const heroSupplement =
-    toSummaryText(ent.productSystem, 18) ||
-    "专注木作空间养护服务";
-
   const secondaryWebsiteHref = contactView.websiteUrl ? buildContactHref(contactView.websiteUrl) : null;
   const contactPrimaryLabel = contactView.hasRealContact ? heroView.primaryCtaLabel : "提交咨询";
   const contactPrimaryHref =
@@ -413,12 +437,15 @@ export default async function EnterprisePage({ params, searchParams }: Props) {
     region: ent.region,
   });
   const heroSubtitle = buildHeroSubtitle(name, { positioning: ent.positioning, intro: ent.intro });
-  const brandStatement =
-    toSummaryText(ent.positioning || ent.intro, 42) ||
-    `${name}专注高端整木空间定制与整体设计表达。`;
-  const brandDetail =
-    toSummaryText(ent.productSystem, 28) ||
-    "专注住宅与商业空间整体木作解决方案。";
+  const aboutBlocks = buildAboutBlocks(name, {
+    positioning: ent.positioning,
+    introPlain,
+    productSystem: ent.productSystem,
+    region: ent.region,
+    area: ent.area,
+  });
+  const aboutParagraphs = buildAboutParagraphs(introPlain, aboutBlocks);
+  const logoUrl = ent.logoUrl ? resolveUploadedImageUrl(ent.logoUrl) : null;
 
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#f4f0ea_0%,#f8f6f2_22%,#fbfaf8_100%)] text-[#1f1b18]">
@@ -447,12 +474,26 @@ export default async function EnterprisePage({ params, searchParams }: Props) {
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(216,182,136,0.22),transparent_24%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.05),transparent_20%)]" />
           <div className="relative z-10 px-6 py-12 sm:px-10 sm:py-16 lg:px-14 lg:py-20">
             <div className="max-w-3xl">
+              {logoUrl ? (
+                <div className="mb-7 inline-flex items-center gap-4 rounded-[26px] border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.18),rgba(255,255,255,0.08))] px-4 py-3 shadow-[0_18px_46px_rgba(0,0,0,0.18)] backdrop-blur">
+                  <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-[20px] bg-[rgba(255,255,255,0.96)] p-2 shadow-[0_8px_18px_rgba(15,23,42,0.1)]">
+                    <Image
+                      src={logoUrl}
+                      alt={`${name} Logo`}
+                      width={96}
+                      height={96}
+                      className="h-full w-full object-contain"
+                    />
+                  </div>
+                  <div className="hidden sm:block">
+                    <p className="text-[11px] uppercase tracking-[0.28em] text-white/58">Brand Mark</p>
+                    <p className="mt-2 text-sm leading-6 text-white/80">{name}</p>
+                  </div>
+                </div>
+              ) : null}
               <h1 className="max-w-4xl font-serif text-5xl leading-[1.02] text-white sm:text-6xl lg:text-[80px]">{name}</h1>
               <p className="mt-5 max-w-2xl text-2xl font-medium leading-tight text-white drop-shadow-[0_4px_18px_rgba(0,0,0,0.38)] sm:text-[32px]">
                 {heroSubtitle}
-              </p>
-              <p className="mt-5 max-w-lg text-base leading-7 text-white/88 drop-shadow-[0_3px_12px_rgba(0,0,0,0.3)]">
-                {heroSupplement}
               </p>
             </div>
           </div>
@@ -460,39 +501,29 @@ export default async function EnterprisePage({ params, searchParams }: Props) {
 
         <div className="mt-16 space-y-16 sm:mt-20">
           <section className="rounded-[36px] border border-[rgba(180,154,107,0.16)] bg-[linear-gradient(180deg,rgba(255,255,255,0.95),rgba(247,241,233,0.9))] p-6 shadow-[0_20px_42px_rgba(35,26,18,0.05)] sm:p-8 lg:p-10">
-            <div className="grid gap-8 lg:grid-cols-[0.84fr,1.16fr]">
-              <div className="flex flex-col justify-between rounded-[30px] border border-[rgba(140,111,78,0.1)] bg-white/78 p-6 shadow-[0_16px_34px_rgba(35,26,18,0.04)] sm:p-7">
-                <div>
-                  <p className="text-[11px] uppercase tracking-[0.28em] text-[#9f7a46]">Brand Story</p>
-                  <h2 className="mt-3 font-serif text-3xl text-[#241c15] sm:text-4xl">关于品牌</h2>
-                  <p className="mt-6 text-xl leading-9 text-[#2f261f] sm:text-2xl sm:leading-10">{brandStatement}</p>
-                  <p className="mt-4 max-w-md text-sm leading-7 text-[#6a5949]">{brandDetail}</p>
-                </div>
-                <div className="mt-8">
-                  <a
-                    href="#contact-panel"
-                    className="inline-flex items-center rounded-full border border-[rgba(180,154,107,0.18)] bg-[rgba(255,249,240,0.92)] px-5 py-2.5 text-sm font-medium text-[#9f7a46] transition hover:bg-white"
-                  >
-                    了解更多
-                  </a>
-                </div>
+            <div className="rounded-[30px] border border-[rgba(140,111,78,0.1)] bg-white/82 p-6 shadow-[0_16px_34px_rgba(35,26,18,0.04)] sm:p-7 lg:p-8">
+              <div className="max-w-4xl">
+                <p className="text-[11px] uppercase tracking-[0.28em] text-[#9f7a46]">Brand Story</p>
+                <h2 className="mt-3 font-serif text-3xl text-[#241c15] sm:text-4xl">关于品牌</h2>
               </div>
 
-              <div>
-                <div className="mb-5">
-                  <p className="text-[11px] uppercase tracking-[0.28em] text-[#9f7a46]">Core Value</p>
-                  <h3 className="mt-3 font-serif text-3xl text-[#241c15]">核心能力</h3>
-                </div>
-                <div className="grid gap-4 md:grid-cols-2">
-                  {capabilityCards.map((item) => (
-                    <div
-                      key={item.title}
-                      className="min-h-[150px] rounded-[28px] border border-[rgba(140,111,78,0.12)] bg-white/88 p-6 shadow-[0_18px_40px_rgba(35,26,18,0.06)] backdrop-blur"
+              <div className="mt-6 rounded-[26px] border border-[rgba(140,111,78,0.08)] bg-[rgba(255,252,247,0.86)] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] sm:mt-7 sm:p-7">
+                <div className="space-y-5">
+                  {aboutParagraphs.map((paragraph, index) => (
+                    <p
+                      key={`${name}-about-${index}`}
+                      className="max-w-5xl text-[15px] leading-9 text-[#3d3025] sm:text-base"
                     >
-                      <p className="text-base font-medium tracking-[0.02em] text-[#a47b45]">{item.title}</p>
-                      <p className="mt-4 line-clamp-1 text-sm leading-7 text-[#4b3d31]">{item.description}</p>
-                    </div>
+                      {paragraph}
+                    </p>
                   ))}
+                  <a
+                    href="#contact-panel"
+                    className="inline-flex items-center gap-2 text-sm font-medium text-[#9f7a46] transition hover:text-[#876234]"
+                  >
+                    了解更多
+                    <span aria-hidden="true">→</span>
+                  </a>
                 </div>
               </div>
             </div>
