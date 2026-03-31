@@ -78,6 +78,10 @@ type EnterpriseOption = {
   brandName: string | null;
 };
 
+function enterpriseOptionLabel(option: EnterpriseOption) {
+  return `${option.label}${option.brandName ? ` / ${option.brandName}` : ""}`;
+}
+
 type ArticleItem = {
   id: string;
   title: string;
@@ -267,6 +271,7 @@ export default function AdminContentPage() {
   const [displayAuthor, setDisplayAuthor] = useState("");
   const [ownedEnterpriseId, setOwnedEnterpriseId] = useState("");
   const [ownedEnterpriseSearch, setOwnedEnterpriseSearch] = useState("");
+  const [ownedEnterpriseOpen, setOwnedEnterpriseOpen] = useState(false);
   const [excerpt, setExcerpt] = useState("");
   const [content, setContent] = useState("");
   const [brandStructured, setBrandStructured] = useState<BrandStructuredData>(createDefaultBrandStructuredData());
@@ -288,6 +293,7 @@ export default function AdminContentPage() {
   const [editDisplayAuthor, setEditDisplayAuthor] = useState("");
   const [editOwnedEnterpriseId, setEditOwnedEnterpriseId] = useState("");
   const [editOwnedEnterpriseSearch, setEditOwnedEnterpriseSearch] = useState("");
+  const [editOwnedEnterpriseOpen, setEditOwnedEnterpriseOpen] = useState(false);
   const [editExcerpt, setEditExcerpt] = useState("");
   const [editContent, setEditContent] = useState("");
   const [editBrandStructured, setEditBrandStructured] = useState<BrandStructuredData>(createDefaultBrandStructuredData());
@@ -328,6 +334,14 @@ export default function AdminContentPage() {
       `${option.label} ${option.brandName || ""}`.toLowerCase().includes(keyword),
     );
   }, [enterpriseOptions, editOwnedEnterpriseSearch]);
+  const selectedOwnedEnterprise = useMemo(
+    () => enterpriseOptions.find((option) => option.id === ownedEnterpriseId) ?? null,
+    [enterpriseOptions, ownedEnterpriseId],
+  );
+  const selectedEditOwnedEnterprise = useMemo(
+    () => enterpriseOptions.find((option) => option.id === editOwnedEnterpriseId) ?? null,
+    [enterpriseOptions, editOwnedEnterpriseId],
+  );
 
   useEffect(() => {
     if (tab === "brands") return;
@@ -347,6 +361,7 @@ export default function AdminContentPage() {
     setDisplayAuthor("");
     setOwnedEnterpriseId("");
     setOwnedEnterpriseSearch("");
+    setOwnedEnterpriseOpen(false);
     setDocumentMeta(createEmptyDocumentMetadata());
   }, [tab]);
 
@@ -720,6 +735,7 @@ export default function AdminContentPage() {
     setEditDisplayAuthor(item.displayAuthor ?? "");
     setEditOwnedEnterpriseId(item.ownedEnterpriseId ?? "");
     setEditOwnedEnterpriseSearch("");
+    setEditOwnedEnterpriseOpen(false);
     setEditExcerpt(item.excerpt ?? "");
     setEditContent(tab === "terms" ? formatTermContentForEditing(item.content) : item.content);
     setEditBrandStructured(
@@ -1054,27 +1070,56 @@ export default function AdminContentPage() {
                     <p className="text-xs text-muted">管理员代发时可指定企业，发布后会自动汇总到对应企业页的企业动态。</p>
                   </div>
                 </div>
-                <input
-                  className="mt-3 w-full rounded-xl border border-border bg-white/90 px-3 py-2 text-sm text-primary placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-[rgba(180,154,107,0.18)]"
-                  value={ownedEnterpriseSearch}
-                  onChange={(e) => setOwnedEnterpriseSearch(e.target.value)}
-                  placeholder={`搜索企业名称，共 ${enterpriseOptions.length} 家`}
-                />
-                <select
-                  className="mt-3 w-full rounded-xl border border-border bg-white/90 px-3 py-2 text-sm text-primary focus:outline-none focus:ring-2 focus:ring-[rgba(180,154,107,0.18)]"
-                  value={ownedEnterpriseId}
-                  onChange={(e) => setOwnedEnterpriseId(e.target.value)}
-                >
-                  <option value="">不指定归属企业</option>
-                  {filteredEnterpriseOptions.map((option) => (
-                    <option key={option.id} value={option.id}>
-                      {option.label}{option.brandName ? ` / ${option.brandName}` : ""}
-                    </option>
-                  ))}
-                </select>
-                {ownedEnterpriseSearch.trim() && filteredEnterpriseOptions.length === 0 ? (
-                  <p className="mt-2 text-xs text-muted">没有找到匹配企业，请换个关键词试试。</p>
-                ) : null}
+                <div className="mt-3 rounded-xl border border-border bg-white/90">
+                  <input
+                    className="w-full rounded-xl border-0 bg-transparent px-3 py-2 text-sm text-primary placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-[rgba(180,154,107,0.18)]"
+                    value={ownedEnterpriseSearch}
+                    onChange={(e) => {
+                      setOwnedEnterpriseSearch(e.target.value);
+                      setOwnedEnterpriseOpen(true);
+                    }}
+                    onFocus={() => setOwnedEnterpriseOpen(true)}
+                    placeholder={selectedOwnedEnterprise ? enterpriseOptionLabel(selectedOwnedEnterprise) : `搜索企业名称，共 ${enterpriseOptions.length} 家`}
+                  />
+                  {ownedEnterpriseOpen ? (
+                    <div className="border-t border-border px-2 py-2">
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => {
+                          setOwnedEnterpriseId("");
+                          setOwnedEnterpriseSearch("");
+                          setOwnedEnterpriseOpen(false);
+                        }}
+                        className="flex w-full items-center rounded-lg px-2 py-2 text-left text-sm text-primary transition hover:bg-surface"
+                      >
+                        不指定归属企业
+                      </button>
+                      <div className="mt-1 max-h-56 overflow-y-auto">
+                        {filteredEnterpriseOptions.map((option) => (
+                          <button
+                            key={option.id}
+                            type="button"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => {
+                              setOwnedEnterpriseId(option.id);
+                              setOwnedEnterpriseSearch(enterpriseOptionLabel(option));
+                              setOwnedEnterpriseOpen(false);
+                            }}
+                            className={`flex w-full items-center rounded-lg px-2 py-2 text-left text-sm transition hover:bg-surface ${
+                              ownedEnterpriseId === option.id ? "bg-[rgba(180,154,107,0.12)] text-primary" : "text-primary"
+                            }`}
+                          >
+                            {enterpriseOptionLabel(option)}
+                          </button>
+                        ))}
+                        {ownedEnterpriseSearch.trim() && filteredEnterpriseOptions.length === 0 ? (
+                          <p className="px-2 py-2 text-xs text-muted">没有找到匹配企业，请换个关键词试试。</p>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
               </div>
             )}
             {(tab === "terms" || tab === "standards") && (
@@ -1368,27 +1413,56 @@ export default function AdminContentPage() {
                     <p className="text-xs text-muted">变更后，企业页会按这里的归属关系自动汇总这篇文章。</p>
                   </div>
                 </div>
-                <input
-                  className="mt-3 w-full rounded-xl border border-border bg-white/90 px-3 py-2 text-sm text-primary placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-[rgba(180,154,107,0.18)]"
-                  value={editOwnedEnterpriseSearch}
-                  onChange={(e) => setEditOwnedEnterpriseSearch(e.target.value)}
-                  placeholder={`搜索企业名称，共 ${enterpriseOptions.length} 家`}
-                />
-                <select
-                  className="mt-3 w-full rounded-xl border border-border bg-white/90 px-3 py-2 text-sm text-primary focus:outline-none focus:ring-2 focus:ring-[rgba(180,154,107,0.18)]"
-                  value={editOwnedEnterpriseId}
-                  onChange={(e) => setEditOwnedEnterpriseId(e.target.value)}
-                >
-                  <option value="">不指定归属企业</option>
-                  {filteredEditEnterpriseOptions.map((option) => (
-                    <option key={option.id} value={option.id}>
-                      {option.label}{option.brandName ? ` / ${option.brandName}` : ""}
-                    </option>
-                  ))}
-                </select>
-                {editOwnedEnterpriseSearch.trim() && filteredEditEnterpriseOptions.length === 0 ? (
-                  <p className="mt-2 text-xs text-muted">没有找到匹配企业，请换个关键词试试。</p>
-                ) : null}
+                <div className="mt-3 rounded-xl border border-border bg-white/90">
+                  <input
+                    className="w-full rounded-xl border-0 bg-transparent px-3 py-2 text-sm text-primary placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-[rgba(180,154,107,0.18)]"
+                    value={editOwnedEnterpriseSearch}
+                    onChange={(e) => {
+                      setEditOwnedEnterpriseSearch(e.target.value);
+                      setEditOwnedEnterpriseOpen(true);
+                    }}
+                    onFocus={() => setEditOwnedEnterpriseOpen(true)}
+                    placeholder={selectedEditOwnedEnterprise ? enterpriseOptionLabel(selectedEditOwnedEnterprise) : `搜索企业名称，共 ${enterpriseOptions.length} 家`}
+                  />
+                  {editOwnedEnterpriseOpen ? (
+                    <div className="border-t border-border px-2 py-2">
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => {
+                          setEditOwnedEnterpriseId("");
+                          setEditOwnedEnterpriseSearch("");
+                          setEditOwnedEnterpriseOpen(false);
+                        }}
+                        className="flex w-full items-center rounded-lg px-2 py-2 text-left text-sm text-primary transition hover:bg-surface"
+                      >
+                        不指定归属企业
+                      </button>
+                      <div className="mt-1 max-h-56 overflow-y-auto">
+                        {filteredEditEnterpriseOptions.map((option) => (
+                          <button
+                            key={option.id}
+                            type="button"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => {
+                              setEditOwnedEnterpriseId(option.id);
+                              setEditOwnedEnterpriseSearch(enterpriseOptionLabel(option));
+                              setEditOwnedEnterpriseOpen(false);
+                            }}
+                            className={`flex w-full items-center rounded-lg px-2 py-2 text-left text-sm transition hover:bg-surface ${
+                              editOwnedEnterpriseId === option.id ? "bg-[rgba(180,154,107,0.12)] text-primary" : "text-primary"
+                            }`}
+                          >
+                            {enterpriseOptionLabel(option)}
+                          </button>
+                        ))}
+                        {editOwnedEnterpriseSearch.trim() && filteredEditEnterpriseOptions.length === 0 ? (
+                          <p className="px-2 py-2 text-xs text-muted">没有找到匹配企业，请换个关键词试试。</p>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
               </div>
             )}
             {(tab === "terms" || tab === "standards") && (

@@ -445,7 +445,6 @@ export default async function EnterprisePage({ params, searchParams }: Props) {
     area: ent.area,
   });
   const aboutParagraphs = buildAboutParagraphs(introPlain, aboutBlocks);
-  const logoUrl = ent.logoUrl ? resolveUploadedImageUrl(ent.logoUrl) : null;
 
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#f4f0ea_0%,#f8f6f2_22%,#fbfaf8_100%)] text-[#1f1b18]">
@@ -474,23 +473,6 @@ export default async function EnterprisePage({ params, searchParams }: Props) {
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(216,182,136,0.22),transparent_24%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.05),transparent_20%)]" />
           <div className="relative z-10 px-6 py-12 sm:px-10 sm:py-16 lg:px-14 lg:py-20">
             <div className="max-w-3xl">
-              {logoUrl ? (
-                <div className="mb-7 inline-flex items-center gap-4 rounded-[26px] border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.18),rgba(255,255,255,0.08))] px-4 py-3 shadow-[0_18px_46px_rgba(0,0,0,0.18)] backdrop-blur">
-                  <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-[20px] bg-[rgba(255,255,255,0.96)] p-2 shadow-[0_8px_18px_rgba(15,23,42,0.1)]">
-                    <Image
-                      src={logoUrl}
-                      alt={`${name} Logo`}
-                      width={96}
-                      height={96}
-                      className="h-full w-full object-contain"
-                    />
-                  </div>
-                  <div className="hidden sm:block">
-                    <p className="text-[11px] uppercase tracking-[0.28em] text-white/58">Brand Mark</p>
-                    <p className="mt-2 text-sm leading-6 text-white/80">{name}</p>
-                  </div>
-                </div>
-              ) : null}
               <h1 className="max-w-4xl font-serif text-5xl leading-[1.02] text-white sm:text-6xl lg:text-[80px]">{name}</h1>
               <p className="mt-5 max-w-2xl text-2xl font-medium leading-tight text-white drop-shadow-[0_4px_18px_rgba(0,0,0,0.38)] sm:text-[32px]">
                 {heroSubtitle}
