@@ -20,7 +20,7 @@ type Props = {
   searchParams?: Promise<{ newsPage?: string }>;
 };
 
-const ENTERPRISE_NEWS_PAGE_SIZE = 9;
+const ENTERPRISE_NEWS_PAGE_SIZE = 6;
 
 function buildEnterpriseArticleWhere(memberId: string, enterpriseId: string) {
   return {
@@ -394,9 +394,6 @@ export default async function EnterprisePage({ params, searchParams }: Props) {
       : enterpriseNewsCards.length > 0
         ? [...enterpriseNewsCards, ...platformNewsCards].slice(0, 3)
         : [...generatedNews, ...platformNewsCards].slice(0, 3);
-  const newsRangeStart = ownArticleCount > 0 ? (normalizedNewsPage - 1) * ENTERPRISE_NEWS_PAGE_SIZE + 1 : 0;
-  const newsRangeEnd = ownArticleCount > 0 ? Math.min(normalizedNewsPage * ENTERPRISE_NEWS_PAGE_SIZE, ownArticleCount) : 0;
-
   const ownGalleryCards: GalleryCard[] = ownGallery.map((image) => ({
     id: image.id,
     title: image.title || `${name} 项目画面`,
@@ -522,19 +519,6 @@ export default async function EnterprisePage({ params, searchParams }: Props) {
           <Section
             id="enterprise-news"
             title="企业动态"
-            eyebrow={ownArticleCount > 0 ? `共 ${ownArticleCount} 条动态` : "优先展示企业发布内容"}
-            description={
-              ownArticleCount > 0
-                ? `按时间倒序展示企业全部已发布内容，当前为第 ${normalizedNewsPage} 页。`
-                : "当前企业尚未发布动态，先展示平台精选与默认内容占位。"
-            }
-            aside={
-              ownArticleCount > 0 ? (
-                <div className="rounded-full border border-[rgba(181,157,121,0.18)] bg-white/76 px-4 py-2 text-xs tracking-[0.08em] text-[#8f7452]">
-                  {newsRangeStart}-{newsRangeEnd} / {ownArticleCount}
-                </div>
-              ) : null
-            }
           >
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {newsCards.map((item) => (
@@ -711,7 +695,7 @@ function NewsItemCard({
   return (
     <Link
       href={item.href}
-      className="group rounded-[24px] border border-[rgba(140,111,78,0.12)] bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,243,236,0.92))] px-5 py-5 shadow-[0_14px_32px_rgba(35,26,18,0.05)] transition hover:-translate-y-0.5"
+      className="group flex h-full min-h-[280px] flex-col rounded-[24px] border border-[rgba(140,111,78,0.12)] bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,243,236,0.92))] px-5 py-5 shadow-[0_14px_32px_rgba(35,26,18,0.05)] transition hover:-translate-y-0.5"
     >
       <div className="flex items-center justify-between gap-3">
         <span className="rounded-full border border-[rgba(181,157,121,0.2)] bg-[rgba(255,249,238,0.92)] px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-[#a47b45]">
@@ -719,9 +703,29 @@ function NewsItemCard({
         </span>
         <span className="text-xs text-[#8c7b69]">{item.dateLabel}</span>
       </div>
-      <p className="mt-4 text-xl font-medium leading-8 text-[#241c15]">{item.title}</p>
-      <p className="mt-3 text-sm leading-7 text-[#5c4d40]">{item.excerpt}</p>
-      <div className="mt-5 text-sm font-medium text-[#a47b45] transition group-hover:translate-x-0.5">继续阅读</div>
+      <p
+        className="mt-4 min-h-[96px] text-xl font-medium leading-8 text-[#241c15]"
+        style={{
+          display: "-webkit-box",
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: "vertical",
+          overflow: "hidden",
+        }}
+      >
+        {item.title}
+      </p>
+      <p
+        className="mt-3 text-sm leading-7 text-[#5c4d40]"
+        style={{
+          display: "-webkit-box",
+          WebkitLineClamp: 3,
+          WebkitBoxOrient: "vertical",
+          overflow: "hidden",
+        }}
+      >
+        {item.excerpt}
+      </p>
+      <div className="mt-auto pt-5 text-sm font-medium text-[#a47b45] transition group-hover:translate-x-0.5">继续阅读</div>
     </Link>
   );
 }
@@ -738,8 +742,7 @@ function EnterpriseNewsPagination({
   const pages = buildPageList(currentPage, totalPages);
 
   return (
-    <div className="mt-8 flex flex-col items-center gap-4">
-      <div className="text-sm text-[#7f6b57]">第 {currentPage} / {totalPages} 页</div>
+    <div className="mt-8 flex justify-center">
       <div className="flex flex-wrap items-center justify-center gap-2">
         <PaginationLink href={buildEnterpriseNewsPageHref(enterpriseId, Math.max(1, currentPage - 1))} disabled={currentPage <= 1}>
           上一页
