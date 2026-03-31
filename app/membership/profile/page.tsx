@@ -3,9 +3,7 @@
 import Link from "next/link";
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { InlinePageBackLink } from "@/components/InlinePageBackLink";
-import { RichContent } from "@/components/RichContent";
 import { RichEditor } from "@/components/RichEditor";
-import { toSummaryText } from "@/lib/brand-content";
 import { MAX_UPLOAD_IMAGE_MB, uploadImageToServer } from "@/lib/client-image";
 import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
 
@@ -135,8 +133,6 @@ export default function MembershipProfilePage() {
   const isAdvanced = memberType === "enterprise_advanced";
   const noPermission = memberType === "personal";
   const completionCount = useMemo(() => Object.values(form).filter((value) => value.trim().length > 0).length, [form]);
-  const previewSummary = useMemo(() => toSummaryText(form.intro, 120) || "填写“关于品牌”后，这里会显示前台正文摘要。", [form.intro]);
-  const previewTitle = useMemo(() => "当前企业资料预览", []);
   const previewHref = enterpriseId ? `/enterprise/${enterpriseId}` : null;
 
   async function handleSubmit(event: React.FormEvent) {
@@ -252,8 +248,7 @@ export default function MembershipProfilePage() {
           </div>
         </section>
       ) : (
-        <form onSubmit={handleSubmit} className="grid gap-6 xl:grid-cols-[1.15fr,0.85fr]">
-          <div className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6">
             <section className="rounded-[28px] border border-border bg-surface-elevated p-6 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
@@ -372,54 +367,15 @@ export default function MembershipProfilePage() {
                 </div>
               </section>
             ) : null}
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              disabled={saving || uploadingLogo}
+              className="inline-flex rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-55"
+            >
+              {saving ? "保存中..." : "保存企业资料"}
+            </button>
           </div>
-
-          <aside className="space-y-6">
-            <section className="rounded-[28px] border border-border bg-surface-elevated p-6 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
-              <h2 className="text-lg font-semibold text-primary">前台最终展示预览</h2>
-              <p className="mt-2 text-sm leading-7 text-muted">这里模拟前台品牌卡片和详情页会读取的最终结果，帮助你在保存前先确认效果。</p>
-
-              <div className="mt-5 rounded-[24px] border border-[rgba(180,154,107,0.18)] bg-[linear-gradient(180deg,rgba(255,252,247,0.98),rgba(248,242,233,0.9))] p-5 shadow-[0_16px_36px_rgba(15,23,42,0.05)]">
-                <p className="text-xs uppercase tracking-[0.2em] text-[#8d7a5a]">Brand Preview</p>
-                <h3 className="mt-3 font-serif text-2xl text-primary">{previewTitle}</h3>
-                <p className="mt-3 text-sm leading-7 text-muted">{previewSummary}</p>
-                <div className="mt-4 flex flex-wrap gap-2 text-xs text-muted">
-                  <span className="rounded-full border border-border px-2.5 py-1">{form.region || "全国"}</span>
-                  {form.area ? <span className="rounded-full border border-border px-2.5 py-1">{form.area}</span> : null}
-                  {form.productSystem ? <span className="rounded-full border border-border px-2.5 py-1">{form.productSystem}</span> : null}
-                </div>
-              </div>
-
-              <div className="mt-5 rounded-[24px] border border-border bg-white p-5">
-                <p className="text-xs uppercase tracking-[0.16em] text-muted">简介预览</p>
-                <div className="mt-4 max-h-[320px] overflow-y-auto rounded-[20px] border border-border bg-surface p-4">
-                  {form.intro ? (
-                    <RichContent html={form.intro} className="text-sm leading-7 text-primary" />
-                  ) : (
-                    <p className="text-sm text-muted">这里会展示清洗后的“关于品牌”效果。</p>
-                  )}
-                </div>
-              </div>
-            </section>
-
-            <section className="rounded-[28px] border border-border bg-surface-elevated p-6 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
-              <h2 className="text-lg font-semibold text-primary">运营提示</h2>
-              <ul className="mt-4 space-y-3 text-sm leading-7 text-muted">
-                <li>“关于品牌”建议 2-4 段，先说品牌故事，再说代表产品和服务能力。</li>
-                <li>“品牌定位”会直接展示在前台首屏标题下方，建议控制在 10-30 字内。</li>
-                <li>兼容字段主要用于治理和旧逻辑兜底，不填不会影响新版主展示，但建议保留已有内容。</li>
-                <li>联系方式尽量写电话、官网或微信说明，方便前台咨询转化。</li>
-                <li>如果旧站内容带有 HTML、内联样式或空标签，系统会在保存时自动清洗。</li>
-              </ul>
-              <button
-                type="submit"
-                disabled={saving || uploadingLogo}
-                className="mt-5 inline-flex rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-55"
-              >
-                {saving ? "保存中..." : "保存企业资料"}
-              </button>
-            </section>
-          </aside>
         </form>
       )}
     </div>
