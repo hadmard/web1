@@ -442,6 +442,7 @@ export default async function EnterprisePage({ params, searchParams }: Props) {
     area: ent.area,
   });
   const aboutParagraphs = buildAboutParagraphs(introPlain, aboutBlocks);
+  const logoUrl = ent.logoUrl ? resolveUploadedImageUrl(ent.logoUrl) : null;
 
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#f4f0ea_0%,#f8f6f2_22%,#fbfaf8_100%)] text-[#1f1b18]">
@@ -481,9 +482,22 @@ export default async function EnterprisePage({ params, searchParams }: Props) {
         <div className="mt-16 space-y-16 sm:mt-20">
           <section className="rounded-[36px] border border-[rgba(180,154,107,0.16)] bg-[linear-gradient(180deg,rgba(255,255,255,0.95),rgba(247,241,233,0.9))] p-6 shadow-[0_20px_42px_rgba(35,26,18,0.05)] sm:p-8 lg:p-10">
             <div className="rounded-[30px] border border-[rgba(140,111,78,0.1)] bg-white/82 p-6 shadow-[0_16px_34px_rgba(35,26,18,0.04)] sm:p-7 lg:p-8">
-              <div className="max-w-4xl">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-5">
+                {logoUrl ? (
+                  <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-[20px] border border-[rgba(140,111,78,0.12)] bg-white p-3 shadow-[0_10px_24px_rgba(35,26,18,0.06)] sm:h-20 sm:w-20">
+                    <Image
+                      src={logoUrl}
+                      alt={`${name} Logo`}
+                      width={120}
+                      height={120}
+                      className="h-full w-full object-contain"
+                    />
+                  </div>
+                ) : null}
+                <div className="max-w-4xl">
                 <p className="text-[11px] uppercase tracking-[0.28em] text-[#9f7a46]">Brand Story</p>
                 <h2 className="mt-3 font-serif text-3xl text-[#241c15] sm:text-4xl">关于品牌</h2>
+                </div>
               </div>
 
               <div className="mt-6 rounded-[26px] border border-[rgba(140,111,78,0.08)] bg-[rgba(255,252,247,0.86)] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] sm:mt-7 sm:p-7">
