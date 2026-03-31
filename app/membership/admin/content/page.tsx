@@ -266,6 +266,7 @@ export default function AdminContentPage() {
   const [source, setSource] = useState("");
   const [displayAuthor, setDisplayAuthor] = useState("");
   const [ownedEnterpriseId, setOwnedEnterpriseId] = useState("");
+  const [ownedEnterpriseSearch, setOwnedEnterpriseSearch] = useState("");
   const [excerpt, setExcerpt] = useState("");
   const [content, setContent] = useState("");
   const [brandStructured, setBrandStructured] = useState<BrandStructuredData>(createDefaultBrandStructuredData());
@@ -286,6 +287,7 @@ export default function AdminContentPage() {
   const [editSource, setEditSource] = useState("");
   const [editDisplayAuthor, setEditDisplayAuthor] = useState("");
   const [editOwnedEnterpriseId, setEditOwnedEnterpriseId] = useState("");
+  const [editOwnedEnterpriseSearch, setEditOwnedEnterpriseSearch] = useState("");
   const [editExcerpt, setEditExcerpt] = useState("");
   const [editContent, setEditContent] = useState("");
   const [editBrandStructured, setEditBrandStructured] = useState<BrandStructuredData>(createDefaultBrandStructuredData());
@@ -312,6 +314,20 @@ export default function AdminContentPage() {
 
   const canEdit = !!(session && (isSuperAdmin || session.canEditAllContent || session.canEditMemberContent || session.canEditOwnContent));
   const canDelete = !!(session && (isSuperAdmin || session.canDeleteAllContent || session.canDeleteMemberContent || session.canDeleteOwnContent));
+  const filteredEnterpriseOptions = useMemo(() => {
+    const keyword = ownedEnterpriseSearch.trim().toLowerCase();
+    if (!keyword) return enterpriseOptions;
+    return enterpriseOptions.filter((option) =>
+      `${option.label} ${option.brandName || ""}`.toLowerCase().includes(keyword),
+    );
+  }, [enterpriseOptions, ownedEnterpriseSearch]);
+  const filteredEditEnterpriseOptions = useMemo(() => {
+    const keyword = editOwnedEnterpriseSearch.trim().toLowerCase();
+    if (!keyword) return enterpriseOptions;
+    return enterpriseOptions.filter((option) =>
+      `${option.label} ${option.brandName || ""}`.toLowerCase().includes(keyword),
+    );
+  }, [enterpriseOptions, editOwnedEnterpriseSearch]);
 
   useEffect(() => {
     if (tab === "brands") return;
@@ -330,6 +346,7 @@ export default function AdminContentPage() {
     setSource("");
     setDisplayAuthor("");
     setOwnedEnterpriseId("");
+    setOwnedEnterpriseSearch("");
     setDocumentMeta(createEmptyDocumentMetadata());
   }, [tab]);
 
@@ -702,6 +719,7 @@ export default function AdminContentPage() {
     setEditSource(item.source ?? "");
     setEditDisplayAuthor(item.displayAuthor ?? "");
     setEditOwnedEnterpriseId(item.ownedEnterpriseId ?? "");
+    setEditOwnedEnterpriseSearch("");
     setEditExcerpt(item.excerpt ?? "");
     setEditContent(tab === "terms" ? formatTermContentForEditing(item.content) : item.content);
     setEditBrandStructured(
@@ -1036,18 +1054,27 @@ export default function AdminContentPage() {
                     <p className="text-xs text-muted">管理员代发时可指定企业，发布后会自动汇总到对应企业页的企业动态。</p>
                   </div>
                 </div>
+                <input
+                  className="mt-3 w-full rounded-xl border border-border bg-white/90 px-3 py-2 text-sm text-primary placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-[rgba(180,154,107,0.18)]"
+                  value={ownedEnterpriseSearch}
+                  onChange={(e) => setOwnedEnterpriseSearch(e.target.value)}
+                  placeholder={`搜索企业名称，共 ${enterpriseOptions.length} 家`}
+                />
                 <select
                   className="mt-3 w-full rounded-xl border border-border bg-white/90 px-3 py-2 text-sm text-primary focus:outline-none focus:ring-2 focus:ring-[rgba(180,154,107,0.18)]"
                   value={ownedEnterpriseId}
                   onChange={(e) => setOwnedEnterpriseId(e.target.value)}
                 >
                   <option value="">不指定归属企业</option>
-                  {enterpriseOptions.map((option) => (
+                  {filteredEnterpriseOptions.map((option) => (
                     <option key={option.id} value={option.id}>
                       {option.label}{option.brandName ? ` / ${option.brandName}` : ""}
                     </option>
                   ))}
                 </select>
+                {ownedEnterpriseSearch.trim() && filteredEnterpriseOptions.length === 0 ? (
+                  <p className="mt-2 text-xs text-muted">没有找到匹配企业，请换个关键词试试。</p>
+                ) : null}
               </div>
             )}
             {(tab === "terms" || tab === "standards") && (
@@ -1341,18 +1368,27 @@ export default function AdminContentPage() {
                     <p className="text-xs text-muted">变更后，企业页会按这里的归属关系自动汇总这篇文章。</p>
                   </div>
                 </div>
+                <input
+                  className="mt-3 w-full rounded-xl border border-border bg-white/90 px-3 py-2 text-sm text-primary placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-[rgba(180,154,107,0.18)]"
+                  value={editOwnedEnterpriseSearch}
+                  onChange={(e) => setEditOwnedEnterpriseSearch(e.target.value)}
+                  placeholder={`搜索企业名称，共 ${enterpriseOptions.length} 家`}
+                />
                 <select
                   className="mt-3 w-full rounded-xl border border-border bg-white/90 px-3 py-2 text-sm text-primary focus:outline-none focus:ring-2 focus:ring-[rgba(180,154,107,0.18)]"
                   value={editOwnedEnterpriseId}
                   onChange={(e) => setEditOwnedEnterpriseId(e.target.value)}
                 >
                   <option value="">不指定归属企业</option>
-                  {enterpriseOptions.map((option) => (
+                  {filteredEditEnterpriseOptions.map((option) => (
                     <option key={option.id} value={option.id}>
                       {option.label}{option.brandName ? ` / ${option.brandName}` : ""}
                     </option>
                   ))}
                 </select>
+                {editOwnedEnterpriseSearch.trim() && filteredEditEnterpriseOptions.length === 0 ? (
+                  <p className="mt-2 text-xs text-muted">没有找到匹配企业，请换个关键词试试。</p>
+                ) : null}
               </div>
             )}
             {(tab === "terms" || tab === "standards") && (

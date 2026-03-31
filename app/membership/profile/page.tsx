@@ -56,6 +56,9 @@ const BASE_FIELDS: Array<{ key: keyof FormState; label: string; placeholder: str
 
 const ADVANCED_FIELDS: Array<{ key: keyof FormState; label: string; placeholder: string }> = [
   { key: "positioning", label: "品牌定位", placeholder: "一句话说清企业是谁、做什么、适合什么客户。" },
+];
+
+const COMPATIBILITY_FIELDS: Array<{ key: keyof FormState; label: string; placeholder: string }> = [
   { key: "productSystem", label: "产品体系", placeholder: "如：整木定制、木门墙板、柜类系统" },
   { key: "craftLevel", label: "工艺等级", placeholder: "如：高定交付、柔性定制、木作精装" },
   { key: "certifications", label: "认证情况", placeholder: "如：高新技术企业 / ISO9001" },
@@ -132,7 +135,7 @@ export default function MembershipProfilePage() {
   const isAdvanced = memberType === "enterprise_advanced";
   const noPermission = memberType === "personal";
   const completionCount = useMemo(() => Object.values(form).filter((value) => value.trim().length > 0).length, [form]);
-  const previewSummary = useMemo(() => toSummaryText(form.positioning || form.intro, 120) || "填写品牌定位或企业简介后，这里会显示前台摘要。", [form.intro, form.positioning]);
+  const previewSummary = useMemo(() => toSummaryText(form.intro, 120) || "填写“关于品牌”后，这里会显示前台正文摘要。", [form.intro]);
   const previewTitle = useMemo(() => "当前企业资料预览", []);
   const previewHref = enterpriseId ? `/enterprise/${enterpriseId}` : null;
 
@@ -219,7 +222,7 @@ export default function MembershipProfilePage() {
               <h1 className="mt-3 font-serif text-3xl font-semibold text-primary">企业资料管理</h1>
               <p className="mt-3 text-sm text-muted">当前身份：{memberTypeLabel(memberType)}</p>
               <p className="mt-2 max-w-2xl text-sm leading-7 text-muted">
-                前台品牌页、品牌总览和企业详情页会优先读取这里的实时字段。企业简介、Logo、地区、联系方式和品牌定位，改这里就是改前台展示结果。
+                前台品牌页、品牌总览和企业详情页会优先读取这里的实时字段。“关于品牌”、Logo、地区、联系方式和品牌定位，改这里就是改前台展示结果。
               </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
@@ -270,10 +273,10 @@ export default function MembershipProfilePage() {
 
               <div className="mt-5 grid gap-5">
                 <label className="block">
-                  <span className="text-sm font-medium text-primary">企业简介</span>
-                  <p className="mt-1 text-xs leading-6 text-muted">支持直接输入清爽正文，也支持粘贴旧站内容。系统会自动清洗危险标签、内联样式和多余嵌套。</p>
+                  <span className="text-sm font-medium text-primary">关于品牌</span>
+                  <p className="mt-1 text-xs leading-6 text-muted">这里对应前台“关于品牌”正文。支持直接输入清爽正文，也支持粘贴旧站内容。系统会自动清洗危险标签、内联样式和多余嵌套。</p>
                   <div className="mt-3">
-                    <RichEditor value={form.intro} onChange={(value) => setForm((prev) => ({ ...prev, intro: value }))} minHeight={260} placeholder="建议用 2-4 段讲清企业定位、代表产品、服务对象和合作能力。" />
+                    <RichEditor value={form.intro} onChange={(value) => setForm((prev) => ({ ...prev, intro: value }))} minHeight={260} placeholder="建议用 2-4 段讲清品牌故事、代表产品、服务对象和合作能力。" />
                   </div>
                 </label>
 
@@ -331,10 +334,10 @@ export default function MembershipProfilePage() {
             {isAdvanced ? (
               <section className="rounded-[28px] border border-border bg-surface-elevated p-6 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
                 <div>
-                  <h2 className="text-lg font-semibold text-primary">高级展示字段</h2>
-                  <p className="mt-2 text-sm text-muted">这些字段会进入前台亮点区、品牌摘要和专业能力展示区，用来提升品牌感和咨询转化。</p>
+                  <h2 className="text-lg font-semibold text-primary">品牌定位</h2>
+                  <p className="mt-2 text-sm text-muted">这里只保留一个“品牌定位”字段，会展示在前台首屏标题下方的副标题位置。</p>
                 </div>
-                <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <div className="mt-5 max-w-xl">
                   {ADVANCED_FIELDS.map((field) => (
                     <label key={field.key} className="block">
                       <span className="text-sm font-medium text-primary">{field.label}</span>
@@ -346,6 +349,26 @@ export default function MembershipProfilePage() {
                       />
                     </label>
                   ))}
+                </div>
+
+                <div className="mt-6 rounded-[24px] border border-[rgba(180,154,107,0.18)] bg-[linear-gradient(180deg,rgba(255,252,247,0.98),rgba(248,242,233,0.9))] p-5">
+                  <p className="text-sm font-medium text-primary">兼容字段</p>
+                  <p className="mt-2 text-sm leading-7 text-muted">
+                    这些字段不会作为新版企业页的主展示区，但管理员后台、品牌治理、搜索和部分旧逻辑仍可能读取它们。为了不影响已有数据，先保留编辑入口。
+                  </p>
+                  <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    {COMPATIBILITY_FIELDS.map((field) => (
+                      <label key={field.key} className="block">
+                        <span className="text-sm font-medium text-primary">{field.label}</span>
+                        <input
+                          className="mt-2 h-12 w-full rounded-[22px] border border-border bg-white px-4 text-sm text-primary placeholder:text-muted focus:border-accent/40 focus:outline-none focus:ring-2 focus:ring-accent/15"
+                          value={form[field.key]}
+                          placeholder={field.placeholder}
+                          onChange={(event) => setForm((prev) => ({ ...prev, [field.key]: event.target.value }))}
+                        />
+                      </label>
+                    ))}
+                  </div>
                 </div>
               </section>
             ) : null}
@@ -373,7 +396,7 @@ export default function MembershipProfilePage() {
                   {form.intro ? (
                     <RichContent html={form.intro} className="text-sm leading-7 text-primary" />
                   ) : (
-                    <p className="text-sm text-muted">这里会展示清洗后的企业简介效果。</p>
+                    <p className="text-sm text-muted">这里会展示清洗后的“关于品牌”效果。</p>
                   )}
                 </div>
               </div>
@@ -382,8 +405,9 @@ export default function MembershipProfilePage() {
             <section className="rounded-[28px] border border-border bg-surface-elevated p-6 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
               <h2 className="text-lg font-semibold text-primary">运营提示</h2>
               <ul className="mt-4 space-y-3 text-sm leading-7 text-muted">
-                <li>企业简介建议 2-4 段，先说定位，再说产品体系和服务能力。</li>
-                <li>品牌定位会直接进入品牌卡片摘要，建议控制在 20-50 字内。</li>
+                <li>“关于品牌”建议 2-4 段，先说品牌故事，再说代表产品和服务能力。</li>
+                <li>“品牌定位”会直接展示在前台首屏标题下方，建议控制在 10-30 字内。</li>
+                <li>兼容字段主要用于治理和旧逻辑兜底，不填不会影响新版主展示，但建议保留已有内容。</li>
                 <li>联系方式尽量写电话、官网或微信说明，方便前台咨询转化。</li>
                 <li>如果旧站内容带有 HTML、内联样式或空标签，系统会在保存时自动清洗。</li>
               </ul>

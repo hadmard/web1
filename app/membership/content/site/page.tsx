@@ -161,7 +161,6 @@ export default function MembershipSitePage() {
 
   const settingsSnapshot = useMemo(() => JSON.stringify(settings), [settings]);
   const hasUnsavedChanges = settingsSnapshot !== savedSnapshot;
-  const capabilityCount = settings.capabilityCards.filter((item) => item.title || item.description).length;
   const tagCount = settings.homepageTags.length;
 
   async function handleSave() {
@@ -238,7 +237,7 @@ export default function MembershipSitePage() {
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
               <TopInfoCard label="主页样式" value="高端品牌型" />
-              <TopInfoCard label="核心能力" value={`${capabilityCount} 条`} />
+              <TopInfoCard label="关于品牌" value="读取企业资料" />
               <TopInfoCard label="保存状态" value={hasUnsavedChanges ? "待保存" : "已同步"} />
             </div>
           </div>
@@ -271,8 +270,11 @@ export default function MembershipSitePage() {
                   }))
                 }
               />
-              <TextField label="主视觉图" value={settings.heroImageUrl} onChange={(value) => setSettings((prev) => ({ ...prev, heroImageUrl: value }))} />
+              <TextField label="首屏主视觉图" value={settings.heroImageUrl} onChange={(value) => setSettings((prev) => ({ ...prev, heroImageUrl: value }))} />
             </div>
+            <p className="mt-3 text-xs leading-6 text-muted">
+              这张图会作为企业主页首屏背景图展示。建议尺寸：1600 × 900 px，横版 16:9，画面尽量简洁，避免文字过多。品牌 Logo 请到“企业资料”里单独上传。
+            </p>
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <TextField
                 label="主按钮文案"
@@ -288,81 +290,16 @@ export default function MembershipSitePage() {
           </Panel>
 
           <Panel title="品牌展示" defaultOpen>
-            <div className="flex items-center justify-between gap-3">
-              <h3 className="text-base font-medium text-primary">核心能力卡片</h3>
-              <button
-                type="button"
-                disabled={settings.capabilityCards.length >= 6}
-                onClick={() =>
-                  setSettings((prev) => ({
-                    ...prev,
-                    capabilityCards: [...prev.capabilityCards, { title: "", description: "", iconKey: "" }],
-                  }))
-                }
-                className="rounded-full border border-border bg-white px-4 py-2 text-sm text-primary transition hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                新增
-              </button>
-            </div>
-            <div className="mt-4 space-y-4">
-              {settings.capabilityCards.length === 0 ? (
-                <div className="rounded-[24px] border border-border bg-surface px-4 py-4 text-sm text-muted">
-                  还没有填写核心能力。
-                </div>
-              ) : null}
-              {settings.capabilityCards.map((card, index) => (
-                <div key={`capability-${index}`} className="rounded-[24px] border border-border bg-white p-4">
-                  <div className="mb-4 flex items-center justify-between gap-3">
-                    <p className="text-sm font-medium text-primary">能力 {index + 1}</p>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setSettings((prev) => ({
-                          ...prev,
-                          capabilityCards: prev.capabilityCards.filter((_, itemIndex) => itemIndex !== index),
-                        }))
-                      }
-                      className="text-sm text-accent hover:underline"
-                    >
-                      删除
-                    </button>
-                  </div>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <TextField
-                      label="标题"
-                      value={card.title}
-                      onChange={(value) =>
-                        setSettings((prev) => ({
-                          ...prev,
-                          capabilityCards: prev.capabilityCards.map((item, itemIndex) => (itemIndex === index ? { ...item, title: value } : item)),
-                        }))
-                      }
-                    />
-                    <TextField
-                      label="补充标识"
-                      value={card.iconKey}
-                      onChange={(value) =>
-                        setSettings((prev) => ({
-                          ...prev,
-                          capabilityCards: prev.capabilityCards.map((item, itemIndex) => (itemIndex === index ? { ...item, iconKey: value } : item)),
-                        }))
-                      }
-                    />
-                  </div>
-                  <div className="mt-4">
-                    <TextAreaField
-                      label="一句话描述"
-                      value={card.description}
-                      onChange={(value) =>
-                        setSettings((prev) => ({
-                          ...prev,
-                          capabilityCards: prev.capabilityCards.map((item, itemIndex) => (itemIndex === index ? { ...item, description: value } : item)),
-                        }))
-                      }
-                    />
-                  </div>
-                </div>
-              ))}
+            <div className="rounded-[24px] border border-border bg-surface px-5 py-5 text-sm leading-7 text-muted">
+              企业主页这一块现在只保留“关于品牌”，正文直接读取会员后台“企业资料”里的“关于品牌”，首屏副标题读取“品牌定位”。
+              <div className="mt-3 rounded-[18px] border border-[rgba(180,154,107,0.16)] bg-white/80 px-4 py-3 text-xs leading-6 text-muted">
+                旧版“核心能力卡片”配置不会被删除，但新版前台企业页已经不再展示这组卡片，系统仅保留数据兼容。
+              </div>
+              <div className="mt-4">
+                <Link href="/membership/profile" className="apple-inline-link">
+                  去填写企业资料
+                </Link>
+              </div>
             </div>
           </Panel>
 
@@ -412,7 +349,7 @@ export default function MembershipSitePage() {
               <SummaryRow label="企业名称" value={settings.heroTitle || "未填写"} />
               <SummaryRow label="一句话定位" value={settings.homepageTagline || "未填写"} />
               <SummaryRow label="品牌标签" value={tagCount ? `${tagCount} 个` : "未填写"} />
-              <SummaryRow label="核心能力" value={capabilityCount ? `${capabilityCount} 条` : "未填写"} />
+              <SummaryRow label="关于品牌" value="读取企业资料" />
               <SummaryRow label="联系人" value={settings.contact.contactPerson || "未填写"} />
               <SummaryRow label="电话" value={settings.contact.contactPhone || "未填写"} />
               <SummaryRow label="SEO" value={settings.seo.title || settings.seo.description ? "已填写" : "未填写"} />
