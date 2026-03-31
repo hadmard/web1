@@ -247,7 +247,7 @@ export default function MembershipContentGalleryPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 px-4 py-12">
+    <div className="mx-auto max-w-7xl space-y-5 px-3 py-6 sm:space-y-6 sm:px-4 sm:py-12">
       <nav className="text-sm text-muted" aria-label="面包屑">
         <Link href="/" className="hover:text-accent">
           首页
@@ -266,15 +266,15 @@ export default function MembershipContentGalleryPage() {
 
       <InlinePageBackLink href="/membership/content" label="返回会员后台" />
 
-      <section className="overflow-hidden rounded-[32px] border border-border bg-surface-elevated shadow-[0_24px_60px_rgba(15,23,42,0.08)]">
-        <div className="bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(244,239,230,0.92))] px-6 py-7">
+      <section className="overflow-hidden rounded-[26px] border border-border bg-surface-elevated shadow-[0_18px_40px_rgba(15,23,42,0.08)] sm:rounded-[32px] sm:shadow-[0_24px_60px_rgba(15,23,42,0.08)]">
+        <div className="bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(244,239,230,0.92))] px-4 py-5 sm:px-6 sm:py-7">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="text-xs uppercase tracking-[0.24em] text-muted">Gallery Console</p>
-              <h1 className="mt-3 font-serif text-3xl font-semibold text-primary">图库管理</h1>
-              <p className="mt-3 max-w-2xl text-sm leading-7 text-muted">上传案例图、工艺图或空间图，保存后会进入你的企业图库。</p>
+              <h1 className="mt-2 font-serif text-2xl font-semibold text-primary sm:mt-3 sm:text-3xl">图库管理</h1>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted sm:mt-3 sm:leading-7">上传案例图、工艺图或空间图，保存后会进入你的企业图库。</p>
             </div>
-            <div className="grid gap-3 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
               <MiniStat label="总数" value={String(stats.total)} />
               <MiniStat label="待审核" value={String(stats.pending)} />
               <MiniStat label="已通过" value={String(stats.approved)} />
@@ -285,9 +285,9 @@ export default function MembershipContentGalleryPage() {
         </div>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[420px_minmax(0,1fr)]">
-        <article className="rounded-[28px] border border-border bg-surface-elevated p-6 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
-          <div className="flex items-center justify-between gap-3">
+      <section className="grid gap-5 sm:gap-6 xl:grid-cols-[420px_minmax(0,1fr)]">
+        <article className="rounded-[24px] border border-border bg-surface-elevated p-4 shadow-[0_14px_30px_rgba(15,23,42,0.06)] sm:rounded-[28px] sm:p-6 sm:shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-lg font-semibold text-primary">上传图片</h2>
               <p className="mt-1 text-sm text-muted">先上传图片，再补标题和标签。</p>
@@ -355,15 +355,15 @@ export default function MembershipContentGalleryPage() {
               type="button"
               onClick={() => void handleSubmit()}
               disabled={saving || uploading}
-              className="rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white shadow-[0_16px_36px_rgba(180,154,107,0.28)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-70"
+              className="w-full rounded-full bg-accent px-5 py-3 text-sm font-medium text-white shadow-[0_16px_36px_rgba(180,154,107,0.28)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto sm:py-2.5"
             >
               {saving ? "保存中..." : "加入图库"}
             </button>
           </div>
         </article>
 
-        <article className="rounded-[28px] border border-border bg-surface-elevated p-6 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
-          <div className="flex items-center justify-between gap-3">
+        <article className="rounded-[24px] border border-border bg-surface-elevated p-4 shadow-[0_14px_30px_rgba(15,23,42,0.06)] sm:rounded-[28px] sm:p-6 sm:shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-lg font-semibold text-primary">已上传图片</h2>
               <p className="mt-1 text-sm text-muted">这里显示你当前账号已提交的图库内容。</p>
@@ -378,7 +378,7 @@ export default function MembershipContentGalleryPage() {
           ) : (
             <div className="mt-6 grid gap-4 md:grid-cols-2">
               {items.map((item) => (
-                <article key={item.id} className="overflow-hidden rounded-[24px] border border-border bg-white shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
+                <article key={item.id} className="overflow-hidden rounded-[20px] border border-border bg-white shadow-[0_12px_28px_rgba(15,23,42,0.05)] sm:rounded-[24px]">
                   <img
                     src={resolveUploadedImageUrl(item.imageUrl)}
                     alt={item.alt || item.title || "图库图片"}
@@ -411,7 +411,7 @@ export default function MembershipContentGalleryPage() {
                           type="button"
                           onClick={() => void handleDelete(item.id)}
                           disabled={deletingId === item.id}
-                          className="rounded-full border border-border bg-surface px-4 py-2 text-sm text-primary transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-70"
+                          className="w-full rounded-full border border-border bg-surface px-4 py-2.5 text-sm text-primary transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto sm:py-2"
                         >
                           {deletingId === item.id ? "删除中..." : "删除图片"}
                         </button>
@@ -430,9 +430,9 @@ export default function MembershipContentGalleryPage() {
 
 function MiniStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-[24px] border border-border bg-white/85 px-4 py-4 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
+    <div className="rounded-[18px] border border-border bg-white/88 px-4 py-3 shadow-[0_10px_24px_rgba(15,23,42,0.06)] sm:rounded-[24px] sm:px-4 sm:py-4">
       <p className="text-[11px] uppercase tracking-[0.2em] text-muted">{label}</p>
-      <p className="mt-3 text-lg font-semibold text-primary">{value}</p>
+      <p className="mt-2 text-base font-semibold text-primary sm:mt-3 sm:text-lg">{value}</p>
     </div>
   );
 }

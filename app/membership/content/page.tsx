@@ -419,17 +419,17 @@ export default function MemberContentPage() {
     : "未开通";
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 px-4 py-12">
-      <section className="overflow-hidden rounded-[32px] border border-border bg-surface-elevated shadow-[0_24px_60px_rgba(15,23,42,0.08)]">
-        <div className="bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(244,239,230,0.92))] px-6 py-7">
+    <div className="mx-auto max-w-7xl space-y-5 px-3 py-6 sm:space-y-6 sm:px-4 sm:py-12">
+      <section className="overflow-hidden rounded-[26px] border border-border bg-surface-elevated shadow-[0_18px_40px_rgba(15,23,42,0.08)] sm:rounded-[32px] sm:shadow-[0_24px_60px_rgba(15,23,42,0.08)]">
+        <div className="bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(244,239,230,0.92))] px-4 py-5 sm:px-6 sm:py-7">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="text-xs uppercase tracking-[0.24em] text-muted">Member Workbench</p>
-              <h1 className="mt-3 font-serif text-3xl font-semibold tracking-tight text-primary">会员后台工作台</h1>
-              <p className="mt-3 text-sm text-muted">{displayName} · {data.member.label}</p>
-              <p className="mt-2 text-sm text-muted">内容发布、企业主页配置、账号安全都收在这里，减少来回切页。</p>
+              <h1 className="mt-2 font-serif text-2xl font-semibold tracking-tight text-primary sm:mt-3 sm:text-3xl">会员后台工作台</h1>
+              <p className="mt-2 text-sm text-muted">{displayName} · {data.member.label}</p>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">内容发布、企业主页配置、账号安全都收在这里，减少来回切页。</p>
             </div>
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
               <HeroMiniCard label="资讯额度" value={newsQuota} />
               <HeroMiniCard label="图库额度" value={galleryQuota} />
               <HeroMiniCard label="认证状态" value={verification} />
@@ -438,8 +438,8 @@ export default function MemberContentPage() {
         </div>
       </section>
 
-      <section id="publish-center" className="rounded-[28px] border border-border bg-surface-elevated p-6 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
-        <div className="flex items-center justify-between gap-3">
+      <section id="publish-center" className="rounded-[24px] border border-border bg-surface-elevated p-4 shadow-[0_14px_30px_rgba(15,23,42,0.06)] sm:rounded-[28px] sm:p-6 sm:shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-lg font-semibold text-primary">内容发布中心</h2>
             <p className="mt-1 text-sm text-muted">发布、图库、审核和企业资料入口都放在这里。</p>
@@ -449,21 +449,21 @@ export default function MemberContentPage() {
             <AnchorLink href="#account-security" label="账号安全" />
           </div>
         </div>
-        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-4 grid gap-3 sm:mt-5 md:grid-cols-2 xl:grid-cols-3">
           {PRIMARY_ACTIONS.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className="rounded-[24px] border border-border bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(244,239,230,0.86))] px-5 py-5 transition hover:-translate-y-0.5 hover:border-accent/35 hover:shadow-[0_14px_30px_rgba(15,23,42,0.08)]"
+              className="rounded-[20px] border border-border bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(244,239,230,0.86))] px-4 py-4 transition hover:-translate-y-0.5 hover:border-accent/35 hover:shadow-[0_14px_30px_rgba(15,23,42,0.08)] sm:rounded-[24px] sm:px-5 sm:py-5"
             >
-              <p className="text-base font-medium text-primary">{item.label}</p>
+              <p className="text-[15px] font-medium text-primary sm:text-base">{item.label}</p>
               <p className="mt-2 text-sm leading-6 text-muted">{item.desc}</p>
             </Link>
           ))}
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid grid-cols-2 gap-3 md:grid-cols-2 md:gap-4 xl:grid-cols-4">
         <StatCard label="资讯内容" value={data.stats.articles.total} sub={`待审核 ${data.stats.articles.pending} · 已通过 ${data.stats.articles.approved}`} />
         <StatCard label="图库内容" value={data.stats.gallery.total} sub={`待审核 ${data.stats.gallery.pending} · 已通过 ${data.stats.gallery.approved}`} />
         <StatCard label="标准反馈" value={data.stats.standardFeedback.total} sub={`待审核 ${data.stats.standardFeedback.pending} · 已通过 ${data.stats.standardFeedback.approved}`} />
@@ -471,8 +471,8 @@ export default function MemberContentPage() {
       </section>
 
       {data.features.supportsEnterpriseSite ? (
-        <section id="site-settings" className="rounded-[28px] border border-border bg-surface-elevated p-6 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
-          <div className="flex items-center justify-between gap-3">
+        <section id="site-settings" className="rounded-[24px] border border-border bg-surface-elevated p-4 shadow-[0_14px_30px_rgba(15,23,42,0.06)] sm:rounded-[28px] sm:p-6 sm:shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-lg font-semibold text-primary">企业主页配置</h2>
               <p className="mt-1 text-sm text-muted">这里集中维护首屏、联系信息和搜索分享设置。</p>
@@ -484,7 +484,7 @@ export default function MemberContentPage() {
             </div>
           </div>
 
-          <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
+          <div className="mt-4 grid gap-4 sm:mt-5 lg:grid-cols-[minmax(0,1fr)_300px]">
             <div className="space-y-4">
               <Field label="企业名称" value={siteSettings.heroTitle} onChange={(value) => setSiteSettings((prev) => ({ ...prev, heroTitle: value }))} />
               <div className="grid gap-4 md:grid-cols-2">
@@ -507,7 +507,7 @@ export default function MemberContentPage() {
               />
             </div>
 
-            <div className="rounded-[24px] border border-border bg-white/90 p-5">
+            <div className="rounded-[20px] border border-border bg-white/90 p-4 sm:rounded-[24px] sm:p-5">
               <p className="text-sm font-medium text-primary">首屏主视觉图</p>
               <input
                 className="mt-3 w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm text-primary"
@@ -605,13 +605,13 @@ export default function MemberContentPage() {
             />
           </div>
 
-          <div className="mt-5 flex items-center justify-between gap-3">
-            <p className="text-sm text-muted">{siteMessage || "保存后企业主页会使用最新配置。"}</p>
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm leading-6 text-muted">{siteMessage || "保存后企业主页会使用最新配置。"}</p>
             <button
               type="button"
               onClick={() => void handleSaveSite()}
               disabled={savingSite || uploadingHeroImage || !hasUnsavedSiteChanges}
-              className="rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white shadow-[0_16px_36px_rgba(180,154,107,0.28)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-70"
+              className="w-full rounded-full bg-accent px-5 py-3 text-sm font-medium text-white shadow-[0_16px_36px_rgba(180,154,107,0.28)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto sm:py-2.5"
             >
               {savingSite ? "保存中..." : uploadingHeroImage ? "上传中..." : hasUnsavedSiteChanges ? "保存主页配置" : "已保存"}
             </button>
@@ -619,8 +619,8 @@ export default function MemberContentPage() {
         </section>
       ) : null}
 
-      <section id="account-security" className="rounded-[28px] border border-border bg-surface-elevated p-6 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
-        <div className="flex items-center justify-between gap-3">
+      <section id="account-security" className="rounded-[24px] border border-border bg-surface-elevated p-4 shadow-[0_14px_30px_rgba(15,23,42,0.06)] sm:rounded-[28px] sm:p-6 sm:shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-lg font-semibold text-primary">账号安全</h2>
             <p className="mt-1 text-sm text-muted">管理找回邮箱和登录密码。</p>
@@ -630,8 +630,8 @@ export default function MemberContentPage() {
         {securityError ? <p className="mt-4 text-sm text-red-600">{securityError}</p> : null}
         {securityMessage ? <p className="mt-4 text-sm text-emerald-700">{securityMessage}</p> : null}
 
-        <div className="mt-5 grid gap-6 xl:grid-cols-[1fr_1.1fr]">
-          <form onSubmit={handleRecoveryEmailSubmit} className="rounded-[24px] border border-border bg-white/90 p-5">
+        <div className="mt-5 grid gap-4 sm:gap-6 xl:grid-cols-[1fr_1.1fr]">
+          <form onSubmit={handleRecoveryEmailSubmit} className="rounded-[20px] border border-border bg-white/90 p-4 sm:rounded-[24px] sm:p-5">
             <h3 className="text-base font-medium text-primary">找回邮箱</h3>
             <p className="mt-2 text-sm text-muted">忘记密码时，系统会把重置链接发到这里。</p>
             <label className="mt-4 block">
@@ -648,14 +648,14 @@ export default function MemberContentPage() {
               <button
                 type="submit"
                 disabled={loadingRecovery}
-                className="rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white shadow-[0_16px_36px_rgba(180,154,107,0.28)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-70"
+                className="w-full rounded-full bg-accent px-5 py-3 text-sm font-medium text-white shadow-[0_16px_36px_rgba(180,154,107,0.28)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto sm:py-2.5"
               >
                 {loadingRecovery ? "保存中..." : "保存找回邮箱"}
               </button>
             </div>
           </form>
 
-          <form onSubmit={handlePasswordSubmit} className="rounded-[24px] border border-border bg-white/90 p-5">
+          <form onSubmit={handlePasswordSubmit} className="rounded-[20px] border border-border bg-white/90 p-4 sm:rounded-[24px] sm:p-5">
             <h3 className="text-base font-medium text-primary">修改密码</h3>
             <div className="mt-4 grid gap-4 md:grid-cols-3">
               <Field label="当前密码" type="password" value={currentPassword} onChange={setCurrentPassword} />
@@ -666,7 +666,7 @@ export default function MemberContentPage() {
               <button
                 type="submit"
                 disabled={loadingPassword}
-                className="rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white shadow-[0_16px_36px_rgba(180,154,107,0.28)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-70"
+                className="w-full rounded-full bg-accent px-5 py-3 text-sm font-medium text-white shadow-[0_16px_36px_rgba(180,154,107,0.28)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto sm:py-2.5"
               >
                 {loadingPassword ? "提交中..." : "更新密码"}
               </button>
@@ -680,19 +680,19 @@ export default function MemberContentPage() {
 
 function HeroMiniCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-[24px] border border-border bg-white/85 px-4 py-4 shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
+    <div className="rounded-[18px] border border-border bg-white/88 px-4 py-3 shadow-[0_10px_24px_rgba(15,23,42,0.06)] sm:rounded-[24px] sm:px-4 sm:py-4 sm:shadow-[0_12px_30px_rgba(15,23,42,0.06)]">
       <p className="text-[11px] uppercase tracking-[0.2em] text-muted">{label}</p>
-      <p className="mt-3 text-lg font-semibold text-primary">{value}</p>
+      <p className="mt-2 text-base font-semibold text-primary sm:mt-3 sm:text-lg">{value}</p>
     </div>
   );
 }
 
 function StatCard({ label, value, sub }: { label: string; value: number; sub: string }) {
   return (
-    <article className="rounded-[26px] border border-border bg-surface-elevated p-5 shadow-[0_14px_36px_rgba(15,23,42,0.05)]">
+    <article className="rounded-[20px] border border-border bg-surface-elevated p-4 shadow-[0_12px_28px_rgba(15,23,42,0.05)] sm:rounded-[26px] sm:p-5 sm:shadow-[0_14px_36px_rgba(15,23,42,0.05)]">
       <p className="text-sm text-muted">{label}</p>
-      <p className="mt-2 text-3xl font-semibold text-primary">{value}</p>
-      <p className="mt-2 text-xs text-muted">{sub}</p>
+      <p className="mt-2 text-2xl font-semibold text-primary sm:text-3xl">{value}</p>
+      <p className="mt-2 text-[11px] leading-5 text-muted sm:text-xs">{sub}</p>
     </article>
   );
 }
@@ -754,7 +754,7 @@ function InfoCard({
   actionLabel: string;
 }) {
   return (
-    <div className="rounded-[24px] border border-[rgba(180,154,107,0.18)] bg-[linear-gradient(180deg,rgba(255,252,247,0.98),rgba(248,242,233,0.9))] p-5 text-sm leading-7 text-muted">
+    <div className="rounded-[20px] border border-[rgba(180,154,107,0.18)] bg-[linear-gradient(180deg,rgba(255,252,247,0.98),rgba(248,242,233,0.9))] p-4 text-sm leading-6 text-muted sm:rounded-[24px] sm:p-5 sm:leading-7">
       <p className="font-medium text-primary">{title}</p>
       <p className="mt-2">{text}</p>
       <div className="mt-3">
@@ -768,7 +768,7 @@ function InfoCard({
 
 function AnchorLink({ href, label }: { href: string; label: string }) {
   return (
-    <a href={href} className="rounded-full border border-border bg-surface px-3 py-1.5 text-xs text-primary transition hover:bg-white">
+    <a href={href} className="rounded-full border border-border bg-surface px-3 py-2 text-xs text-primary transition hover:bg-white">
       {label}
     </a>
   );

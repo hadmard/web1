@@ -197,7 +197,7 @@ export default function MembershipProfilePage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 px-4 py-12">
+    <div className="mx-auto max-w-7xl space-y-5 px-3 py-6 sm:space-y-6 sm:px-4 sm:py-12">
       <nav className="text-sm text-muted" aria-label="面包屑">
         <Link href="/" className="hover:text-accent">首页</Link>
         <span className="mx-2">/</span>
@@ -210,18 +210,18 @@ export default function MembershipProfilePage() {
 
       <InlinePageBackLink href="/membership/content" label="返回会员后台" />
 
-      <section className="overflow-hidden rounded-[32px] border border-border bg-surface-elevated shadow-[0_24px_60px_rgba(15,23,42,0.08)]">
-        <div className="bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(244,239,230,0.92))] px-6 py-7">
+      <section className="overflow-hidden rounded-[26px] border border-border bg-surface-elevated shadow-[0_18px_40px_rgba(15,23,42,0.08)] sm:rounded-[32px] sm:shadow-[0_24px_60px_rgba(15,23,42,0.08)]">
+        <div className="bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(244,239,230,0.92))] px-4 py-5 sm:px-6 sm:py-7">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="text-xs uppercase tracking-[0.24em] text-muted">Brand Profile Studio</p>
-              <h1 className="mt-3 font-serif text-3xl font-semibold text-primary">企业资料管理</h1>
-              <p className="mt-3 text-sm text-muted">当前身份：{memberTypeLabel(memberType)}</p>
-              <p className="mt-2 max-w-2xl text-sm leading-7 text-muted">
+              <h1 className="mt-2 font-serif text-2xl font-semibold text-primary sm:mt-3 sm:text-3xl">企业资料管理</h1>
+              <p className="mt-2 text-sm text-muted">当前身份：{memberTypeLabel(memberType)}</p>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted sm:leading-7">
                 前台品牌页、品牌总览和企业详情页会优先读取这里的实时字段。“关于品牌”、Logo、地区、联系方式和品牌定位，改这里就是改前台展示结果。
               </p>
             </div>
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
               <MiniStat label="已填写字段" value={`${completionCount}/15`} />
               <MiniStat label="高级资料" value={isAdvanced ? "已开通" : "未开通"} />
               <MiniStat label="当前状态" value={saving ? "保存中" : message ? "已更新" : "待编辑"} />
@@ -233,7 +233,7 @@ export default function MembershipProfilePage() {
       {message ? <div className={`rounded-[24px] border px-5 py-4 text-sm ${messageTone(message)}`}>{message}</div> : null}
 
       {noPermission ? (
-        <section className="rounded-[28px] border border-border bg-surface-elevated p-6 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
+        <section className="rounded-[24px] border border-border bg-surface-elevated p-4 shadow-[0_14px_30px_rgba(15,23,42,0.06)] sm:rounded-[28px] sm:p-6 sm:shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
           <h2 className="text-lg font-semibold text-primary">当前账号未开通企业资料编辑</h2>
           <p className="mt-3 text-sm leading-7 text-muted">
             个人会员默认不支持企业主体资料维护。如需开通企业展示页、企业站或品牌信息，请先完成企业认证，再由平台开通对应会员能力。
@@ -248,8 +248,8 @@ export default function MembershipProfilePage() {
           </div>
         </section>
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-6">
-            <section className="rounded-[28px] border border-border bg-surface-elevated p-6 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
+        <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-6">
+            <section className="rounded-[24px] border border-border bg-surface-elevated p-4 shadow-[0_14px_30px_rgba(15,23,42,0.06)] sm:rounded-[28px] sm:p-6 sm:shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <h2 className="text-lg font-semibold text-primary">前台核心字段</h2>
@@ -262,7 +262,7 @@ export default function MembershipProfilePage() {
                 ) : null}
               </div>
 
-              <div className="mt-5 rounded-[24px] border border-[rgba(180,154,107,0.18)] bg-[linear-gradient(180deg,rgba(255,252,247,0.98),rgba(248,242,233,0.9))] p-4 text-sm leading-7 text-[rgba(96,78,47,0.92)]">
+              <div className="mt-4 rounded-[20px] border border-[rgba(180,154,107,0.18)] bg-[linear-gradient(180deg,rgba(255,252,247,0.98),rgba(248,242,233,0.9))] p-4 text-sm leading-6 text-[rgba(96,78,47,0.92)] sm:mt-5 sm:rounded-[24px] sm:leading-7">
                 前台优先读取规则：Logo、地区、摘要、联系方式优先取企业实时字段；品牌快照只作为兜底，不再覆盖你刚保存的结果。
               </div>
 
@@ -297,7 +297,7 @@ export default function MembershipProfilePage() {
                     </div>
                   </label>
 
-                  <div className="rounded-[24px] border border-border bg-surface p-4">
+                  <div className="rounded-[20px] border border-border bg-surface p-4 sm:rounded-[24px]">
                     <p className="text-xs uppercase tracking-[0.16em] text-muted">Logo 预览</p>
                     <div className="mt-4 flex h-28 items-center justify-center rounded-[20px] border border-dashed border-border bg-white">
                       {form.logoUrl ? (
@@ -327,7 +327,7 @@ export default function MembershipProfilePage() {
             </section>
 
             {isAdvanced ? (
-              <section className="rounded-[28px] border border-border bg-surface-elevated p-6 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
+              <section className="rounded-[24px] border border-border bg-surface-elevated p-4 shadow-[0_14px_30px_rgba(15,23,42,0.06)] sm:rounded-[28px] sm:p-6 sm:shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
                 <div>
                   <h2 className="text-lg font-semibold text-primary">品牌定位</h2>
                   <p className="mt-2 text-sm text-muted">这里只保留一个“品牌定位”字段，会展示在前台首屏标题下方的副标题位置。</p>
@@ -346,7 +346,7 @@ export default function MembershipProfilePage() {
                   ))}
                 </div>
 
-                <div className="mt-6 rounded-[24px] border border-[rgba(180,154,107,0.18)] bg-[linear-gradient(180deg,rgba(255,252,247,0.98),rgba(248,242,233,0.9))] p-5">
+                <div className="mt-6 rounded-[20px] border border-[rgba(180,154,107,0.18)] bg-[linear-gradient(180deg,rgba(255,252,247,0.98),rgba(248,242,233,0.9))] p-4 sm:rounded-[24px] sm:p-5">
                   <p className="text-sm font-medium text-primary">兼容字段</p>
                   <p className="mt-2 text-sm leading-7 text-muted">
                     这些字段不会作为新版企业页的主展示区，但管理员后台、品牌治理、搜索和部分旧逻辑仍可能读取它们。为了不影响已有数据，先保留编辑入口。
@@ -371,7 +371,7 @@ export default function MembershipProfilePage() {
             <button
               type="submit"
               disabled={saving || uploadingLogo}
-              className="inline-flex rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-55"
+              className="inline-flex w-full justify-center rounded-full bg-accent px-5 py-3 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-55 sm:w-auto sm:py-2.5"
             >
               {saving ? "保存中..." : "保存企业资料"}
             </button>
@@ -384,9 +384,9 @@ export default function MembershipProfilePage() {
 
 function MiniStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-[24px] border border-white/60 bg-white/74 px-4 py-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)] backdrop-blur">
+    <div className="rounded-[18px] border border-white/60 bg-white/78 px-4 py-3 shadow-[0_10px_24px_rgba(15,23,42,0.05)] backdrop-blur sm:rounded-[24px] sm:px-4 sm:py-4">
       <p className="text-xs uppercase tracking-[0.16em] text-muted">{label}</p>
-      <p className="mt-2 text-base font-semibold text-primary">{value}</p>
+      <p className="mt-2 text-[15px] font-semibold text-primary sm:text-base">{value}</p>
     </div>
   );
 }
