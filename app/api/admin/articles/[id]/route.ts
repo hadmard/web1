@@ -20,6 +20,7 @@ function revalidateArticlePaths(article: {
   title?: string | null;
   categoryHref?: string | null;
   subHref?: string | null;
+  ownedEnterpriseId?: string | null;
 }) {
   const segment = (article.slug || article.title || "").trim();
   const isDictionary =
@@ -31,6 +32,10 @@ function revalidateArticlePaths(article: {
     if (segment) {
       revalidatePath(`/dictionary/${encodeURIComponent(segment)}`);
     }
+  }
+
+  if (article.ownedEnterpriseId) {
+    revalidatePath(`/enterprise/${article.ownedEnterpriseId}`);
   }
 }
 
@@ -61,7 +66,14 @@ export async function PATCH(
   const { id } = await params;
   const target = await prisma.article.findUnique({
     where: { id },
-    select: { id: true, authorMemberId: true, publishedAt: true, categoryHref: true, subHref: true },
+    select: {
+      id: true,
+      authorMemberId: true,
+      publishedAt: true,
+      categoryHref: true,
+      subHref: true,
+      ownedEnterpriseId: true,
+    },
   });
   if (!target) return NextResponse.json({ error: "未找到" }, { status: 404 });
 
@@ -84,6 +96,7 @@ export async function PATCH(
     relatedTermSlugs,
     relatedStandardIds,
     relatedBrandIds,
+    ownedEnterpriseId,
     tagSlugs,
     faqJson,
     syncToMainSite,
@@ -116,6 +129,19 @@ export async function PATCH(
   if (typeof relatedTermSlugs === "string") data.relatedTermSlugs = relatedTermSlugs.trim() || null;
   if (typeof relatedStandardIds === "string") data.relatedStandardIds = relatedStandardIds.trim() || null;
   if (typeof relatedBrandIds === "string") data.relatedBrandIds = relatedBrandIds.trim() || null;
+  if (ownedEnterpriseId === null || (typeof ownedEnterpriseId === "string" && !ownedEnterpriseId.trim())) {
+    data.ownedEnterpriseId = null;
+  } else if (typeof ownedEnterpriseId === "string") {
+    const normalizedOwnedEnterpriseId = ownedEnterpriseId.trim();
+    const ownedEnterprise = await prisma.enterprise.findUnique({
+      where: { id: normalizedOwnedEnterpriseId },
+      select: { id: true },
+    });
+    if (!ownedEnterprise) {
+      return NextResponse.json({ error: "归属企业不存在或已被删除" }, { status: 400 });
+    }
+    data.ownedEnterpriseId = normalizedOwnedEnterpriseId;
+  }
   if (typeof tagSlugs === "string") data.tagSlugs = tagSlugs.trim() || null;
   if (typeof faqJson === "string") data.faqJson = faqJson.trim() || null;
   if (typeof isPinned === "boolean") data.isPinned = isPinned;
@@ -196,6 +222,14 @@ export async function PATCH(
       relatedTermSlugs: true,
       relatedStandardIds: true,
       relatedBrandIds: true,
+      ownedEnterpriseId: true,
+      ownedEnterprise: {
+        select: {
+          id: true,
+          companyName: true,
+          companyShortName: true,
+        },
+      },
       faqJson: true,
       syncToMainSite: true,
     },

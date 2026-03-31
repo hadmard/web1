@@ -80,6 +80,14 @@ export async function GET(request: NextRequest) {
         publishedAt: true,
         viewCount: true,
         status: true,
+        ownedEnterpriseId: true,
+        ownedEnterprise: {
+          select: {
+            id: true,
+            companyName: true,
+            companyShortName: true,
+          },
+        },
         authorMember: {
           select: {
             id: true,
@@ -122,6 +130,7 @@ export async function POST(request: NextRequest) {
       relatedTermSlugs,
       relatedStandardIds,
       relatedBrandIds,
+      ownedEnterpriseId,
       tagSlugs,
       faqJson,
       syncToMainSite,
@@ -178,6 +187,19 @@ export async function POST(request: NextRequest) {
       subHref: typeof subHref === "string" ? subHref : null,
     });
 
+    const normalizedOwnedEnterpriseId =
+      typeof ownedEnterpriseId === "string" && ownedEnterpriseId.trim() ? ownedEnterpriseId.trim() : null;
+
+    if (normalizedOwnedEnterpriseId) {
+      const ownedEnterprise = await prisma.enterprise.findUnique({
+        where: { id: normalizedOwnedEnterpriseId },
+        select: { id: true },
+      });
+      if (!ownedEnterprise) {
+        return NextResponse.json({ error: "归属企业不存在或已被删除" }, { status: 400 });
+      }
+    }
+
     const article = await prisma.article.create({
       data: {
         title: normalizedTitle,
@@ -197,6 +219,7 @@ export async function POST(request: NextRequest) {
         relatedTermSlugs: typeof relatedTermSlugs === "string" ? relatedTermSlugs.trim() || null : null,
         relatedStandardIds: typeof relatedStandardIds === "string" ? relatedStandardIds.trim() || null : null,
         relatedBrandIds: typeof relatedBrandIds === "string" ? relatedBrandIds.trim() || null : null,
+        ownedEnterpriseId: normalizedOwnedEnterpriseId,
         faqJson: typeof faqJson === "string" ? faqJson.trim() || null : null,
         tagSlugs: resolvedTagSlugs.length > 0 ? resolvedTagSlugs.join(",") : null,
         syncToMainSite: syncToMainSite === true,
@@ -206,6 +229,22 @@ export async function POST(request: NextRequest) {
         reviewNote: typeof reviewNote === "string" ? reviewNote.trim() || null : null,
         reviewedAt: safeStatus === "approved" || safeStatus === "rejected" ? new Date() : null,
         reviewedById: safeStatus === "approved" || safeStatus === "rejected" ? session.sub : null,
+      },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        categoryHref: true,
+        subHref: true,
+        status: true,
+        ownedEnterpriseId: true,
+        ownedEnterprise: {
+          select: {
+            id: true,
+            companyName: true,
+            companyShortName: true,
+          },
+        },
       },
     });
 

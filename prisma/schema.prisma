@@ -163,6 +163,7 @@ model Enterprise {
   memberId        String   @unique
   member          Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
   brand           Brand?
+  ownedArticles   Article[] @relation("EnterpriseOwnedArticles")
   inquiries       EnterpriseInquiry[]
   companyName     String?
   companyShortName String?
@@ -355,6 +356,8 @@ model Article {
   reviewedBy          Member?       @relation("ArticleReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
   authorMemberId      String?
   authorMember        Member?       @relation("MemberArticles", fields: [authorMemberId], references: [id], onDelete: SetNull)
+  ownedEnterpriseId   String?
+  ownedEnterprise     Enterprise?   @relation("EnterpriseOwnedArticles", fields: [ownedEnterpriseId], references: [id], onDelete: SetNull)
   conceptSummary      String?
   applicableScenarios String?
   faqJson             String?
@@ -375,6 +378,7 @@ model Article {
   @@index([status, viewCount])
   @@index([status, isPinned])
   @@index([authorMemberId])
+  @@index([ownedEnterpriseId])
   @@map("articles")
 }
 

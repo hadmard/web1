@@ -162,7 +162,14 @@ export async function POST(request: NextRequest) {
 
   const categoryDef = MEMBER_PUBLISH_CATEGORY_OPTIONS.find((item) => item.href === categoryHrefTrim);
   const rawSubHref = typeof subHref === "string" ? subHref.trim() : "";
-  const normalizedSubHref = rawSubHref || null;
+  const memberEnterprise = await prisma.enterprise.findUnique({
+    where: { memberId: session.sub },
+    select: { id: true },
+  });
+  const normalizedSubHref =
+    categoryHrefTrim === "/news" && memberEnterprise
+      ? rawSubHref || "/news/enterprise"
+      : rawSubHref || null;
 
   if (categoryDef && categoryDef.href !== "/brands" && categoryDef.subs.length > 0) {
     if (!normalizedSubHref) {

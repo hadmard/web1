@@ -372,9 +372,14 @@ function PublishCenterPageInner() {
   useEffect(() => {
     const enabledSubOptions = subOptions.filter((item) => item.enabled);
     if (enabledSubOptions.length > 0 && !enabledSubOptions.some((s) => s.href === subHref)) {
+      if (safeTab === "articles" && enterprise?.id) {
+        const enterpriseOption = enabledSubOptions.find((item) => item.href === "/news/enterprise");
+        setSubHref(enterpriseOption?.href ?? enabledSubOptions[0].href);
+        return;
+      }
       setSubHref(enabledSubOptions[0].href);
     }
-  }, [subOptions, subHref]);
+  }, [enterprise?.id, safeTab, subOptions, subHref]);
 
   useEffect(() => {
     if (!message) return;
@@ -1191,6 +1196,21 @@ function PublishCenterPageInner() {
               </div>
             )}
           </div>
+          {safeTab === "articles" && (
+            <div className="rounded-2xl border border-[rgba(180,154,107,0.18)] bg-[linear-gradient(180deg,rgba(255,253,249,0.98),rgba(248,243,236,0.94))] px-4 py-4 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.16)]">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-primary">默认同步到整木资讯</p>
+                  <p className="mt-1 text-xs leading-6 text-muted">
+                    企业会员在这里发布的资讯，审核通过后会直接进入整木资讯栏目中的企业动态内容，同时自动汇总到你的企业页“企业动态”，不需要再单独同步。
+                  </p>
+                </div>
+                <span className="inline-flex min-w-[128px] items-center justify-center rounded-full border border-[rgba(180,154,107,0.32)] bg-white/92 px-4 py-2 text-sm font-medium text-primary shadow-[0_10px_24px_-20px_rgba(15,23,42,0.18)]">
+                  发布后自动同步
+                </span>
+              </div>
+            </div>
+          )}
           {(safeTab === "terms" || safeTab === "standards") && (
             <>
               <label className="block text-sm text-muted">文档 Slug</label>

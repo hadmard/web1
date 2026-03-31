@@ -24,6 +24,13 @@ type Props = {
 
 const ENTERPRISE_NEWS_PAGE_SIZE = 9;
 
+function buildEnterpriseArticleWhere(memberId: string, enterpriseId: string) {
+  return {
+    status: "approved",
+    OR: [{ authorMemberId: memberId }, { ownedEnterpriseId: enterpriseId }],
+  };
+}
+
 type NewsCard = {
   id: string;
   title: string;
@@ -285,10 +292,11 @@ export default async function EnterprisePage({ params, searchParams }: Props) {
   if (!ent?.member) notFound();
 
   const memberId = ent.member.id;
+  const enterpriseArticleWhere = buildEnterpriseArticleWhere(memberId, ent.id);
   const [siteSettings, ownArticleCount, ownGallery, platformArticles, platformGallery] = await Promise.all([
     getMemberSiteSettings(memberId),
     prisma.article.count({
-      where: { authorMemberId: memberId, status: "approved" },
+      where: enterpriseArticleWhere,
     }),
     prisma.galleryImage.findMany({
       where: { authorMemberId: memberId, status: "approved" },
@@ -312,7 +320,7 @@ export default async function EnterprisePage({ params, searchParams }: Props) {
   const totalNewsPages = Math.max(1, Math.ceil(ownArticleCount / ENTERPRISE_NEWS_PAGE_SIZE));
   const normalizedNewsPage = Math.min(currentNewsPage, totalNewsPages);
   const ownArticles = await prisma.article.findMany({
-    where: { authorMemberId: memberId, status: "approved" },
+    where: enterpriseArticleWhere,
     orderBy: articleOrderByPinnedLatest,
     skip: (normalizedNewsPage - 1) * ENTERPRISE_NEWS_PAGE_SIZE,
     take: ENTERPRISE_NEWS_PAGE_SIZE,

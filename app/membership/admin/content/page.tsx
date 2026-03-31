@@ -71,6 +71,13 @@ type SessionInfo = {
   canEditAllContent: boolean;
 };
 
+type EnterpriseOption = {
+  id: string;
+  memberId: string | null;
+  label: string;
+  brandName: string | null;
+};
+
 type ArticleItem = {
   id: string;
   title: string;
@@ -90,6 +97,12 @@ type ArticleItem = {
   viewCount?: number;
   status: Status;
   previewHref?: string | null;
+  ownedEnterpriseId?: string | null;
+  ownedEnterprise?: {
+    id: string;
+    companyName?: string | null;
+    companyShortName?: string | null;
+  } | null;
   authorMember?: {
     id: string;
     name: string | null;
@@ -173,6 +186,38 @@ function buildAutoExcerpt(text: string) {
   return previewText(text, 120);
 }
 
+function normalizeEnterpriseOptions(input: unknown): EnterpriseOption[] {
+  if (!Array.isArray(input)) return [];
+
+  const mapped = new Map<string, EnterpriseOption>();
+  for (const item of input) {
+    if (!item || typeof item !== "object") continue;
+    const candidate = item as {
+      id?: string;
+      enterprise?: { id?: string; companyName?: string | null; companyShortName?: string | null; brand?: { name?: string | null } | null } | null;
+      enterpriseId?: string | null;
+      enterpriseName?: string | null;
+      brandName?: string | null;
+    };
+    const enterpriseId = candidate.enterprise?.id ?? candidate.enterpriseId ?? null;
+    const enterpriseName =
+      candidate.enterprise?.companyShortName?.trim() ||
+      candidate.enterprise?.companyName?.trim() ||
+      candidate.enterpriseName?.trim() ||
+      null;
+    if (!enterpriseId || !enterpriseName) continue;
+    if (mapped.has(enterpriseId)) continue;
+    mapped.set(enterpriseId, {
+      id: enterpriseId,
+      memberId: typeof candidate.id === "string" ? candidate.id : null,
+      label: enterpriseName,
+      brandName: candidate.enterprise?.brand?.name?.trim() || candidate.brandName?.trim() || null,
+    });
+  }
+
+  return Array.from(mapped.values()).sort((a, b) => a.label.localeCompare(b.label, "zh-CN"));
+}
+
 function timeValue(value?: string | null) {
   if (!value) return 0;
   const ms = new Date(value).getTime();
@@ -214,11 +259,13 @@ export default function AdminContentPage() {
   const [items, setItems] = useState<ArticleItem[]>([]);
   const [pendingItems, setPendingItems] = useState<ArticleItem[]>([]);
   const [pendingChanges, setPendingChanges] = useState<ChangeRequestItem[]>([]);
+  const [enterpriseOptions, setEnterpriseOptions] = useState<EnterpriseOption[]>([]);
 
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
   const [source, setSource] = useState("");
   const [displayAuthor, setDisplayAuthor] = useState("");
+  const [ownedEnterpriseId, setOwnedEnterpriseId] = useState("");
   const [excerpt, setExcerpt] = useState("");
   const [content, setContent] = useState("");
   const [brandStructured, setBrandStructured] = useState<BrandStructuredData>(createDefaultBrandStructuredData());
@@ -238,6 +285,7 @@ export default function AdminContentPage() {
   const [editTitle, setEditTitle] = useState("");
   const [editSource, setEditSource] = useState("");
   const [editDisplayAuthor, setEditDisplayAuthor] = useState("");
+  const [editOwnedEnterpriseId, setEditOwnedEnterpriseId] = useState("");
   const [editExcerpt, setEditExcerpt] = useState("");
   const [editContent, setEditContent] = useState("");
   const [editBrandStructured, setEditBrandStructured] = useState<BrandStructuredData>(createDefaultBrandStructuredData());
@@ -258,6 +306,7 @@ export default function AdminContentPage() {
   const selectedTabDef = useMemo(() => CONTENT_TAB_DEFS.find((x) => x.key === tab) ?? CONTENT_TAB_DEFS[0], [tab]);
   const selectedCategory = useMemo(() => MEMBER_PUBLISH_CATEGORY_OPTIONS.find((x) => x.href === selectedTabDef.href) ?? MEMBER_PUBLISH_CATEGORY_OPTIONS[0], [selectedTabDef.href]);
   const subOptions = selectedCategory.subs;
+  const supportsOwnedEnterprise = tab === "articles";
   const isSuperAdmin = session?.role === "SUPER_ADMIN";
   const canReview = session?.role === "SUPER_ADMIN" || session?.role === "ADMIN";
 
@@ -280,6 +329,7 @@ export default function AdminContentPage() {
     setSlug("");
     setSource("");
     setDisplayAuthor("");
+    setOwnedEnterpriseId("");
     setDocumentMeta(createEmptyDocumentMetadata());
   }, [tab]);
 
@@ -366,6 +416,12 @@ export default function AdminContentPage() {
     setLoading(false);
   }, []);
 
+  const loadEnterpriseOptions = useCallback(async () => {
+    const res = await fetch("/api/admin/members", { credentials: "include", cache: "no-store" });
+    const data = await res.json().catch(() => []);
+    setEnterpriseOptions(normalizeEnterpriseOptions(data));
+  }, []);
+
   const loadList = useCallback(async () => {
     const sp = new URLSearchParams({ limit: "100", categoryHref: selectedCategory.href });
     if (searchQuery) sp.set("q", searchQuery);
@@ -387,6 +443,10 @@ export default function AdminContentPage() {
   }, [selectedCategory.href]);
 
   useEffect(() => { void loadSession(); }, [loadSession]);
+  useEffect(() => {
+    if (!session) return;
+    void loadEnterpriseOptions();
+  }, [session, loadEnterpriseOptions]);
   useEffect(() => {
     if (!session) return;
     if (mode === "manage") void loadList();
@@ -573,6 +633,7 @@ export default function AdminContentPage() {
         slug: slug.trim() || null,
         source: source.trim() || null,
         displayAuthor: displayAuthor.trim() || null,
+        ownedEnterpriseId: supportsOwnedEnterprise ? ownedEnterpriseId || null : null,
         excerpt: excerpt || null,
         content: composedContent,
         coverImage:
@@ -616,6 +677,7 @@ export default function AdminContentPage() {
     setSlug("");
     setSource("");
     setDisplayAuthor("");
+    setOwnedEnterpriseId("");
     setExcerpt("");
     setContent("");
     setCoverImage("");
@@ -639,6 +701,7 @@ export default function AdminContentPage() {
     setEditTitle(item.title);
     setEditSource(item.source ?? "");
     setEditDisplayAuthor(item.displayAuthor ?? "");
+    setEditOwnedEnterpriseId(item.ownedEnterpriseId ?? "");
     setEditExcerpt(item.excerpt ?? "");
     setEditContent(tab === "terms" ? formatTermContentForEditing(item.content) : item.content);
     setEditBrandStructured(
@@ -677,6 +740,11 @@ export default function AdminContentPage() {
     setEditTitle(item.patchTitle ?? item.article.title);
     setEditSource(item.article.source ?? "");
     setEditDisplayAuthor(item.article.displayAuthor ?? "");
+    setEditOwnedEnterpriseId(
+      items.find((entry) => entry.id === item.article.id)?.ownedEnterpriseId ??
+        pendingItems.find((entry) => entry.id === item.article.id)?.ownedEnterpriseId ??
+        ""
+    );
     setEditExcerpt(item.patchExcerpt ?? item.article.excerpt ?? "");
     setEditContent(tab === "terms" ? formatTermContentForEditing(nextContent) : nextContent);
     setEditBrandStructured(
@@ -730,6 +798,7 @@ export default function AdminContentPage() {
         slug: editSlug || undefined,
         source: editSource || null,
         displayAuthor: editDisplayAuthor || null,
+        ownedEnterpriseId: supportsOwnedEnterprise ? editOwnedEnterpriseId || null : null,
         excerpt: editExcerpt || null,
         content: composedEditContent,
         coverImage:
@@ -760,7 +829,7 @@ export default function AdminContentPage() {
     setItems((prev) => prev.map((item) => (item.id === savedEditingId ? { ...item, ...data } : item)));
     setPendingItems((prev) => prev.map((item) => (item.id === savedEditingId ? { ...item, ...data } : item)));
     setMessage(nextStatus ? "已修改并审核。" : "已保存修改。");
-    setEditingId(null); setEditingChangeId(null); setReviewAction(null);
+    setEditingId(null); setEditingChangeId(null); setEditOwnedEnterpriseId(""); setReviewAction(null);
     if (mode === "review") {
       await loadReview();
     } else {
@@ -959,6 +1028,28 @@ export default function AdminContentPage() {
                 </div>
               </div>
             </div>
+            {supportsOwnedEnterprise && (
+              <div className="rounded-2xl border border-border bg-surface px-4 py-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-primary">归属企业</label>
+                    <p className="text-xs text-muted">管理员代发时可指定企业，发布后会自动汇总到对应企业页的企业动态。</p>
+                  </div>
+                </div>
+                <select
+                  className="mt-3 w-full rounded-xl border border-border bg-white/90 px-3 py-2 text-sm text-primary focus:outline-none focus:ring-2 focus:ring-[rgba(180,154,107,0.18)]"
+                  value={ownedEnterpriseId}
+                  onChange={(e) => setOwnedEnterpriseId(e.target.value)}
+                >
+                  <option value="">不指定归属企业</option>
+                  {enterpriseOptions.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.label}{option.brandName ? ` / ${option.brandName}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             {(tab === "terms" || tab === "standards") && (
               <>
                 <label className="block text-sm text-muted">文档 Slug</label>
@@ -1242,6 +1333,28 @@ export default function AdminContentPage() {
                 </div>
               </div>
             </div>
+            {supportsOwnedEnterprise && (
+              <div className="rounded-2xl border border-border bg-surface px-4 py-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-primary">归属企业</label>
+                    <p className="text-xs text-muted">变更后，企业页会按这里的归属关系自动汇总这篇文章。</p>
+                  </div>
+                </div>
+                <select
+                  className="mt-3 w-full rounded-xl border border-border bg-white/90 px-3 py-2 text-sm text-primary focus:outline-none focus:ring-2 focus:ring-[rgba(180,154,107,0.18)]"
+                  value={editOwnedEnterpriseId}
+                  onChange={(e) => setEditOwnedEnterpriseId(e.target.value)}
+                >
+                  <option value="">不指定归属企业</option>
+                  {enterpriseOptions.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.label}{option.brandName ? ` / ${option.brandName}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             {(tab === "terms" || tab === "standards") && (
               <>
                 <label className="block text-sm text-muted">文档 Slug</label>
@@ -1437,7 +1550,7 @@ export default function AdminContentPage() {
                 </button>
               )}
               <button type="button" onClick={() => void saveEdit("rejected")} className="px-4 py-2 rounded bg-red-600 text-white text-sm">保存并驳回</button>
-              <button type="button" onClick={() => { setEditingId(null); setEditingChangeId(null); setReviewAction(null); }} className="px-4 py-2 rounded border border-border text-sm">取消</button>
+              <button type="button" onClick={() => { setEditingId(null); setEditingChangeId(null); setEditOwnedEnterpriseId(""); setReviewAction(null); }} className="px-4 py-2 rounded border border-border text-sm">取消</button>
             </div>
             {reviewAction && <p className="text-xs text-muted">处理中：{STATUS_TEXT[reviewAction]}</p>}
           </form>
