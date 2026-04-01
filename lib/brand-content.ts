@@ -113,7 +113,6 @@ function stripUnsafeContainers(input: string) {
 function normalizeUnsafeWrappers(input: string) {
   return input
     .replace(/<\/?(?:span|font)\b[^>]*>/gi, "")
-    .replace(/\sstyle\s*=\s*(\"([^\"]*)\"|'([^']*)')/gi, "")
     .replace(/<(?:div|section|article|header|footer|aside)\b[^>]*>/gi, "<p>")
     .replace(/<\/(?:div|section|article|header|footer|aside)>/gi, "</p>")
     .replace(/<(?:h1|h4|h5|h6)\b[^>]*>/gi, "<h3>")

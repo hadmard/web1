@@ -44,6 +44,30 @@ function uniqueValues(values: string[]) {
   return Array.from(new Set(values.map((item) => item.trim()).filter(Boolean)));
 }
 
+const GEO_TERMS = [
+  "上海",
+  "南浔",
+  "湖州",
+  "南通",
+  "杭州",
+  "广州",
+  "深圳",
+  "北京",
+  "苏州",
+  "南京",
+  "成都",
+  "重庆",
+  "宁波",
+  "无锡",
+  "东莞",
+  "佛山",
+  "乌镇",
+];
+
+const EXCERPT_POSITIVE_PATTERNS = /(发布|亮相|推出|聚焦|覆盖|升级|落地|推动|实现|提出|打造|链接|布局|开业|签约|参展|启动|举办|亮点|核心|重点|围绕|面向)/;
+const EXCERPT_NEGATIVE_PATTERNS = /^(这几天|最近|很多人|有人|一起|欢迎|报名|扫码|看起来|其实|如果|对于|今天|刚刚|这场|这次)/;
+const EXCERPT_END_NOISE = /(欢迎.*|报名.*|请微信扫码.*|扫码.*|点击.*|详情.*)$/;
+
 function extractTitleKeywords(title: string) {
   return uniqueValues(
     stripHtml(title)
@@ -70,6 +94,11 @@ function collectIndustryKeywords(text: string) {
   return uniqueValues(matched).sort((a, b) => b.length - a.length);
 }
 
+function collectGeoKeywords(text: string) {
+  const source = normalizeForMatch(text);
+  return GEO_TERMS.filter((term) => source.includes(normalizeForMatch(term)));
+}
+
 function scoreSentence(sentence: string, titleKeywords: string[], industryKeywords: string[], position: number) {
   const normalized = normalizeForMatch(sentence);
   if (!normalized) return 0;
@@ -91,7 +120,9 @@ function scoreSentence(sentence: string, titleKeywords: string[], industryKeywor
   }
 
   if (/\d/.test(sentence)) score += 2;
-  if (/(发布|亮相|推出|聚焦|覆盖|升级|落地|推动|实现|提出|打造|链接|布局)/.test(sentence)) score += 3;
+  if (EXCERPT_POSITIVE_PATTERNS.test(sentence)) score += 3;
+  if (EXCERPT_NEGATIVE_PATTERNS.test(sentence)) score -= 8;
+  if (/欢迎|扫码|报名/.test(sentence)) score -= 10;
   if (sentence.length >= 18 && sentence.length <= 72) score += 3;
 
   return score;
@@ -105,13 +136,20 @@ export function buildGeoExcerpt(title: string, input: string, max = 120): string
   const sentences = splitSentences(plain);
   const titleKeywords = extractTitleKeywords(cleanTitle);
   const industryKeywords = collectIndustryKeywords(`${cleanTitle} ${plain}`);
+  const geoKeywords = collectGeoKeywords(`${cleanTitle} ${plain}`);
 
   const rankedSentences = sentences
     .map((sentence, index) => ({
       sentence,
       index,
-      score: scoreSentence(sentence, titleKeywords, industryKeywords, index),
+      score:
+        scoreSentence(sentence, titleKeywords, industryKeywords, index) +
+        geoKeywords.reduce((sum, keyword) => {
+          const target = normalizeForMatch(keyword);
+          return target && normalizeForMatch(sentence).includes(target) ? sum + 4 : sum;
+        }, 0),
     }))
+    .filter((item) => !EXCERPT_END_NOISE.test(item.sentence))
     .sort((a, b) => b.score - a.score || a.index - b.index)
     .slice(0, 3)
     .sort((a, b) => a.index - b.index);
@@ -137,6 +175,8 @@ export function buildGeoExcerpt(title: string, input: string, max = 120): string
   if (cleanTitle) {
     summary = summary.replace(new RegExp(`^${escapeRegExp(cleanTitle)}[：:，,\\s-]*`), "").trim();
   }
+
+  summary = summary.replace(EXCERPT_END_NOISE, "").trim();
 
   return summary.length <= max ? summary : previewText(summary, max);
 }

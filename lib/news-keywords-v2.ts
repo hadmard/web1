@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+﻿import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { stripHtml } from "@/lib/text";
 import {
@@ -11,9 +11,81 @@ import {
 } from "@/lib/news-keyword-config-v2";
 
 const AUTO_APPROVE_PENDING_BRANDS = process.env.NEWS_AUTO_APPROVE_PENDING_BRANDS !== "false";
-const KEYWORD_MARKETING_TERMS = ["都", "了", "一个", "这个", "那个", "问题", "错误", "为什么", "如何", "严重", "千万不要", "一定要"];
-const KEYWORD_PUNCTUATION = /[，。:：；;！？!?%]/;
+const KEYWORD_MARKETING_TERMS_CN = [
+  "\u90fd",
+  "\u4e86",
+  "\u4e00\u4e2a",
+  "\u8fd9\u4e2a",
+  "\u90a3\u4e2a",
+  "\u95ee\u9898",
+  "\u9519\u8bef",
+  "\u4e3a\u4ec0\u4e48",
+  "\u5982\u4f55",
+  "\u4e25\u91cd",
+  "\u5343\u4e07\u4e0d\u8981",
+  "\u4e00\u5b9a\u8981",
+];
+const KEYWORD_PUNCTUATION_CN = /[\uFF0C\u3002\uFF1A\uFF1B;!\uFF01\uFF1F?%]/;
+const KEYWORD_SENTENCE_LIKE_PATTERNS = [
+  /\u906d\u9047/,
+  /\u60ca\u9b42/,
+  /\u4e00\u523b$/,
+  /\u771f\u76f8/,
+  /\u59cb\u672b/,
+  /\u80cc\u540e/,
+  /\u4e3a\u4ec0\u4e48/,
+  /\u5982\u4f55/,
+  /\u4ec0\u4e48/,
+  /\u4e0d\u8981/,
+  /\u4e00\u5b9a\u8981/,
+  /\u8b66\u60d5/,
+  /\u6ce8\u610f/,
+  /\u63ed\u79d8/,
+  /\u66dd\u5149/,
+  /\u5b9e\u5f55/,
+  /\u73b0\u573a/,
+  /\u6545\u4e8b/,
+  /\u56e0\u4e3a/,
+  /\u6574\u4e2a/,
+  /\u8fd9\u51e0\u5929/,
+  /\u5fc5\u987b/,
+  /\u4e09\u4ef6\u4e8b/,
+];
+const KEYWORD_INDUSTRY_SIGNALS = [
+  "\u6574\u6728",
+  "\u6728\u4f5c",
+  "\u5b9a\u5236",
+  "\u5bb6\u5c45",
+  "\u5bb6\u88c5",
+  "\u9ad8\u5b9a",
+  "\u5168\u5c4b",
+  "\u6574\u5bb6",
+  "\u677f\u6750",
+  "\u9970\u9762",
+  "\u62a4\u5899\u677f",
+  "\u6728\u95e8",
+  "\u9152\u67dc",
+  "\u4e66\u67dc",
+  "\u8863\u5e3d\u95f4",
+  "\u697c\u68af",
+  "\u80cc\u666f\u5899",
+  "\u5efa\u535a\u4f1a",
+  "\u8bbe\u8ba1\u5468",
+  "\u5bb6\u535a\u4f1a",
+  "\u534f\u4f1a",
+  "\u5de5\u827a",
+  "\u6c34\u6027\u6f06",
+  "\u5f00\u653e\u6f06",
+  "\u70e4\u6f06",
+  "\u69ab\u536f",
+  "\u539f\u6728",
+  "\u6728\u76ae",
+  "\u522b\u5885",
+  "\u5927\u5b85",
+  "\u8c6a\u5b85",
+];
 const KEYWORD_MULTI_DIGITS = /\d{2,}/;
+const KEYWORD_SPLIT_PATTERN_CN = /[\uFF0C\u3002\uFF1A\uFF1B\uFF01\uFF1F\u3001\s()\uFF08\uFF09\u3010\u3011\u300a\u300b\u201c\u201d"'\/\|-]+/;
 
 type WhitelistEntry = {
   word: string;
@@ -64,7 +136,7 @@ type ArticleKeywordInput = {
 function normalizeText(input: string) {
   return stripHtml(input || "")
     .replace(/&nbsp;/gi, " ")
-    .replace(/[“”"'‘’]/g, "")
+    .replace(/[‘’“”"'`]/g, "")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -83,7 +155,7 @@ function unique<T>(items: T[]) {
 
 function splitSentences(input: string) {
   return normalizeText(input)
-    .split(/[。！？!?\n]/)
+    .split(/[\u3002\uFF01\uFF1F\n]/)
     .map((item) => item.trim())
     .filter(Boolean);
 }
@@ -91,9 +163,9 @@ function splitSentences(input: string) {
 function normalizeKeywordList(input: string | null | undefined) {
   return unique(
     (input || "")
-      .split(/[,\n，]+/)
+      .split(/[\uFF0C,\n]+/)
       .map((item) => item.trim())
-      .filter((item) => isValidKeywordCandidate(item)),
+      .filter((item) => isValidKeywordCandidate(item)), 
   ).slice(0, 5);
 }
 
@@ -115,15 +187,22 @@ function countMatchedTerms(input: string, terms: string[]) {
   return terms.reduce((count, term) => count + (input.includes(term) ? 1 : 0), 0);
 }
 
+function hasIndustrySignal(input: string) {
+  return (
+    KEYWORD_INDUSTRY_SIGNALS.some((term) => input.includes(term)) ||
+    NEWS_BRAND_SUFFIXES.some((suffix) => input.endsWith(suffix))
+  );
+}
+
 export function isValidKeywordCandidate(text: string) {
   const input = normalizeText(text);
   if (!input || !clampKeywordLength(input)) return false;
   if (isNoiseKeyword(input)) return false;
-  if (KEYWORD_PUNCTUATION.test(input)) return false;
+  if (KEYWORD_PUNCTUATION_CN.test(input)) return false;
   if (KEYWORD_MULTI_DIGITS.test(input)) return false;
-  if (countMatchedTerms(input, KEYWORD_MARKETING_TERMS) >= 2) return false;
+  if (countMatchedTerms(input, KEYWORD_MARKETING_TERMS_CN) >= 2) return false;
   if (/[A-Za-z0-9]+\s+[A-Za-z0-9]+/.test(input)) return false;
-  if (/的|了|在|如何|为什么|不要|一定要/.test(input) && input.length >= 6) return false;
+  if (KEYWORD_SENTENCE_LIKE_PATTERNS.some((pattern) => pattern.test(input)) && !hasIndustrySignal(input)) return false;
   return /^[A-Za-z0-9\u4e00-\u9fa5]+$/.test(input);
 }
 
@@ -229,8 +308,8 @@ function isValidBrandCandidate(input: string, whitelistLookup: Map<string, White
   if (!isValidKeywordCandidate(input)) return false;
   if (/^[A-Za-z]+$/.test(input)) return false;
   if (NEWS_BRAND_FORBIDDEN_CONTAINS.some((item) => input.includes(item))) return false;
-  if (/^(上海|南浔|湖州|南通|杭州|广州|深圳|北京|苏州|南京|成都|重庆|宁波|无锡|东莞|佛山)$/.test(input)) return false;
-  if (/^(协会|品牌|企业|集团|公司|行业|负责人)$/.test(input)) return false;
+  if (["上海","南浔","湖州","南通","杭州","广州","深圳","北京","苏州","南京","成都","重庆","宁波","无锡","东莞","佛山"].includes(input)) return false;
+  if (["协会","品牌","企业","集团","公司","行业","负责人"].includes(input)) return false;
   return !whitelistLookup.has(normalizeCompact(input));
 }
 
@@ -242,7 +321,7 @@ function collectNerCandidates(text: string, title: string, whitelistLookup: Map<
   const found = new Map<string, KeywordCandidate>();
 
   const pushCandidate = (rawKeyword: string, context: string, ruleSource: string, inTitle = false) => {
-    const keyword = rawKeyword.trim().replace(/[：:，,。.!！？]+$/g, "");
+    const keyword = rawKeyword.trim().replace(/[锛?锛?銆?!锛侊紵]+$/g, "");
     if (!isValidBrandCandidate(keyword, whitelistLookup)) return;
 
     const prev = found.get(keyword);
@@ -277,7 +356,7 @@ function collectNerCandidates(text: string, title: string, whitelistLookup: Map<
     }
   }
 
-  const suffixRegex = /([A-Za-z0-9\u4e00-\u9fa5]{2,8}(?:木业|木作|家居|家私|整木|集团|国际))/g;
+  const suffixRegex = /([A-Za-z0-9\u4e00-\u9fa5]{2,8}(?:鏈ㄤ笟|鏈ㄤ綔|瀹跺眳|瀹剁|鏁存湪|闆嗗洟|鍥介檯))/g;
   let suffixMatch: RegExpExecArray | null;
   while ((suffixMatch = suffixRegex.exec(sourceText)) !== null) {
     const keyword = suffixMatch[1]?.trim();
@@ -288,7 +367,7 @@ function collectNerCandidates(text: string, title: string, whitelistLookup: Map<
 
   const tokens = unique(
     `${titleText} ${sourceText}`
-      .split(/[，,。；;：:\s()（）【】《》“”"'‘’、/\\|-]+/)
+      .split(KEYWORD_SPLIT_PATTERN_CN)
       .map((item) => item.trim())
       .filter(Boolean),
   );
@@ -300,7 +379,7 @@ function collectNerCandidates(text: string, title: string, whitelistLookup: Map<
       continue;
     }
 
-    if (/^[\u4e00-\u9fa5]{2,6}$/.test(token) && titleText.includes(token) && /亮相|参展|打造|发布|签约|升级/.test(sourceText)) {
+    if (/^[\u4e00-\u9fa5]{2,6}$/.test(token) && titleText.includes(token) && /浜浉|鍙傚睍|鎵撻€爘鍙戝竷|绛剧害|鍗囩骇/.test(sourceText)) {
       pushCandidate(token, sentence, "title", true);
     }
   }
@@ -324,9 +403,9 @@ function buildFallbackKeywords(title: string, entries: WhitelistEntry[]) {
 
   return unique(
     titleText
-      .split(/[，,。；;：:\s()（）【】《》“”"'‘’、/\\|-]+/)
+      .split(KEYWORD_SPLIT_PATTERN_CN)
       .map((item) => item.trim())
-      .filter((item) => isValidKeywordCandidate(item)),
+      .filter((item) => isValidKeywordCandidate(item) && hasIndustrySignal(item)), 
   )
     .slice(0, 3)
     .map((keyword) => ({ keyword, score: 1, weight: 1, source: "title" as const }));
@@ -348,6 +427,7 @@ export async function extractNewsKeywords(input: ArticleKeywordInput): Promise<K
 
   const ranked = Array.from(whitelistMatches.values())
     .filter((item) => isValidKeywordCandidate(item.keyword))
+    .filter((item) => item.source !== "title" || hasIndustrySignal(item.keyword))
     .sort((a, b) => b.score - a.score || b.weight - a.weight || b.keyword.length - a.keyword.length)
     .slice(0, 5)
     .map((item) => ({
@@ -503,13 +583,13 @@ export async function syncArticleKeywords(options: {
         await tx.industryWhitelist.upsert({
           where: { word: brand.brandName },
           update: {
-            category: "品牌",
+            category: "鍝佺墝",
             weight: 1,
             status: true,
           },
           create: {
             word: brand.brandName,
-            category: "品牌",
+            category: "鍝佺墝",
             weight: 1,
             status: true,
           },
@@ -715,3 +795,4 @@ export async function getArticlesByKeyword(name: string, limit = 30) {
 export function formatKeywordCsv(input: string[]) {
   return normalizeKeywordList(input.join(",")).join(",");
 }
+
