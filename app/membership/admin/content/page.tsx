@@ -1347,11 +1347,6 @@ export default function AdminContentPage() {
                 />
               </>
             )}
-            <label className="block text-sm text-muted">栏目标签（逗号分隔）</label>
-            <div className="flex gap-2">
-              <input className="flex-1 border border-border rounded px-3 py-2 bg-surface" value={tagSlugs} onChange={(e) => setTagSlugs(e.target.value)} placeholder="如：整木定制,门墙柜一体,渠道招商" />
-              <button type="button" onClick={autoFillPublishTags} className="px-3 py-2 rounded border border-border text-xs hover:bg-surface">标签提取</button>
-            </div>
             {tab === "articles" && (
               <>
                 <div className="flex items-center justify-between gap-3">
@@ -1364,14 +1359,7 @@ export default function AdminContentPage() {
                   onChange={(e) => setManualKeywords(e.target.value)}
                   placeholder="如：图森,整木定制,乌镇国际设计周"
                 />
-                <p className="text-xs text-muted">上面的“标签提取”用于后台栏目标签；这里的关键词才会优先用于前台展示、关键词页和相关阅读。</p>
-                <label className="block text-sm text-muted">手动推荐文章 ID（JSON 数组，可选）</label>
-                <input
-                  className="w-full rounded border border-border bg-surface px-3 py-2"
-                  value={recommendIds}
-                  onChange={(e) => setRecommendIds(e.target.value)}
-                  placeholder='如：["cm123","cm456"]'
-                />
+                <p className="text-xs text-muted">这里的关键词会优先用于前台展示、关键词页和相关阅读。</p>
               </>
             )}
             {tab !== "terms" && tab !== "brands" && tab !== "standards" && tab !== "industry-data" && tab !== "awards" && (
@@ -1632,11 +1620,6 @@ export default function AdminContentPage() {
                 )}
               </div>
             )}
-            <label className="block text-sm text-muted">栏目标签（逗号分隔）</label>
-            <div className="flex gap-2">
-              <input className="flex-1 border border-border rounded px-3 py-2 bg-surface" value={editTagSlugs} onChange={(e) => setEditTagSlugs(e.target.value)} placeholder="如：行业趋势,技术发展,品牌建设" />
-              <button type="button" onClick={autoFillEditTags} className="px-3 py-2 rounded border border-border text-xs hover:bg-surface">标签提取</button>
-            </div>
             {tab === "articles" && (
               <>
                 <div className="flex items-center justify-between gap-3">
@@ -1649,14 +1632,7 @@ export default function AdminContentPage() {
                   onChange={(e) => setEditManualKeywords(e.target.value)}
                   placeholder="如：图森,整木定制,乌镇国际设计周"
                 />
-                <p className="text-xs text-muted">栏目标签仅用于后台分类与检索；这里的关键词会优先覆盖系统抽取结果。</p>
-                <label className="block text-sm text-muted">手动推荐文章 ID（JSON 数组，可选）</label>
-                <input
-                  className="w-full rounded border border-border bg-surface px-3 py-2"
-                  value={editRecommendIds}
-                  onChange={(e) => setEditRecommendIds(e.target.value)}
-                  placeholder='如：["cm123","cm456"]'
-                />
+                <p className="text-xs text-muted">这里的关键词会优先覆盖系统抽取结果，并用于前台展示与相关推荐。</p>
               </>
             )}
             {tab !== "brands" && (
