@@ -72,6 +72,7 @@ const SIDEBAR: SidebarGroup[] = [
       { href: "/membership/admin/accounts", label: "账号一览" },
       { href: "/membership/admin/password-recovery-requests", label: "密码找回申请" },
       { href: "/membership/admin/brands", label: "品牌展示管理" },
+      { href: "/membership/admin/pending-brands", label: "待审核品牌" },
       { href: "/membership/admin/permissions", label: "权限管理（主管理员）" },
       { href: "/membership/admin/member-tiers", label: "会员等级权益" },
       { href: "/membership/admin/member-grants", label: "会员授权管理" },
@@ -261,6 +262,7 @@ export default function AdminLayoutClient({ children }: { children: React.ReactN
     if (href === "/membership/admin/accounts") return pathname === "/membership/admin/accounts";
     if (href === "/membership/admin/password-recovery-requests") return pathname === "/membership/admin/password-recovery-requests";
     if (href === "/membership/admin/brands") return pathname === "/membership/admin/brands" || pathname.startsWith("/membership/admin/brands/");
+    if (href === "/membership/admin/pending-brands") return pathname === "/membership/admin/pending-brands";
     if (href === "/membership/admin/permissions") return pathname === "/membership/admin/permissions";
     if (href === "/membership/admin/member-tiers") return pathname === "/membership/admin/member-tiers";
     if (href === "/membership/admin/member-grants") return pathname === "/membership/admin/member-grants";

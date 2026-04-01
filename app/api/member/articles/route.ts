@@ -13,6 +13,7 @@ import { generateUniqueArticleSlug } from "@/lib/slug";
 import { isContentReviewRequired } from "@/lib/app-settings";
 import { isValidTermStructuredContent, normalizeTermContent } from "@/lib/term-structured";
 import { findDuplicateArticleByTitle, normalizeArticleTitle } from "@/lib/article-title";
+import { formatKeywordCsv, syncArticleKeywords } from "@/lib/news-keywords-v2";
 import {
   findEffectiveCategoryAccess,
   findEffectiveSubcategoryAccess,
@@ -97,6 +98,8 @@ export async function GET(request: NextRequest) {
           { source: { contains: q, mode: "insensitive" } },
           { displayAuthor: { contains: q, mode: "insensitive" } },
           { tagSlugs: { contains: q, mode: "insensitive" } },
+          { keywords: { contains: q, mode: "insensitive" } },
+          { manualKeywords: { contains: q, mode: "insensitive" } },
         ],
       },
     ];
@@ -144,6 +147,7 @@ export async function POST(request: NextRequest) {
     relatedStandardIds,
     relatedBrandIds,
     tagSlugs,
+    manualKeywords,
     faqJson,
     syncToMainSite,
     isPinned,
@@ -250,11 +254,19 @@ export async function POST(request: NextRequest) {
       relatedBrandIds: typeof relatedBrandIds === "string" ? relatedBrandIds.trim() || null : null,
       faqJson: typeof faqJson === "string" ? faqJson.trim() || null : null,
       tagSlugs: resolvedTagSlugs.length > 0 ? resolvedTagSlugs.join(",") : null,
+      manualKeywords: typeof manualKeywords === "string" ? formatKeywordCsv(manualKeywords.split(/[,\n，]+/)) || null : null,
       syncToMainSite: syncToMainSite === true,
       isPinned: (session.role === "SUPER_ADMIN" || session.role === "ADMIN") && isPinned === true,
       status: submissionStatus,
       authorMemberId: session.sub,
     },
+  });
+
+  await syncArticleKeywords({
+    articleId: article.id,
+    title: normalizedTitle,
+    content: normalizedContent,
+    manualKeywords: typeof manualKeywords === "string" ? manualKeywords : null,
   });
 
   await writeOperationLog({

@@ -95,6 +95,9 @@ type ArticleItem = {
   subHref?: string | null;
   categoryHref?: string | null;
   tagSlugs?: string | null;
+  keywords?: string | null;
+  manualKeywords?: string | null;
+  recommendIds?: string | null;
   faqJson?: string | null;
   isPinned?: boolean;
   publishedAt?: string | null;
@@ -282,6 +285,8 @@ export default function AdminContentPage() {
   const [coverImage, setCoverImage] = useState("");
   const [coverPreviewSrc, setCoverPreviewSrc] = useState("");
   const [tagSlugs, setTagSlugs] = useState("");
+  const [manualKeywords, setManualKeywords] = useState("");
+  const [recommendIds, setRecommendIds] = useState("");
   const [isPinned, setIsPinned] = useState(false);
   const [documentMeta, setDocumentMeta] = useState<DocumentMetadata>(createEmptyDocumentMetadata());
 
@@ -303,6 +308,8 @@ export default function AdminContentPage() {
   const [editCoverImage, setEditCoverImage] = useState("");
   const [editCoverPreviewSrc, setEditCoverPreviewSrc] = useState("");
   const [editTagSlugs, setEditTagSlugs] = useState("");
+  const [editManualKeywords, setEditManualKeywords] = useState("");
+  const [editRecommendIds, setEditRecommendIds] = useState("");
   const [editSubHref, setEditSubHref] = useState("");
   const [editIsPinned, setEditIsPinned] = useState(false);
   const [editDocumentMeta, setEditDocumentMeta] = useState<DocumentMetadata>(createEmptyDocumentMetadata());
@@ -687,6 +694,8 @@ export default function AdminContentPage() {
         categoryHref: selectedCategory.href,
         subHref: tab === "brands" ? null : subHref,
         tagSlugs: tagSlugs || null,
+        manualKeywords: manualKeywords || null,
+        recommendIds: recommendIds || null,
         faqJson: tab === "terms" || tab === "standards" ? stringifyDocumentMetadata(documentMeta) : null,
         syncToMainSite: true,
         isPinned,
@@ -714,6 +723,8 @@ export default function AdminContentPage() {
     setContent("");
     setCoverImage("");
     setTagSlugs("");
+    setManualKeywords("");
+    setRecommendIds("");
     setIsPinned(false);
     setDocumentMeta(createEmptyDocumentMetadata());
     setBrandStructured(createDefaultBrandStructuredData());
@@ -761,6 +772,8 @@ export default function AdminContentPage() {
     setEditCoverImage(item.coverImage ?? "");
     replacePreviewUrl("edit", item.coverImage ?? "");
     setEditTagSlugs(item.tagSlugs ?? "");
+    setEditManualKeywords(item.manualKeywords ?? "");
+    setEditRecommendIds(item.recommendIds ?? "");
     setEditSubHref(item.subHref ?? subHref);
     setEditIsPinned(item.isPinned === true);
     setEditDocumentMeta(parseDocumentMetadata(item.faqJson));
@@ -804,6 +817,8 @@ export default function AdminContentPage() {
     setEditCoverImage(item.patchCoverImage ?? item.article.coverImage ?? "");
     replacePreviewUrl("edit", item.patchCoverImage ?? item.article.coverImage ?? "");
     setEditTagSlugs(item.patchTagSlugs ?? item.article.tagSlugs ?? "");
+    setEditManualKeywords(items.find((entry) => entry.id === item.article.id)?.manualKeywords ?? pendingItems.find((entry) => entry.id === item.article.id)?.manualKeywords ?? "");
+    setEditRecommendIds(items.find((entry) => entry.id === item.article.id)?.recommendIds ?? pendingItems.find((entry) => entry.id === item.article.id)?.recommendIds ?? "");
     setEditSubHref(item.patchSubHref ?? item.article.subHref ?? subHref);
     setEditIsPinned(item.article.isPinned === true);
     setEditDocumentMeta(createEmptyDocumentMetadata());
@@ -853,6 +868,8 @@ export default function AdminContentPage() {
               : undefined,
         subHref: tab === "brands" ? null : editSubHref || subHref,
         tagSlugs: editTagSlugs || null,
+        manualKeywords: editManualKeywords || null,
+        recommendIds: editRecommendIds || null,
         faqJson: tab === "terms" || tab === "standards" ? stringifyDocumentMetadata(editDocumentMeta) : null,
         isPinned: editIsPinned,
         status: nextStatus,
@@ -1281,6 +1298,24 @@ export default function AdminContentPage() {
               <input className="flex-1 border border-border rounded px-3 py-2 bg-surface" value={tagSlugs} onChange={(e) => setTagSlugs(e.target.value)} placeholder="如：整木定制,门墙柜一体,渠道招商" />
               <button type="button" onClick={autoFillPublishTags} className="px-3 py-2 rounded border border-border text-xs hover:bg-surface">行业提取</button>
             </div>
+            {tab === "articles" && (
+              <>
+                <label className="block text-sm text-muted">人工关键词（优先用于前台展示与推荐，最多 5 个）</label>
+                <input
+                  className="w-full rounded border border-border bg-surface px-3 py-2"
+                  value={manualKeywords}
+                  onChange={(e) => setManualKeywords(e.target.value)}
+                  placeholder="如：图森,整木定制,乌镇国际设计周"
+                />
+                <label className="block text-sm text-muted">手动推荐文章 ID（JSON 数组，可选）</label>
+                <input
+                  className="w-full rounded border border-border bg-surface px-3 py-2"
+                  value={recommendIds}
+                  onChange={(e) => setRecommendIds(e.target.value)}
+                  placeholder='如：["cm123","cm456"]'
+                />
+              </>
+            )}
             {tab !== "terms" && tab !== "brands" && tab !== "standards" && tab !== "industry-data" && tab !== "awards" && (
               <>
                 <label className="block text-sm text-muted">正文</label>
@@ -1544,6 +1579,24 @@ export default function AdminContentPage() {
               <input className="flex-1 border border-border rounded px-3 py-2 bg-surface" value={editTagSlugs} onChange={(e) => setEditTagSlugs(e.target.value)} placeholder="如：行业趋势,技术发展,品牌建设" />
               <button type="button" onClick={autoFillEditTags} className="px-3 py-2 rounded border border-border text-xs hover:bg-surface">行业提取</button>
             </div>
+            {tab === "articles" && (
+              <>
+                <label className="block text-sm text-muted">人工关键词（优先生效）</label>
+                <input
+                  className="w-full rounded border border-border bg-surface px-3 py-2"
+                  value={editManualKeywords}
+                  onChange={(e) => setEditManualKeywords(e.target.value)}
+                  placeholder="如：图森,整木定制,乌镇国际设计周"
+                />
+                <label className="block text-sm text-muted">手动推荐文章 ID（JSON 数组，可选）</label>
+                <input
+                  className="w-full rounded border border-border bg-surface px-3 py-2"
+                  value={editRecommendIds}
+                  onChange={(e) => setEditRecommendIds(e.target.value)}
+                  placeholder='如：["cm123","cm456"]'
+                />
+              </>
+            )}
             {tab !== "brands" && (
               <>
                 <label className="block text-sm text-muted">顶部配图（可选）</label>

@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { InlinePageBackLink } from "@/components/InlinePageBackLink";
@@ -342,9 +343,11 @@ export default function MembershipContentGalleryPage() {
 
           {form.imageUrl ? (
             <div className="mt-5 overflow-hidden rounded-[24px] border border-border bg-white">
-              <img
+              <Image
                 src={resolveUploadedImageUrl(form.imageUrl)}
                 alt={form.alt || form.title || "图库预览"}
+                width={1600}
+                height={1000}
                 className="aspect-[16/10] w-full object-cover"
               />
             </div>
@@ -379,9 +382,11 @@ export default function MembershipContentGalleryPage() {
             <div className="mt-6 grid gap-4 md:grid-cols-2">
               {items.map((item) => (
                 <article key={item.id} className="overflow-hidden rounded-[20px] border border-border bg-white shadow-[0_12px_28px_rgba(15,23,42,0.05)] sm:rounded-[24px]">
-                  <img
+                  <Image
                     src={resolveUploadedImageUrl(item.imageUrl)}
                     alt={item.alt || item.title || "图库图片"}
+                    width={1600}
+                    height={1000}
                     className="aspect-[16/10] w-full object-cover"
                   />
                   <div className="space-y-3 p-4">

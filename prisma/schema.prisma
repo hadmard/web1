@@ -366,6 +366,9 @@ model Article {
   relatedStandardIds  String?
   relatedBrandIds     String?
   tagSlugs            String?
+  keywords            String?
+  manualKeywords      String?       @map("manual_keywords")
+  recommendIds        String?       @map("recommend_ids")
   syncToMainSite      Boolean       @default(false)
   isPinned            Boolean       @default(false)
   viewCount           Int           @default(0)
@@ -373,13 +376,69 @@ model Article {
   updatedAt           DateTime      @updatedAt
   tags                ArticleTag[]
   changeRequests      ArticleChangeRequest[]
+  keywordItems        NewsKeyword[]
 
   @@index([status])
   @@index([status, viewCount])
   @@index([status, isPinned])
+  @@index([keywords])
+  @@index([manualKeywords])
   @@index([authorMemberId])
   @@index([ownedEnterpriseId])
   @@map("articles")
+}
+
+model IndustryWhitelist {
+  id          String   @id @default(cuid())
+  word        String   @unique
+  category    String
+  subCategory String?  @map("sub_category")
+  weight      Int      @default(1)
+  synonyms    String?
+  status      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+  @@index([weight])
+  @@map("industry_whitelist")
+}
+
+model PendingBrand {
+  id              String   @id @default(cuid())
+  brandName       String   @unique @map("brand_name")
+  firstNewsId     String?  @map("first_news_id")
+  lastNewsId      String?  @map("last_news_id")
+  occurrenceCount Int      @default(1) @map("occurrence_count")
+  articleCount    Int      @default(1) @map("article_count")
+  articleIds      String?  @map("article_ids")
+  lastOccurrence  DateTime? @map("last_occurrence")
+  sourceContext   String?  @map("source_context")
+  ruleSource      String?  @map("rule_source")
+  confidence      Float?
+  approvedSource  String?  @map("approved_source")
+  autoApprovedAt  DateTime? @map("auto_approved_at")
+  status          Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([status])
+  @@map("pending_brands")
+}
+
+model NewsKeyword {
+  id          String   @id @default(cuid())
+  newsId      String   @map("news_id")
+  keyword     String
+  weightScore Decimal? @db.Decimal(10, 2) @map("weight_score")
+  isManual    Boolean  @default(false) @map("is_manual")
+  sortOrder   Int?     @map("sort_order")
+  createdAt   DateTime @default(now())
+  article     Article  @relation(fields: [newsId], references: [id], onDelete: Cascade)
+
+  @@index([newsId])
+  @@index([keyword])
+  @@map("news_keywords")
 }
 
 model ArticleChangeRequest {

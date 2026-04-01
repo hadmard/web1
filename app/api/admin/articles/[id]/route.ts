@@ -6,6 +6,7 @@ import { writeOperationLog } from "@/lib/operation-log";
 import { canChangeReviewStatus, canDirectlyDeleteArticle, canDirectlyEditArticle, canReviewSubmissions } from "@/lib/content-permissions";
 import { isValidTermStructuredContent, normalizeTermContent } from "@/lib/term-structured";
 import { findDuplicateArticleByTitle, normalizeArticleTitle } from "@/lib/article-title";
+import { formatKeywordCsv, syncArticleKeywords } from "@/lib/news-keywords-v2";
 
 function isAdmin(session: { role: string | null } | null) {
   return session?.role === "SUPER_ADMIN" || session?.role === "ADMIN";
@@ -31,6 +32,19 @@ function revalidateArticlePaths(article: {
     revalidatePath("/dictionary/all");
     if (segment) {
       revalidatePath(`/dictionary/${encodeURIComponent(segment)}`);
+    }
+  }
+
+  const isNews =
+    article.categoryHref?.startsWith("/news") || article.subHref?.startsWith("/news");
+  if (isNews) {
+    revalidatePath("/news");
+    revalidatePath("/news/all");
+    if (article.subHref) {
+      revalidatePath(article.subHref);
+    }
+    if (segment) {
+      revalidatePath(`/news/${encodeURIComponent(segment)}`);
     }
   }
 
@@ -103,6 +117,8 @@ export async function PATCH(
     isPinned,
     status,
     reviewNote,
+    manualKeywords,
+    recommendIds,
   } = body;
 
   const data: Record<string, unknown> = {};
@@ -143,6 +159,8 @@ export async function PATCH(
     data.ownedEnterpriseId = normalizedOwnedEnterpriseId;
   }
   if (typeof tagSlugs === "string") data.tagSlugs = tagSlugs.trim() || null;
+  if (typeof manualKeywords === "string") data.manualKeywords = formatKeywordCsv(manualKeywords.split(/[,\n，]+/)) || null;
+  if (typeof recommendIds === "string") data.recommendIds = recommendIds.trim() || null;
   if (typeof faqJson === "string") data.faqJson = faqJson.trim() || null;
   if (typeof isPinned === "boolean") data.isPinned = isPinned;
   if (syncToMainSite !== undefined) data.syncToMainSite = syncToMainSite === true;
@@ -209,6 +227,9 @@ export async function PATCH(
       content: true,
       coverImage: true,
       tagSlugs: true,
+      keywords: true,
+      manualKeywords: true,
+      recommendIds: true,
       isPinned: true,
       status: true,
       reviewNote: true,
@@ -234,6 +255,19 @@ export async function PATCH(
       syncToMainSite: true,
     },
   });
+  if (
+    typeof data.title === "string" ||
+    typeof data.content === "string" ||
+    typeof data.manualKeywords === "string" ||
+    data.manualKeywords === null
+  ) {
+    await syncArticleKeywords({
+      articleId: article.id,
+      title: article.title,
+      content: article.content,
+      manualKeywords: article.manualKeywords,
+    });
+  }
   revalidateArticlePaths(article);
   if (typeof data.status === "string") {
     await writeOperationLog({

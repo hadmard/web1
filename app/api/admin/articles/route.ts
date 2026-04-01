@@ -7,6 +7,7 @@ import { generateUniqueArticleSlug } from "@/lib/slug";
 import { isContentReviewRequired } from "@/lib/app-settings";
 import { isValidTermStructuredContent, normalizeTermContent } from "@/lib/term-structured";
 import { findDuplicateArticleByTitle, normalizeArticleTitle } from "@/lib/article-title";
+import { formatKeywordCsv, syncArticleKeywords } from "@/lib/news-keywords-v2";
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +52,8 @@ export async function GET(request: NextRequest) {
           { source: { contains: q, mode: "insensitive" } },
           { displayAuthor: { contains: q, mode: "insensitive" } },
           { tagSlugs: { contains: q, mode: "insensitive" } },
+          { keywords: { contains: q, mode: "insensitive" } },
+          { manualKeywords: { contains: q, mode: "insensitive" } },
         ],
       },
     ];
@@ -75,6 +78,9 @@ export async function GET(request: NextRequest) {
         subHref: true,
         categoryHref: true,
         tagSlugs: true,
+        keywords: true,
+        manualKeywords: true,
+        recommendIds: true,
         faqJson: true,
         isPinned: true,
         publishedAt: true,
@@ -132,6 +138,8 @@ export async function POST(request: NextRequest) {
       relatedBrandIds,
       ownedEnterpriseId,
       tagSlugs,
+      manualKeywords,
+      recommendIds,
       faqJson,
       syncToMainSite,
       isPinned,
@@ -222,6 +230,8 @@ export async function POST(request: NextRequest) {
         ownedEnterpriseId: normalizedOwnedEnterpriseId,
         faqJson: typeof faqJson === "string" ? faqJson.trim() || null : null,
         tagSlugs: resolvedTagSlugs.length > 0 ? resolvedTagSlugs.join(",") : null,
+        manualKeywords: typeof manualKeywords === "string" ? formatKeywordCsv(manualKeywords.split(/[,\n，]+/)) || null : null,
+        recommendIds: typeof recommendIds === "string" ? recommendIds.trim() || null : null,
         syncToMainSite: syncToMainSite === true,
         isPinned: typeof isPinned === "boolean" ? isPinned : false,
         status: safeStatus,
@@ -246,6 +256,13 @@ export async function POST(request: NextRequest) {
           },
         },
       },
+    });
+
+    await syncArticleKeywords({
+      articleId: article.id,
+      title: normalizedTitle,
+      content: normalizedContent,
+      manualKeywords: typeof manualKeywords === "string" ? manualKeywords : null,
     });
 
     return NextResponse.json(article);

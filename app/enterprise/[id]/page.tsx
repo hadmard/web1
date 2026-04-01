@@ -485,9 +485,11 @@ export default async function EnterprisePage({ params, searchParams }: Props) {
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-5">
                 {logoUrl ? (
                   <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-[20px] border border-[rgba(140,111,78,0.12)] bg-white p-3 shadow-[0_10px_24px_rgba(35,26,18,0.06)] sm:h-20 sm:w-20">
-                    <img
+                    <Image
                       src={logoUrl}
                       alt={`${name} Logo`}
+                      width={120}
+                      height={120}
                       className="h-full w-full object-contain"
                     />
                   </div>

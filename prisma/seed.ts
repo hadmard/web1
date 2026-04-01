@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { categories as staticCategories } from "../lib/site-structure";
+import { INDUSTRY_WHITELIST_SEED } from "../lib/news-keyword-config-v2";
 
 const prisma = new PrismaClient();
 
@@ -156,6 +157,27 @@ async function main() {
       }
       console.log("Created category:", cat.title);
     }
+  }
+
+  for (const item of INDUSTRY_WHITELIST_SEED) {
+    await prisma.industryWhitelist.upsert({
+      where: { word: item.word },
+      update: {
+        category: item.category,
+        subCategory: item.subCategory ?? null,
+        weight: item.weight,
+        synonyms: item.synonyms?.length ? JSON.stringify(item.synonyms) : null,
+        status: true,
+      },
+      create: {
+        word: item.word,
+        category: item.category,
+        subCategory: item.subCategory ?? null,
+        weight: item.weight,
+        synonyms: item.synonyms?.length ? JSON.stringify(item.synonyms) : null,
+        status: true,
+      },
+    });
   }
 }
 
