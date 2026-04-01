@@ -360,6 +360,8 @@ export default function AdminContentPage() {
     if (tab === "standards") setStandardStructured(createDefaultStandardStructuredData());
     if (tab === "industry-data") setDataStructured(createDefaultDataStructuredData());
     if (tab === "awards") setAwardStructured(createDefaultAwardStructuredData());
+    setMessage("");
+    setLastSubmitted(null);
     setCoverImage("");
     replacePreviewUrl("publish", "");
     setIsPinned(false);
