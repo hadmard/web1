@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
@@ -11,6 +12,24 @@ import { formatKeywordCsv, syncArticleKeywords } from "@/lib/news-keywords-v2";
 
 export const dynamic = "force-dynamic";
 
+function getMutationErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    if (error.code === "P2002") {
+      const target = Array.isArray(error.meta?.target) ? error.meta.target.join(",") : String(error.meta?.target ?? "");
+      if (target.includes("title")) return "\u6807\u9898\u5df2\u5b58\u5728\uff0c\u8bf7\u66f4\u6362\u4e00\u4e2a\u65b0\u7684\u6807\u9898";
+      if (target.includes("slug")) return "Slug \u5df2\u5b58\u5728\uff0c\u8bf7\u66f4\u6362\u4e00\u4e2a\u65b0\u7684 slug";
+      return "\u5b58\u5728\u91cd\u590d\u6570\u636e\uff0c\u8bf7\u68c0\u67e5\u6807\u9898\u6216 slug";
+    }
+  }
+
+  if (error instanceof Error) {
+    const message = error.message.trim();
+    if (message) return `${fallback}\uFF1A${message}`;
+  }
+
+  return fallback;
+}
+
 function isAdmin(session: { role: string | null } | null) {
   return session?.role === "SUPER_ADMIN" || session?.role === "ADMIN";
 }
@@ -22,7 +41,7 @@ function isSuperAdmin(session: { role: string | null } | null) {
 export async function GET(request: NextRequest) {
   const session = await getSession();
   if (!session || !isAdmin(session)) {
-    return NextResponse.json({ error: "需要管理员权限" }, { status: 403 });
+    return NextResponse.json({ error: "\u9700\u8981\u7ba1\u7406\u5458\u6743\u9650" }, { status: 403 });
   }
 
   const { searchParams } = new URL(request.url);
@@ -114,7 +133,7 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getSession();
     if (!session || !isAdmin(session)) {
-      return NextResponse.json({ error: "需要管理员权限" }, { status: 403 });
+      return NextResponse.json({ error: "\u9700\u8981\u7ba1\u7406\u5458\u6743\u9650" }, { status: 403 });
     }
 
     const body = await request.json().catch(() => ({}));
@@ -148,12 +167,12 @@ export async function POST(request: NextRequest) {
     } = body;
 
     if (!title || typeof title !== "string") {
-      return NextResponse.json({ error: "标题必填" }, { status: 400 });
+      return NextResponse.json({ error: "\u6807\u9898\u5fc5\u586b" }, { status: 400 });
     }
     const normalizedTitle = normalizeArticleTitle(title);
     const existingTitle = await findDuplicateArticleByTitle(normalizedTitle);
     if (existingTitle) {
-      return NextResponse.json({ error: "标题已存在，请更换一个新的标题" }, { status: 400 });
+      return NextResponse.json({ error: "\u6807\u9898\u5df2\u5b58\u5728\uff0c\u8bf7\u66f4\u6362\u4e00\u4e2a\u65b0\u7684\u6807\u9898" }, { status: 400 });
     }
     const isDictionary =
       (typeof categoryHref === "string" && categoryHref.startsWith("/dictionary")) ||
@@ -162,7 +181,7 @@ export async function POST(request: NextRequest) {
       isDictionary && typeof content === "string" ? normalizeTermContent(content) : typeof content === "string" ? content : "";
     if (isDictionary) {
       if (!isValidTermStructuredContent(normalizedContent)) {
-        return NextResponse.json({ error: "词库内容必须按固定小标题分节格式提交" }, { status: 400 });
+        return NextResponse.json({ error: "\u8bcd\u5e93\u5185\u5bb9\u5fc5\u987b\u6309\u56fa\u5b9a\u5c0f\u6807\u9898\u5206\u8282\u683c\u5f0f\u63d0\u4ea4" }, { status: 400 });
       }
     }
     const customSlug = typeof slug === "string" ? slug.trim() : "";
@@ -204,7 +223,7 @@ export async function POST(request: NextRequest) {
         select: { id: true },
       });
       if (!ownedEnterprise) {
-        return NextResponse.json({ error: "归属企业不存在或已被删除" }, { status: 400 });
+        return NextResponse.json({ error: "\u5f52\u5c5e\u4f01\u4e1a\u4e0d\u5b58\u5728\u6216\u5df2\u88ab\u5220\u9664" }, { status: 400 });
       }
     }
 
@@ -258,18 +277,28 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    await syncArticleKeywords({
-      articleId: article.id,
-      title: normalizedTitle,
-      content: normalizedContent,
-      manualKeywords: typeof manualKeywords === "string" ? manualKeywords : null,
-    });
+    try {
+      await syncArticleKeywords({
+        articleId: article.id,
+        title: normalizedTitle,
+        content: normalizedContent,
+        manualKeywords: typeof manualKeywords === "string" ? manualKeywords : null,
+      });
+    } catch (keywordError) {
+      await prisma.newsKeyword.deleteMany({ where: { newsId: article.id } }).catch(() => undefined);
+      await prisma.article.delete({ where: { id: article.id } }).catch(() => undefined);
+      const reason = getMutationErrorMessage(keywordError, "\u5173\u952e\u8bcd\u540c\u6b65\u5931\u8d25");
+      return NextResponse.json(
+        { error: `\u53d1\u5e03\u5931\u8d25\uff1a${reason}\u3002\u672c\u6b21\u6587\u7ae0\u672a\u4fdd\u5b58\uff0c\u8bf7\u4fee\u6b63\u540e\u91cd\u8bd5\u3002` },
+        { status: 500 },
+      );
+    }
 
     return NextResponse.json(article);
   } catch (e) {
     console.error("POST /api/admin/articles", e);
-    const msg =
-      process.env.NODE_ENV === "development" && e instanceof Error ? e.message : "发布失败，请稍后重试";
+    const msg = getMutationErrorMessage(e, "\u53d1\u5e03\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5");
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
+

@@ -949,7 +949,7 @@ export default function AdminContentPage() {
     });
     setTagSlugs(tags.join(","));
     suppressMessageScrollRef.current = true;
-    setMessage(tags.length > 0 ? `已按标题、摘要、正文和栏目语义提取 ${tags.length} 个行业关键词。` : "未识别到明显行业关键词，请手动补充。");
+    setMessage(tags.length > 0 ? `已按标题、摘要、正文和栏目语义提取 ${tags.length} 个栏目标签。` : "未识别到明显栏目标签，请手动补充。");
   }
 
   function autoFillEditTags() {
@@ -962,7 +962,61 @@ export default function AdminContentPage() {
     });
     setEditTagSlugs(tags.join(","));
     suppressMessageScrollRef.current = true;
-    setMessage(tags.length > 0 ? `已按标题、摘要、正文和栏目语义提取 ${tags.length} 个行业关键词。` : "未识别到明显行业关键词，请手动补充。");
+    setMessage(tags.length > 0 ? `已按标题、摘要、正文和栏目语义提取 ${tags.length} 个栏目标签。` : "未识别到明显栏目标签，请手动补充。");
+  }
+
+  async function generatePublishManualKeywords() {
+    const res = await fetch("/api/admin/articles/keyword-preview", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title,
+        content: getPublishSourceText(),
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      suppressMessageScrollRef.current = true;
+      setMessage(data.error ?? "关键词生成失败");
+      return;
+    }
+
+    setManualKeywords(typeof data.keywordCsv === "string" ? data.keywordCsv : "");
+    suppressMessageScrollRef.current = true;
+    const pendingBrandCount = Array.isArray(data.pendingBrands) ? data.pendingBrands.length : 0;
+    setMessage(
+      pendingBrandCount > 0
+        ? `已按新规则生成关键词，并识别到 ${pendingBrandCount} 个疑似新品牌候选。`
+        : "已按新规则生成关键词，可直接用于前台展示与推荐。",
+    );
+  }
+
+  async function generateEditManualKeywords() {
+    const res = await fetch("/api/admin/articles/keyword-preview", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: editTitle,
+        content: getEditSourceText(),
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      suppressMessageScrollRef.current = true;
+      setMessage(data.error ?? "关键词生成失败");
+      return;
+    }
+
+    setEditManualKeywords(typeof data.keywordCsv === "string" ? data.keywordCsv : "");
+    suppressMessageScrollRef.current = true;
+    const pendingBrandCount = Array.isArray(data.pendingBrands) ? data.pendingBrands.length : 0;
+    setMessage(
+      pendingBrandCount > 0
+        ? `已按新规则生成关键词，并识别到 ${pendingBrandCount} 个疑似新品牌候选。`
+        : "已按新规则生成关键词，可直接用于前台展示与推荐。",
+    );
   }
 
   function applyManageSearch(event?: FormEvent) {
@@ -1293,20 +1347,24 @@ export default function AdminContentPage() {
                 />
               </>
             )}
-            <label className="block text-sm text-muted">关键词（逗号分隔）</label>
+            <label className="block text-sm text-muted">栏目标签（逗号分隔）</label>
             <div className="flex gap-2">
               <input className="flex-1 border border-border rounded px-3 py-2 bg-surface" value={tagSlugs} onChange={(e) => setTagSlugs(e.target.value)} placeholder="如：整木定制,门墙柜一体,渠道招商" />
-              <button type="button" onClick={autoFillPublishTags} className="px-3 py-2 rounded border border-border text-xs hover:bg-surface">行业提取</button>
+              <button type="button" onClick={autoFillPublishTags} className="px-3 py-2 rounded border border-border text-xs hover:bg-surface">标签提取</button>
             </div>
             {tab === "articles" && (
               <>
-                <label className="block text-sm text-muted">人工关键词（优先用于前台展示与推荐，最多 5 个）</label>
+                <div className="flex items-center justify-between gap-3">
+                  <label className="block text-sm text-muted">人工关键词（优先用于前台展示与推荐，最多 5 个）</label>
+                  <button type="button" onClick={() => void generatePublishManualKeywords()} className="px-3 py-1.5 rounded border border-border text-xs hover:bg-surface">按新规则生成</button>
+                </div>
                 <input
                   className="w-full rounded border border-border bg-surface px-3 py-2"
                   value={manualKeywords}
                   onChange={(e) => setManualKeywords(e.target.value)}
                   placeholder="如：图森,整木定制,乌镇国际设计周"
                 />
+                <p className="text-xs text-muted">上面的“标签提取”用于后台栏目标签；这里的关键词才会优先用于前台展示、关键词页和相关阅读。</p>
                 <label className="block text-sm text-muted">手动推荐文章 ID（JSON 数组，可选）</label>
                 <input
                   className="w-full rounded border border-border bg-surface px-3 py-2"
@@ -1574,20 +1632,24 @@ export default function AdminContentPage() {
                 )}
               </div>
             )}
-            <label className="block text-sm text-muted">关键词（逗号分隔）</label>
+            <label className="block text-sm text-muted">栏目标签（逗号分隔）</label>
             <div className="flex gap-2">
               <input className="flex-1 border border-border rounded px-3 py-2 bg-surface" value={editTagSlugs} onChange={(e) => setEditTagSlugs(e.target.value)} placeholder="如：行业趋势,技术发展,品牌建设" />
-              <button type="button" onClick={autoFillEditTags} className="px-3 py-2 rounded border border-border text-xs hover:bg-surface">行业提取</button>
+              <button type="button" onClick={autoFillEditTags} className="px-3 py-2 rounded border border-border text-xs hover:bg-surface">标签提取</button>
             </div>
             {tab === "articles" && (
               <>
-                <label className="block text-sm text-muted">人工关键词（优先生效）</label>
+                <div className="flex items-center justify-between gap-3">
+                  <label className="block text-sm text-muted">人工关键词（优先生效）</label>
+                  <button type="button" onClick={() => void generateEditManualKeywords()} className="px-3 py-1.5 rounded border border-border text-xs hover:bg-surface">按新规则生成</button>
+                </div>
                 <input
                   className="w-full rounded border border-border bg-surface px-3 py-2"
                   value={editManualKeywords}
                   onChange={(e) => setEditManualKeywords(e.target.value)}
                   placeholder="如：图森,整木定制,乌镇国际设计周"
                 />
+                <p className="text-xs text-muted">栏目标签仅用于后台分类与检索；这里的关键词会优先覆盖系统抽取结果。</p>
                 <label className="block text-sm text-muted">手动推荐文章 ID（JSON 数组，可选）</label>
                 <input
                   className="w-full rounded border border-border bg-surface px-3 py-2"
