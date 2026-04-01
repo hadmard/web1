@@ -415,6 +415,7 @@ model PendingBrand {
   lastOccurrence  DateTime? @map("last_occurrence")
   sourceContext   String?  @map("source_context")
   ruleSource      String?  @map("rule_source")
+  triggerReason   String?  @map("trigger_reason")
   confidence      Float?
   approvedSource  String?  @map("approved_source")
   autoApprovedAt  DateTime? @map("auto_approved_at")

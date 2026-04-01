@@ -10,6 +10,7 @@ type PendingBrandItem = {
   occurrenceCount: number;
   articleCount: number;
   ruleSource?: string | null;
+  triggerReason?: string | null;
   confidence?: number | null;
   approvedSource?: string | null;
   autoApprovedAt?: string | null;
@@ -234,7 +235,7 @@ export default function PendingBrandsAdminPage() {
                   <th className="px-4 py-3 font-medium">出现次数</th>
                   <th className="px-4 py-3 font-medium">文章数</th>
                   <th className="px-4 py-3 font-medium">最近出现</th>
-                  <th className="px-4 py-3 font-medium">规则 / 置信度</th>
+                  <th className="px-4 py-3 font-medium">规则 / 阈值</th>
                   <th className="px-4 py-3 font-medium">上下文</th>
                   <th className="px-4 py-3 font-medium">状态</th>
                   <th className="px-4 py-3 font-medium">操作</th>
@@ -254,6 +255,7 @@ export default function PendingBrandsAdminPage() {
                       <td className="px-4 py-4 text-muted">{formatTime(item.lastOccurrence)}</td>
                       <td className="px-4 py-4 text-muted">
                         <div>{item.ruleSource || "-"}</div>
+                        <div className="mt-1 text-xs">{item.triggerReason || "-"}</div>
                         <div className="mt-1 text-xs">confidence {item.confidence != null ? item.confidence.toFixed(2) : "-"}</div>
                         {item.approvedSource ? (
                           <div className="mt-1 text-xs">

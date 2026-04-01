@@ -45,6 +45,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         data: {
           status: 1,
           approvedSource: "manual-admin",
+          triggerReason: "manual-admin",
         },
       }),
     ]);

@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { stripHtml } from "@/lib/text";
 import {
@@ -10,6 +11,9 @@ import {
 } from "@/lib/news-keyword-config-v2";
 
 const AUTO_APPROVE_PENDING_BRANDS = process.env.NEWS_AUTO_APPROVE_PENDING_BRANDS !== "false";
+const KEYWORD_MARKETING_TERMS = ["都", "了", "一个", "这个", "那个", "问题", "错误", "为什么", "如何", "严重", "千万不要", "一定要"];
+const KEYWORD_PUNCTUATION = /[，。:：；;！？!?%]/;
+const KEYWORD_MULTI_DIGITS = /\d{2,}/;
 
 type WhitelistEntry = {
   word: string;
@@ -46,6 +50,7 @@ export type KeywordExtractionResult = {
     sourceContext: string;
     frequency: number;
     ruleSource: string;
+    triggerReason: string | null;
     confidence: number;
   }>;
 };
@@ -88,12 +93,12 @@ function normalizeKeywordList(input: string | null | undefined) {
     (input || "")
       .split(/[,\n，]+/)
       .map((item) => item.trim())
-      .filter((item) => clampKeywordLength(item) && !isNoiseKeyword(item)),
+      .filter((item) => isValidKeywordCandidate(item)),
   ).slice(0, 5);
 }
 
 function clampKeywordLength(input: string) {
-  return input.length >= 2 && input.length <= 8;
+  return input.length >= 2 && input.length <= 10;
 }
 
 function isNoiseKeyword(input: string) {
@@ -104,6 +109,22 @@ function isNoiseKeyword(input: string) {
     NEWS_STOPWORDS.includes(input) ||
     NEWS_PENDING_BRAND_BLACKLIST.includes(input)
   );
+}
+
+function countMatchedTerms(input: string, terms: string[]) {
+  return terms.reduce((count, term) => count + (input.includes(term) ? 1 : 0), 0);
+}
+
+export function isValidKeywordCandidate(text: string) {
+  const input = normalizeText(text);
+  if (!input || !clampKeywordLength(input)) return false;
+  if (isNoiseKeyword(input)) return false;
+  if (KEYWORD_PUNCTUATION.test(input)) return false;
+  if (KEYWORD_MULTI_DIGITS.test(input)) return false;
+  if (countMatchedTerms(input, KEYWORD_MARKETING_TERMS) >= 2) return false;
+  if (/[A-Za-z0-9]+\s+[A-Za-z0-9]+/.test(input)) return false;
+  if (/的|了|在|如何|为什么|不要|一定要/.test(input) && input.length >= 6) return false;
+  return /^[A-Za-z0-9\u4e00-\u9fa5]+$/.test(input);
 }
 
 function safeParseJsonArray(input: string | null | undefined) {
@@ -162,8 +183,8 @@ function getKeywordWeightFromLookup(keyword: string, lookup: Map<string, Whiteli
   return lookup.get(normalizeCompact(keyword))?.weight ?? 1;
 }
 
-function collectWhitelistMatches(text: string, title: string, entries: WhitelistEntry[]) {
-  const sourceText = normalizeText(text);
+function collectWhitelistMatches(bodyText: string, title: string, entries: WhitelistEntry[]) {
+  const sourceText = normalizeText(bodyText);
   const normalizedTitle = normalizeText(title);
   const lead = sourceText.slice(0, 200);
   const matches = new Map<string, KeywordCandidate>();
@@ -185,7 +206,7 @@ function collectWhitelistMatches(text: string, title: string, entries: Whitelist
     if (!frequency && !inTitle) continue;
 
     const frequencyWeight = Math.min(1.5, 1 + Math.log(Math.max(1, frequency || 1)));
-    const titleWeight = inTitle ? 2 : 1;
+    const titleWeight = inTitle ? 1.15 : 1;
     const leadWeight = inLead ? 1.2 : 1;
     const score = entry.weight * titleWeight * leadWeight * frequencyWeight;
 
@@ -205,8 +226,7 @@ function collectWhitelistMatches(text: string, title: string, entries: Whitelist
 }
 
 function isValidBrandCandidate(input: string, whitelistLookup: Map<string, WhitelistEntry>) {
-  if (!input || input.length < 2 || input.length > 10) return false;
-  if (isNoiseKeyword(input)) return false;
+  if (!isValidKeywordCandidate(input)) return false;
   if (/^[A-Za-z]+$/.test(input)) return false;
   if (NEWS_BRAND_FORBIDDEN_CONTAINS.some((item) => input.includes(item))) return false;
   if (/^(上海|南浔|湖州|南通|杭州|广州|深圳|北京|苏州|南京|成都|重庆|宁波|无锡|东莞|佛山)$/.test(input)) return false;
@@ -291,7 +311,7 @@ function collectNerCandidates(text: string, title: string, whitelistLookup: Map<
 function buildFallbackKeywords(title: string, entries: WhitelistEntry[]) {
   const titleText = normalizeText(title);
   const fromWhitelist = entries
-    .filter((entry) => titleText.includes(entry.word))
+    .filter((entry) => titleText.includes(entry.word) && isValidKeywordCandidate(entry.word))
     .slice(0, 3)
     .map((entry) => ({
       keyword: entry.word,
@@ -306,7 +326,7 @@ function buildFallbackKeywords(title: string, entries: WhitelistEntry[]) {
     titleText
       .split(/[，,。；;：:\s()（）【】《》“”"'‘’、/\\|-]+/)
       .map((item) => item.trim())
-      .filter((item) => clampKeywordLength(item) && !isNoiseKeyword(item)),
+      .filter((item) => isValidKeywordCandidate(item)),
   )
     .slice(0, 3)
     .map((keyword) => ({ keyword, score: 1, weight: 1, source: "title" as const }));
@@ -317,7 +337,7 @@ export async function extractNewsKeywords(input: ArticleKeywordInput): Promise<K
   const content = normalizeText(`${input.city ? `${input.city} ` : ""}${input.content || ""}`);
   const entries = await loadWhitelistEntries();
   const whitelistLookup = buildWhitelistLookup(entries);
-  const whitelistMatches = collectWhitelistMatches(`${title} ${content}`, title, entries);
+  const whitelistMatches = collectWhitelistMatches(content, title, entries);
   const nerMatches = collectNerCandidates(`${title} ${content}`, title, whitelistLookup);
 
   for (const [keyword, candidate] of Array.from(nerMatches.entries())) {
@@ -327,7 +347,7 @@ export async function extractNewsKeywords(input: ArticleKeywordInput): Promise<K
   }
 
   const ranked = Array.from(whitelistMatches.values())
-    .filter((item) => clampKeywordLength(item.keyword) && !isNoiseKeyword(item.keyword))
+    .filter((item) => isValidKeywordCandidate(item.keyword))
     .sort((a, b) => b.score - a.score || b.weight - a.weight || b.keyword.length - a.keyword.length)
     .slice(0, 5)
     .map((item) => ({
@@ -338,13 +358,19 @@ export async function extractNewsKeywords(input: ArticleKeywordInput): Promise<K
     }));
 
   const finalKeywords = ranked.length > 0 ? ranked : buildFallbackKeywords(title, entries);
-  const autoApprovedBrands = Array.from(nerMatches.values()).map((item) => ({
-    brandName: item.keyword,
-    sourceContext: item.contexts[0] ?? item.keyword,
-    frequency: item.frequency,
-    ruleSource: item.ruleSource || (item.inTitle ? "title" : "context"),
-    confidence: Number(Math.min(0.95, 0.45 + item.frequency * 0.15 + (item.inTitle ? 0.15 : 0) + (item.inLead ? 0.05 : 0)).toFixed(2)),
-  }));
+  const autoApprovedBrands = Array.from(nerMatches.values())
+    .filter((item) => {
+      const bodyFrequency = content ? content.split(item.keyword).length - 1 : 0;
+      return isValidKeywordCandidate(item.keyword) && bodyFrequency > 0;
+    })
+    .map((item) => ({
+      brandName: item.keyword,
+      sourceContext: item.contexts[0] ?? item.keyword,
+      frequency: item.frequency,
+      ruleSource: item.ruleSource || (item.inTitle ? "title" : "context"),
+      triggerReason: null,
+      confidence: Number(Math.min(0.95, 0.45 + item.frequency * 0.15 + (item.inTitle ? 0.05 : 0) + (item.inLead ? 0.05 : 0)).toFixed(2)),
+    }));
 
   return {
     keywords: finalKeywords.slice(0, Math.max(3, Math.min(5, finalKeywords.length))),
@@ -396,6 +422,7 @@ export async function syncArticleKeywords(options: {
     }
 
     for (const brand of result.pendingBrands) {
+      if (!isValidKeywordCandidate(brand.brandName)) continue;
       const existing = await tx.pendingBrand.findUnique({ where: { brandName: brand.brandName } });
       const existingArticleIds = parseJsonStringArray(existing?.articleIds);
       const mergedArticleIds = Array.from(new Set([...existingArticleIds, options.articleId]));
@@ -403,6 +430,7 @@ export async function syncArticleKeywords(options: {
       const nextOccurrenceCount = (existing?.occurrenceCount ?? 0) + brand.frequency;
       const thresholdReached = brand.frequency >= 2 || nextArticleCount >= 2;
       const shouldAutoApprove = AUTO_APPROVE_PENDING_BRANDS && thresholdReached;
+      const triggerReason = brand.frequency >= 2 ? "single-article>=2" : nextArticleCount >= 2 ? "cross-article>=2" : null;
       const nextApprovedSource =
         existing?.approvedSource === "manual-admin"
           ? "manual-admin"
@@ -422,6 +450,7 @@ export async function syncArticleKeywords(options: {
             lastOccurrence: new Date(),
             sourceContext: brand.sourceContext,
             ruleSource: brand.ruleSource,
+            triggerReason: shouldAutoApprove ? triggerReason : existing?.triggerReason,
             confidence: brand.confidence,
             status: nextStatus,
             approvedSource: nextApprovedSource,
@@ -440,6 +469,7 @@ export async function syncArticleKeywords(options: {
             lastOccurrence: new Date(),
             sourceContext: brand.sourceContext,
             ruleSource: brand.ruleSource,
+            triggerReason,
             confidence: brand.confidence,
             status: nextStatus,
             approvedSource: nextApprovedSource,
@@ -463,6 +493,7 @@ export async function syncArticleKeywords(options: {
             autoApproveEnabled: AUTO_APPROVE_PENDING_BRANDS,
             shouldAutoApprove,
             ruleSource: brand.ruleSource,
+            triggerReason,
             confidence: brand.confidence,
           }),
         },
@@ -496,6 +527,7 @@ export async function syncArticleKeywords(options: {
                 occurrenceCount: nextOccurrenceCount,
                 articleCount: nextArticleCount,
                 ruleSource: brand.ruleSource,
+                triggerReason,
                 confidence: brand.confidence,
                 whitelistWeight: 1,
               }),
@@ -624,6 +656,60 @@ export async function getRecommendedNews(articleId: string, limit = 8) {
   return [...scored, ...sameSection, ...latest]
     .filter((item, index, list) => list.findIndex((row) => row.id === item.id) === index)
     .slice(0, limit);
+}
+
+export async function resolveCanonicalKeywordName(name: string) {
+  const normalized = normalizeCompact(name);
+  if (!normalized) return null;
+  const entries = await loadWhitelistEntries();
+  const lookup = buildWhitelistLookup(entries);
+  return lookup.get(normalized)?.word ?? normalizeText(name);
+}
+
+export async function getArticlesByKeyword(name: string, limit = 30) {
+  const keyword = await resolveCanonicalKeywordName(name);
+  if (!keyword || !isValidKeywordCandidate(keyword)) {
+    return {
+      keyword: keyword ?? normalizeText(name),
+      total: 0,
+      items: [] as Array<{
+        id: string;
+        title: string;
+        slug: string;
+        excerpt: string | null;
+        publishedAt: Date | null;
+        updatedAt: Date;
+      }>,
+    };
+  }
+
+  const where: Prisma.ArticleWhereInput = {
+    status: "approved",
+    OR: [
+      { keywordItems: { some: { keyword } } },
+      { manualKeywords: { contains: keyword } },
+      { keywords: { contains: keyword } },
+    ],
+  };
+
+  const [items, total] = await Promise.all([
+    prisma.article.findMany({
+      where,
+      orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }],
+      take: limit,
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        excerpt: true,
+        publishedAt: true,
+        updatedAt: true,
+      },
+    }),
+    prisma.article.count({ where }),
+  ]);
+
+  return { keyword, total, items };
 }
 
 export function formatKeywordCsv(input: string[]) {

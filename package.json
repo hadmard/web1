@@ -15,6 +15,7 @@
     "backup:db": "powershell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts/backup-postgres-db.ps1",
     "run:company-migration": "powershell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts/run-company-migration.ps1",
     "run:company-rollout": "powershell -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts/run-company-rollout.ps1",
+    "selftest:keyword-filter": "node scripts/selftest-keyword-filter.js",
     "selftest:news-keywords": "node scripts/selftest-news-keywords.js",
     "selftest:pending-brand-threshold": "node scripts/selftest-pending-brand-threshold.js",
     "db:generate": "prisma generate",

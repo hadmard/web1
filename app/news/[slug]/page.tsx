@@ -14,7 +14,7 @@ import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
 import { DEFAULT_NEWS_SHARE_IMAGE, findNewsArticleBySegment, normalizeNewsSegment, resolveArticleShareImage } from "@/lib/news-sharing";
 import { prisma } from "@/lib/prisma";
 import { articleOrderByPinnedLatest } from "@/lib/articles";
-import { getRecommendedNews } from "@/lib/news-keywords-v2";
+import { getRecommendedNews, isValidKeywordCandidate } from "@/lib/news-keywords-v2";
 
 export const revalidate = 300;
 export const dynamic = "force-dynamic";
@@ -124,17 +124,15 @@ function resolveNewsSectionLabel(subHref?: string | null, categoryHref?: string 
   return NEWS_SECTION_LABELS[href] ?? "整木资讯";
 }
 
-function parseKeywordList(keywordSource?: string | null, tagSlugs?: string | null, title?: string | null) {
-  const base = `${keywordSource || ""},${tagSlugs || ""}`
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
-
-  if (title?.trim()) {
-    base.unshift(title.trim());
-  }
-
-  return Array.from(new Set(base)).slice(0, 12);
+function parseKeywordList(keywordSource?: string | null, tagSlugs?: string | null) {
+  return Array.from(
+    new Set(
+      `${keywordSource || ""},${tagSlugs || ""}`
+        .split(",")
+        .map((item) => item.trim())
+        .filter((item) => isValidKeywordCandidate(item)),
+    ),
+  ).slice(0, 5);
 }
 
 export default async function ArticlePage({ params, searchParams }: Props) {
@@ -276,8 +274,8 @@ export default async function ArticlePage({ params, searchParams }: Props) {
   const publicBaseUrl = articleUrl.replace(/\/news\/.*$/, "");
   const articleShareImage = resolveArticleShareImage(article);
   const articleSection = resolveNewsSectionLabel(article.subHref, article.categoryHref);
-  const keywords = parseKeywordList(article.manualKeywords ?? article.keywords, article.tagSlugs, article.title);
-  const recommendedArticles = await getRecommendedNews(article.id, 8);
+  const keywords = parseKeywordList(article.manualKeywords ?? article.keywords, article.tagSlugs);
+  const recommendedArticles = await getRecommendedNews(article.id, 4);
 
   const articleSchema = {
     "@context": "https://schema.org",
@@ -400,40 +398,36 @@ export default async function ArticlePage({ params, searchParams }: Props) {
           <section className="mt-10 rounded-[24px] border border-border bg-surface-elevated px-5 py-6 sm:px-7">
             <h2 className="mb-4 text-lg font-semibold text-primary">核心关键词</h2>
             <div className="flex flex-wrap gap-2.5">
-              {keywords.slice(0, 5).map((keyword) => (
-                <span
+              {keywords.map((keyword) => (
+                <Link
                   key={keyword}
-                  className="inline-flex items-center rounded-full border border-[rgba(194,182,154,0.32)] bg-[linear-gradient(180deg,rgba(255,252,246,0.98),rgba(246,240,231,0.94))] px-3.5 py-1.5 text-sm text-[#7b6542]"
+                  href={`/keyword/${encodeURIComponent(keyword)}`}
+                  className="inline-flex items-center rounded-full border border-[rgba(194,182,154,0.32)] bg-[linear-gradient(180deg,rgba(255,252,246,0.98),rgba(246,240,231,0.94))] px-3.5 py-1.5 text-sm text-[#7b6542] transition hover:border-[rgba(180,154,107,0.48)] hover:text-accent"
                 >
                   {keyword}
-                </span>
+                </Link>
               ))}
             </div>
           </section>
         ) : null}
 
         {recommendedArticles.length > 0 ? (
-          <section className="mt-10 rounded-[24px] border border-border bg-[rgba(255,255,255,0.95)] px-5 py-6 shadow-[0_22px_44px_-38px_rgba(15,23,42,0.12)] sm:px-7">
+          <section className="mt-10 rounded-[20px] bg-[#fafafa] px-4 py-4 sm:px-5">
             <div className="mb-4 flex items-center justify-between gap-4">
               <h2 className="text-lg font-semibold text-primary">相关阅读</h2>
               <Link href="/news/all" className="text-sm text-muted hover:text-accent">
                 查看更多
               </Link>
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {recommendedArticles.slice(0, 8).map((item) => (
+            <div className="divide-y divide-[rgba(15,23,42,0.08)]">
+              {recommendedArticles.slice(0, 4).map((item) => (
                 <Link
                   key={item.id}
                   href={buildNewsPath(item.id)}
-                  className="rounded-[20px] border border-border bg-surface-elevated px-4 py-4 transition hover:-translate-y-0.5 hover:border-[rgba(194,182,154,0.36)] hover:shadow-[0_14px_30px_-24px_rgba(15,23,42,0.22)]"
+                  className="flex items-start gap-3 rounded-xl px-2 py-3 text-sm leading-7 text-primary transition hover:bg-white hover:text-accent"
                 >
-                  <p className="line-clamp-2 text-sm font-medium leading-7 text-primary">{item.title}</p>
-                  <p className="mt-2 line-clamp-2 text-xs leading-6 text-muted">
-                    {previewText(item.excerpt ?? item.title, 72)}
-                  </p>
-                  <p className="mt-3 text-xs text-muted">
-                    {(item.publishedAt ?? item.updatedAt).toLocaleDateString("zh-CN")}
-                  </p>
+                  <span className="mt-2 h-1.5 w-1.5 rounded-full bg-[rgba(180,154,107,0.86)]" />
+                  <span className="flex-1">{item.title}</span>
                 </Link>
               ))}
             </div>
