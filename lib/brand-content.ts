@@ -147,6 +147,53 @@ function parseAttributes(input: string) {
   return attributes;
 }
 
+function clampImageDimension(value: string | null | undefined) {
+  if (!value) return "";
+  const matched = value.trim().match(/^(\d{1,4})(?:px)?$/i);
+  if (!matched) return "";
+  const dimension = Number.parseInt(matched[1], 10);
+  if (!Number.isFinite(dimension) || dimension < 1 || dimension > 2400) return "";
+  return `${dimension}px`;
+}
+
+function extractSafeImageStyle(styleText: string | null | undefined) {
+  const source = String(styleText ?? "");
+  if (!source) return "";
+
+  const safeRules: string[] = [];
+  const display = source.match(/(?:^|;)\s*display\s*:\s*(block)\s*(?:;|$)/i)?.[1];
+  if (display) safeRules.push(`display:${display.toLowerCase()}`);
+
+  const width = clampImageDimension(source.match(/(?:^|;)\s*width\s*:\s*([^;]+)\s*(?:;|$)/i)?.[1]);
+  if (width) safeRules.push(`width:${width}`);
+
+  const maxWidth = source.match(/(?:^|;)\s*max-width\s*:\s*(100%)\s*(?:;|$)/i)?.[1];
+  if (maxWidth) safeRules.push(`max-width:${maxWidth}`);
+
+  const heightRaw = source.match(/(?:^|;)\s*height\s*:\s*([^;]+)\s*(?:;|$)/i)?.[1]?.trim().toLowerCase() ?? "";
+  if (heightRaw === "auto") {
+    safeRules.push("height:auto");
+  } else {
+    const height = clampImageDimension(heightRaw);
+    if (height) safeRules.push(`height:${height}`);
+  }
+
+  const margin = source.match(/(?:^|;)\s*margin\s*:\s*([^;]+)\s*(?:;|$)/i)?.[1]?.trim() ?? "";
+  if (margin && /^((auto|\d+(?:\.\d+)?px)\s+){0,3}(auto|\d+(?:\.\d+)?px)$/.test(margin)) {
+    safeRules.push(`margin:${margin.replace(/\s+/g, " ")}`);
+  }
+
+  const objectFit = source.match(/(?:^|;)\s*object-fit\s*:\s*(contain|cover)\s*(?:;|$)/i)?.[1];
+  if (objectFit) safeRules.push(`object-fit:${objectFit.toLowerCase()}`);
+
+  const borderRadius = clampImageDimension(
+    source.match(/(?:^|;)\s*border-radius\s*:\s*([^;]+)\s*(?:;|$)/i)?.[1]
+  );
+  if (borderRadius) safeRules.push(`border-radius:${borderRadius}`);
+
+  return safeRules.join(";");
+}
+
 function sanitizeTag(tagName: string, attrText: string) {
   const tag = tagName.toLowerCase();
   if (!ALLOWED_TAGS.has(tag)) return "";
@@ -165,7 +212,14 @@ function sanitizeTag(tagName: string, attrText: string) {
     if (!isSafeSrc(src)) return "";
     const alt = attrs.get("alt") ?? "";
     const title = attrs.get("title");
-    return `<img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}"${title ? ` title="${escapeHtml(title)}"` : ""}>`;
+    const width = clampImageDimension(attrs.get("width"));
+    const height = clampImageDimension(attrs.get("height"));
+    const style = extractSafeImageStyle(attrs.get("style"));
+    return `<img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}"${
+      title ? ` title="${escapeHtml(title)}"` : ""
+    }${width ? ` width="${width.replace(/px$/i, "")}"` : ""}${height ? ` height="${height.replace(/px$/i, "")}"` : ""}${
+      style ? ` style="${escapeHtml(style)}"` : ""
+    }>`;
   }
 
   return `<${tag}>`;

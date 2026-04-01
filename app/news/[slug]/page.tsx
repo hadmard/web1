@@ -135,6 +135,16 @@ function parseKeywordList(keywordSource?: string | null) {
   ).slice(0, 5);
 }
 
+function stripNewsLeadingOverviewHeading(html?: string | null) {
+  const source = (html || "").trim();
+  if (!source) return "";
+
+  return source.replace(
+    /^\s*<(h[1-6]|p)[^>]*>\s*(?:概述|导语|摘要|前言|概况)\s*<\/\1>\s*/i,
+    "",
+  );
+}
+
 export default async function ArticlePage({ params, searchParams }: Props) {
   const { slug } = await params;
   if (NEWS_SUB_SLUGS.has(slug)) {
@@ -376,7 +386,7 @@ export default async function ArticlePage({ params, searchParams }: Props) {
         ) : null}
 
         <div className="mt-8 rounded-[24px] border border-[rgba(15,23,42,0.06)] bg-[rgba(255,255,255,0.94)] px-5 py-7 shadow-[0_22px_44px_-38px_rgba(15,23,42,0.12)] sm:rounded-[26px] sm:px-8 sm:py-9 sm:shadow-[0_24px_48px_-40px_rgba(15,23,42,0.12)]">
-          <RichContent html={article.content} className="prose prose-neutral dark:prose-invert max-w-none" />
+          <RichContent html={stripNewsLeadingOverviewHeading(article.content)} className="prose prose-neutral dark:prose-invert max-w-none" />
           <div className="mt-5 pt-1 sm:mt-6 sm:pt-2">
             <ArticleShareActions
               title={article.title}

@@ -7,6 +7,7 @@ import { canChangeReviewStatus, canDirectlyDeleteArticle, canDirectlyEditArticle
 import { isValidTermStructuredContent, normalizeTermContent } from "@/lib/term-structured";
 import { findDuplicateArticleByTitle, normalizeArticleTitle } from "@/lib/article-title";
 import { formatKeywordCsv, syncArticleKeywords } from "@/lib/news-keywords-v2";
+import { buildNewsPath } from "@/lib/share-config";
 
 function isAdmin(session: { role: string | null } | null) {
   return session?.role === "SUPER_ADMIN" || session?.role === "ADMIN";
@@ -17,6 +18,7 @@ function isDictionaryPath(input: string | null | undefined) {
 }
 
 function revalidateArticlePaths(article: {
+  id?: string | null;
   slug?: string | null;
   title?: string | null;
   categoryHref?: string | null;
@@ -42,6 +44,9 @@ function revalidateArticlePaths(article: {
     revalidatePath("/news/all");
     if (article.subHref) {
       revalidatePath(article.subHref);
+    }
+    if (article.id) {
+      revalidatePath(buildNewsPath(article.id));
     }
     if (segment) {
       revalidatePath(`/news/${encodeURIComponent(segment)}`);
@@ -121,6 +126,12 @@ export async function PATCH(
     recommendIds,
   } = body;
 
+  const nextCategoryHref =
+    typeof categoryHref === "string" ? categoryHref.trim() || null : target.categoryHref;
+  const nextSubHref =
+    typeof subHref === "string" ? subHref.trim() || null : target.subHref;
+  const isDictionary = isDictionaryPath(nextCategoryHref) || isDictionaryPath(nextSubHref);
+
   const data: Record<string, unknown> = {};
   if (typeof title === "string") data.title = normalizeArticleTitle(title);
   if (typeof slug === "string") {
@@ -135,7 +146,7 @@ export async function PATCH(
   if (typeof source === "string") data.source = source.trim() || null;
   if (typeof sourceUrl === "string") data.sourceUrl = sourceUrl.trim() || null;
   if (typeof displayAuthor === "string") data.displayAuthor = displayAuthor.trim() || null;
-  if (typeof content === "string") data.content = normalizeTermContent(content);
+  if (typeof content === "string") data.content = isDictionary ? normalizeTermContent(content) : content;
   if (typeof coverImage === "string") data.coverImage = coverImage.trim() || null;
   if (typeof subHref === "string") data.subHref = subHref.trim() || null;
   if (typeof categoryHref === "string") data.categoryHref = categoryHref.trim() || null;
@@ -193,11 +204,6 @@ export async function PATCH(
     }
   }
 
-  const nextCategoryHref =
-    typeof data.categoryHref === "string" ? (data.categoryHref as string) : target.categoryHref;
-  const nextSubHref =
-    typeof data.subHref === "string" ? (data.subHref as string) : target.subHref;
-  const isDictionary = isDictionaryPath(nextCategoryHref) || isDictionaryPath(nextSubHref);
   if (isDictionary && typeof data.content === "string" && !isValidTermStructuredContent(data.content as string)) {
     return NextResponse.json({ error: "词库内容必须按固定小标题分节格式提交" }, { status: 400 });
   }
