@@ -1350,8 +1350,8 @@ export default function AdminContentPage() {
             {tab === "articles" && (
               <>
                 <div className="flex items-center justify-between gap-3">
-                  <label className="block text-sm text-muted">人工关键词（优先用于前台展示与推荐，最多 5 个）</label>
-                  <button type="button" onClick={() => void generatePublishManualKeywords()} className="px-3 py-1.5 rounded border border-border text-xs hover:bg-surface">按新规则生成</button>
+                  <label className="block text-sm text-muted">前台关键词（可手填，也可自动生成，最多 5 个）</label>
+                  <button type="button" onClick={() => void generatePublishManualKeywords()} className="px-3 py-1.5 rounded border border-border text-xs hover:bg-surface">自动生成</button>
                 </div>
                 <input
                   className="w-full rounded border border-border bg-surface px-3 py-2"
@@ -1359,7 +1359,7 @@ export default function AdminContentPage() {
                   onChange={(e) => setManualKeywords(e.target.value)}
                   placeholder="如：图森,整木定制,乌镇国际设计周"
                 />
-                <p className="text-xs text-muted">这里的关键词会优先用于前台展示、关键词页和相关阅读。</p>
+                <p className="text-xs text-muted">可直接手动填写；如果不想手填，点击右侧“自动生成”。保存后这里的关键词会优先用于前台展示、关键词页和相关阅读。</p>
               </>
             )}
             {tab !== "terms" && tab !== "brands" && tab !== "standards" && tab !== "industry-data" && tab !== "awards" && (
@@ -1623,8 +1623,8 @@ export default function AdminContentPage() {
             {tab === "articles" && (
               <>
                 <div className="flex items-center justify-between gap-3">
-                  <label className="block text-sm text-muted">人工关键词（优先生效）</label>
-                  <button type="button" onClick={() => void generateEditManualKeywords()} className="px-3 py-1.5 rounded border border-border text-xs hover:bg-surface">按新规则生成</button>
+                  <label className="block text-sm text-muted">前台关键词（可手填，也可自动生成）</label>
+                  <button type="button" onClick={() => void generateEditManualKeywords()} className="px-3 py-1.5 rounded border border-border text-xs hover:bg-surface">自动生成</button>
                 </div>
                 <input
                   className="w-full rounded border border-border bg-surface px-3 py-2"
@@ -1632,7 +1632,7 @@ export default function AdminContentPage() {
                   onChange={(e) => setEditManualKeywords(e.target.value)}
                   placeholder="如：图森,整木定制,乌镇国际设计周"
                 />
-                <p className="text-xs text-muted">这里的关键词会优先覆盖系统抽取结果，并用于前台展示与相关推荐。</p>
+                <p className="text-xs text-muted">可直接手动调整；如果想重算，点击右侧“自动生成”。保存后这里的关键词会优先覆盖系统抽取结果，并用于前台展示与相关推荐。</p>
               </>
             )}
             {tab !== "brands" && (
