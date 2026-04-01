@@ -89,7 +89,15 @@ function normalizeEditorContentInput(input: string) {
 }
 
 function normalizePastedText(text: string) {
-  return text.replace(/\u00a0/g, " ").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n");
+  return text
+    .replace(/[\u00a0\u2002-\u200b\u202f\u205f\u3000]/g, " ")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/([一-龥])\s+([一-龥])/g, "$1$2")
+    .replace(/\s+([，。！？；：、])/g, "$1")
+    .replace(/([（【《“])\s+/g, "$1")
+    .replace(/\s+([）】》”])/g, "$1")
+    .trim();
 }
 
 function normalizePastedHref(href: string) {
@@ -211,6 +219,12 @@ function sanitizePastedHtml(rawHtml: string, imageMap?: Map<string, string>) {
         image.setAttribute("src", nextSrc);
         return image;
       }
+      const fallbackSrc = getNormalizedPastedImageSrc(node, rawHtml);
+      if (fallbackSrc) {
+        const image = document.createElement("img");
+        image.setAttribute("src", fallbackSrc);
+        return image;
+      }
       return null;
     }
 
@@ -304,7 +318,10 @@ function sanitizePastedHtml(rawHtml: string, imageMap?: Map<string, string>) {
 
   const html = container.innerHTML
     .replace(/<p>\s*<\/p>/g, "")
+    .replace(/<p>(?:\s|&nbsp;|<br\s*\/?>)*<\/p>/g, "")
     .replace(/(<br\s*\/?>\s*){3,}/g, "<br><br>")
+    .replace(/(<p>\s*){2,}/g, "<p>")
+    .replace(/(\s*<\/p>){2,}/g, "</p>")
     .trim();
 
   return html || "<p></p>";
@@ -470,6 +487,15 @@ export function RichEditor({
 
   const DEFAULT_IMAGE_WIDTH = 600;
 
+  const resolveDefaultImageSize = (size: { width: number; height: number }) => {
+    const safeWidth = Math.max(1, size.width || 640);
+    const safeHeight = Math.max(1, size.height || 360);
+    const maxWidth = 960;
+    const width = Math.min(safeWidth, maxWidth, DEFAULT_IMAGE_WIDTH);
+    const height = Math.max(1, Math.round(width / (safeWidth / safeHeight || 1)));
+    return { width, height };
+  };
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -620,9 +646,7 @@ export function RichEditor({
       try {
         const imageUrl = await uploadImageToServer(file, { folder: "content/editor-inline" });
         const size = await getImageSize(imageUrl);
-        const maxWidth = 960;
-        const width = Math.min(size.width, maxWidth, DEFAULT_IMAGE_WIDTH);
-        const height = Math.round(width / (size.width / size.height || 1));
+        const { width, height } = resolveDefaultImageSize(size);
         editor
           .chain()
           .focus()
@@ -651,15 +675,38 @@ export function RichEditor({
     insertPastedHtmlRef.current = async (html: string) => {
       if (!editor) return;
       const anchor = createSelectionAnchor(editor);
+      const applyDefaultSizeToPastedImages = async (from: number, to: number) => {
+        const targets: Array<{ pos: number; src: string }> = [];
+        editor.state.doc.nodesBetween(from, to, (node, pos) => {
+          if (node.type.name !== "image") return;
+          if (node.attrs.width && node.attrs.height) return;
+          const src = typeof node.attrs.src === "string" ? node.attrs.src : "";
+          if (!src) return;
+          targets.push({ pos, src });
+        });
+
+        for (const target of targets) {
+          const size = await getImageSize(target.src);
+          const { width, height } = resolveDefaultImageSize(size);
+          editor
+            .chain()
+            .focus()
+            .setNodeSelection(target.pos)
+            .updateAttributes("image", { width, height, align: "center" })
+            .run();
+        }
+      };
+
       try {
         const result = await transferPastedRemoteImages(html);
         const tr = editor.state.tr.setSelection(TextSelection.create(editor.state.doc, anchor.from, anchor.to));
         editor.view.dispatch(tr);
         editor.chain().focus().insertContent(result.html).run();
+        await applyDefaultSizeToPastedImages(anchor.from, editor.state.selection.to);
         if (result.failedCount > 0) {
           window.alert(
             result.failedCount === result.totalCount
-              ? "本次粘贴里的网页图片没有成功转存，当前只保留了文字内容。你可以改用“上传图片”补图。"
+              ? "本次粘贴里的网页图片没有成功转存，已尽量保留可用图片与文字内容。"
               : `本次粘贴有 ${result.failedCount} 张网页图片转存失败，已保留文字和成功导入的图片。`
           );
         }
@@ -667,7 +714,8 @@ export function RichEditor({
         const tr = editor.state.tr.setSelection(TextSelection.create(editor.state.doc, anchor.from, anchor.to));
         editor.view.dispatch(tr);
         editor.chain().focus().insertContent(sanitizePastedHtml(html)).run();
-        window.alert("网页内容已粘贴，但图片转存失败，当前只保留了文字内容。你可以改用“上传图片”补图。");
+        await applyDefaultSizeToPastedImages(anchor.from, editor.state.selection.to);
+        window.alert("网页内容已粘贴，图片转存失败时会尽量保留可用图片；如个别图片仍缺失，可再手动补图。");
       }
     };
     return () => {

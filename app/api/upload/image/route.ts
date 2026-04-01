@@ -200,6 +200,7 @@ async function uploadRemoteImage(remoteUrlValue: string, folderRaw: string) {
       headers: {
         Accept: "image/*,*/*;q=0.8",
         "User-Agent": "Mozilla/5.0 (compatible; ZhengmuImageFetcher/1.0)",
+        Referer: `${remoteUrl.origin}/`,
       },
       cache: "no-store",
       redirect: "follow",

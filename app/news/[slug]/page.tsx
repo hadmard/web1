@@ -124,10 +124,10 @@ function resolveNewsSectionLabel(subHref?: string | null, categoryHref?: string 
   return NEWS_SECTION_LABELS[href] ?? "整木资讯";
 }
 
-function parseKeywordList(keywordSource?: string | null, tagSlugs?: string | null) {
+function parseKeywordList(keywordSource?: string | null) {
   return Array.from(
     new Set(
-      `${keywordSource || ""},${tagSlugs || ""}`
+      `${keywordSource || ""}`
         .split(",")
         .map((item) => item.trim())
         .filter((item) => isValidKeywordCandidate(item)),
@@ -274,7 +274,7 @@ export default async function ArticlePage({ params, searchParams }: Props) {
   const publicBaseUrl = articleUrl.replace(/\/news\/.*$/, "");
   const articleShareImage = resolveArticleShareImage(article);
   const articleSection = resolveNewsSectionLabel(article.subHref, article.categoryHref);
-  const keywords = parseKeywordList(article.manualKeywords ?? article.keywords, article.tagSlugs);
+  const keywords = parseKeywordList(article.manualKeywords ?? article.keywords);
   const recommendedArticles = await getRecommendedNews(article.id, 4);
 
   const articleSchema = {
