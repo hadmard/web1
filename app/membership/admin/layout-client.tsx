@@ -66,6 +66,11 @@ const SIDEBAR: SidebarGroup[] = [
     ],
   },
   {
+    id: "import",
+    label: "采集工具",
+    children: [{ href: "/membership/admin/news-import", label: "新闻抓取" }],
+  },
+  {
     id: "account",
     label: "账号",
     children: [
@@ -92,6 +97,7 @@ function defaultCollapseState(): CollapseState {
     publish: false,
     manage: false,
     review: false,
+    import: false,
     account: false,
     system: true,
   };
