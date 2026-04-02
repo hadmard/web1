@@ -1,5 +1,6 @@
 ﻿import { revalidatePath } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { containsSuspiciousText, htmlToPlainText, normalizePlainTextField, toSummaryText } from "@/lib/brand-content";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
@@ -264,11 +265,22 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const enterpriseId = asTrimmedString(body.enterpriseId);
+    if (enterpriseId) {
+      const existingBrand = await prisma.brand.findUnique({
+        where: { enterpriseId },
+        select: { id: true, slug: true, name: true },
+      });
+      if (existingBrand) {
+        return NextResponse.json({ error: "该企业已绑定品牌", existingBrand }, { status: 409 });
+      }
+    }
+
     const brand = await prisma.brand.create({
       data: {
         name,
         slug: asTrimmedString(body.slug) ?? slugifyBrandName(name),
-        enterpriseId: asTrimmedString(body.enterpriseId),
+        enterpriseId,
         logoUrl: asTrimmedString(body.logoUrl),
         tagline: normalizePlainTextField(body.tagline),
         region: normalizePlainTextField(body.region),
@@ -295,6 +307,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(brand);
   } catch (error) {
     console.error("POST /api/admin/brands", error);
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return NextResponse.json({ error: "品牌 slug 或企业绑定已存在，请调整后重试" }, { status: 409 });
+    }
     const message = process.env.NODE_ENV === "development" && error instanceof Error ? error.message : "品牌创建失败，请稍后重试";
     return NextResponse.json({ error: message }, { status: 500 });
   }

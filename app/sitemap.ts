@@ -39,6 +39,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     createEntry("/standards/all", now, "weekly", 0.85),
     createEntry("/brands", now, "weekly", 0.9),
     createEntry("/brands/all", now, "weekly", 0.85),
+    createEntry("/enterprise", now, "weekly", 0.85),
     createEntry("/market", now, "weekly", 0.5),
     createEntry("/awards", now, "weekly", 0.8),
     createEntry("/huadianbang", now, "weekly", 0.85),
@@ -60,7 +61,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   try {
-    const [terms, standards, standardArticles, brandArticles, newsArticles, tags] = await Promise.all([
+    const [terms, standards, standardArticles, brandArticles, newsArticles, tags, enterprises] = await Promise.all([
       prisma.term.findMany({ select: { slug: true, updatedAt: true } }),
       prisma.standard.findMany({ select: { id: true, updatedAt: true } }),
       prisma.article.findMany({
@@ -86,6 +87,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         select: { id: true, updatedAt: true, publishedAt: true },
       }),
       prisma.tag.findMany({ select: { type: true, slug: true, updatedAt: true } }),
+      prisma.enterprise.findMany({
+        where: { verificationStatus: "approved" },
+        select: { id: true, updatedAt: true },
+      }),
     ]);
 
     const termUrls = terms.map((term) =>
@@ -110,6 +115,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     const tagUrls = tags.map((tag) =>
       createEntry(`/tags/${tag.type}/${tag.slug}`, tag.updatedAt, "monthly", 0.6)
+    );
+
+    const enterpriseUrls = enterprises.map((enterprise) =>
+      createEntry(`/enterprise/${enterprise.id}`, enterprise.updatedAt, "monthly", 0.78)
     );
 
     const huadianAnnualUrls = annualBoards.map((board) =>
@@ -143,6 +152,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       ...brandUrls,
       ...articleUrls,
       ...tagUrls,
+      ...enterpriseUrls,
       ...huadianAnnualUrls,
       ...huadianAnnualBrandUrls,
       ...huadianSpecialUrls,

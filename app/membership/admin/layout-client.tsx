@@ -66,9 +66,9 @@ const SIDEBAR: SidebarGroup[] = [
     ],
   },
   {
-    id: "import",
-    label: "采集工具",
-    children: [{ href: "/membership/admin/news-import", label: "新闻抓取" }],
+    id: "enterprise",
+    label: "企业管理",
+    children: [{ href: "/membership/admin/enterprises", label: "企业列表" }],
   },
   {
     id: "account",
@@ -77,6 +77,7 @@ const SIDEBAR: SidebarGroup[] = [
       { href: "/membership/admin/accounts", label: "账号一览" },
       { href: "/membership/admin/password-recovery-requests", label: "密码找回申请" },
       { href: "/membership/admin/brands", label: "品牌展示管理" },
+      { href: "/membership/admin/brands/create", label: "创建品牌" },
       { href: "/membership/admin/pending-brands", label: "待审核品牌" },
       { href: "/membership/admin/permissions", label: "权限管理（主管理员）" },
       { href: "/membership/admin/member-tiers", label: "会员等级权益" },
@@ -97,7 +98,7 @@ function defaultCollapseState(): CollapseState {
     publish: false,
     manage: false,
     review: false,
-    import: false,
+    enterprise: false,
     account: false,
     system: true,
   };
@@ -266,8 +267,12 @@ export default function AdminLayoutClient({ children }: { children: React.ReactN
 
   const isLinkActive = (href: string) => {
     if (href === "/membership/admin/accounts") return pathname === "/membership/admin/accounts";
+    if (href === "/membership/admin/enterprises") return pathname === "/membership/admin/enterprises" || pathname.startsWith("/membership/admin/enterprises/");
     if (href === "/membership/admin/password-recovery-requests") return pathname === "/membership/admin/password-recovery-requests";
-    if (href === "/membership/admin/brands") return pathname === "/membership/admin/brands" || pathname.startsWith("/membership/admin/brands/");
+    if (href === "/membership/admin/brands/create") return pathname === "/membership/admin/brands/create";
+    if (href === "/membership/admin/brands") {
+      return pathname === "/membership/admin/brands" || (pathname.startsWith("/membership/admin/brands/") && pathname !== "/membership/admin/brands/create");
+    }
     if (href === "/membership/admin/pending-brands") return pathname === "/membership/admin/pending-brands";
     if (href === "/membership/admin/permissions") return pathname === "/membership/admin/permissions";
     if (href === "/membership/admin/member-tiers") return pathname === "/membership/admin/member-tiers";

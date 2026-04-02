@@ -295,6 +295,12 @@ export default function AdminBrandsPage() {
               这里用于统一管理前台品牌展示。管理员先在列表里判断哪些企业需要前台显示，再进入详情页维护 Logo、简介、联系方式和展示资料。
             </p>
           </div>
+          <Link
+            href="/membership/admin/brands/create"
+            className="rounded-full bg-accent px-5 py-3 text-sm font-medium text-white transition hover:opacity-90"
+          >
+            创建品牌
+          </Link>
           <div className="grid min-w-[300px] grid-cols-3 gap-3 text-center text-sm">
             <StatCard label="品牌总数" value={String(stats.totalBrands)} />
             <StatCard label="前台显示" value={String(stats.visibleTotal)} />

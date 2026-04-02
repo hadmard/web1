@@ -12,6 +12,52 @@ function trimUrl(value: unknown) {
   return typeof value === "string" ? value.trim() || null : null;
 }
 
+export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const session = await getSession();
+  if (!session || !isAdmin(session)) {
+    return NextResponse.json({ error: "需要管理员权限" }, { status: 403 });
+  }
+
+  const { id } = await params;
+  const enterprise = await prisma.enterprise.findUnique({
+    where: { id },
+    include: {
+      brand: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          isBrandVisible: true,
+          isRecommend: true,
+          sortOrder: true,
+        },
+      },
+      member: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          memberType: true,
+          rankingWeight: true,
+        },
+      },
+    },
+  });
+
+  if (!enterprise) {
+    return NextResponse.json({ error: "企业不存在" }, { status: 404 });
+  }
+
+  return NextResponse.json({
+    ...enterprise,
+    frontDisplay: {
+      name: enterprise.companyShortName || enterprise.companyName || enterprise.member.name || "企业",
+      summary: toSummaryText(enterprise.positioning || enterprise.intro, 120),
+      detailHref: `/enterprise/${enterprise.id}`,
+    },
+  });
+}
+
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
   if (!session || !isAdmin(session)) {
