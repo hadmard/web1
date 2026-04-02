@@ -145,6 +145,25 @@ function stripNewsLeadingOverviewHeading(html?: string | null) {
   );
 }
 
+function normalizeArticleSourceValue(value?: string | null) {
+  const normalized = (value || "").trim();
+  return normalized.length > 0 ? normalized : "";
+}
+
+function buildArticleSourceSummary(article: { source?: string | null; sourceUrl?: string | null }) {
+  const sourceName = normalizeArticleSourceValue(article.source);
+  const sourceUrl = normalizeArticleSourceValue(article.sourceUrl);
+  if (!sourceName && !sourceUrl) return null;
+
+  return {
+    sourceName: sourceName || "原始来源",
+    sourceUrl,
+    description: sourceName
+      ? `本文转载自「${sourceName}」，仅用于行业信息交流。`
+      : "本文整理自公开信息，仅用于行业信息交流。",
+  };
+}
+
 export default async function ArticlePage({ params, searchParams }: Props) {
   const { slug } = await params;
   if (NEWS_SUB_SLUGS.has(slug)) {
@@ -286,6 +305,7 @@ export default async function ArticlePage({ params, searchParams }: Props) {
   const articleSection = resolveNewsSectionLabel(article.subHref, article.categoryHref);
   const keywords = parseKeywordList(article.manualKeywords ?? article.keywords);
   const recommendedArticles = await getRecommendedNews(article.id, 4);
+  const sourceSummary = buildArticleSourceSummary(article);
 
   const articleSchema = {
     "@context": "https://schema.org",
@@ -387,6 +407,26 @@ export default async function ArticlePage({ params, searchParams }: Props) {
 
         <div className="mt-8 rounded-[24px] border border-[rgba(15,23,42,0.06)] bg-[rgba(255,255,255,0.94)] px-5 py-7 shadow-[0_22px_44px_-38px_rgba(15,23,42,0.12)] sm:rounded-[26px] sm:px-8 sm:py-9 sm:shadow-[0_24px_48px_-40px_rgba(15,23,42,0.12)]">
           <RichContent html={stripNewsLeadingOverviewHeading(article.content)} className="prose prose-neutral dark:prose-invert max-w-none" />
+          {sourceSummary ? (
+            <section className="mt-10 rounded-2xl border border-[rgba(15,23,42,0.08)] bg-[#f6f7f9] px-5 py-4 text-[14px] leading-7 text-[#666] sm:px-6">
+              <h2 className="text-[15px] font-semibold text-[#333]">信息来源</h2>
+              <p className="mt-2">{sourceSummary.description}</p>
+              {sourceSummary.sourceUrl ? (
+                <p className="mt-2">
+                  原文链接：
+                  <a
+                    href={sourceSummary.sourceUrl}
+                    target="_blank"
+                    rel="nofollow noreferrer"
+                    className="ml-1 text-[#1677ff] transition-colors hover:underline"
+                  >
+                    点击查看原文
+                  </a>
+                </p>
+              ) : null}
+              <p className="mt-2 text-[13px] text-[#7a7a7a]">如涉及版权问题，请联系删除。</p>
+            </section>
+          ) : null}
           <div className="mt-5 pt-1 sm:mt-6 sm:pt-2">
             <ArticleShareActions
               title={article.title}

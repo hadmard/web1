@@ -18,6 +18,7 @@
     "selftest:keyword-filter": "node scripts/selftest-keyword-filter.js",
     "selftest:news-keywords": "node scripts/selftest-news-keywords.js",
     "selftest:pending-brand-threshold": "node scripts/selftest-pending-brand-threshold.js",
+    "import:news": "ts-node --transpile-only scripts/import-news-feed.ts",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",

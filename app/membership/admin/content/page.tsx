@@ -271,6 +271,7 @@ export default function AdminContentPage() {
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
   const [source, setSource] = useState("");
+  const [sourceUrl, setSourceUrl] = useState("");
   const [displayAuthor, setDisplayAuthor] = useState("");
   const [ownedEnterpriseId, setOwnedEnterpriseId] = useState("");
   const [ownedEnterpriseSearch, setOwnedEnterpriseSearch] = useState("");
@@ -295,6 +296,7 @@ export default function AdminContentPage() {
   const [editSlug, setEditSlug] = useState("");
   const [editTitle, setEditTitle] = useState("");
   const [editSource, setEditSource] = useState("");
+  const [editSourceUrl, setEditSourceUrl] = useState("");
   const [editDisplayAuthor, setEditDisplayAuthor] = useState("");
   const [editOwnedEnterpriseId, setEditOwnedEnterpriseId] = useState("");
   const [editOwnedEnterpriseSearch, setEditOwnedEnterpriseSearch] = useState("");
@@ -673,6 +675,7 @@ export default function AdminContentPage() {
         title: title.trim(),
         slug: slug.trim() || null,
         source: source.trim() || null,
+        sourceUrl: sourceUrl.trim() || null,
         displayAuthor: displayAuthor.trim() || null,
         ownedEnterpriseId: supportsOwnedEnterprise ? ownedEnterpriseId || null : null,
         excerpt: excerpt || null,
@@ -719,6 +722,7 @@ export default function AdminContentPage() {
     setTitle("");
     setSlug("");
     setSource("");
+    setSourceUrl("");
     setDisplayAuthor("");
     setOwnedEnterpriseId("");
     setExcerpt("");
@@ -745,6 +749,7 @@ export default function AdminContentPage() {
     setEditSlug(item.slug ?? "");
     setEditTitle(item.title);
     setEditSource(item.source ?? "");
+    setEditSourceUrl(item.sourceUrl ?? "");
     setEditDisplayAuthor(item.displayAuthor ?? "");
     setEditOwnedEnterpriseId(item.ownedEnterpriseId ?? "");
     setEditOwnedEnterpriseSearch("");
@@ -788,6 +793,7 @@ export default function AdminContentPage() {
     setEditSlug("");
     setEditTitle(item.patchTitle ?? item.article.title);
     setEditSource(item.article.source ?? "");
+    setEditSourceUrl(item.article.sourceUrl ?? "");
     setEditDisplayAuthor(item.article.displayAuthor ?? "");
     setEditOwnedEnterpriseId(
       items.find((entry) => entry.id === item.article.id)?.ownedEnterpriseId ??
@@ -848,6 +854,7 @@ export default function AdminContentPage() {
         title: editTitle,
         slug: editSlug || undefined,
         source: editSource || null,
+        sourceUrl: editSourceUrl || null,
         displayAuthor: editDisplayAuthor || null,
         ownedEnterpriseId: supportsOwnedEnterprise ? editOwnedEnterpriseId || null : null,
         excerpt: editExcerpt || null,
@@ -1114,6 +1121,16 @@ export default function AdminContentPage() {
                   value={source}
                   onChange={(e) => setSource(e.target.value)}
                   placeholder="如：整木网 / 品牌官方"
+                />
+              </div>
+              <div className="rounded-2xl border border-border bg-surface px-4 py-3 md:col-span-2">
+                <label className="mb-2 block text-sm font-medium text-primary">原文链接</label>
+                <input
+                  className="w-full border-0 bg-transparent px-0 py-0 text-[15px] text-primary placeholder:text-muted focus:outline-none"
+                  value={sourceUrl}
+                  onChange={(e) => setSourceUrl(e.target.value)}
+                  placeholder="如：https://example.com/article"
+                  inputMode="url"
                 />
               </div>
               <div className={`rounded-2xl border px-4 py-3 transition md:min-w-[168px] ${isPinned ? "border-[rgba(180,154,107,0.54)] bg-[linear-gradient(180deg,rgba(202,174,121,0.2),rgba(180,154,107,0.14))] shadow-[0_18px_34px_-24px_rgba(180,154,107,0.6)]" : "border-border bg-[linear-gradient(180deg,rgba(255,253,249,0.98),rgba(248,243,236,0.94))] shadow-[0_14px_28px_-24px_rgba(15,23,42,0.16)]"}`}>
@@ -1467,6 +1484,16 @@ export default function AdminContentPage() {
                   value={editSource}
                   onChange={(e) => setEditSource(e.target.value)}
                   placeholder="如：整木网 / 品牌官方"
+                />
+              </div>
+              <div className="rounded-2xl border border-border bg-surface px-4 py-3 md:col-span-2">
+                <label className="mb-2 block text-sm font-medium text-primary">原文链接</label>
+                <input
+                  className="w-full border-0 bg-transparent px-0 py-0 text-[15px] text-primary placeholder:text-muted focus:outline-none"
+                  value={editSourceUrl}
+                  onChange={(e) => setEditSourceUrl(e.target.value)}
+                  placeholder="如：https://example.com/article"
+                  inputMode="url"
                 />
               </div>
               <div className={`rounded-2xl border px-4 py-3 transition md:min-w-[168px] ${editIsPinned ? "border-[rgba(180,154,107,0.54)] bg-[linear-gradient(180deg,rgba(202,174,121,0.2),rgba(180,154,107,0.14))] shadow-[0_18px_34px_-24px_rgba(180,154,107,0.6)]" : "border-border bg-[linear-gradient(180deg,rgba(255,253,249,0.98),rgba(248,243,236,0.94))] shadow-[0_14px_28px_-24px_rgba(15,23,42,0.16)]"}`}>

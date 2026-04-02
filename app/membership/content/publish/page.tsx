@@ -236,6 +236,7 @@ function PublishCenterPageInner() {
 
   const [title, setTitle] = useState("");
   const [source, setSource] = useState("");
+  const [sourceUrl, setSourceUrl] = useState("");
   const [displayAuthor, setDisplayAuthor] = useState("");
   const [excerpt, setExcerpt] = useState("");
   const [content, setContent] = useState("");
@@ -562,6 +563,7 @@ function PublishCenterPageInner() {
       title: title.trim(),
       slug: slug.trim() || null,
       source: source.trim() || null,
+      sourceUrl: sourceUrl.trim() || null,
       displayAuthor: displayAuthor.trim() || null,
       excerpt: excerpt.trim() || null,
       content: composedContent,
@@ -630,6 +632,7 @@ function PublishCenterPageInner() {
     setCoverImage("");
     replacePreviewUrl("publish", "");
     setSource("");
+    setSourceUrl("");
     setDisplayAuthor("");
     setConceptSummary("");
     setApplicableScenarios("");
@@ -1173,6 +1176,16 @@ function PublishCenterPageInner() {
                 value={source}
                 onChange={(e) => setSource(e.target.value)}
                 placeholder="如：整木网 / 品牌官方"
+              />
+            </div>
+            <div className="rounded-2xl border border-border bg-surface px-4 py-3 md:col-span-2">
+              <label className="mb-2 block text-sm font-medium text-primary">原文链接</label>
+              <input
+                className="w-full border-0 bg-transparent px-0 py-0 text-[15px] text-primary placeholder:text-muted focus:outline-none"
+                value={sourceUrl}
+                onChange={(e) => setSourceUrl(e.target.value)}
+                placeholder="如：https://example.com/article"
+                inputMode="url"
               />
             </div>
             {(role === "SUPER_ADMIN" || role === "ADMIN") && (

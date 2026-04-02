@@ -342,6 +342,7 @@ model Article {
   slug                String        @unique
   source              String?
   sourceUrl           String?
+  contentHash         String?       @map("content_hash")
   displayAuthor       String?
   excerpt             String?
   content             String
@@ -383,6 +384,7 @@ model Article {
   @@index([status, isPinned])
   @@index([keywords])
   @@index([manualKeywords])
+  @@index([contentHash])
   @@index([authorMemberId])
   @@index([ownedEnterpriseId])
   @@map("articles")
