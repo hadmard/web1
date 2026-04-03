@@ -11,8 +11,9 @@ import { JsonLd } from "@/components/JsonLd";
 import { RichContent } from "@/components/RichContent";
 import { ArticleShareActions } from "@/components/ArticleShareActions";
 import { getSiteVisualSettings } from "@/lib/site-visual-settings";
-import { getSiteUrl } from "@/lib/seo";
-import { buildArticleShareVersion, buildPublicDictionaryUrl } from "@/lib/share-config";
+import { buildPageMetadata, getSiteUrl } from "@/lib/seo";
+import { buildArticleShareVersion, buildPublicDictionaryUrl, DEFAULT_DICTIONARY_SHARE_IMAGE } from "@/lib/share-config";
+import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
 import {
   addHeadingAnchors,
   extractHeadingAnchors,
@@ -49,12 +50,17 @@ function normalizeSegment(raw: string) {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const s = normalizeSegment(slug);
+  const fallbackShareImage = DEFAULT_DICTIONARY_SHARE_IMAGE;
   if (DICTIONARY_SUBCATEGORY_MAP[s]) {
     const sub = DICTIONARY_SUBCATEGORY_MAP[s];
-    return {
+    return buildPageMetadata({
       title: `${sub.label} | 整木词库`,
       description: `整木词库子栏目：${sub.label}。`,
-    };
+      path: sub.href,
+      type: "website",
+      image: fallbackShareImage,
+      imageAlt: sub.label,
+    });
   }
   const article = await prisma.article.findFirst({
     where: {
@@ -64,27 +70,34 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         { OR: [{ slug: s }, { title: s }, { slug: { contains: s } }, { title: { contains: s } }] },
       ],
     },
-    select: { title: true, excerpt: true, content: true, faqJson: true },
+    select: { title: true, slug: true, excerpt: true, content: true, faqJson: true, coverImage: true },
   });
 
   if (article) {
     const metadata = parseDocumentMetadata(article.faqJson);
     const description = metadata.seoDescription || previewText(metadata.intro || (article.excerpt ?? article.content), 160);
-    return {
+    const shareImage = resolveUploadedImageUrl(article.coverImage) || fallbackShareImage;
+    return buildPageMetadata({
       title: metadata.seoTitle || `${article.title} | 中华整木网 · 整木词库`,
       description,
-      openGraph: { title: article.title, description, type: "article" },
-    };
+      path: `/dictionary/${article.slug}`,
+      type: "article",
+      image: shareImage,
+      imageAlt: article.title,
+    });
   }
 
   const term = await getTermBySlug(s);
   if (!term) return { title: "词条未找到" };
   const description = previewText(term.definition, 160);
-  return {
+  return buildPageMetadata({
     title: `${term.title} | 中华整木网 · 整木词库`,
     description,
-    openGraph: { title: term.title, description, type: "article" },
-  };
+    path: `/dictionary/${term.slug}`,
+    type: "article",
+    image: fallbackShareImage,
+    imageAlt: term.title,
+  });
 }
 
 export default async function TermPage({ params }: Props) {
