@@ -132,14 +132,12 @@ export async function getSession(): Promise<Session | null> {
 
   const isAdminRole = resolvedRole === "SUPER_ADMIN" || resolvedRole === "ADMIN";
   const accountLabel = dbMember.email.split("@")[0]?.trim() || dbMember.email.trim();
+  const isEnterpriseMember = effective.memberType === "enterprise_basic" || effective.memberType === "enterprise_advanced";
   const displayName = isAdminRole
     ? accountLabel || dbMember.name?.trim() || "管理员"
-    : dbMember.enterprise?.companyShortName?.trim() ||
-      dbMember.enterprise?.companyName?.trim() ||
-      dbMember.name?.trim() ||
-      dbMember.enterprise?.contactPerson?.trim() ||
-      accountLabel ||
-      "会员";
+    : isEnterpriseMember
+      ? dbMember.enterprise?.companyShortName?.trim() || dbMember.enterprise?.companyName?.trim() || "企业会员"
+      : dbMember.name?.trim() || accountLabel || "会员";
 
   return {
     sub: payload.sub,

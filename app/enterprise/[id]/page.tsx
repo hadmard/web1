@@ -358,7 +358,7 @@ export default async function EnterprisePage({ params, searchParams }: Props) {
     select: { id: true, title: true, slug: true, excerpt: true, createdAt: true, publishedAt: true },
   });
 
-  const name = ent.companyShortName || ent.companyName || ent.member.name || "企业";
+  const name = ent.companyShortName || ent.companyName || "企业";
   const introPlain = htmlToPlainText(ent.intro || ent.positioning || "");
   const heroView = resolveEnterpriseHomepageHero(ent, siteSettings, ownGallery);
   const contactView = resolveEnterpriseHomepageContact(ent, siteSettings);
