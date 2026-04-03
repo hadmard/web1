@@ -93,7 +93,7 @@ export const DEFAULT_SITE_VISUAL_SETTINGS: SiteVisualSettings = {
     awardsHero: "/images/seedance2/picture_13.jpg",
     newsArticleHero: "/images/seedance2/picture_14.jpg",
     brandDetailHero: "/images/seedance2/picture_15.jpg",
-    dictionaryArticleHero: "/images/seedance2/picture_16.jpg",
+    dictionaryArticleHero: "/images/dictionary-share-default.png",
     standardArticleHero: "/images/seedance2/picture_17.jpg",
     awardDetailHero: "/images/seedance2/picture_18.jpg",
     membershipHero: "/images/seedance2/picture_19.jpg",

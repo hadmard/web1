@@ -1,0 +1,87 @@
+<svg width="1600" height="900" viewBox="0 0 1600 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="180" y1="120" x2="1380" y2="780" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1B120D"/>
+      <stop offset="0.38" stop-color="#3E2719"/>
+      <stop offset="0.74" stop-color="#0F1920"/>
+      <stop offset="1" stop-color="#070B0F"/>
+    </linearGradient>
+    <radialGradient id="glowLeft" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(328 242) rotate(38.6) scale(488 350)">
+      <stop stop-color="#C99645" stop-opacity="0.38"/>
+      <stop offset="1" stop-color="#C99645" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowRight" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1236 668) rotate(180) scale(516 368)">
+      <stop stop-color="#E6C37A" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#E6C37A" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="frame" x1="252" y1="156" x2="1326" y2="758" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F4DEAE" stop-opacity="0.95"/>
+      <stop offset="0.48" stop-color="#B48743" stop-opacity="0.72"/>
+      <stop offset="1" stop-color="#F2D598" stop-opacity="0.88"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="458" y1="286" x2="1134" y2="620" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#120F0D" stop-opacity="0.68"/>
+      <stop offset="1" stop-color="#1D1610" stop-opacity="0.4"/>
+    </linearGradient>
+    <filter id="softBlur" x="-120" y="-120" width="1840" height="1140" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="40"/>
+    </filter>
+    <filter id="textGlow" x="360" y="206" width="882" height="390" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
+  </defs>
+
+  <rect width="1600" height="900" fill="url(#bg)"/>
+  <rect width="1600" height="900" fill="url(#glowLeft)"/>
+  <rect width="1600" height="900" fill="url(#glowRight)"/>
+
+  <g opacity="0.18">
+    <path d="M160 122H1440" stroke="#E7C98A" stroke-width="1.2"/>
+    <path d="M160 778H1440" stroke="#E7C98A" stroke-width="1.2"/>
+    <path d="M220 92V808" stroke="#E7C98A" stroke-width="1.2"/>
+    <path d="M1380 92V808" stroke="#E7C98A" stroke-width="1.2"/>
+  </g>
+
+  <g opacity="0.14">
+    <path d="M268 202H1332" stroke="#F0D4A1" stroke-width="1"/>
+    <path d="M268 698H1332" stroke="#F0D4A1" stroke-width="1"/>
+    <path d="M308 162V738" stroke="#F0D4A1" stroke-width="1"/>
+    <path d="M1292 162V738" stroke="#F0D4A1" stroke-width="1"/>
+  </g>
+
+  <g filter="url(#softBlur)" opacity="0.3">
+    <circle cx="338" cy="254" r="126" fill="#D7A44C"/>
+    <circle cx="1238" cy="648" r="108" fill="#A46A2B"/>
+  </g>
+
+  <rect x="252" y="156" width="1096" height="588" rx="36" fill="#0C0C0C" fill-opacity="0.16" stroke="url(#frame)" stroke-width="2"/>
+  <rect x="286" y="190" width="1028" height="520" rx="28" fill="url(#panel)" stroke="#F5DDAF" stroke-opacity="0.16" stroke-width="1.4"/>
+
+  <g opacity="0.78">
+    <path d="M356 260L476 260" stroke="#D0A35B" stroke-width="2"/>
+    <path d="M1124 640L1244 640" stroke="#D0A35B" stroke-width="2"/>
+    <circle cx="332" cy="260" r="10" stroke="#F4DEAE" stroke-width="2"/>
+    <circle cx="1268" cy="640" r="10" stroke="#F4DEAE" stroke-width="2"/>
+  </g>
+
+  <g opacity="0.34">
+    <path d="M396 342C466 304 548 286 646 286" stroke="#E8CA8E" stroke-width="1.4"/>
+    <path d="M1204 558C1134 596 1052 614 954 614" stroke="#E8CA8E" stroke-width="1.4"/>
+    <path d="M398 560C470 616 560 648 672 658" stroke="#D4A866" stroke-width="1.2"/>
+    <path d="M1202 340C1136 286 1048 254 934 244" stroke="#D4A866" stroke-width="1.2"/>
+  </g>
+
+  <g filter="url(#textGlow)" opacity="0.58">
+    <text x="800" y="458" text-anchor="middle" fill="#F7E8C5" font-size="152" font-weight="700" letter-spacing="24"
+      font-family="'Noto Serif SC','Source Han Serif SC','Songti SC','STSong',serif">整木词库</text>
+  </g>
+
+  <text x="800" y="458" text-anchor="middle" fill="url(#frame)" font-size="152" font-weight="700" letter-spacing="24"
+    font-family="'Noto Serif SC','Source Han Serif SC','Songti SC','STSong',serif">整木词库</text>
+
+  <text x="800" y="535" text-anchor="middle" fill="#E7D4AF" fill-opacity="0.86" font-size="28" letter-spacing="8"
+    font-family="'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif">WHOLE WOOD DICTIONARY</text>
+
+  <text x="800" y="610" text-anchor="middle" fill="#C9A97A" fill-opacity="0.92" font-size="22" letter-spacing="5"
+    font-family="'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif">行业术语 · 概念体系 · 品牌知识 · 高定场景</text>
+</svg>

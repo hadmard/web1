@@ -1,6 +1,7 @@
 import { PUBLIC_SITE_URL } from "@/lib/public-site-config";
 
 const FALLBACK_SHARE_VERSION = "mobile-share-20260329-1";
+export const DEFAULT_DICTIONARY_SHARE_IMAGE = "/images/dictionary-share-default.png";
 
 export function buildNewsPath(segment: string) {
   return `/news/${encodeURIComponent(segment)}`;
