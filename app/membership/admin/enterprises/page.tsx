@@ -184,13 +184,12 @@ export default function AdminEnterprisesPage() {
       </section>
 
       <section className="overflow-hidden rounded-[28px] border border-[rgba(181,157,121,0.16)] bg-white shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
-        <div className="hidden border-b border-border px-5 py-4 text-xs uppercase tracking-[0.18em] text-muted lg:grid lg:grid-cols-[minmax(0,1.5fr)_120px_140px_140px_140px_210px] lg:gap-4">
+        <div className="hidden border-b border-border px-5 py-3 text-[11px] uppercase tracking-[0.16em] text-muted lg:grid lg:grid-cols-[minmax(0,1.8fr)_120px_132px_120px_196px] lg:gap-3">
           <span>企业</span>
-          <span>地区 / 品类</span>
+          <span>地区</span>
           <span>会员类型</span>
           <span>状态</span>
-          <span>品牌绑定</span>
-          <span>操作</span>
+          <span>绑定 / 操作</span>
         </div>
 
         {loading ? (
@@ -200,52 +199,51 @@ export default function AdminEnterprisesPage() {
         ) : (
           <div className="divide-y divide-border">
             {items.map((item) => (
-              <article key={item.id} className="px-5 py-4">
-                <div className="grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_120px_140px_140px_140px_210px] lg:items-center">
+              <article key={item.id} className="px-5 py-3.5">
+                <div className="grid gap-3 lg:grid-cols-[minmax(0,1.8fr)_120px_132px_120px_196px] lg:items-center">
                   <div className="min-w-0">
-                    <p className="truncate text-base font-medium text-primary">{displayEnterpriseName(item)}</p>
-                    <p className="mt-1 truncate text-sm text-muted">
+                    <p className="truncate text-[15px] font-medium leading-6 text-primary">{displayEnterpriseName(item)}</p>
+                    <p className="truncate text-sm leading-5 text-muted">
                       {item.companyName && item.companyName !== item.companyShortName ? item.companyName : item.member.email}
                     </p>
                   </div>
 
-                  <div className="text-sm text-primary">
-                    <p>{item.region || "全国"}</p>
-                    <p className="text-xs text-muted">{item.productSystem || item.area || "资料待补充"}</p>
-                  </div>
+                  <div className="text-sm text-primary">{item.region || "全国"}</div>
 
                   <div className="text-sm text-primary">{memberTypeLabel(item.member.memberType)}</div>
                   <div className="text-sm text-primary">{verificationLabel(item.verificationStatus)}</div>
 
-                  <div className="text-sm text-primary">
-                    {item.brand ? (
-                      <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-emerald-700">已绑定</span>
-                    ) : (
-                      <span className="rounded-full bg-slate-100 px-3 py-1.5 text-slate-600">未绑定</span>
-                    )}
-                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="text-sm text-primary">
+                      {item.brand ? (
+                        <span className="rounded-full bg-emerald-50 px-3 py-1 text-emerald-700">已绑定</span>
+                      ) : (
+                        <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600">未绑定</span>
+                      )}
+                    </div>
 
-                  <div className="flex flex-wrap gap-3 text-sm">
-                    <Link href={`/enterprise/${item.id}`} className="text-accent hover:underline" target="_blank">
-                      查看
-                    </Link>
-                    <Link href={`/membership/admin/enterprises/${item.id}`} className="text-accent hover:underline">
-                      编辑
-                    </Link>
-                    {item.brand ? (
-                      <Link href={`/membership/admin/brands/${item.brand.id}`} className="text-accent hover:underline">
-                        编辑品牌
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm">
+                      <Link href={`/enterprise/${item.id}`} className="text-accent hover:underline" target="_blank">
+                        查看
                       </Link>
-                    ) : (
-                      <button
-                        type="button"
-                        disabled={creatingId === item.id}
-                        className="text-accent hover:underline disabled:cursor-not-allowed disabled:opacity-50"
-                        onClick={() => void createBrandFromEnterprise(item)}
-                      >
-                        {creatingId === item.id ? "创建中..." : "设为品牌"}
-                      </button>
-                    )}
+                      <Link href={`/membership/admin/enterprises/${item.id}`} className="text-accent hover:underline">
+                        编辑
+                      </Link>
+                      {item.brand ? (
+                        <Link href={`/membership/admin/brands/${item.brand.id}`} className="text-accent hover:underline">
+                          编辑品牌
+                        </Link>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={creatingId === item.id}
+                          className="text-accent hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+                          onClick={() => void createBrandFromEnterprise(item)}
+                        >
+                          {creatingId === item.id ? "创建中..." : "设为品牌"}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </article>
