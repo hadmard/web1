@@ -67,6 +67,13 @@ import {
   type DocumentMetadata,
 } from "@/lib/document-metadata";
 import {
+  buildAutoSeoDescription,
+  buildAutoSeoKeywords,
+  buildAutoSeoTitle,
+  hasAutoSeoSource,
+} from "@/lib/document-seo";
+import { slugify } from "@/lib/slug";
+import {
   formatTermContentForEditing,
   normalizeTermContent,
 } from "@/lib/term-structured";
@@ -271,6 +278,10 @@ function PublishCenterPageInner() {
   const [editCoverPreviewSrc, setEditCoverPreviewSrc] = useState("");
   const [editReason, setEditReason] = useState("");
   const [editDocumentMeta, setEditDocumentMeta] = useState<DocumentMetadata>(createEmptyDocumentMetadata());
+  const autoSlugRef = useRef("");
+  const autoSeoRef = useRef({ seoTitle: "", seoKeywords: "", seoDescription: "" });
+  const autoEditSlugRef = useRef("");
+  const autoEditSeoRef = useRef({ seoTitle: "", seoKeywords: "", seoDescription: "" });
 
   const allCategoryAccess = useMemo(
     () => (memberAccess.categories.length > 0 ? memberAccess.categories : getDefaultMemberAccess().categories),
@@ -306,6 +317,8 @@ function PublishCenterPageInner() {
     [activeSubAccess]
   );
   const canPasteImages = authed === true;
+  const isDocumentTab = safeTab === "terms" || safeTab === "standards";
+  const documentKind = safeTab === "standards" ? "standards" : "terms";
 
   const filteredItems = useMemo(
     () => items.filter((item) => resolveTabKeyFromHref(item.categoryHref, item.subHref) === safeTab),
@@ -381,6 +394,83 @@ function PublishCenterPageInner() {
       setSubHref(enabledSubOptions[0].href);
     }
   }, [enterprise?.id, safeTab, subOptions, subHref]);
+
+  useEffect(() => {
+    if (!isDocumentTab) return;
+
+    const nextSlug = slugify(title);
+    if (!slug.trim() || slug === autoSlugRef.current) {
+      setSlug(nextSlug);
+    }
+    autoSlugRef.current = nextSlug;
+
+    const canAutoFillSeo = hasAutoSeoSource(documentMeta.intro, content);
+    if (!canAutoFillSeo) {
+      autoSeoRef.current = { seoTitle: "", seoKeywords: "", seoDescription: "" };
+      return;
+    }
+
+    const nextSeoTitle = buildAutoSeoTitle(title);
+    const nextSeoKeywords = buildAutoSeoKeywords(title, documentKind);
+    const nextSeoDescription = buildAutoSeoDescription(title, documentMeta.intro, content);
+
+    setDocumentMeta((prev) => ({
+      ...prev,
+      seoTitle: !prev.seoTitle.trim() || prev.seoTitle === autoSeoRef.current.seoTitle ? nextSeoTitle : prev.seoTitle,
+      seoKeywords:
+        !prev.seoKeywords.trim() || prev.seoKeywords === autoSeoRef.current.seoKeywords ? nextSeoKeywords : prev.seoKeywords,
+      seoDescription:
+        !prev.seoDescription.trim() || prev.seoDescription === autoSeoRef.current.seoDescription
+          ? nextSeoDescription
+          : prev.seoDescription,
+    }));
+
+    autoSeoRef.current = {
+      seoTitle: nextSeoTitle,
+      seoKeywords: nextSeoKeywords,
+      seoDescription: nextSeoDescription,
+    };
+  }, [content, documentKind, documentMeta.intro, isDocumentTab, slug, title]);
+
+  useEffect(() => {
+    if (!isDocumentTab || !editingId) return;
+
+    const nextSlug = slugify(editTitle);
+    if (!editSlug.trim() || editSlug === autoEditSlugRef.current) {
+      setEditSlug(nextSlug);
+    }
+    autoEditSlugRef.current = nextSlug;
+
+    const canAutoFillSeo = hasAutoSeoSource(editDocumentMeta.intro, editContent);
+    if (!canAutoFillSeo) {
+      autoEditSeoRef.current = { seoTitle: "", seoKeywords: "", seoDescription: "" };
+      return;
+    }
+
+    const nextSeoTitle = buildAutoSeoTitle(editTitle);
+    const nextSeoKeywords = buildAutoSeoKeywords(editTitle, documentKind);
+    const nextSeoDescription = buildAutoSeoDescription(editTitle, editDocumentMeta.intro, editContent);
+
+    setEditDocumentMeta((prev) => ({
+      ...prev,
+      seoTitle:
+        !prev.seoTitle.trim() || prev.seoTitle === autoEditSeoRef.current.seoTitle ? nextSeoTitle : prev.seoTitle,
+      seoKeywords:
+        !prev.seoKeywords.trim() || prev.seoKeywords === autoEditSeoRef.current.seoKeywords
+          ? nextSeoKeywords
+          : prev.seoKeywords,
+      seoDescription:
+        !prev.seoDescription.trim() || prev.seoDescription === autoEditSeoRef.current.seoDescription
+          ? nextSeoDescription
+          : prev.seoDescription,
+    }));
+
+    autoEditSeoRef.current = {
+      seoTitle: nextSeoTitle,
+      seoKeywords: nextSeoKeywords,
+      seoDescription: nextSeoDescription,
+    };
+  }, [documentKind, editContent, editDocumentMeta.intro, editSlug, editTitle, editingId, isDocumentTab]);
 
   useEffect(() => {
     if (!message) return;
@@ -525,6 +615,8 @@ function PublishCenterPageInner() {
     setRelatedBrandIds("");
     setTagSlugs("");
     setSlug("");
+    autoSlugRef.current = "";
+    autoSeoRef.current = { seoTitle: "", seoKeywords: "", seoDescription: "" };
     setDocumentMeta(createEmptyDocumentMetadata());
   }, [safeTab, replacePreviewUrl]);
 
@@ -642,12 +734,15 @@ function PublishCenterPageInner() {
     setRelatedBrandIds("");
     setTagSlugs("");
     setDocumentMeta(createEmptyDocumentMetadata());
+    autoSlugRef.current = "";
+    autoSeoRef.current = { seoTitle: "", seoKeywords: "", seoDescription: "" };
     setIsPinned(false);
     await load();
     setLoading(false);
   }
 
   const openEditRequest = useCallback((item: Row) => {
+    const nextMeta = parseDocumentMetadata(item.faqJson);
     setEditingId(item.id);
     setEditSlug(item.slug ?? "");
     setEditTitle(item.title ?? "");
@@ -676,7 +771,18 @@ function PublishCenterPageInner() {
     setEditCoverImage(item.coverImage ?? "");
     replacePreviewUrl("edit", item.coverImage ?? "");
     setEditReason("");
-    setEditDocumentMeta(parseDocumentMetadata(item.faqJson));
+    setEditDocumentMeta(nextMeta);
+    autoEditSlugRef.current = slugify(item.title ?? "");
+    const nextAutoEditSeo = hasAutoSeoSource(nextMeta.intro, item.content ?? "")
+      ? {
+          seoTitle: buildAutoSeoTitle(item.title ?? ""),
+          seoKeywords: buildAutoSeoKeywords(item.title ?? "", safeTab === "standards" ? "standards" : "terms"),
+          seoDescription: buildAutoSeoDescription(item.title ?? "", nextMeta.intro, item.content ?? ""),
+        }
+      : { seoTitle: "", seoKeywords: "", seoDescription: "" };
+    autoEditSeoRef.current = {
+      ...nextAutoEditSeo,
+    };
   }, [safeTab, replacePreviewUrl]);
 
   useEffect(() => {
@@ -1265,6 +1371,7 @@ function PublishCenterPageInner() {
                   <textarea className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[84px]" value={documentMeta.acceptanceCriteria} onChange={(e) => setDocumentMeta((prev) => ({ ...prev, acceptanceCriteria: e.target.value }))} placeholder="验收标准" />
                 </div>
               )}
+              <p className="text-xs text-muted">填写简介和正文内容后，系统会自动生成 SEO；手动修改后将不再自动覆盖。</p>
               <div className="grid gap-3 md:grid-cols-3">
                 <input className="w-full border border-border rounded px-3 py-2 bg-surface" value={documentMeta.seoTitle} onChange={(e) => setDocumentMeta((prev) => ({ ...prev, seoTitle: e.target.value }))} placeholder="SEO 标题" />
                 <input className="w-full border border-border rounded px-3 py-2 bg-surface" value={documentMeta.seoKeywords} onChange={(e) => setDocumentMeta((prev) => ({ ...prev, seoKeywords: e.target.value }))} placeholder="SEO 关键词，逗号分隔" />

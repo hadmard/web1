@@ -52,6 +52,13 @@ import {
   type DocumentMetadata,
 } from "@/lib/document-metadata";
 import {
+  buildAutoSeoDescription,
+  buildAutoSeoKeywords,
+  buildAutoSeoTitle,
+  hasAutoSeoSource,
+} from "@/lib/document-seo";
+import { slugify } from "@/lib/slug";
+import {
   formatTermContentForEditing,
   normalizeTermContent,
 } from "@/lib/term-structured";
@@ -315,6 +322,10 @@ export default function AdminContentPage() {
   const [editSubHref, setEditSubHref] = useState("");
   const [editIsPinned, setEditIsPinned] = useState(false);
   const [editDocumentMeta, setEditDocumentMeta] = useState<DocumentMetadata>(createEmptyDocumentMetadata());
+  const autoSlugRef = useRef("");
+  const autoSeoRef = useRef({ seoTitle: "", seoKeywords: "", seoDescription: "" });
+  const autoEditSlugRef = useRef("");
+  const autoEditSeoRef = useRef({ seoTitle: "", seoKeywords: "", seoDescription: "" });
   const [reviewAction, setReviewAction] = useState<Status | null>(null);
   const [highlightedItemId, setHighlightedItemId] = useState<string | null>(null);
   const [manageSearchDraft, setManageSearchDraft] = useState(searchQuery);
@@ -324,6 +335,8 @@ export default function AdminContentPage() {
   const selectedCategory = useMemo(() => MEMBER_PUBLISH_CATEGORY_OPTIONS.find((x) => x.href === selectedTabDef.href) ?? MEMBER_PUBLISH_CATEGORY_OPTIONS[0], [selectedTabDef.href]);
   const subOptions = selectedCategory.subs;
   const supportsOwnedEnterprise = tab === "articles";
+  const isDocumentTab = tab === "terms" || tab === "standards";
+  const documentKind = tab === "standards" ? "standards" : "terms";
   const isSuperAdmin = session?.role === "SUPER_ADMIN";
   const canReview = session?.role === "SUPER_ADMIN" || session?.role === "ADMIN";
 
@@ -373,8 +386,87 @@ export default function AdminContentPage() {
     setOwnedEnterpriseId("");
     setOwnedEnterpriseSearch("");
     setOwnedEnterpriseOpen(false);
+    autoSlugRef.current = "";
+    autoSeoRef.current = { seoTitle: "", seoKeywords: "", seoDescription: "" };
     setDocumentMeta(createEmptyDocumentMetadata());
   }, [tab]);
+
+  useEffect(() => {
+    if (!isDocumentTab) return;
+
+    const nextSlug = slugify(title);
+    if (!slug.trim() || slug === autoSlugRef.current) {
+      setSlug(nextSlug);
+    }
+    autoSlugRef.current = nextSlug;
+
+    const canAutoFillSeo = hasAutoSeoSource(documentMeta.intro, content);
+    if (!canAutoFillSeo) {
+      autoSeoRef.current = { seoTitle: "", seoKeywords: "", seoDescription: "" };
+      return;
+    }
+
+    const nextSeoTitle = buildAutoSeoTitle(title);
+    const nextSeoKeywords = buildAutoSeoKeywords(title, documentKind);
+    const nextSeoDescription = buildAutoSeoDescription(title, documentMeta.intro, content);
+
+    setDocumentMeta((prev) => ({
+      ...prev,
+      seoTitle: !prev.seoTitle.trim() || prev.seoTitle === autoSeoRef.current.seoTitle ? nextSeoTitle : prev.seoTitle,
+      seoKeywords:
+        !prev.seoKeywords.trim() || prev.seoKeywords === autoSeoRef.current.seoKeywords ? nextSeoKeywords : prev.seoKeywords,
+      seoDescription:
+        !prev.seoDescription.trim() || prev.seoDescription === autoSeoRef.current.seoDescription
+          ? nextSeoDescription
+          : prev.seoDescription,
+    }));
+
+    autoSeoRef.current = {
+      seoTitle: nextSeoTitle,
+      seoKeywords: nextSeoKeywords,
+      seoDescription: nextSeoDescription,
+    };
+  }, [content, documentKind, documentMeta.intro, isDocumentTab, slug, title]);
+
+  useEffect(() => {
+    if (!isDocumentTab || !editingId) return;
+
+    const nextSlug = slugify(editTitle);
+    if (!editSlug.trim() || editSlug === autoEditSlugRef.current) {
+      setEditSlug(nextSlug);
+    }
+    autoEditSlugRef.current = nextSlug;
+
+    const canAutoFillSeo = hasAutoSeoSource(editDocumentMeta.intro, editContent);
+    if (!canAutoFillSeo) {
+      autoEditSeoRef.current = { seoTitle: "", seoKeywords: "", seoDescription: "" };
+      return;
+    }
+
+    const nextSeoTitle = buildAutoSeoTitle(editTitle);
+    const nextSeoKeywords = buildAutoSeoKeywords(editTitle, documentKind);
+    const nextSeoDescription = buildAutoSeoDescription(editTitle, editDocumentMeta.intro, editContent);
+
+    setEditDocumentMeta((prev) => ({
+      ...prev,
+      seoTitle:
+        !prev.seoTitle.trim() || prev.seoTitle === autoEditSeoRef.current.seoTitle ? nextSeoTitle : prev.seoTitle,
+      seoKeywords:
+        !prev.seoKeywords.trim() || prev.seoKeywords === autoEditSeoRef.current.seoKeywords
+          ? nextSeoKeywords
+          : prev.seoKeywords,
+      seoDescription:
+        !prev.seoDescription.trim() || prev.seoDescription === autoEditSeoRef.current.seoDescription
+          ? nextSeoDescription
+          : prev.seoDescription,
+    }));
+
+    autoEditSeoRef.current = {
+      seoTitle: nextSeoTitle,
+      seoKeywords: nextSeoKeywords,
+      seoDescription: nextSeoDescription,
+    };
+  }, [documentKind, editContent, editDocumentMeta.intro, editingId, editSlug, editTitle, isDocumentTab]);
 
   function replacePreviewUrl(kind: "publish" | "edit", nextUrl: string) {
     const targetRef = kind === "publish" ? publishObjectUrlRef : editObjectUrlRef;
@@ -732,6 +824,8 @@ export default function AdminContentPage() {
     setManualKeywords("");
     setRecommendIds("");
     setIsPinned(false);
+    autoSlugRef.current = "";
+    autoSeoRef.current = { seoTitle: "", seoKeywords: "", seoDescription: "" };
     setDocumentMeta(createEmptyDocumentMetadata());
     setBrandStructured(createDefaultBrandStructuredData());
     setStandardStructured(createDefaultStandardStructuredData());
@@ -740,6 +834,7 @@ export default function AdminContentPage() {
   }
 
   function openEdit(item: ArticleItem) {
+    const nextMeta = parseDocumentMetadata(item.faqJson);
     if (mode === "manage") {
       manageReturnScrollRef.current = window.scrollY;
       manageReturnItemIdRef.current = item.id;
@@ -783,7 +878,18 @@ export default function AdminContentPage() {
     setEditRecommendIds(item.recommendIds ?? "");
     setEditSubHref(item.subHref ?? subHref);
     setEditIsPinned(item.isPinned === true);
-    setEditDocumentMeta(parseDocumentMetadata(item.faqJson));
+    setEditDocumentMeta(nextMeta);
+    autoEditSlugRef.current = slugify(item.title ?? "");
+    const nextAutoEditSeo = hasAutoSeoSource(nextMeta.intro, item.content ?? "")
+      ? {
+          seoTitle: buildAutoSeoTitle(item.title ?? ""),
+          seoKeywords: buildAutoSeoKeywords(item.title ?? "", tab === "standards" ? "standards" : "terms"),
+          seoDescription: buildAutoSeoDescription(item.title ?? "", nextMeta.intro, item.content ?? ""),
+        }
+      : { seoTitle: "", seoKeywords: "", seoDescription: "" };
+    autoEditSeoRef.current = {
+      ...nextAutoEditSeo,
+    };
   }
 
   function openEditFromChange(item: ChangeRequestItem) {
@@ -829,6 +935,8 @@ export default function AdminContentPage() {
     setEditRecommendIds(items.find((entry) => entry.id === item.article.id)?.recommendIds ?? pendingItems.find((entry) => entry.id === item.article.id)?.recommendIds ?? "");
     setEditSubHref(item.patchSubHref ?? item.article.subHref ?? subHref);
     setEditIsPinned(item.article.isPinned === true);
+    autoEditSlugRef.current = slugify(item.patchTitle ?? item.article.title ?? "");
+    autoEditSeoRef.current = { seoTitle: "", seoKeywords: "", seoDescription: "" };
     setEditDocumentMeta(createEmptyDocumentMetadata());
   }
 
@@ -1248,6 +1356,7 @@ export default function AdminContentPage() {
                     <textarea className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[84px]" value={documentMeta.acceptanceCriteria} onChange={(e) => setDocumentMeta((prev) => ({ ...prev, acceptanceCriteria: e.target.value }))} placeholder="验收标准" />
                   </div>
                 )}
+                <p className="text-xs text-muted">填写简介和正文内容后，系统会自动生成 SEO；手动修改后将不再自动覆盖。</p>
                 <div className="grid gap-3 md:grid-cols-3">
                   <input className="w-full border border-border rounded px-3 py-2 bg-surface" value={documentMeta.seoTitle} onChange={(e) => setDocumentMeta((prev) => ({ ...prev, seoTitle: e.target.value }))} placeholder="SEO 标题" />
                   <input className="w-full border border-border rounded px-3 py-2 bg-surface" value={documentMeta.seoKeywords} onChange={(e) => setDocumentMeta((prev) => ({ ...prev, seoKeywords: e.target.value }))} placeholder="SEO 关键词，逗号分隔" />
@@ -1610,6 +1719,7 @@ export default function AdminContentPage() {
                     <textarea className="w-full border border-border rounded px-3 py-2 bg-surface min-h-[84px]" value={editDocumentMeta.acceptanceCriteria} onChange={(e) => setEditDocumentMeta((prev) => ({ ...prev, acceptanceCriteria: e.target.value }))} placeholder="验收标准" />
                   </div>
                 )}
+                <p className="text-xs text-muted">填写简介和正文内容后，系统会自动生成 SEO；手动修改后将不再自动覆盖。</p>
                 <div className="grid gap-3 md:grid-cols-3">
                   <input className="w-full border border-border rounded px-3 py-2 bg-surface" value={editDocumentMeta.seoTitle} onChange={(e) => setEditDocumentMeta((prev) => ({ ...prev, seoTitle: e.target.value }))} placeholder="SEO 标题" />
                   <input className="w-full border border-border rounded px-3 py-2 bg-surface" value={editDocumentMeta.seoKeywords} onChange={(e) => setEditDocumentMeta((prev) => ({ ...prev, seoKeywords: e.target.value }))} placeholder="SEO 关键词，逗号分隔" />

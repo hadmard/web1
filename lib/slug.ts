@@ -1,10 +1,19 @@
+import { pinyin } from "pinyin-pro";
 import { prisma } from "@/lib/prisma";
 
 export function slugify(input: string) {
-  return String(input || "")
+  const source = String(input || "").trim();
+  const romanized = pinyin(source, {
+    toneType: "none",
+    type: "array",
+    nonZh: "consecutive",
+    v: false,
+  }).join(" ");
+
+  return String(romanized || source)
     .toLowerCase()
     .trim()
-    .replace(/[^a-z0-9\u4e00-\u9fa5\s-]/g, "")
+    .replace(/[^a-z0-9\s-]/g, "")
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-")
     .replace(/^-+|-+$/g, "")
