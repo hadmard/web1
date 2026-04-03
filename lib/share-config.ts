@@ -6,8 +6,16 @@ export function buildNewsPath(segment: string) {
   return `/news/${encodeURIComponent(segment)}`;
 }
 
+export function buildDictionaryPath(segment: string) {
+  return `/dictionary/${encodeURIComponent(segment)}`;
+}
+
 export function buildPublicNewsUrl(segment: string) {
   return `${PUBLIC_SITE_URL}${buildNewsPath(segment)}`;
+}
+
+export function buildPublicDictionaryUrl(segment: string) {
+  return `${PUBLIC_SITE_URL}${buildDictionaryPath(segment)}`;
 }
 
 export function buildArticleShareVersion(value: string | number | Date | null | undefined) {
