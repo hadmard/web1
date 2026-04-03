@@ -438,7 +438,7 @@ export default function AdminBrandsPage() {
       </section>
 
       <section className="overflow-hidden rounded-[28px] border border-[rgba(181,157,121,0.16)] bg-white shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
-        <div className="hidden border-b border-border px-5 py-4 text-xs uppercase tracking-[0.18em] text-muted lg:grid lg:grid-cols-[88px_64px_minmax(0,1.5fr)_120px_120px_150px_120px_140px] lg:gap-4">
+        <div className="hidden border-b border-border px-5 py-3 text-[11px] uppercase tracking-[0.16em] text-muted lg:grid lg:grid-cols-[72px_56px_minmax(0,1.7fr)_116px_112px_148px_108px_132px] lg:gap-3">
           <span>选择</span>
           <span>序号</span>
           <span>企业 / 品牌</span>
@@ -462,18 +462,18 @@ export default function AdminBrandsPage() {
               return (
                 <article
                   key={item.id}
-                  className={`px-5 py-4 transition ${
+                  className={`px-5 py-3 transition ${
                     selectedBrandIds.includes(item.id) ? "bg-[rgba(255,249,238,0.78)]" : ""
                   }`}
                 >
-                  <div className="grid gap-4 lg:grid-cols-[88px_64px_minmax(0,1.5fr)_120px_120px_150px_120px_140px] lg:items-center">
+                  <div className="grid gap-3 lg:grid-cols-[72px_56px_minmax(0,1.7fr)_116px_112px_148px_108px_132px] lg:items-center">
                     <div>
                       <button
                         type="button"
                         aria-label={item.enterprise ? `选中 ${item.frontDisplay.name}` : `选中 ${item.name}`}
                         title={item.enterprise ? "选中企业" : "选中品牌"}
                         onClick={() => toggleSelectedBrand(item.id)}
-                        className={`relative inline-flex h-10 w-10 items-center justify-center rounded-[12px] border transition ${
+                        className={`relative inline-flex h-9 w-9 items-center justify-center rounded-[12px] border transition ${
                           selectedBrandIds.includes(item.id)
                             ? "border-accent bg-[rgba(186,158,108,0.12)] shadow-[0_10px_24px_rgba(180,154,107,0.14)]"
                             : "border-border bg-white hover:border-accent/40 hover:bg-surface"
@@ -495,17 +495,12 @@ export default function AdminBrandsPage() {
                       <Link
                         href={item.frontDisplay.detailHref}
                         target="_blank"
-                        className={`truncate text-base font-medium transition hover:text-accent hover:underline ${
+                        className={`truncate text-[15px] font-medium leading-6 transition hover:text-accent hover:underline ${
                           selectedBrandIds.includes(item.id) ? "text-accent" : "text-primary"
                         }`}
                       >
                         {item.frontDisplay.name}
                       </Link>
-                      <p className="mt-1 truncate text-sm text-muted">
-                        {item.frontDisplay.region}
-                        {item.frontDisplay.area ? ` / ${item.frontDisplay.area}` : ""}
-                        {item.enterprise?.companyName && item.enterprise.companyName !== item.frontDisplay.name ? ` / ${item.enterprise.companyName}` : ""}
-                      </p>
                     </div>
 
                     <div className="text-sm text-primary">{memberTypeLabel(item)}</div>
@@ -515,7 +510,7 @@ export default function AdminBrandsPage() {
                         type="button"
                         disabled={disabled}
                         onClick={() => void updateBrand(item.id, { isBrandVisible: !item.isBrandVisible })}
-                        className={`rounded-full px-3 py-1.5 text-sm transition ${item.isBrandVisible ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"} ${disabled ? "cursor-not-allowed opacity-60" : ""}`}
+                        className={`rounded-full px-3 py-1 text-sm transition ${item.isBrandVisible ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"} ${disabled ? "cursor-not-allowed opacity-60" : ""}`}
                       >
                         {item.isBrandVisible ? "显示中" : "已隐藏"}
                       </button>
@@ -524,12 +519,12 @@ export default function AdminBrandsPage() {
                     <div className="flex flex-wrap gap-2">
                       {issues.length > 0 ? (
                         issues.map((label) => (
-                          <span key={label} className="rounded-full border border-[rgba(181,157,121,0.18)] bg-[rgba(255,249,238,0.92)] px-2.5 py-1 text-xs text-accent">
-                            {label}
-                          </span>
-                        ))
+                            <span key={label} className="rounded-full border border-[rgba(181,157,121,0.18)] bg-[rgba(255,249,238,0.92)] px-2.5 py-0.5 text-xs text-accent">
+                              {label}
+                            </span>
+                          ))
                       ) : (
-                        <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs text-emerald-700">完整</span>
+                        <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs text-emerald-700">完整</span>
                       )}
                     </div>
 
@@ -538,13 +533,13 @@ export default function AdminBrandsPage() {
                         type="button"
                         disabled={disabled}
                         onClick={() => void updateBrand(item.id, { isRecommend: !item.isRecommend })}
-                        className={`rounded-full px-3 py-1.5 text-sm transition ${item.isRecommend ? "bg-[rgba(245,236,220,0.85)] text-accent" : "bg-slate-100 text-slate-600"} ${disabled ? "cursor-not-allowed opacity-60" : ""}`}
+                        className={`rounded-full px-3 py-1 text-sm transition ${item.isRecommend ? "bg-[rgba(245,236,220,0.85)] text-accent" : "bg-slate-100 text-slate-600"} ${disabled ? "cursor-not-allowed opacity-60" : ""}`}
                       >
                         {item.isRecommend ? "推荐中" : "普通"}
                       </button>
                     </div>
 
-                    <div className="flex flex-wrap gap-3 text-sm">
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm">
                       <Link href={`/membership/admin/brands/${item.id}`} className="text-accent hover:underline">
                         {item.enterprise ? "管理详情" : "选择企业"}
                       </Link>
