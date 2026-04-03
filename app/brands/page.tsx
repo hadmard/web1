@@ -34,20 +34,79 @@ function BrandMark({ name, logoUrl }: { name: string; logoUrl: string | null }) 
   return <div className="flex h-[84px] w-[84px] items-center justify-center rounded-[26px] border border-dashed border-[rgba(174,149,111,0.28)] bg-white text-[11px] tracking-[0.18em] text-[#8d7a5a]">LOGO</div>;
 }
 
+type DirectoryBrand = Awaited<ReturnType<typeof getBrandDirectoryList>>[number];
+
+function BrandPreviewCard({ item, compact = false }: { item: DirectoryBrand; compact?: boolean }) {
+  const href = `/brands/${item.slug}`;
+
+  return (
+    <Link
+      href={href}
+      className={[
+        "group block rounded-[28px] border border-[rgba(181,157,121,0.16)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(250,247,242,0.92))] shadow-[0_16px_40px_rgba(15,23,42,0.05)] transition hover:-translate-y-1 hover:border-[rgba(181,157,121,0.3)] hover:shadow-[0_22px_54px_rgba(15,23,42,0.08)]",
+        compact ? "p-5" : "p-6",
+      ].join(" ")}
+    >
+      <div className="flex items-start gap-4">
+        <BrandMark name={item.enterpriseName} logoUrl={item.logoUrl} />
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                {item.isRecommend ? (
+                  <span className="rounded-full border border-[rgba(181,157,121,0.22)] bg-[rgba(245,236,220,0.8)] px-3 py-1 text-xs text-accent">
+                    推荐
+                  </span>
+                ) : null}
+                <span className="text-[11px] uppercase tracking-[0.18em] text-muted">
+                  {item.memberType === "enterprise_advanced" ? "高级企业" : "企业会员"}
+                </span>
+              </div>
+              <h3 className="mt-3 font-serif text-2xl leading-tight text-primary">{item.enterpriseName}</h3>
+            </div>
+            <span className="text-xs text-muted">{item.locationLabel}</span>
+          </div>
+
+          <p className="mt-4 line-clamp-2 text-sm leading-7 text-primary/88">{item.headline}</p>
+          <p className="mt-2 line-clamp-3 text-sm leading-7 text-muted">{item.summary}</p>
+
+          <div className="mt-4 flex flex-wrap gap-2 text-xs text-muted">
+            {item.highlights.slice(0, compact ? 2 : 3).map((tag) => (
+              <span key={tag} className="rounded-full border border-border px-3 py-1.5">
+                {tag}
+              </span>
+            ))}
+          </div>
+
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-sm">
+            <div className="flex flex-wrap gap-3 text-muted">
+              <span>{item.serviceLine}</span>
+              <span>{item.contactLabel}</span>
+            </div>
+            <span className="text-primary transition group-hover:translate-x-0.5">查看详情</span>
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
 export default async function BrandsPage() {
   const [category, brands] = await Promise.all([getCategoryWithMetaByHref("/brands"), getBrandDirectoryList(8)]);
-  const lead = brands[0] ?? null;
-  const rest = brands.slice(1, 5);
+  const recommended = brands.filter((item) => item.isRecommend);
+  const lead = recommended[0] ?? brands[0] ?? null;
+  const spotlight = brands.filter((item) => item.id !== lead?.id).slice(0, 3);
+  const directory = brands.filter((item) => item.id !== lead?.id).slice(0, 4);
 
   return (
     <CategoryHome basePath="/brands" category={category} searchHref="/brands/all">
-      <section className="mt-8 space-y-6">
+      <section className="mt-8 space-y-8">
         <article className="overflow-hidden rounded-[36px] border border-[rgba(181,157,121,0.18)] bg-[radial-gradient(circle_at_top_left,rgba(213,183,131,0.15),transparent_32%),linear-gradient(180deg,rgba(255,255,255,0.98),rgba(247,242,235,0.92))] shadow-[0_24px_76px_rgba(34,31,26,0.08)]">
           <div className="p-7 sm:p-9">
             <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-              <div className="max-w-2xl">
-                <p className="text-xs uppercase tracking-[0.3em] text-[#9d7e4d]">Brand Gallery</p>
-                <h2 className="mt-4 font-serif text-3xl text-primary sm:text-[2.9rem] sm:leading-[1.08]">整木品牌橱窗</h2>
+              <div className="max-w-3xl">
+                <p className="text-xs uppercase tracking-[0.3em] text-[#9d7e4d]">Brand Directory</p>
+                <h1 className="mt-4 font-serif text-3xl text-primary sm:text-[2.9rem] sm:leading-[1.08]">整木市场</h1>
               </div>
               <div className="flex flex-wrap gap-3">
                 <Link href="/brands/all" className="inline-flex items-center justify-center rounded-full bg-accent px-5 py-3 text-sm font-medium text-white transition hover:opacity-92">
@@ -74,7 +133,9 @@ export default async function BrandsPage() {
                   <p className="mt-4 text-sm leading-8 text-muted">{lead.summary}</p>
                   <div className="mt-5 flex flex-wrap gap-2 text-xs text-muted">
                     {lead.highlights.map((item) => (
-                      <span key={item} className="rounded-full border border-border px-3 py-1.5">{item}</span>
+                      <span key={item} className="rounded-full border border-border px-3 py-1.5">
+                        {item}
+                      </span>
                     ))}
                   </div>
                 </div>
@@ -112,27 +173,9 @@ export default async function BrandsPage() {
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
-              {rest.map((item) => {
-                const href = `/brands/${item.slug}`;
-                return (
-                  <Link key={item.id} href={href} className="group rounded-[28px] border border-[rgba(181,157,121,0.16)] bg-white/94 p-5 shadow-[0_16px_40px_rgba(15,23,42,0.05)] transition hover:-translate-y-1 hover:shadow-[0_22px_54px_rgba(15,23,42,0.08)]">
-                    <div className="flex items-start gap-4">
-                      <BrandMark name={item.enterpriseName} logoUrl={item.logoUrl} />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[11px] uppercase tracking-[0.18em] text-[#9d7e4d]">{item.memberType === "enterprise_advanced" ? "高级企业" : "企业会员"}</p>
-                        <h3 className="mt-2 font-serif text-2xl text-primary">{item.enterpriseName}</h3>
-                        <p className="mt-3 text-sm leading-7 text-primary/88">{item.headline}</p>
-                        <p className="mt-2 line-clamp-2 text-sm leading-7 text-muted">{item.summary}</p>
-                        <div className="mt-4 flex flex-wrap gap-2 text-xs text-muted">
-                          {item.highlights.slice(0, 2).map((tag) => (
-                            <span key={tag} className="rounded-full border border-border px-2.5 py-1">{tag}</span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
+              {spotlight.map((item) => (
+                <BrandPreviewCard key={item.id} item={item} compact />
+              ))}
             </div>
           </article>
         ) : null}
@@ -140,48 +183,20 @@ export default async function BrandsPage() {
         <article className="rounded-[32px] border border-[rgba(181,157,121,0.16)] bg-white/94 p-6 shadow-[0_16px_40px_rgba(15,23,42,0.05)] sm:p-8">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <h3 className="section-label mb-2 text-primary">推荐品牌</h3>
-              <p className="text-sm text-muted">优先展示资料较完整、品牌定位清晰、便于咨询转化的品牌。</p>
+              <h2 className="section-label mb-2 text-primary">品牌列表</h2>
             </div>
-            <p className="text-sm text-muted">当前橱窗展示 {brands.length} 家品牌</p>
+            <Link href="/brands/all" className="text-sm text-accent transition hover:opacity-80">
+              查看全部品牌
+            </Link>
           </div>
 
-          {brands.length === 0 ? (
+          {directory.length === 0 ? (
             <p className="mt-6 text-sm text-muted">暂无可展示的品牌资料。</p>
           ) : (
             <div className="mt-6 grid gap-4 lg:grid-cols-2">
-              {brands.map((item) => {
-                const href = `/brands/${item.slug}`;
-                return (
-                  <Link key={item.id} href={href} className="group block rounded-[28px] border border-[rgba(181,157,121,0.16)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(250,247,242,0.92))] p-5 shadow-[0_14px_34px_rgba(15,23,42,0.05)] transition hover:-translate-y-1 hover:border-[rgba(181,157,121,0.3)] hover:shadow-[0_22px_54px_rgba(15,23,42,0.08)]">
-                    <div className="flex items-start gap-4">
-                      <BrandMark name={item.enterpriseName} logoUrl={item.logoUrl} />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div>
-                            <p className="text-[11px] uppercase tracking-[0.12em] text-muted">{item.memberType === "enterprise_advanced" ? "高级企业" : "企业会员"}</p>
-                            <h3 className="mt-2 font-serif text-2xl text-primary">{item.enterpriseName}</h3>
-                          </div>
-                          {item.isRecommend ? <span className="rounded-full border border-[rgba(181,157,121,0.22)] bg-[rgba(245,236,220,0.8)] px-3 py-1 text-xs text-accent">推荐</span> : null}
-                        </div>
-                        <p className="mt-4 line-clamp-2 text-sm leading-7 text-primary/88">{item.headline}</p>
-                        <p className="mt-2 line-clamp-3 text-sm leading-7 text-muted">{item.summary}</p>
-                        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-sm">
-                          <div className="flex flex-wrap gap-2 text-xs text-muted">
-                            {item.highlights.slice(0, 3).map((tag) => (
-                              <span key={tag} className="rounded-full border border-border px-2.5 py-1">{tag}</span>
-                            ))}
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <span className="text-xs text-muted">{item.contactHref ? "支持咨询联系" : "查看完整品牌资料"}</span>
-                            <span className="text-primary transition group-hover:translate-x-0.5">了解品牌</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
+              {directory.map((item) => (
+                <BrandPreviewCard key={item.id} item={item} />
+              ))}
             </div>
           )}
         </article>
