@@ -18,6 +18,7 @@ function resolveParentHref(pathname: string) {
 
 function shouldShowBackButton(pathname: string) {
   if (pathname === "/") return false;
+  if (pathname === "/brands/all") return false;
 
   const detailRoutePatterns = [
     /^\/news\/[^/]+$/,

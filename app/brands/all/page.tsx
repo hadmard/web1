@@ -78,70 +78,72 @@ type BrandCardItem = Awaited<ReturnType<typeof getBrandDirectory>>["items"][numb
 function BrandCard({ item, featured = false }: { item: BrandCardItem; featured?: boolean }) {
   const href = `/brands/${item.slug}`;
   const updated = item.updatedAt.toLocaleDateString("zh-CN");
-  const logoSize = featured ? 88 : 72;
-  const summary = truncateText(item.summary, 80);
-  const headline = truncateText(item.headline, featured ? 44 : 34);
-  const highlights = item.highlights.slice(0, featured ? 4 : 3).map((tag) => truncateText(tag, 16));
+  const logoSize = featured ? 76 : 62;
+  const summary = truncateText(item.summary, featured ? 72 : 54);
+  const headline = truncateText(item.headline, featured ? 28 : 22);
+  const highlights = item.highlights.slice(0, 2).map((tag) => truncateText(tag, 14));
 
   return (
     <article
       className={[
-        "rounded-[30px] border border-[rgba(181,157,121,0.16)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(250,247,242,0.92))] shadow-[0_16px_40px_rgba(15,23,42,0.05)] transition hover:-translate-y-1 hover:border-[rgba(181,157,121,0.3)] hover:shadow-[0_22px_54px_rgba(15,23,42,0.08)]",
-        featured ? "p-7" : "p-5",
+        "h-full rounded-[26px] border border-[rgba(181,157,121,0.14)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,248,243,0.96))] shadow-[0_14px_32px_rgba(15,23,42,0.045)] transition hover:-translate-y-1 hover:border-[rgba(181,157,121,0.26)] hover:shadow-[0_20px_44px_rgba(15,23,42,0.07)]",
+        featured ? "p-5" : "p-4",
       ].join(" ")}
     >
-      <div className="flex items-start gap-4">
+      <div className="flex h-full flex-col">
+        <div className="flex items-start gap-3">
         <Link href={href} className="shrink-0">
           <BrandLogo name={item.enterpriseName} logoUrl={item.logoUrl} size={logoSize} />
         </Link>
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                {item.isRecommend ? (
-                  <span className="rounded-full border border-[rgba(181,157,121,0.22)] bg-[rgba(245,236,220,0.8)] px-3 py-1 text-xs text-accent">
-                    推荐
-                  </span>
-                ) : null}
-                <span className="text-[11px] uppercase tracking-[0.18em] text-muted">
-                  {item.memberType === "enterprise_advanced" ? "高级企业" : "企业会员"}
+            <div className="flex flex-wrap items-center gap-2">
+              {item.isRecommend ? (
+                <span className="rounded-full border border-[rgba(181,157,121,0.22)] bg-[rgba(245,236,220,0.82)] px-2.5 py-1 text-[11px] text-accent">
+                  推荐
                 </span>
-              </div>
-              <h2 className={featured ? "mt-3 font-serif text-[2rem] leading-tight text-primary" : "mt-3 font-serif text-[1.5rem] leading-tight text-primary"}>
-                <Link href={href} className="transition hover:text-accent">
-                  {item.enterpriseName}
-                </Link>
-              </h2>
+              ) : null}
+              <span className="text-[11px] tracking-[0.16em] text-muted">
+                {item.memberType === "enterprise_advanced" ? "高级企业" : "企业会员"}
+              </span>
             </div>
-            <span className="text-xs text-muted">{item.locationLabel}</span>
+            <h2 className={featured ? "mt-3 font-serif text-[1.85rem] leading-tight text-primary" : "mt-2.5 font-serif text-[1.2rem] leading-tight text-primary"}>
+              <Link href={href} className="transition hover:text-accent">
+                {item.enterpriseName}
+              </Link>
+            </h2>
+            <p className="mt-2 text-xs text-muted">{item.locationLabel}</p>
           </div>
+        </div>
 
-          <p className={featured ? "mt-4 line-clamp-2 text-base leading-8 text-primary/88" : "mt-4 line-clamp-2 text-sm leading-7 text-primary/88"}>
+        <div className="mt-4 space-y-2.5">
+          <p className={featured ? "line-clamp-1 text-sm leading-7 text-primary/88" : "line-clamp-1 text-sm leading-6 text-primary/88"}>
             {headline}
           </p>
-          <p className="mt-2 line-clamp-3 text-sm leading-7 text-muted">{summary}</p>
+          <p className={featured ? "line-clamp-2 text-sm leading-7 text-muted" : "line-clamp-2 text-sm leading-6 text-muted"}>
+            {summary}
+          </p>
+        </div>
 
-          <div className="mt-4 flex flex-wrap gap-2 text-xs text-muted">
-            {highlights.length > 0 ? (
-              highlights.map((tag) => (
-                <span key={tag} className="rounded-full border border-border px-3 py-1.5">
-                  {tag}
-                </span>
-              ))
-            ) : (
-              <span className="rounded-full border border-border px-3 py-1.5">资料持续完善中</span>
-            )}
-          </div>
+        <div className="mt-4 flex flex-wrap gap-2 text-xs text-muted">
+          {highlights.length > 0 ? (
+            highlights.map((tag) => (
+              <span key={tag} className="rounded-full border border-border px-2.5 py-1">
+                {tag}
+              </span>
+            ))
+          ) : (
+            <span className="rounded-full border border-border px-2.5 py-1">资料完善中</span>
+          )}
+        </div>
 
-          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-sm">
-            <div className="flex flex-wrap gap-3 text-muted">
-              <span>{item.contactLabel}</span>
-              <span>更新于 {updated}</span>
-            </div>
-            <Link href={href} className="text-primary transition hover:text-accent">
-              查看详情
-            </Link>
+        <div className="mt-auto flex items-center justify-between gap-3 border-t border-[rgba(181,157,121,0.1)] pt-4 text-sm">
+          <div className="min-w-0 text-xs text-muted">
+            <span className="truncate">{item.contactLabel}</span>
+            <span className="ml-2">更新于 {updated}</span>
           </div>
+          <Link href={href} className="shrink-0 text-sm text-primary transition hover:text-accent">
+            查看详情
+          </Link>
         </div>
       </div>
     </article>
@@ -179,7 +181,7 @@ export default async function BrandsAllPage({ searchParams }: Props) {
   };
 
   return (
-    <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:py-10">
+    <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:py-8">
       <JsonLd data={jsonLd} />
 
       <nav className="mb-6 text-sm text-muted" aria-label="面包屑">
@@ -190,25 +192,25 @@ export default async function BrandsAllPage({ searchParams }: Props) {
         <span className="text-primary">品牌总览</span>
       </nav>
 
-      <section className="overflow-hidden rounded-[36px] border border-[rgba(181,157,121,0.18)] bg-[radial-gradient(circle_at_top_left,rgba(213,183,131,0.15),transparent_32%),linear-gradient(180deg,rgba(255,255,255,0.98),rgba(247,242,235,0.92))] shadow-[0_28px_80px_rgba(34,31,26,0.07)]">
+      <section className="overflow-hidden rounded-[30px] border border-[rgba(181,157,121,0.16)] bg-[radial-gradient(circle_at_top_left,rgba(213,183,131,0.13),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.98),rgba(247,242,235,0.94))] shadow-[0_22px_56px_rgba(34,31,26,0.06)]">
         <div className="grid gap-0 xl:grid-cols-[1.08fr,0.92fr]">
-          <div className="p-7 sm:p-9">
+          <div className="p-6 sm:p-8">
             <p className="text-xs uppercase tracking-[0.3em] text-[#9d7e4d]">Brand Directory</p>
-            <h1 className="mt-4 font-serif text-3xl text-primary sm:text-[2.8rem] sm:leading-[1.1]">品牌总览</h1>
+            <h1 className="mt-3 font-serif text-[2rem] text-primary sm:text-[2.4rem] sm:leading-[1.08]">品牌总览</h1>
           </div>
-          <div className="border-t border-[rgba(181,157,121,0.16)] p-6 sm:p-8 xl:border-l xl:border-t-0">
-            <form method="get" className="rounded-[28px] border border-[rgba(181,157,121,0.18)] bg-white/86 p-5 shadow-[0_16px_38px_rgba(15,23,42,0.05)]">
+          <div className="border-t border-[rgba(181,157,121,0.16)] p-5 sm:p-7 xl:border-l xl:border-t-0">
+            <form method="get" className="rounded-[24px] border border-[rgba(181,157,121,0.16)] bg-white/88 p-4 shadow-[0_12px_26px_rgba(15,23,42,0.04)]">
               <label className="block text-xs uppercase tracking-[0.18em] text-[#8d7a5a]">搜索品牌</label>
               <input
                 name="q"
                 defaultValue={q}
-                className="mt-3 h-12 w-full rounded-[18px] border border-border bg-surface px-4 text-sm text-primary"
+                className="mt-3 h-11 w-full rounded-[16px] border border-border bg-surface px-4 text-sm text-primary"
                 placeholder="品牌名 / 企业名 / 产品体系 / 地区关键词"
               />
               <input type="hidden" name="region" value={region} />
               <div className="mt-4 flex flex-wrap gap-3">
-                <button className="rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white">开始筛选</button>
-                <Link href="/brands/all" className="rounded-full border border-border bg-white px-5 py-2.5 text-sm text-primary transition hover:bg-surface">
+                <button className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-white">开始筛选</button>
+                <Link href="/brands/all" className="rounded-full border border-border bg-white px-4 py-2 text-sm text-primary transition hover:bg-surface">
                   重置
                 </Link>
               </div>
@@ -217,7 +219,7 @@ export default async function BrandsAllPage({ searchParams }: Props) {
         </div>
       </section>
 
-      <section className="mt-6 flex flex-wrap gap-2 text-xs" aria-label="地区筛选">
+      <section className="mt-5 flex flex-wrap gap-2 text-xs" aria-label="地区筛选">
         <Link
           href={buildPageHref(q, "", 1)}
           className={`rounded-full border px-3 py-1.5 transition ${region === "" ? "border-accent bg-[rgba(180,154,107,0.08)] text-accent" : "border-border text-muted hover:border-[rgba(180,154,107,0.26)] hover:text-primary"}`}
@@ -236,11 +238,11 @@ export default async function BrandsAllPage({ searchParams }: Props) {
       </section>
 
       {recommended.length > 0 ? (
-        <section className="mt-10" aria-labelledby="recommended-brands-heading">
-          <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+        <section className="mt-8" aria-labelledby="recommended-brands-heading">
+          <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
             <div>
               <p className="text-xs uppercase tracking-[0.3em] text-[#9d7e4d]">Recommended Brands</p>
-              <h2 id="recommended-brands-heading" className="mt-2 font-serif text-2xl text-primary">
+              <h2 id="recommended-brands-heading" className="mt-1.5 font-serif text-[1.8rem] text-primary">
                 推荐品牌
               </h2>
             </div>
@@ -254,11 +256,11 @@ export default async function BrandsAllPage({ searchParams }: Props) {
         </section>
       ) : null}
 
-      <section className="mt-10" aria-labelledby="all-brands-heading">
-        <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+      <section className="mt-8" aria-labelledby="all-brands-heading">
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-[#9d7e4d]">All Brands</p>
-            <h2 id="all-brands-heading" className="mt-2 font-serif text-2xl text-primary">
+            <h2 id="all-brands-heading" className="mt-1.5 font-serif text-[1.8rem] text-primary">
               全部品牌
             </h2>
           </div>
@@ -278,7 +280,7 @@ export default async function BrandsAllPage({ searchParams }: Props) {
         )}
       </section>
 
-      <nav className="mt-8 flex flex-col gap-4 rounded-[24px] border border-border bg-white p-4 text-sm shadow-[0_14px_36px_rgba(15,23,42,0.05)] sm:flex-row sm:items-center sm:justify-between" aria-label="分页导航">
+      <nav className="mt-6 flex flex-col gap-4 rounded-[22px] border border-border bg-white p-4 text-sm shadow-[0_12px_28px_rgba(15,23,42,0.05)] sm:flex-row sm:items-center sm:justify-between" aria-label="分页导航">
         <span className="text-muted">当前为第 {safePage} 页，共 {totalPages} 页</span>
         <div className="flex flex-wrap items-center gap-2">
           <Link
