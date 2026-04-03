@@ -2,7 +2,10 @@ import { articleOrderByPinnedLatest } from "@/lib/articles";
 import { prisma } from "@/lib/prisma";
 import { resolveUploadedImageShareUrl } from "@/lib/uploaded-image";
 
-export const DEFAULT_NEWS_SHARE_IMAGE = "/api/og/news-default";
+export const DEFAULT_NEWS_SHARE_IMAGE = "/images/seedance2/picture_14.jpg";
+export const DEFAULT_NEWS_SHARE_IMAGE_WIDTH = 1600;
+export const DEFAULT_NEWS_SHARE_IMAGE_HEIGHT = 900;
+export const DEFAULT_NEWS_SHARE_IMAGE_TYPE = "image/jpeg";
 
 export function normalizeNewsSegment(raw: string) {
   let value = (raw || "").trim();
@@ -66,4 +69,8 @@ export function resolveArticleShareImage(article: { coverImage?: string | null; 
   ];
 
   return candidates.find((value) => Boolean(value && value.trim())) || DEFAULT_NEWS_SHARE_IMAGE;
+}
+
+export function isDefaultNewsShareImage(image: string | null | undefined) {
+  return (image || "").trim() === DEFAULT_NEWS_SHARE_IMAGE;
 }

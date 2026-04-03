@@ -7,11 +7,20 @@ import { previewText } from "@/lib/text";
 import { RichContent } from "@/components/RichContent";
 import { NewsViewTracker } from "./NewsViewTracker";
 import { NewsUrlSync } from "./NewsUrlSync";
-import { buildPageMetadata } from "@/lib/seo";
+import { absoluteUrl, buildPageMetadata } from "@/lib/seo";
 import { ArticleShareActions } from "@/components/ArticleShareActions";
 import { buildArticleShareVersion, buildNewsPath, buildNewsShareEntryUrl, buildPublicNewsUrl } from "@/lib/share-config";
 import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
-import { DEFAULT_NEWS_SHARE_IMAGE, findNewsArticleBySegment, normalizeNewsSegment, resolveArticleShareImage } from "@/lib/news-sharing";
+import {
+  DEFAULT_NEWS_SHARE_IMAGE,
+  DEFAULT_NEWS_SHARE_IMAGE_HEIGHT,
+  DEFAULT_NEWS_SHARE_IMAGE_TYPE,
+  DEFAULT_NEWS_SHARE_IMAGE_WIDTH,
+  findNewsArticleBySegment,
+  isDefaultNewsShareImage,
+  normalizeNewsSegment,
+  resolveArticleShareImage,
+} from "@/lib/news-sharing";
 import { prisma } from "@/lib/prisma";
 import { articleOrderByPinnedLatest } from "@/lib/articles";
 import { getRecommendedNews, isValidKeywordCandidate } from "@/lib/news-keywords-v2";
@@ -90,7 +99,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!article || article.status !== "approved") return { title: "资讯" };
   const description = previewText(article.excerpt ?? article.content, 160);
   const image = resolveArticleShareImage(article);
-  return buildPageMetadata({
+  const metadata = buildPageMetadata({
     title: article.title,
     description,
     path: buildNewsPath(article.id),
@@ -99,6 +108,32 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     image,
     imageAlt: article.title,
   });
+  const imageUrl = absoluteUrl(image);
+  const imageMeta = isDefaultNewsShareImage(image)
+    ? [
+        {
+          url: imageUrl,
+          secureUrl: imageUrl,
+          alt: article.title,
+          width: DEFAULT_NEWS_SHARE_IMAGE_WIDTH,
+          height: DEFAULT_NEWS_SHARE_IMAGE_HEIGHT,
+          type: DEFAULT_NEWS_SHARE_IMAGE_TYPE,
+        },
+      ]
+    : [{ url: imageUrl, secureUrl: imageUrl, alt: article.title }];
+
+  return {
+    ...metadata,
+    openGraph: {
+      ...metadata.openGraph,
+      url: absoluteUrl(buildNewsPath(article.id)),
+      images: imageMeta,
+    },
+    twitter: {
+      ...metadata.twitter,
+      images: [imageUrl],
+    },
+  };
 }
 
 function getSearchParamValue(value: string | string[] | undefined) {
