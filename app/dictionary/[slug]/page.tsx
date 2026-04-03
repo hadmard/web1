@@ -9,8 +9,10 @@ import { previewText } from "@/lib/text";
 import { DefinitionBlock } from "@/components/DefinitionBlock";
 import { JsonLd } from "@/components/JsonLd";
 import { RichContent } from "@/components/RichContent";
+import { ArticleShareActions } from "@/components/ArticleShareActions";
 import { getSiteVisualSettings } from "@/lib/site-visual-settings";
 import { getSiteUrl } from "@/lib/seo";
+import { buildArticleShareVersion, buildPublicDictionaryUrl } from "@/lib/share-config";
 import {
   addHeadingAnchors,
   extractHeadingAnchors,
@@ -224,6 +226,9 @@ export default async function TermPage({ params }: Props) {
 
     const baseUrl = getSiteUrl();
     const termUrl = `${baseUrl}/dictionary/${article.slug}`;
+    const shareUrl = buildPublicDictionaryUrl(article.slug);
+    const shareVersion = buildArticleShareVersion(article.updatedAt ?? article.createdAt ?? article.id);
+    const shareEntryUrl = `${shareUrl}?sharev=${encodeURIComponent(shareVersion)}`;
     const breadcrumbSchema = {
       "@context": "https://schema.org",
       "@type": "BreadcrumbList",
@@ -265,6 +270,12 @@ export default async function TermPage({ params }: Props) {
 
             <section className="rounded-3xl border border-border bg-surface-elevated p-6">
               <RichContent html={anchoredHtml} className="prose prose-neutral dark:prose-invert max-w-none" />
+              <ArticleShareActions
+                title={article.title}
+                shareUrl={shareEntryUrl}
+                siteName="整木词库"
+                className="mt-6"
+              />
             </section>
 
             {relatedItems.length > 0 && (
@@ -336,6 +347,9 @@ export default async function TermPage({ params }: Props) {
 
   const baseUrl = getSiteUrl();
   const termUrl = `${baseUrl}/dictionary/${term.slug}`;
+  const shareUrl = buildPublicDictionaryUrl(term.slug);
+  const shareVersion = buildArticleShareVersion(term.updatedAt ?? term.createdAt ?? term.slug);
+  const shareEntryUrl = `${shareUrl}?sharev=${encodeURIComponent(shareVersion)}`;
   const breadcrumbSchema = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -353,6 +367,12 @@ export default async function TermPage({ params }: Props) {
       <h1 className="font-serif text-2xl font-semibold tracking-tight text-gray-900 dark:text-gray-100">{term.title}</h1>
       <ContentHeroImage fallbackSrc={visualSettings.backgrounds.dictionaryArticleHero} alt={term.title} />
       <DefinitionBlock definition={term.definition} />
+      <ArticleShareActions
+        title={term.title}
+        shareUrl={shareEntryUrl}
+        siteName="整木词库"
+        className="mt-0"
+      />
 
       {term.background && (
         <section className="mt-8">
