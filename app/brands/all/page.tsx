@@ -75,74 +75,96 @@ function truncateText(text: string, length: number) {
 
 type BrandCardItem = Awaited<ReturnType<typeof getBrandDirectory>>["items"][number];
 
+function getMemberLabel(memberType: string) {
+  return memberType === "enterprise_advanced" ? "高级企业" : "企业会员";
+}
+
+function getBrandTags(item: BrandCardItem) {
+  return item.highlights.filter((tag) => tag.length <= 8).slice(0, 2).map((tag) => truncateText(tag, 8));
+}
+
 function BrandCard({ item, featured = false }: { item: BrandCardItem; featured?: boolean }) {
   const href = `/brands/${item.slug}`;
   const updated = item.updatedAt.toLocaleDateString("zh-CN");
-  const logoSize = featured ? 76 : 62;
-  const summary = truncateText(item.summary, featured ? 72 : 54);
-  const headline = truncateText(item.headline, featured ? 28 : 22);
-  const highlights = item.highlights.slice(0, 2).map((tag) => truncateText(tag, 14));
+  const logoSize = featured ? 72 : 58;
+  const headline = truncateText(item.headline, featured ? 22 : 18);
+  const summary = truncateText(item.summary, featured ? 66 : 42);
+  const tags = getBrandTags(item);
+  const memberLabel = getMemberLabel(item.memberType);
+  const serviceLine = truncateText(item.serviceLine, featured ? 18 : 14);
+  const locationLabel = truncateText(item.locationLabel, featured ? 18 : 14);
+  const contactLabel = item.contactLabel === "查看详情" ? "品牌详情" : item.contactLabel;
 
   return (
     <article
       className={[
-        "h-full rounded-[26px] border border-[rgba(181,157,121,0.14)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,248,243,0.96))] shadow-[0_14px_32px_rgba(15,23,42,0.045)] transition hover:-translate-y-1 hover:border-[rgba(181,157,121,0.26)] hover:shadow-[0_20px_44px_rgba(15,23,42,0.07)]",
-        featured ? "p-5" : "p-4",
+        "group h-full rounded-[26px] border border-[rgba(181,157,121,0.14)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,248,243,0.96))] shadow-[0_14px_32px_rgba(15,23,42,0.045)] transition hover:-translate-y-1 hover:border-[rgba(181,157,121,0.26)] hover:shadow-[0_20px_44px_rgba(15,23,42,0.07)]",
+        featured ? "p-5" : "p-4.5",
       ].join(" ")}
     >
       <div className="flex h-full flex-col">
         <div className="flex items-start gap-3">
-        <Link href={href} className="shrink-0">
-          <BrandLogo name={item.enterpriseName} logoUrl={item.logoUrl} size={logoSize} />
-        </Link>
-        <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
+          <Link href={href} className="shrink-0">
+            <BrandLogo name={item.enterpriseName} logoUrl={item.logoUrl} size={logoSize} />
+          </Link>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2 text-[11px]">
               {item.isRecommend ? (
-                <span className="rounded-full border border-[rgba(181,157,121,0.22)] bg-[rgba(245,236,220,0.82)] px-2.5 py-1 text-[11px] text-accent">
-                  推荐
+                <span className="rounded-full border border-[rgba(181,157,121,0.22)] bg-[rgba(245,236,220,0.82)] px-2.5 py-1 text-accent">
+                  推荐品牌
                 </span>
               ) : null}
-              <span className="text-[11px] tracking-[0.16em] text-muted">
-                {item.memberType === "enterprise_advanced" ? "高级企业" : "企业会员"}
+              <span className="rounded-full border border-[rgba(181,157,121,0.14)] bg-white/82 px-2.5 py-1 text-muted">
+                {memberLabel}
               </span>
             </div>
-            <h2 className={featured ? "mt-3 font-serif text-[1.85rem] leading-tight text-primary" : "mt-2.5 font-serif text-[1.2rem] leading-tight text-primary"}>
+            <h2 className={featured ? "mt-3 font-serif text-[1.65rem] leading-tight text-primary" : "mt-2.5 font-serif text-[1.22rem] leading-tight text-primary"}>
               <Link href={href} className="transition hover:text-accent">
                 {item.enterpriseName}
               </Link>
             </h2>
-            <p className="mt-2 text-xs text-muted">{item.locationLabel}</p>
+            <p className="mt-2 line-clamp-1 text-sm text-primary/84">{headline}</p>
           </div>
         </div>
 
-        <div className="mt-4 space-y-2.5">
-          <p className={featured ? "line-clamp-1 text-sm leading-7 text-primary/88" : "line-clamp-1 text-sm leading-6 text-primary/88"}>
-            {headline}
-          </p>
-          <p className={featured ? "line-clamp-2 text-sm leading-7 text-muted" : "line-clamp-2 text-sm leading-6 text-muted"}>
-            {summary}
-          </p>
+        <div className="mt-4 rounded-[20px] bg-white/68 px-4 py-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.18em] text-[#9d7e4d]">地区</p>
+              <p className="mt-1 line-clamp-1 text-sm text-primary">{locationLabel}</p>
+            </div>
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.18em] text-[#9d7e4d]">业务</p>
+              <p className="mt-1 line-clamp-1 text-sm text-primary">{serviceLine}</p>
+            </div>
+          </div>
         </div>
 
+        <p className={featured ? "mt-4 line-clamp-2 text-sm leading-7 text-muted" : "mt-4 line-clamp-2 text-sm leading-6 text-muted"}>
+          {summary}
+        </p>
+
         <div className="mt-4 flex flex-wrap gap-2 text-xs text-muted">
-          {highlights.length > 0 ? (
-            highlights.map((tag) => (
-              <span key={tag} className="rounded-full border border-border px-2.5 py-1">
-                {tag}
-              </span>
-            ))
-          ) : (
-            <span className="rounded-full border border-border px-2.5 py-1">资料完善中</span>
-          )}
+          {tags.length > 0
+            ? tags.map((tag) => (
+                <span key={tag} className="rounded-full border border-border bg-white/82 px-2.5 py-1">
+                  {tag}
+                </span>
+              ))
+            : (
+                <span className="rounded-full border border-border bg-white/82 px-2.5 py-1">{item.region}</span>
+              )}
         </div>
 
         <div className="mt-auto flex items-center justify-between gap-3 border-t border-[rgba(181,157,121,0.1)] pt-4 text-sm">
           <div className="min-w-0 text-xs text-muted">
-            <span className="truncate">{item.contactLabel}</span>
-            <span className="ml-2">更新于 {updated}</span>
+            <span className="truncate">更新于 {updated}</span>
           </div>
-          <Link href={href} className="shrink-0 text-sm text-primary transition hover:text-accent">
-            查看详情
+          <Link
+            href={href}
+            className="shrink-0 rounded-full border border-[rgba(181,157,121,0.22)] bg-white px-4 py-2 text-sm text-primary transition group-hover:border-[rgba(181,157,121,0.34)] group-hover:text-accent"
+          >
+            {contactLabel}
           </Link>
         </div>
       </div>
@@ -248,7 +270,7 @@ export default async function BrandsAllPage({ searchParams }: Props) {
             </div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-4 lg:grid-cols-3">
             {recommended.map((item) => (
               <BrandCard key={`recommended-${item.id}`} item={item} featured />
             ))}
@@ -272,7 +294,7 @@ export default async function BrandsAllPage({ searchParams }: Props) {
             暂无符合条件的品牌数据。
           </article>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {items.map((item) => (
               <BrandCard key={item.id} item={item} />
             ))}
