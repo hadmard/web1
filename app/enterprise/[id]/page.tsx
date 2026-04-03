@@ -459,7 +459,7 @@ export default async function EnterprisePage({ params, searchParams }: Props) {
           <span className="text-[#2c241d]">{name}</span>
         </nav>
 
-        <section className="relative overflow-hidden rounded-[40px] border border-[rgba(140,111,78,0.14)] bg-[#171310] shadow-[0_30px_120px_rgba(32,24,17,0.22)]">
+        <section className="relative overflow-hidden rounded-[30px] border border-[rgba(140,111,78,0.14)] bg-[#171310] shadow-[0_24px_72px_rgba(32,24,17,0.18)] sm:rounded-[40px] sm:shadow-[0_30px_120px_rgba(32,24,17,0.22)]">
           <Image
             src={heroBackground}
             alt={`${name} 品牌主视觉`}
@@ -469,19 +469,23 @@ export default async function EnterprisePage({ params, searchParams }: Props) {
           />
           <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(8,6,5,0.94)_0%,rgba(14,10,8,0.82)_44%,rgba(20,15,11,0.56)_100%)]" />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(216,182,136,0.22),transparent_24%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.05),transparent_20%)]" />
-          <div className="relative z-10 px-6 py-12 sm:px-10 sm:py-16 lg:px-14 lg:py-20">
+          <div className="relative z-10 px-5 py-8 sm:px-10 sm:py-16 lg:px-14 lg:py-20">
             <div className="max-w-3xl">
-              <h1 className="max-w-4xl font-serif text-5xl leading-[1.02] text-white sm:text-6xl lg:text-[80px]">{name}</h1>
-              <p className="mt-5 max-w-2xl text-2xl font-medium leading-tight text-white drop-shadow-[0_4px_18px_rgba(0,0,0,0.38)] sm:text-[32px]">
+              <p className="text-[11px] uppercase tracking-[0.28em] text-white/62">Brand Home</p>
+              <h1 className="mt-3 max-w-4xl font-serif text-[2.4rem] leading-[1.04] text-white sm:text-6xl lg:text-[80px]">{name}</h1>
+              <p className="mt-3 max-w-xl text-lg leading-8 text-white/92 drop-shadow-[0_4px_18px_rgba(0,0,0,0.32)] sm:mt-5 sm:max-w-2xl sm:text-[32px] sm:font-medium sm:leading-tight">
                 {heroSubtitle}
+              </p>
+              <p className="mt-3 max-w-lg text-sm leading-6 text-white/68 sm:hidden">
+                {aboutSummary}
               </p>
             </div>
           </div>
         </section>
 
-        <div className="mt-16 space-y-16 sm:mt-20">
-          <section className="rounded-[36px] border border-[rgba(180,154,107,0.16)] bg-[linear-gradient(180deg,rgba(255,255,255,0.95),rgba(247,241,233,0.9))] p-6 shadow-[0_20px_42px_rgba(35,26,18,0.05)] sm:p-8 lg:p-10">
-            <div className="rounded-[30px] border border-[rgba(140,111,78,0.1)] bg-white/82 p-6 shadow-[0_16px_34px_rgba(35,26,18,0.04)] sm:p-7 lg:p-8">
+        <div className="mt-10 space-y-10 sm:mt-20 sm:space-y-16">
+          <section className="rounded-[28px] border border-[rgba(180,154,107,0.16)] bg-[linear-gradient(180deg,rgba(255,255,255,0.95),rgba(247,241,233,0.9))] p-4 shadow-[0_16px_32px_rgba(35,26,18,0.05)] sm:rounded-[36px] sm:p-8 lg:p-10">
+            <div className="rounded-[24px] border border-[rgba(140,111,78,0.1)] bg-white/82 p-5 shadow-[0_16px_34px_rgba(35,26,18,0.04)] sm:rounded-[30px] sm:p-7 lg:p-8">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-5">
                 {logoUrl ? (
                   <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-[20px] border border-[rgba(140,111,78,0.12)] bg-white p-3 shadow-[0_10px_24px_rgba(35,26,18,0.06)] sm:h-20 sm:w-20">
@@ -496,16 +500,19 @@ export default async function EnterprisePage({ params, searchParams }: Props) {
                 ) : null}
                 <div className="max-w-4xl">
                 <p className="text-[11px] uppercase tracking-[0.28em] text-[#9f7a46]">Brand Story</p>
-                <h2 className="mt-3 font-serif text-3xl text-[#241c15] sm:text-4xl">关于品牌</h2>
+                <h2 className="mt-2.5 font-serif text-[1.9rem] text-[#241c15] sm:mt-3 sm:text-4xl">关于品牌</h2>
                 </div>
               </div>
 
-              <div className="mt-6 rounded-[26px] border border-[rgba(140,111,78,0.08)] bg-[rgba(255,252,247,0.86)] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] sm:mt-7 sm:p-7">
-                <div className="space-y-5">
-                  {aboutParagraphs.map((paragraph, index) => (
+              <div className="mt-5 rounded-[22px] border border-[rgba(140,111,78,0.08)] bg-[rgba(255,252,247,0.86)] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] sm:mt-7 sm:rounded-[26px] sm:p-7">
+                <p className="text-[15px] leading-7 text-[#3d3025] sm:hidden">
+                  {aboutSummary}
+                </p>
+                <div className="mt-4 space-y-4 sm:mt-0 sm:space-y-5">
+                  {aboutParagraphs.slice(0, 2).map((paragraph, index) => (
                     <p
                       key={`${name}-about-${index}`}
-                      className="max-w-5xl text-[15px] leading-9 text-[#3d3025] sm:text-base"
+                      className={index === 0 ? "hidden max-w-5xl text-[15px] leading-8 text-[#3d3025] sm:block sm:text-base" : "hidden max-w-5xl text-[15px] leading-8 text-[#3d3025] md:block md:text-base"}
                     >
                       {paragraph}
                     </p>
@@ -522,8 +529,8 @@ export default async function EnterprisePage({ params, searchParams }: Props) {
             </div>
           </section>
 
-          <Section id="gallery-section" title="精选案例">
-            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+          <Section id="gallery-section" title="精选案例" description="移动端左右滑动即可快速浏览案例，不必连续下拉。">
+            <div className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 md:mx-0 md:grid md:snap-none md:grid-cols-2 md:gap-6 md:overflow-visible md:px-0 xl:grid-cols-3">
               {galleryCards.map((item) => (
                 <CaseCard key={item.id} item={item} />
               ))}
@@ -545,37 +552,37 @@ export default async function EnterprisePage({ params, searchParams }: Props) {
           </Section>
 
           <section id="contact-panel">
-            <div className="overflow-hidden rounded-[36px] border border-[rgba(180,154,107,0.18)] bg-[linear-gradient(135deg,rgba(255,252,247,0.98)_0%,rgba(245,238,229,0.96)_48%,rgba(234,223,209,0.94)_100%)] shadow-[0_28px_90px_rgba(32,24,17,0.08)]">
-              <div className="grid gap-8 px-6 py-9 sm:px-10 sm:py-10 lg:grid-cols-[0.88fr,1.12fr] lg:px-12">
+            <div className="overflow-hidden rounded-[28px] border border-[rgba(180,154,107,0.18)] bg-[linear-gradient(135deg,rgba(255,252,247,0.98)_0%,rgba(245,238,229,0.96)_48%,rgba(234,223,209,0.94)_100%)] shadow-[0_20px_56px_rgba(32,24,17,0.08)] sm:rounded-[36px] sm:shadow-[0_28px_90px_rgba(32,24,17,0.08)]">
+              <div className="grid gap-5 px-4 py-5 sm:gap-8 sm:px-10 sm:py-10 lg:grid-cols-[0.88fr,1.12fr] lg:px-12">
                 <div className="flex flex-col justify-center">
                   <p className="text-[11px] uppercase tracking-[0.32em] text-[#9f7a46]">Contact</p>
-                  <h2 className="mt-4 font-serif text-4xl leading-tight text-[#231b15] sm:text-5xl">获取专属方案</h2>
-                  <p className="mt-5 max-w-xl text-base leading-8 text-[#4e4033]">
+                  <h2 className="mt-2.5 font-serif text-[1.95rem] leading-tight text-[#231b15] sm:mt-4 sm:text-5xl">获取专属方案</h2>
+                  <p className="mt-3 max-w-xl text-sm leading-6 text-[#4e4033] sm:mt-5 sm:text-base sm:leading-8">
                     {contactView.contactIntro || "提交您的需求，我们将为您提供专属整木空间解决方案，从设计到落地，全流程支持。"}
                   </p>
-                  <div className="mt-8 flex flex-wrap gap-4">
+                  <div className="mt-4 flex flex-col gap-2.5 sm:mt-8 sm:flex-row sm:flex-wrap sm:gap-4">
                     <a
                       href={contactPrimaryHref}
-                      className="inline-flex min-w-[148px] items-center justify-center rounded-full bg-[#c79a62] px-6 py-3.5 text-sm font-medium text-white transition hover:bg-[#b9894f]"
+                      className="inline-flex min-w-[148px] items-center justify-center rounded-full bg-[#c79a62] px-5 py-3 text-sm font-medium text-white transition hover:bg-[#b9894f] sm:px-6 sm:py-3.5"
                     >
                       {contactPrimaryLabel}
                     </a>
                     <a
                       href={secondaryWebsiteHref || "#gallery-section"}
-                      className="inline-flex min-w-[148px] items-center justify-center rounded-full border border-[rgba(165,132,87,0.26)] bg-white/78 px-6 py-3.5 text-sm font-medium text-[#2c221b] transition hover:bg-white"
+                      className="inline-flex min-w-[148px] items-center justify-center rounded-full border border-[rgba(165,132,87,0.26)] bg-white/78 px-5 py-3 text-sm font-medium text-[#2c221b] transition hover:bg-white sm:px-6 sm:py-3.5"
                     >
                       {secondaryWebsiteHref ? "访问官网" : "查看案例"}
                     </a>
                   </div>
                 </div>
 
-                <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr),220px]">
-                  <div className="rounded-[28px] border border-[rgba(180,154,107,0.14)] bg-[linear-gradient(180deg,rgba(255,255,255,0.84),rgba(255,251,245,0.72))] p-6 shadow-[0_18px_36px_rgba(35,26,18,0.05)]">
-                    <div className="space-y-4">
+                <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr),220px] lg:gap-4">
+                  <div className="rounded-[22px] border border-[rgba(180,154,107,0.14)] bg-[linear-gradient(180deg,rgba(255,255,255,0.84),rgba(255,251,245,0.72))] p-4 shadow-[0_14px_28px_rgba(35,26,18,0.05)] sm:rounded-[28px] sm:p-6 sm:shadow-[0_18px_36px_rgba(35,26,18,0.05)]">
+                    <div className="space-y-2.5 sm:space-y-4">
                       {contactView.items.map((item) => (
                         <div
                           key={item.label}
-                          className="rounded-[22px] border border-[rgba(180,154,107,0.12)] bg-white/88 px-5 py-4 shadow-[0_10px_24px_rgba(35,26,18,0.03)]"
+                          className="rounded-[18px] border border-[rgba(180,154,107,0.12)] bg-white/88 px-4 py-3 shadow-[0_8px_18px_rgba(35,26,18,0.03)] sm:rounded-[22px] sm:px-5 sm:py-4 sm:shadow-[0_10px_24px_rgba(35,26,18,0.03)]"
                         >
                           <p className="text-[11px] uppercase tracking-[0.18em] text-[#9f7a46]">{item.label}</p>
                           {item.href ? (
@@ -583,27 +590,27 @@ export default async function EnterprisePage({ params, searchParams }: Props) {
                               href={item.href}
                               target={item.href.startsWith("http") ? "_blank" : undefined}
                               rel={item.href.startsWith("http") ? "noreferrer" : undefined}
-                              className="mt-2 block text-lg leading-7 text-[#231b15] underline-offset-4 hover:text-[#a47b45] hover:underline"
+                              className="mt-1.5 block text-[15px] leading-6 text-[#231b15] underline-offset-4 hover:text-[#a47b45] hover:underline sm:mt-2 sm:text-lg sm:leading-7"
                             >
                               {item.value}
                             </a>
                           ) : (
-                            <p className="mt-2 text-lg leading-7 text-[#231b15]">{item.value}</p>
+                            <p className="mt-1.5 text-[15px] leading-6 text-[#231b15] sm:mt-2 sm:text-lg sm:leading-7">{item.value}</p>
                           )}
                         </div>
                       ))}
                     </div>
                     {!contactView.hasRealContact ? (
-                      <p className="mt-5 text-sm leading-7 text-[#6d5d4f]">
+                      <p className="mt-3 text-sm leading-6 text-[#6d5d4f] sm:mt-5 sm:leading-7">
                         当前企业未公开完整联系方式，可通过左侧咨询按钮发起需求对接。
                       </p>
                     ) : null}
                   </div>
 
                   {contactView.wechatQrImageUrl ? (
-                    <div className="rounded-[28px] border border-[rgba(180,154,107,0.16)] bg-white/78 p-5 shadow-[0_16px_32px_rgba(35,26,18,0.05)]">
+                    <div className="rounded-[22px] border border-[rgba(180,154,107,0.16)] bg-white/78 p-4 shadow-[0_14px_28px_rgba(35,26,18,0.05)] sm:rounded-[28px] sm:p-5 sm:shadow-[0_16px_32px_rgba(35,26,18,0.05)]">
                       <p className="text-[11px] uppercase tracking-[0.18em] text-[#9f7a46]">扫码联系</p>
-                      <div className="mt-4 flex items-center justify-center overflow-hidden rounded-[20px] border border-[rgba(180,154,107,0.14)] bg-white p-3">
+                      <div className="mt-3 flex items-center justify-center overflow-hidden rounded-[18px] border border-[rgba(180,154,107,0.14)] bg-white p-2.5 sm:mt-4 sm:rounded-[20px] sm:p-3">
                         <Image
                           src={resolveUploadedImageUrl(contactView.wechatQrImageUrl)}
                           alt="联系二维码"
@@ -612,7 +619,7 @@ export default async function EnterprisePage({ params, searchParams }: Props) {
                           className="h-full w-full object-contain"
                         />
                       </div>
-                      <p className="mt-3 text-sm leading-6 text-[#6d5d4f]">支持微信等渠道进一步沟通</p>
+                      <p className="mt-2.5 text-sm leading-6 text-[#6d5d4f] sm:mt-3">支持微信等渠道进一步沟通</p>
                     </div>
                   ) : null}
                 </div>
@@ -642,11 +649,11 @@ function Section({
 }) {
   return (
     <section id={id}>
-      <div className="mb-7 flex items-end justify-between gap-4">
+      <div className="mb-5 flex items-end justify-between gap-4 sm:mb-7">
         <div>
           {eyebrow ? <p className="text-[11px] uppercase tracking-[0.24em] text-[#9f7a46]">{eyebrow}</p> : null}
-          <h2 className="mt-3 font-serif text-3xl text-[#241c15] sm:text-4xl">{title}</h2>
-          {description ? <p className="mt-3 max-w-2xl text-sm leading-7 text-[#6a5949]">{description}</p> : null}
+          <h2 className="mt-2.5 font-serif text-[1.9rem] text-[#241c15] sm:mt-3 sm:text-4xl">{title}</h2>
+          {description ? <p className="mt-2 max-w-2xl text-sm leading-6 text-[#6a5949] sm:mt-3 sm:leading-7">{description}</p> : null}
         </div>
         {aside}
       </div>
@@ -666,7 +673,7 @@ function FeatureStrip({ label, value }: { label: string; value: string }) {
 
 function CaseCard({ item }: { item: GalleryCard }) {
   const wrapperClass =
-    "group overflow-hidden rounded-[30px] border border-[rgba(140,111,78,0.12)] bg-white shadow-[0_18px_40px_rgba(35,26,18,0.06)]";
+    "group min-w-[78vw] snap-start overflow-hidden rounded-[26px] border border-[rgba(140,111,78,0.12)] bg-white shadow-[0_14px_32px_rgba(35,26,18,0.06)] md:min-w-0 md:rounded-[30px] md:shadow-[0_18px_40px_rgba(35,26,18,0.06)]";
 
   if (item.imageUrl) {
     const content = (
@@ -677,12 +684,12 @@ function CaseCard({ item }: { item: GalleryCard }) {
             alt={item.title}
             width={800}
             height={600}
-            className="aspect-[5/4] w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+            className="aspect-[4/3] w-full object-cover transition duration-500 group-hover:scale-[1.03] md:aspect-[5/4]"
           />
         </div>
-        <div className="bg-white px-6 py-5">
+        <div className="bg-white px-4 py-4 md:px-6 md:py-5">
           <p className="text-[11px] uppercase tracking-[0.2em] text-[#a47b45]">{item.category}</p>
-          <p className="mt-3 text-lg font-medium text-[#241c15]">{item.title}</p>
+          <p className="mt-2.5 line-clamp-2 text-base font-medium leading-7 text-[#241c15] md:mt-3 md:text-lg">{item.title}</p>
         </div>
       </>
     );
