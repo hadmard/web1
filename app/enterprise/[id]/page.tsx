@@ -709,7 +709,7 @@ function NewsItemCard({
   return (
     <Link
       href={item.href}
-      className="group flex h-full min-h-[280px] flex-col rounded-[24px] border border-[rgba(140,111,78,0.12)] bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,243,236,0.92))] px-5 py-5 shadow-[0_14px_32px_rgba(35,26,18,0.05)] transition hover:-translate-y-0.5"
+      className="group flex h-full min-h-[232px] flex-col rounded-[24px] border border-[rgba(140,111,78,0.12)] bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,243,236,0.92))] px-5 py-4.5 shadow-[0_14px_32px_rgba(35,26,18,0.05)] transition hover:-translate-y-0.5"
     >
       <div className="flex items-center justify-between gap-3">
         <span className="rounded-full border border-[rgba(181,157,121,0.2)] bg-[rgba(255,249,238,0.92)] px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-[#a47b45]">
@@ -718,7 +718,7 @@ function NewsItemCard({
         <span className="text-xs text-[#8c7b69]">{item.dateLabel}</span>
       </div>
       <p
-        className="mt-4 min-h-[96px] text-xl font-medium leading-8 text-[#241c15]"
+        className="mt-3.5 min-h-[72px] text-[1.75rem] font-medium leading-[1.45] text-[#241c15]"
         style={{
           display: "-webkit-box",
           WebkitLineClamp: 2,
@@ -729,17 +729,17 @@ function NewsItemCard({
         {item.title}
       </p>
       <p
-        className="mt-3 text-sm leading-7 text-[#5c4d40]"
+        className="mt-2.5 text-sm leading-7 text-[#5c4d40]"
         style={{
           display: "-webkit-box",
-          WebkitLineClamp: 3,
+          WebkitLineClamp: 2,
           WebkitBoxOrient: "vertical",
           overflow: "hidden",
         }}
       >
         {item.excerpt}
       </p>
-      <div className="mt-auto pt-5 text-sm font-medium text-[#a47b45] transition group-hover:translate-x-0.5">继续阅读</div>
+      <div className="mt-auto pt-4 text-sm font-medium text-[#a47b45] transition group-hover:translate-x-0.5">继续阅读</div>
     </Link>
   );
 }
