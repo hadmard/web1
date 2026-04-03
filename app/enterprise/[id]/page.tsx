@@ -110,17 +110,6 @@ function shortText(value: string | null | undefined, maxLength = 18) {
   return normalized.length > maxLength ? `${normalized.slice(0, Math.max(0, maxLength - 1)).trim()}…` : normalized;
 }
 
-function buildLocationLabel(region?: string | null, area?: string | null) {
-  const normalizedRegion = shortText(region, 16);
-  const normalizedArea = shortText(area, 16);
-  if (normalizedRegion && normalizedArea) {
-    if (normalizedArea.includes(normalizedRegion)) return normalizedArea;
-    if (normalizedRegion.includes(normalizedArea)) return normalizedRegion;
-    return `${normalizedRegion} · ${normalizedArea}`;
-  }
-  return normalizedRegion || normalizedArea || "全国";
-}
-
 function buildHeroSubtitle(name: string, input: { positioning?: string | null; intro?: string | null }) {
   return (
     toSummaryText(input.positioning, 24) ||
@@ -204,48 +193,7 @@ function buildFallbackGallery(name: string, productSystem?: string | null): Gall
   ];
 }
 
-function buildAboutSummary(
-  name: string,
-  input: {
-    positioning?: string | null;
-    intro?: string | null;
-    productSystem?: string | null;
-    region?: string | null;
-  },
-) {
-  return (
-    toSummaryText(input.positioning || input.intro, 120) ||
-    `${name}围绕${input.productSystem || "整木与空间服务"}建立统一展示与交付表达，持续服务${input.region || "区域"}客户咨询与项目合作。`
-  );
-}
-
-function buildAboutBlocks(
-  name: string,
-  input: {
-    positioning?: string | null;
-    introPlain: string;
-    productSystem?: string | null;
-    region?: string | null;
-    area?: string | null;
-  },
-) {
-  const introPieces = chunkParagraphs(input.introPlain);
-  if (introPieces.length >= 2) {
-    return introPieces.slice(0, 3);
-  }
-
-  return [
-    `${name}${input.region ? `立足${buildLocationLabel(input.region, input.area)}` : ""}，持续完善品牌展示、项目沟通与空间落地能力。`,
-    input.productSystem
-      ? `围绕${toSummaryText(input.productSystem, 30)}构建更完整的整木系统表达，兼顾设计统一性与实际落地效果。`
-      : "围绕整木空间定制与项目交付建立更完整的服务表达。",
-    input.positioning
-      ? `${toSummaryText(input.positioning, 44)}，更关注空间气质、材质协调与整体完成度。`
-      : "在方案呈现、工艺细节与合作节奏之间保持稳定平衡，让项目推进更顺畅。",
-  ];
-}
-
-function buildAboutParagraphs(introPlain: string, fallbackBlocks: string[]) {
+function buildAboutParagraphs(introPlain: string) {
   const cleaned = chunkParagraphs(introPlain)
     .map((item) =>
       splitSentences(item)
@@ -257,10 +205,10 @@ function buildAboutParagraphs(introPlain: string, fallbackBlocks: string[]) {
     .filter((item) => item && !isBusinessScopeParagraph(item));
 
   if (cleaned.length > 0) {
-    return cleaned.slice(0, 2);
+    return cleaned.slice(0, 3);
   }
 
-  return fallbackBlocks.slice(0, 2);
+  return [];
 }
 
 export async function generateMetadata({ params }: Props) {
@@ -359,7 +307,7 @@ export default async function EnterprisePage({ params, searchParams }: Props) {
   });
 
   const name = ent.companyShortName || ent.companyName || "企业";
-  const introPlain = htmlToPlainText(ent.intro || ent.positioning || "");
+  const introPlain = htmlToPlainText(ent.intro || "");
   const heroView = resolveEnterpriseHomepageHero(ent, siteSettings, ownGallery);
   const contactView = resolveEnterpriseHomepageContact(ent, siteSettings);
   const generatedNews = buildGeneratedNews(name, {
@@ -427,21 +375,9 @@ export default async function EnterprisePage({ params, searchParams }: Props) {
   const contactPrimaryLabel = contactView.hasRealContact ? heroView.primaryCtaLabel : "提交咨询";
   const contactPrimaryHref =
     contactView.primaryCtaHref === "#contact-panel" ? secondaryWebsiteHref || "/membership" : contactView.primaryCtaHref;
-  const aboutSummary = buildAboutSummary(name, {
-    positioning: ent.positioning,
-    intro: ent.intro,
-    productSystem: ent.productSystem,
-    region: ent.region,
-  });
   const heroSubtitle = buildHeroSubtitle(name, { positioning: ent.positioning, intro: ent.intro });
-  const aboutBlocks = buildAboutBlocks(name, {
-    positioning: ent.positioning,
-    introPlain,
-    productSystem: ent.productSystem,
-    region: ent.region,
-    area: ent.area,
-  });
-  const aboutParagraphs = buildAboutParagraphs(introPlain, aboutBlocks);
+  const aboutParagraphs = buildAboutParagraphs(introPlain);
+  const aboutIntroPreview = aboutParagraphs[0] || "该企业暂未完善企业简介资料。";
   const logoUrl = ent.logoUrl ? resolveUploadedImageUrl(ent.logoUrl) : null;
 
   return (
@@ -479,7 +415,7 @@ export default async function EnterprisePage({ params, searchParams }: Props) {
                 </p>
               </div>
               <p className="mt-3 max-w-lg px-1 text-sm leading-6 text-white/82 sm:hidden">
-                {aboutSummary}
+                {aboutIntroPreview}
               </p>
             </div>
           </div>
@@ -506,32 +442,22 @@ export default async function EnterprisePage({ params, searchParams }: Props) {
                 </div>
               </div>
 
-              <div className="mt-5 rounded-[22px] border border-[rgba(140,111,78,0.08)] bg-[rgba(255,252,247,0.86)] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] sm:mt-7 sm:rounded-[26px] sm:p-7">
-                <div className="grid gap-5 lg:grid-cols-[minmax(0,0.84fr),minmax(0,1.16fr)] lg:gap-8">
-                  <div className="rounded-[20px] border border-[rgba(159,122,70,0.12)] bg-[linear-gradient(180deg,rgba(255,255,255,0.72),rgba(252,246,238,0.92))] p-4 sm:rounded-[22px] sm:p-5">
-                    <p className="text-[11px] uppercase tracking-[0.22em] text-[#9f7a46]">品牌摘要</p>
-                    <p className="mt-3 text-[15px] leading-7 text-[#3d3025] sm:text-base sm:leading-8">
-                      {aboutSummary}
-                    </p>
-                  </div>
-
-                  <div className="space-y-4 sm:space-y-5">
-                    {aboutParagraphs.slice(0, 2).map((paragraph, index) => (
+              <div className="mt-5 border-t border-[rgba(159,122,70,0.14)] pt-5 sm:mt-7 sm:pt-7">
+                <div className="max-w-4xl space-y-4 sm:space-y-5">
+                  {aboutParagraphs.length > 0 ? (
+                    aboutParagraphs.slice(0, 3).map((paragraph, index) => (
                       <p
                         key={`${name}-about-${index}`}
                         className="text-[15px] leading-7 text-[#3d3025] sm:text-base sm:leading-8"
                       >
                         {paragraph}
                       </p>
-                    ))}
-                    <a
-                      href="#contact-panel"
-                      className="inline-flex items-center gap-2 text-sm font-medium text-[#9f7a46] transition hover:text-[#876234]"
-                    >
-                      了解更多
-                      <span aria-hidden="true">→</span>
-                    </a>
-                  </div>
+                    ))
+                  ) : (
+                    <p className="text-[15px] leading-7 text-[#5d4d3f] sm:text-base sm:leading-8">
+                      该企业暂未完善企业简介资料。
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -731,7 +657,7 @@ function NewsItemCard({
       </div>
       <p
         title={item.title}
-        className="mt-2.5 min-h-[52px] text-[1.5rem] font-medium leading-[1.4] text-[#241c15] sm:mt-3 sm:min-h-[60px] sm:text-[1.7rem]"
+        className="mt-2.5 min-h-[48px] text-[1.2rem] font-medium leading-[1.3] text-[#241c15] sm:mt-3 sm:min-h-[54px] sm:text-[1.35rem] sm:leading-[1.35]"
         style={{
           display: "-webkit-box",
           WebkitLineClamp: 2,
