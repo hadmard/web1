@@ -55,7 +55,7 @@ export function HomeBrandEntrySection({
           <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="mb-2 text-[13px] text-muted sm:text-sm">品牌生态</p>
-              <h3 className="font-serif text-lg font-semibold text-primary">品牌入口</h3>
+              <h3 className="font-serif text-lg font-semibold text-primary sm:text-[1.35rem]">关于品牌</h3>
             </div>
             {middleAd.enabled && middleAd.title ? (
               <Link href={middleAd.href || "/membership"} className="text-sm font-medium text-accent hover:text-primary">
@@ -104,7 +104,7 @@ export function HomeBrandEntrySection({
 
         <article data-reveal="fade-right" data-reveal-delay="80" className="glass-panel spotlight-card p-5" data-mouse-zone>
           <p className="mb-2 text-[13px] text-muted sm:text-sm">区域热度</p>
-          <h3 className="mb-3 font-serif text-lg font-semibold text-primary">品牌数量</h3>
+          <h3 className="mb-3 font-serif text-lg font-semibold text-primary sm:text-[1.35rem]">品牌数量</h3>
           <ul className="list-cascade space-y-2 text-sm">
             {regionCounts.map((region) => (
               <li key={region.region} className="flex items-center justify-between">

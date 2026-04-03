@@ -459,24 +459,26 @@ export default async function EnterprisePage({ params, searchParams }: Props) {
           <span className="text-[#2c241d]">{name}</span>
         </nav>
 
-        <section className="relative overflow-hidden rounded-[30px] border border-[rgba(140,111,78,0.14)] bg-[#171310] shadow-[0_24px_72px_rgba(32,24,17,0.18)] sm:rounded-[40px] sm:shadow-[0_30px_120px_rgba(32,24,17,0.22)]">
+        <section className="relative isolate overflow-hidden rounded-[30px] border border-[rgba(140,111,78,0.14)] bg-[#171310] shadow-[0_24px_72px_rgba(32,24,17,0.18)] sm:rounded-[40px] sm:shadow-[0_30px_120px_rgba(32,24,17,0.22)]">
           <Image
             src={heroBackground}
             alt={`${name} 品牌主视觉`}
             fill
             priority
-            className="object-cover"
+            className="z-0 object-cover"
           />
-          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(8,6,5,0.94)_0%,rgba(14,10,8,0.82)_44%,rgba(20,15,11,0.56)_100%)]" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(216,182,136,0.22),transparent_24%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.05),transparent_20%)]" />
-          <div className="relative z-10 px-5 py-8 sm:px-10 sm:py-16 lg:px-14 lg:py-20">
+          <div className="pointer-events-none absolute inset-0 z-[1] bg-[linear-gradient(180deg,rgba(8,6,5,0.34)_0%,rgba(8,6,5,0.66)_24%,rgba(12,8,6,0.88)_72%,rgba(12,8,6,0.94)_100%)] sm:bg-[linear-gradient(90deg,rgba(8,6,5,0.96)_0%,rgba(12,8,6,0.88)_36%,rgba(18,13,10,0.68)_68%,rgba(20,15,11,0.5)_100%)]" />
+          <div className="pointer-events-none absolute inset-0 z-[2] bg-[radial-gradient(circle_at_top_right,rgba(216,182,136,0.2),transparent_24%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.05),transparent_22%)]" />
+          <div className="relative z-10 flex min-h-[380px] items-end px-4 py-6 sm:min-h-[460px] sm:px-10 sm:py-16 lg:min-h-[520px] lg:px-14 lg:py-20">
             <div className="max-w-3xl">
               <p className="text-[11px] uppercase tracking-[0.28em] text-white/62">Brand Home</p>
-              <h1 className="mt-3 max-w-4xl font-serif text-[2.4rem] leading-[1.04] text-white sm:text-6xl lg:text-[80px]">{name}</h1>
-              <p className="mt-3 max-w-xl text-lg leading-8 text-white/92 drop-shadow-[0_4px_18px_rgba(0,0,0,0.32)] sm:mt-5 sm:max-w-2xl sm:text-[32px] sm:font-medium sm:leading-tight">
-                {heroSubtitle}
-              </p>
-              <p className="mt-3 max-w-lg text-sm leading-6 text-white/68 sm:hidden">
+              <h1 className="mt-3 max-w-4xl font-serif text-[2rem] leading-[1.04] text-white drop-shadow-[0_10px_28px_rgba(0,0,0,0.3)] sm:text-6xl lg:text-[80px]">{name}</h1>
+              <div className="mt-3 w-full max-w-full rounded-[22px] border border-white/12 bg-[linear-gradient(180deg,rgba(10,8,6,0.72),rgba(10,8,6,0.48))] px-4 py-3.5 shadow-[0_16px_36px_rgba(0,0,0,0.24)] backdrop-blur-[8px] sm:mt-5 sm:inline-flex sm:w-auto sm:max-w-2xl sm:rounded-[24px] sm:bg-[linear-gradient(180deg,rgba(10,8,6,0.52),rgba(10,8,6,0.28))] sm:px-5 sm:py-4">
+                <p className="max-w-none text-[1.08rem] font-medium leading-7 text-white drop-shadow-[0_8px_24px_rgba(0,0,0,0.48)] sm:max-w-2xl sm:text-[32px] sm:leading-tight">
+                  {heroSubtitle}
+                </p>
+              </div>
+              <p className="mt-3 max-w-lg px-1 text-sm leading-6 text-white/82 sm:hidden">
                 {aboutSummary}
               </p>
             </div>
@@ -505,25 +507,31 @@ export default async function EnterprisePage({ params, searchParams }: Props) {
               </div>
 
               <div className="mt-5 rounded-[22px] border border-[rgba(140,111,78,0.08)] bg-[rgba(255,252,247,0.86)] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] sm:mt-7 sm:rounded-[26px] sm:p-7">
-                <p className="text-[15px] leading-7 text-[#3d3025] sm:hidden">
-                  {aboutSummary}
-                </p>
-                <div className="mt-4 space-y-4 sm:mt-0 sm:space-y-5">
-                  {aboutParagraphs.slice(0, 2).map((paragraph, index) => (
-                    <p
-                      key={`${name}-about-${index}`}
-                      className={index === 0 ? "hidden max-w-5xl text-[15px] leading-8 text-[#3d3025] sm:block sm:text-base" : "hidden max-w-5xl text-[15px] leading-8 text-[#3d3025] md:block md:text-base"}
-                    >
-                      {paragraph}
+                <div className="grid gap-5 lg:grid-cols-[minmax(0,0.84fr),minmax(0,1.16fr)] lg:gap-8">
+                  <div className="rounded-[20px] border border-[rgba(159,122,70,0.12)] bg-[linear-gradient(180deg,rgba(255,255,255,0.72),rgba(252,246,238,0.92))] p-4 sm:rounded-[22px] sm:p-5">
+                    <p className="text-[11px] uppercase tracking-[0.22em] text-[#9f7a46]">品牌摘要</p>
+                    <p className="mt-3 text-[15px] leading-7 text-[#3d3025] sm:text-base sm:leading-8">
+                      {aboutSummary}
                     </p>
-                  ))}
-                  <a
-                    href="#contact-panel"
-                    className="inline-flex items-center gap-2 text-sm font-medium text-[#9f7a46] transition hover:text-[#876234]"
-                  >
-                    了解更多
-                    <span aria-hidden="true">→</span>
-                  </a>
+                  </div>
+
+                  <div className="space-y-4 sm:space-y-5">
+                    {aboutParagraphs.slice(0, 2).map((paragraph, index) => (
+                      <p
+                        key={`${name}-about-${index}`}
+                        className="text-[15px] leading-7 text-[#3d3025] sm:text-base sm:leading-8"
+                      >
+                        {paragraph}
+                      </p>
+                    ))}
+                    <a
+                      href="#contact-panel"
+                      className="inline-flex items-center gap-2 text-sm font-medium text-[#9f7a46] transition hover:text-[#876234]"
+                    >
+                      了解更多
+                      <span aria-hidden="true">→</span>
+                    </a>
+                  </div>
                 </div>
               </div>
             </div>
