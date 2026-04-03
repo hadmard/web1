@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { ChangeEvent, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
@@ -281,7 +282,13 @@ export default function AdminEnterpriseDetailPage() {
                 {uploadingLogo ? "上传中..." : `上传 Logo（最大 ${MAX_UPLOAD_IMAGE_MB}MB）`}
               </label>
               {form.logoUrl ? (
-                <img src={resolveUploadedImageUrl(form.logoUrl)} alt="Logo 预览" className="h-14 w-14 rounded-[14px] border border-border bg-white object-contain p-2" />
+                <Image
+                  src={resolveUploadedImageUrl(form.logoUrl)}
+                  alt="Logo 预览"
+                  width={56}
+                  height={56}
+                  className="h-14 w-14 rounded-[14px] border border-border bg-white object-contain p-2"
+                />
               ) : null}
             </div>
           </Field>
