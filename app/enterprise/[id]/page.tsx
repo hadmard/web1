@@ -709,16 +709,14 @@ function NewsItemCard({
   return (
     <Link
       href={item.href}
-      className="group flex h-full min-h-[232px] flex-col rounded-[24px] border border-[rgba(140,111,78,0.12)] bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,243,236,0.92))] px-5 py-4.5 shadow-[0_14px_32px_rgba(35,26,18,0.05)] transition hover:-translate-y-0.5"
+      className="group flex h-full min-h-[196px] flex-col rounded-[24px] border border-[rgba(140,111,78,0.12)] bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,243,236,0.92))] px-4 py-4 shadow-[0_14px_32px_rgba(35,26,18,0.05)] transition hover:-translate-y-0.5 sm:min-h-[208px] sm:px-5 sm:py-4.5"
     >
-      <div className="flex items-center justify-between gap-3">
-        <span className="rounded-full border border-[rgba(181,157,121,0.2)] bg-[rgba(255,249,238,0.92)] px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-[#a47b45]">
-          {item.badge}
-        </span>
-        <span className="text-xs text-[#8c7b69]">{item.dateLabel}</span>
+      <div className="flex items-center justify-end">
+        <span className="text-[11px] text-[#8c7b69] sm:text-xs">{item.dateLabel}</span>
       </div>
       <p
-        className="mt-3.5 min-h-[72px] text-[1.75rem] font-medium leading-[1.45] text-[#241c15]"
+        title={item.title}
+        className="mt-2.5 min-h-[52px] text-[1.5rem] font-medium leading-[1.4] text-[#241c15] sm:mt-3 sm:min-h-[60px] sm:text-[1.7rem]"
         style={{
           display: "-webkit-box",
           WebkitLineClamp: 2,
@@ -728,18 +726,20 @@ function NewsItemCard({
       >
         {item.title}
       </p>
-      <p
-        className="mt-2.5 text-sm leading-7 text-[#5c4d40]"
-        style={{
-          display: "-webkit-box",
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: "vertical",
-          overflow: "hidden",
-        }}
-      >
-        {item.excerpt}
-      </p>
-      <div className="mt-auto pt-4 text-sm font-medium text-[#a47b45] transition group-hover:translate-x-0.5">继续阅读</div>
+      <div className="mt-auto flex items-end justify-between gap-3 pt-3 sm:pt-4">
+        <p
+          className="min-w-0 flex-1 text-[13px] leading-6 text-[#5c4d40] sm:text-sm sm:leading-7"
+          style={{
+            display: "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical",
+            overflow: "hidden",
+          }}
+        >
+          {item.excerpt}
+        </p>
+        <div className="shrink-0 text-sm font-medium text-[#a47b45] transition group-hover:translate-x-0.5">→</div>
+      </div>
     </Link>
   );
 }
