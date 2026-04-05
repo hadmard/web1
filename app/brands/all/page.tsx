@@ -79,31 +79,40 @@ function getMemberLabel(memberType: string) {
   return memberType === "enterprise_advanced" ? "高级企业" : "企业会员";
 }
 
-function getBrandTags(item: BrandCardItem) {
-  return item.highlights.filter((tag) => tag.length <= 8).slice(0, 2).map((tag) => truncateText(tag, 8));
-}
-
 function BrandCard({ item, featured = false }: { item: BrandCardItem; featured?: boolean }) {
   const href = `/brands/${item.slug}`;
-  const updated = item.updatedAt.toLocaleDateString("zh-CN");
-  const logoSize = featured ? 72 : 58;
-  const headline = truncateText(item.headline, featured ? 22 : 18);
-  const summary = truncateText(item.summary, featured ? 66 : 42);
-  const tags = getBrandTags(item);
+  const logoSize = 72;
+  const summary = truncateText(item.summary, featured ? 110 : 78);
   const memberLabel = getMemberLabel(item.memberType);
-  const serviceLine = truncateText(item.serviceLine, featured ? 18 : 14);
-  const locationLabel = truncateText(item.locationLabel, featured ? 18 : 14);
   const contactLabel = item.contactLabel === "查看详情" ? "品牌详情" : item.contactLabel;
+
+  if (!featured) {
+    return (
+      <Link
+        href={href}
+        className="group flex h-full min-h-[168px] flex-col items-center justify-center rounded-[24px] border border-[rgba(181,157,121,0.14)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(250,247,242,0.95))] p-5 text-center shadow-[0_12px_28px_rgba(15,23,42,0.04)] transition hover:-translate-y-1 hover:border-[rgba(181,157,121,0.26)] hover:shadow-[0_18px_38px_rgba(15,23,42,0.07)]"
+      >
+        <div className="flex h-[84px] items-center justify-center">
+          <BrandLogo name={item.enterpriseName} logoUrl={item.logoUrl} size={logoSize} />
+        </div>
+        <h3 className="mt-4 line-clamp-2 font-serif text-[1.05rem] leading-6 text-primary transition group-hover:text-accent">
+          {item.enterpriseName}
+        </h3>
+      </Link>
+    );
+  }
 
   return (
     <article
       className={[
         "group h-full rounded-[26px] border border-[rgba(181,157,121,0.14)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,248,243,0.96))] shadow-[0_14px_32px_rgba(15,23,42,0.045)] transition hover:-translate-y-1 hover:border-[rgba(181,157,121,0.26)] hover:shadow-[0_20px_44px_rgba(15,23,42,0.07)]",
-        featured ? "p-5" : "p-4.5",
+        featured
+          ? "relative overflow-hidden p-6 before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-[linear-gradient(90deg,transparent,rgba(181,157,121,0.65),transparent)]"
+          : "p-5",
       ].join(" ")}
     >
       <div className="flex h-full flex-col">
-        <div className="flex items-start gap-3">
+        <div className={featured ? "flex items-start gap-4" : "flex items-start gap-3"}>
           <Link href={href} className="shrink-0">
             <BrandLogo name={item.enterpriseName} logoUrl={item.logoUrl} size={logoSize} />
           </Link>
@@ -118,51 +127,28 @@ function BrandCard({ item, featured = false }: { item: BrandCardItem; featured?:
                 {memberLabel}
               </span>
             </div>
-            <h2 className={featured ? "mt-3 font-serif text-[1.65rem] leading-tight text-primary" : "mt-2.5 font-serif text-[1.22rem] leading-tight text-primary"}>
+            <h2 className={featured ? "mt-3 font-serif text-[1.85rem] leading-[1.08] text-primary" : "mt-2.5 font-serif text-[1.22rem] leading-tight text-primary"}>
               <Link href={href} className="transition hover:text-accent">
                 {item.enterpriseName}
               </Link>
             </h2>
-            <p className="mt-2 line-clamp-1 text-sm text-primary/84">{headline}</p>
+            {featured ? <div className="mt-3 h-px w-16 bg-[linear-gradient(90deg,rgba(181,157,121,0.55),rgba(181,157,121,0))]" /> : null}
           </div>
         </div>
 
-        <div className="mt-4 rounded-[20px] bg-white/68 px-4 py-3">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.18em] text-[#9d7e4d]">地区</p>
-              <p className="mt-1 line-clamp-1 text-sm text-primary">{locationLabel}</p>
-            </div>
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.18em] text-[#9d7e4d]">业务</p>
-              <p className="mt-1 line-clamp-1 text-sm text-primary">{serviceLine}</p>
-            </div>
-          </div>
-        </div>
-
-        <p className={featured ? "mt-4 line-clamp-2 text-sm leading-7 text-muted" : "mt-4 line-clamp-2 text-sm leading-6 text-muted"}>
+        <p className={featured ? "mt-6 line-clamp-4 text-[15px] leading-8 text-muted" : "mt-4 line-clamp-3 text-sm leading-6 text-muted"}>
           {summary}
         </p>
 
-        <div className="mt-4 flex flex-wrap gap-2 text-xs text-muted">
-          {tags.length > 0
-            ? tags.map((tag) => (
-                <span key={tag} className="rounded-full border border-border bg-white/82 px-2.5 py-1">
-                  {tag}
-                </span>
-              ))
-            : (
-                <span className="rounded-full border border-border bg-white/82 px-2.5 py-1">{item.region}</span>
-              )}
-        </div>
-
-        <div className="mt-auto flex items-center justify-between gap-3 border-t border-[rgba(181,157,121,0.1)] pt-4 text-sm">
-          <div className="min-w-0 text-xs text-muted">
-            <span className="truncate">更新于 {updated}</span>
-          </div>
+        <div className={featured ? "mt-auto flex items-center justify-end border-t border-[rgba(181,157,121,0.1)] pt-6 text-sm" : "mt-auto flex items-center justify-end border-t border-[rgba(181,157,121,0.1)] pt-5 text-sm"}>
           <Link
             href={href}
-            className="shrink-0 rounded-full border border-[rgba(181,157,121,0.22)] bg-white px-4 py-2 text-sm text-primary transition group-hover:border-[rgba(181,157,121,0.34)] group-hover:text-accent"
+            className={[
+              "shrink-0 rounded-full border border-[rgba(181,157,121,0.22)] text-sm text-primary transition group-hover:border-[rgba(181,157,121,0.34)] group-hover:text-accent",
+              featured
+                ? "bg-[linear-gradient(180deg,#fffdf8,#f8f1e6)] px-5 py-2.5 shadow-[0_10px_24px_rgba(181,157,121,0.12)]"
+                : "bg-white px-4 py-2",
+            ].join(" ")}
           >
             {contactLabel}
           </Link>
@@ -270,7 +256,7 @@ export default async function BrandsAllPage({ searchParams }: Props) {
             </div>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-3">
+          <div className="grid gap-5 lg:grid-cols-3">
             {recommended.map((item) => (
               <BrandCard key={`recommended-${item.id}`} item={item} featured />
             ))}
@@ -294,7 +280,7 @@ export default async function BrandsAllPage({ searchParams }: Props) {
             暂无符合条件的品牌数据。
           </article>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-4">
             {items.map((item) => (
               <BrandCard key={item.id} item={item} />
             ))}
