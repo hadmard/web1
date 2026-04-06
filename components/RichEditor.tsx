@@ -503,6 +503,7 @@ export function RichEditor({
   const [lockRatio, setLockRatio] = useState(true);
   const [ratio, setRatio] = useState(1);
   const [selectedImagePos, setSelectedImagePos] = useState<number | null>(null);
+  const selectedImagePosRef = useRef<number | null>(null);
 
   const DEFAULT_IMAGE_WIDTH = 600;
 
@@ -575,6 +576,21 @@ export function RichEditor({
         return false;
       },
       handleDOMEvents: {
+        mousedown: (view, event) => {
+          const target = event.target as HTMLElement | null;
+          const imageEl = target?.closest("img");
+          if (!imageEl) return false;
+          try {
+            const pos = view.posAtDOM(imageEl, 0);
+            const safePos = Math.min(Math.max(pos, 0), view.state.doc.content.size);
+            const tr = view.state.tr.setSelection(NodeSelection.create(view.state.doc, safePos));
+            view.dispatch(tr);
+            view.focus();
+          } catch {
+            return false;
+          }
+          return false;
+        },
         contextmenu: (view, event) => {
           const target = event.target as HTMLElement | null;
           const imageEl = target?.closest("img");
@@ -639,12 +655,14 @@ export function RichEditor({
       const selection = editor.state.selection;
       const currentNode = selection instanceof NodeSelection ? selection.node : null;
       if (currentNode?.type.name !== "image") {
+        selectedImagePosRef.current = null;
         setSelectedImagePos(null);
         return;
       }
       const attrs = currentNode.attrs as ImageAttrs;
       const w = Number(attrs.width || 0);
       const h = Number(attrs.height || 0);
+      selectedImagePosRef.current = selection.from;
       setSelectedImagePos(selection.from);
       setImgWidth(w > 0 ? String(Math.round(w)) : "");
       setImgHeight(h > 0 ? String(Math.round(h)) : "");
@@ -653,14 +671,16 @@ export function RichEditor({
     editor.on("selectionUpdate", syncImageState);
     editor.on("update", syncImageState);
     return () => {
+      selectedImagePosRef.current = null;
       editor.off("selectionUpdate", syncImageState);
       editor.off("update", syncImageState);
     };
   }, [editor]);
 
-  const hasSelectedImage = !!editor && selectedImagePos !== null;
+  const resolvedSelectedImagePos = selectedImagePosRef.current ?? selectedImagePos;
+  const hasSelectedImage = !!editor && resolvedSelectedImagePos !== null;
   const selectedImageAttrs = hasSelectedImage
-    ? ((editor?.state.doc.nodeAt(selectedImagePos ?? -1)?.attrs as ImageAttrs | undefined) ?? undefined)
+    ? ((editor?.state.doc.nodeAt(resolvedSelectedImagePos ?? -1)?.attrs as ImageAttrs | undefined) ?? undefined)
     : undefined;
   const isImageActive = hasSelectedImage;
   const imageAlign = (selectedImageAttrs?.align ?? "center") as NonNullable<ImageAttrs["align"]>;
@@ -750,15 +770,20 @@ export function RichEditor({
 
   const updateSelectedImage = (attrs: Partial<ImageAttrs>) => {
     if (!editor) return false;
-    const targetPos = selectedImagePos;
+    const targetPos = selectedImagePosRef.current ?? selectedImagePos;
     if (targetPos === null) return false;
 
-    return editor
+    const success = editor
       .chain()
       .focus()
       .setNodeSelection(targetPos)
       .updateAttributes("image", attrs)
       .run();
+    if (success) {
+      selectedImagePosRef.current = targetPos;
+      setSelectedImagePos(targetPos);
+    }
+    return success;
   };
 
   const applyImageSize = () => {
@@ -906,6 +931,11 @@ export function RichEditor({
               已选中图片
             </span>
             <span className="text-[11px] tracking-[0.03em] text-[#938160]">可调整尺寸与版式</span>
+            {selectedImageAttrs?.href ? (
+              <span className="rounded-full border border-[rgba(180,154,107,0.28)] bg-[rgba(250,245,237,0.92)] px-2.5 py-1 text-[11px] text-[#7a6643]">
+                已设置链接
+              </span>
+            ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-2.5 text-xs">
             <span className="text-[#8d7a5a]">尺寸</span>
@@ -977,6 +1007,18 @@ export function RichEditor({
               }`}
             />
           </div>
+          <ToolButton
+            label={selectedImageAttrs?.href ? "编辑图片链接" : "设置图片链接"}
+            onClick={setOrEditLink}
+            className="rounded-full border-[rgba(180,154,107,0.28)] bg-[linear-gradient(180deg,rgba(255,255,255,0.9),rgba(248,242,233,0.94))] px-3.5 text-[#5f4e34] shadow-[0_10px_24px_rgba(15,23,42,0.04),inset_0_1px_0_rgba(255,255,255,0.88)] hover:border-[rgba(180,154,107,0.42)] hover:bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(250,245,237,0.98))]"
+          />
+          {selectedImageAttrs?.href ? (
+            <ToolButton
+              label="取消图片链接"
+              onClick={() => void updateSelectedImage({ href: null })}
+              className="rounded-full border-[rgba(194,182,154,0.24)] bg-[rgba(255,255,255,0.72)] px-3.5 text-[#6c5a3f] shadow-[0_10px_24px_rgba(15,23,42,0.04),inset_0_1px_0_rgba(255,255,255,0.86)] hover:bg-[rgba(244,236,221,0.9)]"
+            />
+          ) : null}
           </div>
         </div>
       )}
@@ -1105,6 +1147,27 @@ export function RichEditor({
             </>
           ) : (
             <>
+              <button
+                type="button"
+                className="w-full text-left px-2 py-1.5 text-xs rounded hover:bg-surface"
+                onClick={() => {
+                  setOrEditLink();
+                  setMenu((m) => ({ ...m, open: false }));
+                }}
+              >
+                图片链接
+              </button>
+              <button
+                type="button"
+                className="w-full text-left px-2 py-1.5 text-xs rounded hover:bg-surface text-muted"
+                onClick={() => {
+                  updateSelectedImage({ href: null });
+                  setMenu((m) => ({ ...m, open: false }));
+                }}
+              >
+                取消图片链接
+              </button>
+              <div className="my-1 h-px bg-border" />
               <button
                 type="button"
                 className="w-full text-left px-2 py-1.5 text-xs rounded hover:bg-surface"
