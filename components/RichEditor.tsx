@@ -24,6 +24,7 @@ type ImageAttrs = {
   width?: number | null;
   height?: number | null;
   align?: "left" | "center" | "right";
+  href?: string | null;
 };
 
 type MenuMode = "text" | "image";
@@ -259,7 +260,7 @@ function sanitizePastedHtml(rawHtml: string, imageMap?: Map<string, string>) {
         anchor.rel = "noopener noreferrer nofollow";
       }
       cleanChildren(node, anchor);
-      return anchor.textContent?.trim() ? anchor : null;
+      return anchor.childNodes.length > 0 ? anchor : null;
     }
 
     if (["h1", "h2", "h3", "blockquote", "ul", "ol", "li"].includes(tag)) {
@@ -410,11 +411,20 @@ const RichImage = Image.extend({
       width: { default: null },
       height: { default: null },
       align: { default: "center" },
+      href: {
+        default: null,
+        parseHTML: (element) => {
+          const parent = element.parentElement;
+          if (parent?.tagName.toLowerCase() !== "a") return null;
+          return parent.getAttribute("href") || null;
+        },
+      },
     };
   },
   renderHTML({ HTMLAttributes }) {
     const attrs = HTMLAttributes as ImageAttrs & { style?: string };
     const styles: string[] = ["display:block"];
+    const href = typeof attrs.href === "string" && attrs.href.trim() ? attrs.href.trim() : "";
 
     if (attrs.width) styles.push(`width:${attrs.width}px`, "max-width:100%");
     if (attrs.height) styles.push(`height:${attrs.height}px`);
@@ -425,7 +435,16 @@ const RichImage = Image.extend({
     if (attrs.align === "right") styles.push("margin:8px 0 8px auto");
     if (!attrs.align || attrs.align === "center") styles.push("margin:8px auto");
 
-    return ["img", { ...HTMLAttributes, style: styles.join(";") }];
+    const { href: _href, ...imgAttrs } = HTMLAttributes;
+    const imageNode = ["img", { ...imgAttrs, style: styles.join(";") }];
+
+    if (!href) return imageNode;
+
+    return [
+      "a",
+      { href, target: "_blank", rel: "noopener noreferrer nofollow" },
+      imageNode,
+    ];
   },
 });
 
@@ -780,15 +799,25 @@ export function RichEditor({
   };
 
   const setOrEditLink = () => {
-    const prev = editor.getAttributes("link").href as string | undefined;
+    const prev = editor.isActive("image")
+      ? ((editor.getAttributes("image") as ImageAttrs).href ?? undefined)
+      : (editor.getAttributes("link").href as string | undefined);
     const url = window.prompt("请输入链接（http(s)://）", prev || "https://");
     if (url === null) return;
     const v = url.trim();
     if (!v) {
+      if (editor.isActive("image")) {
+        updateSelectedImage({ href: null });
+        return;
+      }
       editor.chain().focus().unsetLink().run();
       return;
     }
     const normalized = /^https?:\/\//i.test(v) ? v : `https://${v}`;
+    if (editor.isActive("image")) {
+      updateSelectedImage({ href: normalized });
+      return;
+    }
     editor.chain().focus().setLink({ href: normalized, target: "_blank", rel: "noopener noreferrer nofollow" }).run();
   };
 
@@ -824,7 +853,16 @@ export function RichEditor({
         <ToolButton label="斜体" active={editor.isActive("italic")} onClick={() => editor.chain().focus().toggleItalic().run()} />
         <ToolButton label="下划线" active={editor.isActive("underline")} onClick={() => editor.chain().focus().toggleUnderline().run()} />
         <ToolButton label="链接" active={editor.isActive("link")} onClick={setOrEditLink} />
-        <ToolButton label="取消链接" onClick={() => editor.chain().focus().unsetLink().run()} />
+        <ToolButton
+          label="取消链接"
+          onClick={() => {
+            if (editor.isActive("image")) {
+              updateSelectedImage({ href: null });
+              return;
+            }
+            editor.chain().focus().unsetLink().run();
+          }}
+        />
         <ToolButton label="清除格式" onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()} />
 
         <ToolButton label="左对齐" active={editor.isActive({ textAlign: "left" })} onClick={() => editor.chain().focus().setTextAlign("left").run()} />
@@ -1037,7 +1075,11 @@ export function RichEditor({
                 type="button"
                 className="w-full text-left px-2 py-1.5 text-xs rounded hover:bg-surface text-muted"
                 onClick={() => {
-                  editor.chain().focus().unsetLink().run();
+                  if (editor.isActive("image")) {
+                    updateSelectedImage({ href: null });
+                  } else {
+                    editor.chain().focus().unsetLink().run();
+                  }
                   setMenu((m) => ({ ...m, open: false }));
                 }}
               >

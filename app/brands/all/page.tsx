@@ -29,7 +29,17 @@ export async function generateMetadata(): Promise<Metadata> {
   });
 }
 
-function BrandLogo({ name, logoUrl, size = 72 }: { name: string; logoUrl: string | null; size?: number }) {
+function BrandLogo({
+  name,
+  logoUrl,
+  size = 72,
+  className = "",
+}: {
+  name: string;
+  logoUrl: string | null;
+  size?: number;
+  className?: string;
+}) {
   if (logoUrl) {
     return (
       <Image
@@ -37,14 +47,14 @@ function BrandLogo({ name, logoUrl, size = 72 }: { name: string; logoUrl: string
         alt={`${name} logo`}
         width={size}
         height={size}
-        className="rounded-[22px] border border-[rgba(174,149,111,0.18)] bg-white object-contain p-3 shadow-[0_12px_28px_rgba(15,23,42,0.05)]"
+        className={`rounded-[22px] border border-[rgba(174,149,111,0.18)] bg-white object-contain p-3 shadow-[0_12px_28px_rgba(15,23,42,0.05)] ${className}`.trim()}
       />
     );
   }
 
   return (
     <div
-      className="flex items-center justify-center rounded-[22px] border border-dashed border-[rgba(174,149,111,0.28)] bg-white text-[11px] tracking-[0.18em] text-[#8d7a5a]"
+      className={`flex items-center justify-center rounded-[22px] border border-dashed border-[rgba(174,149,111,0.28)] bg-white text-[11px] tracking-[0.18em] text-[#8d7a5a] ${className}`.trim()}
       style={{ width: size, height: size }}
     >
       LOGO
@@ -81,7 +91,7 @@ function getMemberLabel(memberType: string) {
 
 function BrandCard({ item, featured = false }: { item: BrandCardItem; featured?: boolean }) {
   const href = `/brands/${item.slug}`;
-  const logoSize = 72;
+  const logoSize = featured ? 88 : 72;
   const summary = truncateText(item.summary, featured ? 110 : 78);
   const memberLabel = getMemberLabel(item.memberType);
   const contactLabel = item.contactLabel === "查看详情" ? "品牌详情" : item.contactLabel;
@@ -112,11 +122,16 @@ function BrandCard({ item, featured = false }: { item: BrandCardItem; featured?:
       ].join(" ")}
     >
       <div className="flex h-full flex-col">
-        <div className={featured ? "flex items-start gap-4" : "flex items-start gap-3"}>
-          <Link href={href} className="shrink-0">
-            <BrandLogo name={item.enterpriseName} logoUrl={item.logoUrl} size={logoSize} />
+        <div className={featured ? "grid gap-5 sm:grid-cols-[112px,minmax(0,1fr)] sm:items-stretch" : "flex items-start gap-3"}>
+          <Link href={href} className={featured ? "flex sm:h-full sm:min-h-[112px]" : "shrink-0"}>
+            <BrandLogo
+              name={item.enterpriseName}
+              logoUrl={item.logoUrl}
+              size={logoSize}
+              className={featured ? "h-full w-full rounded-[28px] p-5 sm:min-h-[112px]" : ""}
+            />
           </Link>
-          <div className="min-w-0 flex-1">
+          <div className={featured ? "flex min-w-0 flex-1 flex-col justify-center sm:min-h-[112px]" : "min-w-0 flex-1"}>
             <div className="flex flex-wrap items-center gap-2 text-[11px]">
               {item.isRecommend ? (
                 <span className="rounded-full border border-[rgba(181,157,121,0.22)] bg-[rgba(245,236,220,0.82)] px-2.5 py-1 text-accent">
