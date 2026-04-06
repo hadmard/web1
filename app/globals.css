@@ -956,12 +956,28 @@ html[data-motion-tier="low"] .mouse-parallax {
   line-height: 0;
   text-decoration: none;
   cursor: pointer;
+  border-radius: 10px;
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    outline-color 180ms ease,
+    background-color 180ms ease;
+  outline: 1px solid transparent;
 }
 .rich-editor-content a:has(> img) img {
   margin: 0;
 }
 .rich-editor-content a:has(> img):hover img {
-  filter: brightness(0.98);
+  filter: brightness(0.985);
+}
+.rich-editor-content a:has(> img):hover {
+  transform: translateY(-2px);
+  outline-color: rgba(138, 115, 77, 0.28);
+  box-shadow: 0 14px 30px -20px rgba(15, 23, 42, 0.28);
+}
+.rich-editor-content a:has(> img):focus-visible {
+  outline: 2px solid rgba(138, 115, 77, 0.42);
+  outline-offset: 4px;
 }
 [data-inline-heading="h1"] {
   font-size: 2rem;
