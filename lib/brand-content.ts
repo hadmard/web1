@@ -292,6 +292,7 @@ export function sanitizeRichText(input: string | null | undefined) {
   });
   html = html
     .replace(/<p>\s*(<img\b[^>]*>)\s*<\/p>/gi, "$1")
+    .replace(/<p>\s*(<a\b[^>]*>\s*<img\b[^>]*>\s*<\/a>)\s*<\/p>/gi, "$1")
     .replace(/(?:<br>\s*){3,}/gi, "<br><br>")
     .replace(/\s+(<\/(?:p|li|blockquote|h2|h3|ul|ol)>)/gi, "$1")
     .replace(/(<(?:p|li|blockquote|h2|h3)>)[\s\n]+/gi, "$1");

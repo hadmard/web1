@@ -948,6 +948,21 @@ html[data-motion-tier="low"] .mouse-parallax {
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+.rich-editor-content a:has(> img) {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  margin: 1rem auto;
+  line-height: 0;
+  text-decoration: none;
+  cursor: pointer;
+}
+.rich-editor-content a:has(> img) img {
+  margin: 0;
+}
+.rich-editor-content a:has(> img):hover img {
+  filter: brightness(0.98);
+}
 [data-inline-heading="h1"] {
   font-size: 2rem;
   line-height: 1.25;
