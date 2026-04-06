@@ -636,14 +636,16 @@ export function RichEditor({
   useEffect(() => {
     if (!editor) return;
     const syncImageState = () => {
-      if (!editor.isActive("image")) {
+      const selection = editor.state.selection;
+      const currentNode = selection instanceof NodeSelection ? selection.node : null;
+      if (currentNode?.type.name !== "image") {
         setSelectedImagePos(null);
         return;
       }
-      const attrs = editor.getAttributes("image") as ImageAttrs;
+      const attrs = currentNode.attrs as ImageAttrs;
       const w = Number(attrs.width || 0);
       const h = Number(attrs.height || 0);
-      setSelectedImagePos(editor.state.selection.from);
+      setSelectedImagePos(selection.from);
       setImgWidth(w > 0 ? String(Math.round(w)) : "");
       setImgHeight(h > 0 ? String(Math.round(h)) : "");
       if (w > 0 && h > 0) setRatio(w / h);
@@ -656,8 +658,12 @@ export function RichEditor({
     };
   }, [editor]);
 
-  const isImageActive = !!editor?.isActive("image");
-  const imageAlign = ((editor?.getAttributes("image") as ImageAttrs | undefined)?.align ?? "center") as NonNullable<ImageAttrs["align"]>;
+  const hasSelectedImage = !!editor && selectedImagePos !== null;
+  const selectedImageAttrs = hasSelectedImage
+    ? ((editor?.state.doc.nodeAt(selectedImagePos ?? -1)?.attrs as ImageAttrs | undefined) ?? undefined)
+    : undefined;
+  const isImageActive = hasSelectedImage;
+  const imageAlign = (selectedImageAttrs?.align ?? "center") as NonNullable<ImageAttrs["align"]>;
 
   const insertImage = useMemo(
     () => async (file: File) => {
@@ -744,7 +750,7 @@ export function RichEditor({
 
   const updateSelectedImage = (attrs: Partial<ImageAttrs>) => {
     if (!editor) return false;
-    const targetPos = selectedImagePos ?? (editor.isActive("image") ? editor.state.selection.from : null);
+    const targetPos = selectedImagePos;
     if (targetPos === null) return false;
 
     return editor
@@ -799,14 +805,14 @@ export function RichEditor({
   };
 
   const setOrEditLink = () => {
-    const prev = editor.isActive("image")
-      ? ((editor.getAttributes("image") as ImageAttrs).href ?? undefined)
+    const prev = hasSelectedImage
+      ? (selectedImageAttrs?.href ?? undefined)
       : (editor.getAttributes("link").href as string | undefined);
     const url = window.prompt("请输入链接（http(s)://）", prev || "https://");
     if (url === null) return;
     const v = url.trim();
     if (!v) {
-      if (editor.isActive("image")) {
+      if (hasSelectedImage) {
         updateSelectedImage({ href: null });
         return;
       }
@@ -814,7 +820,7 @@ export function RichEditor({
       return;
     }
     const normalized = /^https?:\/\//i.test(v) ? v : `https://${v}`;
-    if (editor.isActive("image")) {
+    if (hasSelectedImage) {
       updateSelectedImage({ href: normalized });
       return;
     }
@@ -852,11 +858,11 @@ export function RichEditor({
         <ToolButton label="加粗" active={editor.isActive("bold")} onClick={toggleBoldMark} />
         <ToolButton label="斜体" active={editor.isActive("italic")} onClick={() => editor.chain().focus().toggleItalic().run()} />
         <ToolButton label="下划线" active={editor.isActive("underline")} onClick={() => editor.chain().focus().toggleUnderline().run()} />
-        <ToolButton label="链接" active={editor.isActive("link")} onClick={setOrEditLink} />
+        <ToolButton label="链接" active={editor.isActive("link") || !!selectedImageAttrs?.href} onClick={setOrEditLink} />
         <ToolButton
           label="取消链接"
           onClick={() => {
-            if (editor.isActive("image")) {
+            if (hasSelectedImage) {
               updateSelectedImage({ href: null });
               return;
             }
@@ -1075,7 +1081,7 @@ export function RichEditor({
                 type="button"
                 className="w-full text-left px-2 py-1.5 text-xs rounded hover:bg-surface text-muted"
                 onClick={() => {
-                  if (editor.isActive("image")) {
+                  if (hasSelectedImage) {
                     updateSelectedImage({ href: null });
                   } else {
                     editor.chain().focus().unsetLink().run();
