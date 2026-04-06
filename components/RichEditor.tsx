@@ -385,6 +385,18 @@ function createSelectionAnchor(editor: NonNullable<ReturnType<typeof useEditor>>
   return { from, to };
 }
 
+function resolveImageNodeSelection(view: any, eventTarget: EventTarget | null) {
+  const target = eventTarget as HTMLElement | null;
+  const imageEl = target?.closest("img");
+  if (!imageEl) return null;
+  try {
+    const pos = view.posAtDOM(imageEl, 0);
+    return Math.min(Math.max(pos, 0), view.state.doc.content.size);
+  } catch {
+    return null;
+  }
+}
+
 const SpecialText = Mark.create({
   name: "specialText",
   addAttributes() {
@@ -436,7 +448,7 @@ const RichImage = Image.extend({
     if (!attrs.align || attrs.align === "center") styles.push("margin:8px auto");
 
     const { href: _href, ...imgAttrs } = HTMLAttributes;
-    const imageNode = ["img", { ...imgAttrs, style: styles.join(";") }];
+    const imageNode = ["img", { ...imgAttrs, style: styles.join(";") }] as const;
 
     if (!href) return imageNode;
 
@@ -444,7 +456,7 @@ const RichImage = Image.extend({
       "a",
       { href, target: "_blank", rel: "noopener noreferrer nofollow" },
       imageNode,
-    ];
+    ] as const;
   },
 });
 
@@ -577,38 +589,26 @@ export function RichEditor({
       },
       handleDOMEvents: {
         mousedown: (view, event) => {
-          const target = event.target as HTMLElement | null;
-          const imageEl = target?.closest("img");
-          if (!imageEl) return false;
-          try {
-            const pos = view.posAtDOM(imageEl, 0);
-            const safePos = Math.min(Math.max(pos, 0), view.state.doc.content.size);
-            const tr = view.state.tr.setSelection(NodeSelection.create(view.state.doc, safePos));
-            view.dispatch(tr);
-            view.focus();
-          } catch {
-            return false;
-          }
-          return false;
+          const safePos = resolveImageNodeSelection(view, event.target);
+          if (safePos === null) return false;
+          event.preventDefault();
+          const tr = view.state.tr.setSelection(NodeSelection.create(view.state.doc, safePos));
+          view.dispatch(tr);
+          view.focus();
+          return true;
         },
         contextmenu: (view, event) => {
-          const target = event.target as HTMLElement | null;
-          const imageEl = target?.closest("img");
+          const safePos = resolveImageNodeSelection(view, event.target);
+          const imageEl = (event.target as HTMLElement | null)?.closest("img");
           const menuWidth = 190;
           const menuHeight = imageEl ? 250 : 340;
           const x = Math.min(Math.max(8, event.clientX), window.innerWidth - menuWidth - 8);
           const y = Math.min(Math.max(8, event.clientY), window.innerHeight - menuHeight - 8);
 
-          if (imageEl) {
-            try {
-              const pos = view.posAtDOM(imageEl, 0);
-              const safePos = Math.min(Math.max(pos, 0), view.state.doc.content.size);
-              const tr = view.state.tr.setSelection(NodeSelection.create(view.state.doc, safePos));
-              view.dispatch(tr);
-              view.focus();
-            } catch {
-              // ignore selection sync errors
-            }
+          if (safePos !== null) {
+            const tr = view.state.tr.setSelection(NodeSelection.create(view.state.doc, safePos));
+            view.dispatch(tr);
+            view.focus();
             event.preventDefault();
             setMenu({ open: true, x, y, mode: "image" });
             return true;
@@ -773,12 +773,17 @@ export function RichEditor({
     const targetPos = selectedImagePosRef.current ?? selectedImagePos;
     if (targetPos === null) return false;
 
-    const success = editor
-      .chain()
-      .focus()
-      .setNodeSelection(targetPos)
-      .updateAttributes("image", attrs)
-      .run();
+    const currentNode = editor.state.doc.nodeAt(targetPos);
+    if (!currentNode || currentNode.type.name !== "image") return false;
+
+    const tr = editor.state.tr.setNodeMarkup(targetPos, undefined, {
+      ...currentNode.attrs,
+      ...attrs,
+    });
+    tr.setSelection(NodeSelection.create(tr.doc, targetPos));
+    editor.view.dispatch(tr);
+    editor.view.focus();
+    const success = true;
     if (success) {
       selectedImagePosRef.current = targetPos;
       setSelectedImagePos(targetPos);
@@ -1172,7 +1177,7 @@ export function RichEditor({
                 type="button"
                 className="w-full text-left px-2 py-1.5 text-xs rounded hover:bg-surface"
                 onClick={() => {
-                  editor.chain().focus().updateAttributes("image", { align: "left" }).run();
+                  updateSelectedImage({ align: "left" });
                   setMenu((m) => ({ ...m, open: false }));
                 }}
               >
@@ -1182,7 +1187,7 @@ export function RichEditor({
                 type="button"
                 className="w-full text-left px-2 py-1.5 text-xs rounded hover:bg-surface"
                 onClick={() => {
-                  editor.chain().focus().updateAttributes("image", { align: "center" }).run();
+                  updateSelectedImage({ align: "center" });
                   setMenu((m) => ({ ...m, open: false }));
                 }}
               >
@@ -1192,7 +1197,7 @@ export function RichEditor({
                 type="button"
                 className="w-full text-left px-2 py-1.5 text-xs rounded hover:bg-surface"
                 onClick={() => {
-                  editor.chain().focus().updateAttributes("image", { align: "right" }).run();
+                  updateSelectedImage({ align: "right" });
                   setMenu((m) => ({ ...m, open: false }));
                 }}
               >
