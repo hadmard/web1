@@ -70,6 +70,7 @@ function buildPreviewHref(
   const encoded = encodeURIComponent(segment);
   const tab = resolveTabKeyFromHref(categoryHref, subHref);
   if (tab === "brands") return `/brands/${encoded}`;
+  if (tab === "buying") return `/brands/buying/${encoded}`;
   if (tab === "terms") return `/dictionary/${encoded}`;
   if (tab === "standards") return `/standards/${encoded}`;
   if (tab === "awards") return `/awards/${encoded}`;
