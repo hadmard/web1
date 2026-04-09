@@ -312,6 +312,19 @@ model CategoryFaq {
   @@map("category_faqs")
 }
 
+model BuyingFaq {
+  id        String   @id @default(cuid())
+  question  String
+  answer    String
+  sort      Int      @default(0)
+  visible   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([visible, sort])
+  @@map("buying_faqs")
+}
+
 model Tag {
   id        String       @id @default(cuid())
   type      String

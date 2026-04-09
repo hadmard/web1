@@ -76,6 +76,7 @@ const SIDEBAR: SidebarGroup[] = [
     children: [
       { href: "/membership/admin/accounts", label: "账号一览" },
       { href: "/membership/admin/password-recovery-requests", label: "密码找回申请" },
+      { href: "/membership/admin/buying-faqs", label: "整木选购问答" },
       { href: "/membership/admin/brands", label: "品牌展示管理" },
       { href: "/membership/admin/brands/create", label: "创建品牌" },
       { href: "/membership/admin/pending-brands", label: "待审核品牌" },
@@ -117,6 +118,7 @@ export default function AdminLayoutClient({ children }: { children: React.ReactN
   const [auditCounts, setAuditCounts] = useState<Record<ContentTabKey, number>>({
     articles: 0,
     brands: 0,
+    buying: 0,
     terms: 0,
     standards: 0,
     "industry-data": 0,
@@ -186,6 +188,7 @@ export default function AdminLayoutClient({ children }: { children: React.ReactN
       const nextCounts: Record<ContentTabKey, number> = {
         articles: 0,
         brands: 0,
+        buying: 0,
         terms: 0,
         standards: 0,
         "industry-data": 0,
@@ -269,6 +272,7 @@ export default function AdminLayoutClient({ children }: { children: React.ReactN
     if (href === "/membership/admin/accounts") return pathname === "/membership/admin/accounts";
     if (href === "/membership/admin/enterprises") return pathname === "/membership/admin/enterprises" || pathname.startsWith("/membership/admin/enterprises/");
     if (href === "/membership/admin/password-recovery-requests") return pathname === "/membership/admin/password-recovery-requests";
+    if (href === "/membership/admin/buying-faqs") return pathname === "/membership/admin/buying-faqs";
     if (href === "/membership/admin/brands/create") return pathname === "/membership/admin/brands/create";
     if (href === "/membership/admin/brands") {
       return pathname === "/membership/admin/brands" || (pathname.startsWith("/membership/admin/brands/") && pathname !== "/membership/admin/brands/create");
