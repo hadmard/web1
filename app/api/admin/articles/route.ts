@@ -10,6 +10,8 @@ import { isValidTermStructuredContent, normalizeTermContent } from "@/lib/term-s
 import { findDuplicateArticleByTitle, normalizeArticleTitle } from "@/lib/article-title";
 import { formatKeywordCsv, syncArticleKeywords } from "@/lib/news-keywords-v2";
 
+import { resolveTabKeyFromHref } from "@/lib/content-taxonomy";
+import { buildContentTabWhere } from "@/lib/content-taxonomy";
 export const dynamic = "force-dynamic";
 
 function getMutationErrorMessage(error: unknown, fallback: string) {
@@ -52,12 +54,20 @@ export async function GET(request: NextRequest) {
   const status = searchParams.get("status");
   const categoryHref = searchParams.get("categoryHref");
   const q = searchParams.get("q")?.trim();
+  const tab = searchParams.get("tab");
   const where: any = {};
   if (status && ["draft", "pending", "approved", "rejected"].includes(status)) {
     where.status = status;
   }
-  if (categoryHref && typeof categoryHref === "string") {
-    where.OR = [{ categoryHref: { startsWith: categoryHref } }, { subHref: { startsWith: categoryHref } }];
+  const resolvedTab =
+    typeof tab === "string" && tab.trim()
+      ? tab.trim()
+      : typeof categoryHref === "string" && categoryHref.trim()
+        ? resolveTabKeyFromHref(categoryHref, null)
+        : "";
+  const tabWhere = buildContentTabWhere(resolvedTab);
+  if (tabWhere) {
+    where.AND = [...(Array.isArray(where.AND) ? where.AND : []), tabWhere];
   }
   if (q) {
     where.AND = [

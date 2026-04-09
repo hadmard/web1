@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { canReviewSubmissions } from "@/lib/content-permissions";
+import { buildContentTabWhere, resolveTabKeyFromHref } from "@/lib/content-taxonomy";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const status = searchParams.get("status");
   const categoryHref = searchParams.get("categoryHref");
+  const tab = searchParams.get("tab");
   const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
   const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "20", 10)));
   const skip = (page - 1) * limit;
@@ -21,8 +23,15 @@ export async function GET(request: NextRequest) {
   if (status && ["pending", "approved", "rejected"].includes(status)) {
     where.status = status;
   }
-  if (categoryHref && typeof categoryHref === "string") {
-    where.article = { OR: [{ categoryHref: { startsWith: categoryHref } }, { subHref: { startsWith: categoryHref } }] };
+  const resolvedTab =
+    typeof tab === "string" && tab.trim()
+      ? tab.trim()
+      : typeof categoryHref === "string" && categoryHref.trim()
+        ? resolveTabKeyFromHref(categoryHref, null)
+        : "";
+  const tabWhere = buildContentTabWhere(resolvedTab);
+  if (tabWhere) {
+    where.article = tabWhere;
   }
 
   const [items, total] = await Promise.all([

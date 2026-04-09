@@ -558,15 +558,15 @@ export default function AdminContentPage() {
   }, []);
 
   const loadList = useCallback(async () => {
-    const sp = new URLSearchParams({ limit: "100", categoryHref: selectedCategory.href });
+    const sp = new URLSearchParams({ limit: "100", tab });
     if (searchQuery) sp.set("q", searchQuery);
     const res = await fetch(`/api/admin/articles?${sp.toString()}`, { credentials: "include", cache: "no-store" });
     const data = await res.json().catch(() => ({}));
     setItems(Array.isArray(data.items) ? data.items : []);
-  }, [searchQuery, selectedCategory.href]);
+  }, [searchQuery, tab]);
 
   const loadReview = useCallback(async () => {
-    const sp = new URLSearchParams({ status: "pending", limit: "200", categoryHref: selectedCategory.href });
+    const sp = new URLSearchParams({ status: "pending", limit: "200", tab });
     const [a, c] = await Promise.all([
       fetch(`/api/admin/articles?${sp.toString()}`, { credentials: "include", cache: "no-store" }),
       fetch(`/api/admin/article-change-requests?${sp.toString()}`, { credentials: "include", cache: "no-store" }),
@@ -575,7 +575,7 @@ export default function AdminContentPage() {
     const cd = await c.json().catch(() => ({}));
     setPendingItems(Array.isArray(ad.items) ? ad.items : []);
     setPendingChanges(Array.isArray(cd.items) ? cd.items : []);
-  }, [selectedCategory.href]);
+  }, [tab]);
 
   useEffect(() => { void loadSession(); }, [loadSession]);
   useEffect(() => {

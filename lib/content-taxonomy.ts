@@ -93,6 +93,57 @@ export function resolveTabKeyFromHref(
   return "articles";
 }
 
+export function buildContentTabWhere(tab: ContentTabKey | string | null) {
+  const normalized = (tab || "").trim() as ContentTabKey | "";
+  if (!normalized) return null;
+
+  if (normalized === "articles") {
+    return {
+      OR: [{ categoryHref: { startsWith: "/news" } }, { subHref: { startsWith: "/news" } }],
+    };
+  }
+
+  if (normalized === "brands") {
+    return {
+      OR: [
+        { categoryHref: "/brands" },
+        { subHref: { startsWith: "/brands/brand" } },
+      ],
+    };
+  }
+
+  if (normalized === "buying") {
+    return {
+      OR: [{ categoryHref: { startsWith: "/brands/buying" } }, { subHref: { startsWith: "/brands/buying" } }],
+    };
+  }
+
+  if (normalized === "terms") {
+    return {
+      OR: [{ categoryHref: { startsWith: "/dictionary" } }, { subHref: { startsWith: "/dictionary" } }],
+    };
+  }
+
+  if (normalized === "standards") {
+    return {
+      OR: [{ categoryHref: { startsWith: "/standards" } }, { subHref: { startsWith: "/standards" } }],
+    };
+  }
+
+  if (normalized === "awards") {
+    return {
+      OR: [
+        { categoryHref: { startsWith: "/awards" } },
+        { subHref: { startsWith: "/awards" } },
+        { categoryHref: { startsWith: "/huadianbang" } },
+        { subHref: { startsWith: "/huadianbang" } },
+      ],
+    };
+  }
+
+  return null;
+}
+
 export const MEMBER_ALLOWED_CATEGORY_HREFS = new Set(
   MEMBER_PUBLISH_CATEGORY_OPTIONS.map((x) => x.href)
 );
