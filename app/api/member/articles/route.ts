@@ -257,6 +257,7 @@ export async function POST(request: NextRequest) {
       manualKeywords: typeof manualKeywords === "string" ? formatKeywordCsv(manualKeywords.split(/[,\n，]+/)) || null : null,
       syncToMainSite: syncToMainSite === true,
       isPinned: (session.role === "SUPER_ADMIN" || session.role === "ADMIN") && isPinned === true,
+      publishedAt: submissionStatus === "approved" ? new Date() : null,
       status: submissionStatus,
       authorMemberId: session.sub,
     },
