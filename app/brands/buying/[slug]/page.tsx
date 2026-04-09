@@ -93,14 +93,6 @@ export default async function BuyingArticleDetailPage({ params }: Props) {
     permanentRedirect(`/brands/buying/${encodeURIComponent(article.slug)}`);
   }
 
-  const keywords = Array.from(
-    new Set(
-      [article.title, ...(article.tagSlugs || "").split(",")]
-        .map((item) => item.trim())
-        .filter(Boolean),
-    ),
-  ).slice(0, 12);
-
   return (
     <article className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-12">
       <nav className="mb-6 flex flex-wrap items-center gap-x-2 gap-y-2 text-sm text-muted" aria-label="面包屑">
@@ -113,13 +105,10 @@ export default async function BuyingArticleDetailPage({ params }: Props) {
         <span className="text-primary">{article.title}</span>
       </nav>
 
-      <header className="rounded-[30px] border border-[rgba(181,157,121,0.16)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(247,242,235,0.92))] px-6 py-7 shadow-[0_18px_48px_rgba(15,23,42,0.06)] sm:px-8 sm:py-9">
-        <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.12em] text-[#9a8560]">
-          <span>选购内容</span>
-        </div>
-        <h1 className="mt-4 font-serif text-[2.1rem] leading-[1.18] text-primary sm:text-[2.8rem]">{article.title}</h1>
-        {article.excerpt ? <p className="mt-4 max-w-3xl text-[15px] leading-8 text-muted sm:text-base">{article.excerpt}</p> : null}
-        <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-primary/56">
+      <header className="rounded-[30px] border border-[rgba(181,157,121,0.16)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(247,242,235,0.92))] px-6 py-6 shadow-[0_18px_48px_rgba(15,23,42,0.06)] sm:px-8 sm:py-7">
+        <h1 className="font-serif text-[2.1rem] leading-[1.18] text-primary sm:text-[2.8rem]">{article.title}</h1>
+        {article.excerpt ? <p className="mt-3 max-w-3xl text-[15px] leading-8 text-muted sm:text-base">{article.excerpt}</p> : null}
+        <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-primary/56">
           <span>{new Date(article.publishedAt ?? article.updatedAt).toLocaleDateString("zh-CN")}</span>
           {article.displayAuthor ? <span>作者：{article.displayAuthor}</span> : null}
           {article.source ? (
@@ -132,15 +121,6 @@ export default async function BuyingArticleDetailPage({ params }: Props) {
             )
           ) : null}
         </div>
-        {keywords.length > 0 ? (
-          <div className="mt-5 flex flex-wrap gap-2">
-            {keywords.map((keyword) => (
-              <span key={keyword} className="rounded-full border border-[rgba(181,157,121,0.18)] bg-[rgba(255,249,238,0.92)] px-3 py-1 text-xs text-accent">
-                {keyword}
-              </span>
-            ))}
-          </div>
-        ) : null}
       </header>
 
       {article.coverImage ? (
