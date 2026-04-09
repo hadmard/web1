@@ -12,7 +12,7 @@ import { RichContent } from "@/components/RichContent";
 import { ArticleShareActions } from "@/components/ArticleShareActions";
 import { getSiteVisualSettings } from "@/lib/site-visual-settings";
 import { buildPageMetadata, getSiteUrl } from "@/lib/seo";
-import { buildArticleShareVersion, buildPublicDictionaryUrl, DEFAULT_DICTIONARY_SHARE_IMAGE } from "@/lib/share-config";
+import { buildPublicDictionaryUrl, DEFAULT_DICTIONARY_SHARE_IMAGE } from "@/lib/share-config";
 import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
 import {
   addHeadingAnchors,
@@ -240,8 +240,6 @@ export default async function TermPage({ params }: Props) {
     const baseUrl = getSiteUrl();
     const termUrl = `${baseUrl}/dictionary/${article.slug}`;
     const shareUrl = buildPublicDictionaryUrl(article.slug);
-    const shareVersion = buildArticleShareVersion(article.updatedAt ?? article.createdAt ?? article.id);
-    const shareEntryUrl = `${shareUrl}?sharev=${encodeURIComponent(shareVersion)}`;
     const breadcrumbSchema = {
       "@context": "https://schema.org",
       "@type": "BreadcrumbList",
@@ -285,7 +283,7 @@ export default async function TermPage({ params }: Props) {
               <RichContent html={anchoredHtml} className="prose prose-neutral dark:prose-invert max-w-none" />
               <ArticleShareActions
                 title={article.title}
-                shareUrl={shareEntryUrl}
+                shareUrl={shareUrl}
                 siteName="整木词库"
                 className="mt-6"
               />
@@ -361,8 +359,6 @@ export default async function TermPage({ params }: Props) {
   const baseUrl = getSiteUrl();
   const termUrl = `${baseUrl}/dictionary/${term.slug}`;
   const shareUrl = buildPublicDictionaryUrl(term.slug);
-  const shareVersion = buildArticleShareVersion(term.updatedAt ?? term.createdAt ?? term.slug);
-  const shareEntryUrl = `${shareUrl}?sharev=${encodeURIComponent(shareVersion)}`;
   const breadcrumbSchema = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -382,7 +378,7 @@ export default async function TermPage({ params }: Props) {
       <DefinitionBlock definition={term.definition} />
       <ArticleShareActions
         title={term.title}
-        shareUrl={shareEntryUrl}
+        shareUrl={shareUrl}
         siteName="整木词库"
         className="mt-0"
       />
