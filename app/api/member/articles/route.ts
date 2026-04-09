@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { defaultContentStatusForSubmission } from "@/lib/member-access";
 import { writeOperationLog } from "@/lib/operation-log";
 import {
+  buildContentTabWhere,
   MEMBER_ALLOWED_CATEGORY_HREFS,
   MEMBER_PUBLISH_CATEGORY_OPTIONS,
   type ContentTabKey,
@@ -11,6 +12,7 @@ import {
 import { resolveTagSlugs } from "@/lib/tag-suggest";
 import { generateUniqueArticleSlug } from "@/lib/slug";
 import { isContentReviewRequired } from "@/lib/app-settings";
+import { normalizeRichTextField } from "@/lib/brand-content";
 import { isValidTermStructuredContent, normalizeTermContent } from "@/lib/term-structured";
 import { findDuplicateArticleByTitle, normalizeArticleTitle } from "@/lib/article-title";
 import { formatKeywordCsv, syncArticleKeywords } from "@/lib/news-keywords-v2";
@@ -21,48 +23,6 @@ import {
 } from "@/lib/member-access-resolver";
 
 const MEMBER_CONTENT_STATUSES = new Set(["draft", "pending", "approved", "rejected"]);
-
-function buildTabWhere(tab: string | null) {
-  const normalized = (tab || "").trim() as ContentTabKey | "";
-  if (!normalized) return null;
-
-  if (normalized === "articles") {
-    return {
-      OR: [{ categoryHref: { startsWith: "/news" } }, { subHref: { startsWith: "/news" } }],
-    };
-  }
-
-  if (normalized === "brands") {
-    return {
-      OR: [{ categoryHref: { startsWith: "/brands" } }, { subHref: { startsWith: "/brands" } }],
-    };
-  }
-
-  if (normalized === "terms") {
-    return {
-      OR: [{ categoryHref: { startsWith: "/dictionary" } }, { subHref: { startsWith: "/dictionary" } }],
-    };
-  }
-
-  if (normalized === "standards") {
-    return {
-      OR: [{ categoryHref: { startsWith: "/standards" } }, { subHref: { startsWith: "/standards" } }],
-    };
-  }
-
-  if (normalized === "awards") {
-    return {
-      OR: [
-        { categoryHref: { startsWith: "/awards" } },
-        { subHref: { startsWith: "/awards" } },
-        { categoryHref: { startsWith: "/huadianbang" } },
-        { subHref: { startsWith: "/huadianbang" } },
-      ],
-    };
-  }
-
-  return null;
-}
 
 export async function GET(request: NextRequest) {
   const session = await getSession();
@@ -81,7 +41,7 @@ export async function GET(request: NextRequest) {
     where.status = status;
   }
 
-  const tabWhere = buildTabWhere(tab);
+  const tabWhere = buildContentTabWhere(tab);
   if (tabWhere) {
     where.AND = [...(where.AND ?? []), tabWhere];
   }
@@ -175,7 +135,7 @@ export async function POST(request: NextRequest) {
       ? rawSubHref || "/news/enterprise"
       : rawSubHref || null;
 
-  if (categoryDef && categoryDef.href !== "/brands" && categoryDef.subs.length > 0) {
+  if (categoryDef && categoryDef.subs.length > 0) {
     if (!normalizedSubHref) {
       return NextResponse.json({ error: "请选择子栏目" }, { status: 400 });
     }
@@ -212,8 +172,11 @@ export async function POST(request: NextRequest) {
   }
   const isDictionary =
     categoryHrefTrim.startsWith("/dictionary") || (normalizedSubHref?.startsWith("/dictionary") ?? false);
-  const normalizedContent =
-    isDictionary && typeof content === "string" ? normalizeTermContent(content) : typeof content === "string" ? content : "";
+  const normalizedContent = isDictionary
+    ? typeof content === "string"
+      ? normalizeTermContent(content)
+      : ""
+    : normalizeRichTextField(content) ?? "";
   if (isDictionary) {
     if (!isValidTermStructuredContent(normalizedContent)) {
       return NextResponse.json({ error: "词库内容必须按固定小标题分节格式提交" }, { status: 400 });

@@ -368,7 +368,6 @@ export default function AdminContentPage() {
   );
 
   useEffect(() => {
-    if (tab === "brands") return;
     if (!subHref && subOptions[0]) setSubHref(subOptions[0].href);
   }, [tab, subHref, subOptions]);
 
@@ -791,7 +790,7 @@ export default function AdminContentPage() {
               ? (awardStructured.year ? `${awardStructured.year}版` : null)
               : null,
         categoryHref: selectedCategory.href,
-        subHref: tab === "brands" ? null : subHref,
+        subHref: subOptions.length > 0 ? subHref || null : null,
         tagSlugs: tagSlugs || null,
         manualKeywords: manualKeywords || null,
         recommendIds: recommendIds || null,
@@ -809,7 +808,8 @@ export default function AdminContentPage() {
       typeof data?.subHref === "string" ? data.subHref : subHref,
       typeof data?.id === "string" ? data.id : null,
       typeof data?.slug === "string" ? data.slug : null,
-      submittedTitle
+      submittedTitle,
+      tab
     );
     setLastSubmitted({ title: submittedTitle, href: previewHref, status: submittedStatus });
     setMessage("提交成功。");
@@ -985,7 +985,7 @@ export default function AdminContentPage() {
             : tab === "awards"
               ? (editAwardStructured.year ? `${editAwardStructured.year}版` : null)
               : undefined,
-        subHref: tab === "brands" ? null : editSubHref || subHref,
+        subHref: subOptions.length > 0 ? editSubHref || subHref || null : null,
         tagSlugs: editTagSlugs || null,
         manualKeywords: editManualKeywords || null,
         recommendIds: editRecommendIds || null,
@@ -1191,7 +1191,7 @@ export default function AdminContentPage() {
       {mode === "publish" && (
         <section className="rounded-xl border border-border bg-surface-elevated p-5">
           <form onSubmit={submitPublish} className="space-y-3">
-            {tab !== "brands" && (
+            {subOptions.length > 0 && (
               <>
                 <label className="block text-sm text-muted">子栏目</label>
                 <div className="flex flex-wrap gap-2">{subOptions.map((s) => <button key={s.href} type="button" onClick={() => setSubHref(s.href)} className={`px-3 py-1 rounded border ${subHref === s.href ? "bg-accent text-white border-accent" : "border-border"}`}>{s.label}</button>)}</div>
@@ -1824,6 +1824,23 @@ export default function AdminContentPage() {
                     <img src={resolveUploadedImageUrl(editCoverPreviewSrc || editCoverImage)} alt="" className="max-h-80 w-full rounded-lg border border-border bg-surface-elevated object-contain" loading="lazy" />
                   </div>
                 )}
+              </>
+            )}
+            {subOptions.length > 0 && (
+              <>
+                <label className="block text-sm text-muted">子栏目</label>
+                <div className="flex flex-wrap gap-2">
+                  {subOptions.map((s) => (
+                    <button
+                      key={s.href}
+                      type="button"
+                      onClick={() => setEditSubHref(s.href)}
+                      className={`px-3 py-1 rounded border ${editSubHref === s.href ? "bg-accent text-white border-accent" : "border-border"}`}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
               </>
             )}
             {tab === "terms" ? (

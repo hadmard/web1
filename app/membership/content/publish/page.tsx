@@ -272,6 +272,7 @@ function PublishCenterPageInner() {
   const [editTitle, setEditTitle] = useState("");
   const [editExcerpt, setEditExcerpt] = useState("");
   const [editContent, setEditContent] = useState("");
+  const [editSubHref, setEditSubHref] = useState("");
   const [editBrandStructured, setEditBrandStructured] = useState<BrandStructuredData>(createDefaultBrandStructuredData());
   const [editStandardStructured, setEditStandardStructured] = useState<StandardStructuredData>(createDefaultStandardStructuredData());
   const [editDataStructured, setEditDataStructured] = useState<DataStructuredData>(createDefaultDataStructuredData());
@@ -620,7 +621,7 @@ function PublishCenterPageInner() {
     autoSlugRef.current = "";
     autoSeoRef.current = { seoTitle: "", seoKeywords: "", seoDescription: "" };
     setDocumentMeta(createEmptyDocumentMetadata());
-  }, [safeTab, replacePreviewUrl]);
+  }, [safeTab, replacePreviewUrl, subHref]);
 
   useEffect(() => {
     if (safeTab === "brands") resetBrandStructured();
@@ -632,7 +633,7 @@ function PublishCenterPageInner() {
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (loading || !selectedCategory || !selectedCategoryAccess?.enabled) return;
-    if (safeTab !== "brands" && subOptions.length > 0 && !activeSubAccess?.enabled) {
+    if (subOptions.length > 0 && !activeSubAccess?.enabled) {
       setMessage("当前子栏目未开通投稿权限，请联系管理员授权。");
       return;
     }
@@ -662,7 +663,7 @@ function PublishCenterPageInner() {
       excerpt: excerpt.trim() || null,
       content: composedContent,
       categoryHref: selectedCategory.href,
-      subHref: safeTab === "brands" ? null : subHref,
+      subHref: subOptions.length > 0 ? subHref || null : null,
       coverImage:
         safeTab === "brands"
           ? brandStructured.logoUrl.trim() || null
@@ -711,7 +712,8 @@ function PublishCenterPageInner() {
       typeof data?.subHref === "string" ? data.subHref : payload.subHref,
       typeof data?.id === "string" ? data.id : null,
       typeof data?.slug === "string" ? data.slug : null,
-      submittedTitle
+      submittedTitle,
+      safeTab
     );
     setLastSubmitted({ title: submittedTitle, href: previewHref, status: submittedStatus });
     setMessage(nextStatus === "approved" ? "提交成功，内容已发布。" : "提交成功，已进入审核流程。");
@@ -750,6 +752,7 @@ function PublishCenterPageInner() {
     setEditTitle(item.title ?? "");
     setEditExcerpt(item.excerpt ?? "");
     setEditContent(safeTab === "terms" ? formatTermContentForEditing(item.content ?? "") : (item.content ?? ""));
+    setEditSubHref(item.subHref ?? subHref);
     setEditBrandStructured(
       safeTab === "brands"
         ? parseBrandStructuredHtml(item.content ?? "") ?? createDefaultBrandStructuredData()
@@ -785,7 +788,7 @@ function PublishCenterPageInner() {
     autoEditSeoRef.current = {
       ...nextAutoEditSeo,
     };
-  }, [safeTab, replacePreviewUrl]);
+  }, [safeTab, replacePreviewUrl, subHref]);
 
   useEffect(() => {
     if (!editQueryId) {
@@ -849,6 +852,7 @@ function PublishCenterPageInner() {
         excerpt: editExcerpt,
         content: composedEditContent,
         coverImage: safeTab === "brands" ? editBrandStructured.logoUrl.trim() || null : editCoverImage.trim() || null,
+        subHref: subOptions.length > 0 ? editSubHref || subHref || null : null,
         reason: editReason,
       }),
     });
@@ -1214,7 +1218,7 @@ function PublishCenterPageInner() {
             </div>
           )}
 
-          {safeTab !== "brands" && subOptions.length > 0 && (
+          {subOptions.length > 0 && (
             <>
               <label className="block text-sm text-muted">子栏目</label>
               <div className="flex flex-wrap gap-2 rounded-lg border border-border bg-surface p-2">
@@ -1510,6 +1514,39 @@ function PublishCenterPageInner() {
               value={editExcerpt}
               onChange={(e) => setEditExcerpt(e.target.value)}
             />
+            {subOptions.length > 0 && (
+              <>
+                <label className="block text-sm text-muted">子栏目</label>
+                <div className="flex flex-wrap gap-2 rounded-lg border border-border bg-surface p-2">
+                  {subOptions.map((s) => {
+                    const active = editSubHref === s.href;
+                    const disabled = !s.enabled;
+                    return (
+                      <button
+                        key={s.href}
+                        type="button"
+                        onClick={() => {
+                          if (!disabled) setEditSubHref(s.href);
+                        }}
+                        disabled={disabled}
+                        className={`px-3 py-1.5 rounded-md text-sm transition ${
+                          disabled
+                            ? "cursor-not-allowed border border-dashed border-border text-muted/70 bg-surface"
+                            : active
+                              ? "bg-accent text-white"
+                              : "bg-surface-elevated text-primary border border-border hover:bg-surface"
+                        }`}
+                      >
+                        <span>{s.label}</span>
+                        <span className={`ml-2 text-[11px] ${disabled || !active ? "opacity-80" : "text-white/80"}`}>
+                          {disabled ? "未开通" : formatQuota(s.annualLimit, s.remainingCount)}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
             {safeTab !== "brands" && (
               <>
                 <label className="block text-sm text-muted">新顶部配图（可选）</label>
