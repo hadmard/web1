@@ -2,7 +2,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import type { Metadata } from "next";
 import { findNewsArticleBySegment, resolveArticleShareImage } from "@/lib/news-sharing";
 import { buildPageMetadata } from "@/lib/seo";
-import { buildArticleShareVersion, buildNewsShareEntryUrl } from "@/lib/share-config";
+import { buildArticleShareVersion, buildPublicNewsUrl } from "@/lib/share-config";
 import { previewText } from "@/lib/text";
 
 export const revalidate = 300;
@@ -33,7 +33,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     ...buildPageMetadata({
       title: article.title,
       description,
-      path: `/share/news/${article.id}?sharev=${encodeURIComponent(shareVersion)}`,
+      path: `/share/news/${article.id}`,
       type: "article",
       siteName: SHARE_SITE_NAME,
       image,
@@ -51,5 +51,5 @@ export default async function ShareNewsPage({ params }: Props) {
   }
 
   const shareVersion = buildArticleShareVersion(article.updatedAt ?? article.publishedAt ?? article.id);
-  permanentRedirect(buildNewsShareEntryUrl(article.id, shareVersion));
+  permanentRedirect(buildPublicNewsUrl(article.id));
 }

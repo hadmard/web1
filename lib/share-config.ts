@@ -44,7 +44,6 @@ export function buildArticleShareVersion(value: string | number | Date | null | 
 }
 
 export function buildNewsShareEntryUrl(segment: string, shareVersion?: string | null) {
-  const url = new URL(buildPublicNewsUrl(segment));
-  url.searchParams.set("sharev", shareVersion?.trim() || FALLBACK_SHARE_VERSION);
-  return url.toString();
+  void shareVersion;
+  return buildPublicNewsUrl(segment);
 }

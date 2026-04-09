@@ -4,10 +4,20 @@ import { useEffect } from "react";
 
 type NewsUrlSyncProps = {
   canonicalPath: string;
-  shareVersion?: string | null;
 };
 
-export function NewsUrlSync({ canonicalPath, shareVersion }: NewsUrlSyncProps) {
+const TRACKING_PARAM_NAMES = [
+  "sharev",
+  "from",
+  "utm",
+  "utm_source",
+  "utm_medium",
+  "utm_campaign",
+  "utm_term",
+  "utm_content",
+] as const;
+
+export function NewsUrlSync({ canonicalPath }: NewsUrlSyncProps) {
   useEffect(() => {
     const currentUrl = new URL(window.location.href);
     let changed = false;
@@ -17,14 +27,15 @@ export function NewsUrlSync({ canonicalPath, shareVersion }: NewsUrlSyncProps) {
       changed = true;
     }
 
-    if (shareVersion && currentUrl.searchParams.get("sharev") !== shareVersion) {
-      currentUrl.searchParams.set("sharev", shareVersion);
+    for (const paramName of TRACKING_PARAM_NAMES) {
+      if (!currentUrl.searchParams.has(paramName)) continue;
+      currentUrl.searchParams.delete(paramName);
       changed = true;
     }
 
     if (!changed) return;
     window.history.replaceState(window.history.state, "", `${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`);
-  }, [canonicalPath, shareVersion]);
+  }, [canonicalPath]);
 
   return null;
 }

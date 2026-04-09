@@ -10,6 +10,7 @@ import {
 } from "@/lib/enterprise-homepage";
 import { getMemberSiteSettings } from "@/lib/member-site-settings";
 import { prisma } from "@/lib/prisma";
+import { buildNewsPath } from "@/lib/share-config";
 import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
 
 export const dynamic = "force-dynamic";
@@ -373,7 +374,7 @@ export default async function EnterprisePage({ params, searchParams }: Props) {
     title: article.title,
     excerpt: toSummaryText(article.excerpt || article.title, 78) || article.title,
     dateLabel: formatDate(article.publishedAt || article.createdAt),
-    href: `/news/${article.slug}`,
+    href: buildNewsPath(article.id),
     badge: "企业动态",
     imageUrl: ownGallery[index]?.imageUrl || ownGallery[0]?.imageUrl || DEFAULT_NEWS_IMAGES[index % DEFAULT_NEWS_IMAGES.length],
   }));
@@ -383,7 +384,7 @@ export default async function EnterprisePage({ params, searchParams }: Props) {
     title: article.title,
     excerpt: toSummaryText(article.excerpt || article.title, 78) || article.title,
     dateLabel: formatDate(article.publishedAt || article.createdAt),
-    href: `/news/${article.slug}`,
+    href: buildNewsPath(article.id),
     badge: "行业资讯",
     imageUrl: platformGallery[index]?.imageUrl || platformGallery[0]?.imageUrl || DEFAULT_NEWS_IMAGES[index % DEFAULT_NEWS_IMAGES.length],
   }));
