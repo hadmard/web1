@@ -88,41 +88,41 @@ export default async function BuyingPage() {
                 (() => {
                   faqNumber += 1;
                   return (
-              <article
-                key={block.item.id}
-                className="rounded-[28px] border border-[rgba(15,23,42,0.06)] bg-[rgba(255,255,255,0.94)] px-6 py-7 shadow-[0_22px_44px_-38px_rgba(15,23,42,0.12)] sm:px-8 sm:py-8"
-              >
-                <p className="text-xs uppercase tracking-[0.16em] text-[#9d7e4d]">Q{faqNumber}</p>
-                <h3 className="mt-3 font-serif text-2xl leading-tight text-primary">{block.item.question}</h3>
-                <p className="mt-4 text-[15px] leading-8 text-primary/84 sm:text-base">{block.item.answer}</p>
-              </article>
+                    <article
+                      key={block.item.id}
+                      className="rounded-[28px] border border-[rgba(15,23,42,0.06)] bg-[rgba(255,255,255,0.94)] px-6 py-7 shadow-[0_22px_44px_-38px_rgba(15,23,42,0.12)] sm:px-8 sm:py-8"
+                    >
+                      <p className="text-xs uppercase tracking-[0.16em] text-[#9d7e4d]">Q{faqNumber}</p>
+                      <h3 className="mt-3 font-serif text-2xl leading-tight text-primary">{block.item.question}</h3>
+                      <p className="mt-4 text-[15px] leading-8 text-primary/84 sm:text-base">{block.item.answer}</p>
+                    </article>
                   );
                 })()
               ) : (
-              <section
-                key={`cta-${block.index}`}
-                className="rounded-[30px] border border-[rgba(181,157,121,0.18)] bg-[linear-gradient(180deg,rgba(255,252,247,0.98),rgba(244,237,227,0.94))] px-6 py-7 shadow-[0_18px_48px_rgba(15,23,42,0.06)] sm:px-8"
-              >
-                <p className="text-xs uppercase tracking-[0.26em] text-[#9d7e4d]">Next Step</p>
-                <h2 className="mt-3 font-serif text-2xl text-primary">还想继续筛选品牌或直接咨询？</h2>
-                <p className="mt-3 max-w-2xl text-sm leading-7 text-muted">
-                  先去看品牌列表做横向比较，或者直接联系我们，把预算、风格和空间需求一次说清楚。
-                </p>
-                <div className="mt-5 flex flex-wrap gap-3">
-                  <Link
-                    href="/brands?from=buying"
-                    className="inline-flex items-center justify-center rounded-full bg-accent px-5 py-3 text-sm font-medium text-white transition hover:opacity-92"
-                  >
-                    查看品牌列表
-                  </Link>
-                  <Link
-                    href="/contact"
-                    className="inline-flex items-center justify-center rounded-full border border-border bg-white px-5 py-3 text-sm font-medium text-primary transition hover:bg-surface"
-                  >
-                    联系我们
-                  </Link>
-                </div>
-              </section>
+                <section
+                  key={`cta-${block.index}`}
+                  className="rounded-[30px] border border-[rgba(181,157,121,0.18)] bg-[linear-gradient(180deg,rgba(255,252,247,0.98),rgba(244,237,227,0.94))] px-6 py-7 shadow-[0_18px_48px_rgba(15,23,42,0.06)] sm:px-8"
+                >
+                  <p className="text-xs uppercase tracking-[0.26em] text-[#9d7e4d]">Next Step</p>
+                  <h2 className="mt-3 font-serif text-2xl text-primary">还想继续筛选品牌或直接咨询？</h2>
+                  <p className="mt-3 max-w-2xl text-sm leading-7 text-muted">
+                    先去看品牌列表做横向比较，或者直接联系我们，把预算、风格和空间需求一次说清楚。
+                  </p>
+                  <div className="mt-5 flex flex-wrap gap-3">
+                    <Link
+                      href="/brands?from=buying"
+                      className="inline-flex items-center justify-center rounded-full bg-accent px-5 py-3 text-sm font-medium text-white transition hover:opacity-92"
+                    >
+                      查看品牌列表
+                    </Link>
+                    <Link
+                      href="/contact"
+                      className="inline-flex items-center justify-center rounded-full border border-border bg-white px-5 py-3 text-sm font-medium text-primary transition hover:bg-surface"
+                    >
+                      联系我们
+                    </Link>
+                  </div>
+                </section>
               ),
             );
           })()
