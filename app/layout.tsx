@@ -120,6 +120,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   return (
     <html lang="zh-CN" className="scroll-smooth">
       <head>
+        <meta name="baidu-site-verification" content="codeva-SKFaI7c7mN" />
         <link
           rel="search"
           type="application/opensearchdescription+xml"

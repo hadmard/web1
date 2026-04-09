@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-type Context = { params: { slug: string } };
+type Context = { params: Promise<{ slug: string }> };
 
 function normalizeSegment(raw: string) {
   let value = (raw || "").trim();
@@ -19,15 +19,17 @@ function normalizeSegment(raw: string) {
 
 export async function POST(_request: Request, context: Context) {
   try {
-    const { slug } = context.params;
+    const { slug } = await context.params;
     const normalizedSlug = normalizeSegment(slug);
     if (!normalizedSlug) return NextResponse.json({ ok: true });
 
     await prisma.article.updateMany({
       where: {
-        slug: normalizedSlug,
         status: "approved",
-        OR: [{ categoryHref: { startsWith: "/news" } }, { subHref: { startsWith: "/news" } }],
+        AND: [
+          { OR: [{ id: normalizedSlug }, { slug: normalizedSlug }] },
+          { OR: [{ categoryHref: { startsWith: "/news" } }, { subHref: { startsWith: "/news" } }] },
+        ],
       },
       data: { viewCount: { increment: 1 } },
     });
