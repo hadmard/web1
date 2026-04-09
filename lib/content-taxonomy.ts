@@ -1,4 +1,4 @@
-export type CategoryOption = {
+﻿export type CategoryOption = {
   href: string;
   label: string;
   subs: Array<{ href: string; label: string }>;
@@ -7,6 +7,7 @@ export type CategoryOption = {
 export type ContentTabKey =
   | "articles"
   | "brands"
+  | "buying"
   | "terms"
   | "standards"
   | "industry-data"
@@ -27,12 +28,14 @@ export const MEMBER_PUBLISH_CATEGORY_OPTIONS: CategoryOption[] = [
     subs: [...NEWS_SUBCATEGORY_OPTIONS],
   },
   {
+    href: "/brands/buying",
+    label: "整木选购",
+    subs: [],
+  },
+  {
     href: "/brands",
     label: "整木市场",
-    subs: [
-      { href: "/brands/brand", label: "整木品牌" },
-      { href: "/brands/buying", label: "整木选购" },
-    ],
+    subs: [],
   },
   {
     href: "/dictionary",
@@ -70,6 +73,7 @@ export const MEMBER_PUBLISH_CATEGORY_OPTIONS: CategoryOption[] = [
 export const CONTENT_TAB_DEFS: Array<{ key: ContentTabKey; href: string; label: string }> = [
   { key: "articles", href: "/news", label: "整木资讯" },
   { key: "brands", href: "/brands", label: "整木市场" },
+  { key: "buying", href: "/brands/buying", label: "整木选购" },
   { key: "terms", href: "/dictionary", label: "整木词库" },
   { key: "standards", href: "/standards", label: "整木标准" },
   { key: "awards", href: "/awards", label: "整木评选" },
@@ -81,6 +85,7 @@ export function resolveTabKeyFromHref(
 ): ContentTabKey {
   const source = (categoryHref || subHref || "").trim();
   if (source.startsWith("/news")) return "articles";
+  if (source.startsWith("/brands/buying")) return "buying";
   if (source.startsWith("/brands")) return "brands";
   if (source.startsWith("/dictionary")) return "terms";
   if (source.startsWith("/standards")) return "standards";
