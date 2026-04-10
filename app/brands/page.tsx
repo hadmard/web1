@@ -1,20 +1,43 @@
 ﻿import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { CategoryHome } from "@/components/CategoryHome";
 import { buildCategoryMetadata } from "@/lib/category-metadata";
-import { getCategoryWithMetaByHref } from "@/lib/categories";
 import { getBrandDirectoryList } from "@/lib/brand-directory";
 import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+const HERO_TEXT =
+  "聚合整木品牌与整木选购内容，方便用户从品牌了解、产品方向和选购参考等多个角度进入整木市场核心内容。";
+
+const GUIDE_TEXT =
+  "整木市场主要包含整木品牌与整木选购两个方向。整木品牌侧重品牌展示与基础资料，整木选购侧重材料、工艺、风格和选购参考，方便用户根据需求进入对应内容。";
+
+const BRAND_COLUMN_HREF = "/brands/brand";
+const BUYING_COLUMN_HREF = "/brands/buying";
+const BUYING_VISUAL_IMAGE = "/images/seedance2/picture_10.jpg";
+
+const buyingFaqs = [
+  {
+    question: "选整木先看什么？",
+    description: "先建立对常见用材、板材体系与适用场景的基础认知，再判断是否适合自己的项目需求。",
+  },
+  {
+    question: "哪些工艺最影响落地效果？",
+    description: "重点关注表面处理、结构做法、安装配合与交付细节，避免只看展示效果。",
+  },
+  {
+    question: "预算和风格怎么平衡？",
+    description: "结合空间风格、配置深度与预算区间做判断，让选购方向更清晰、沟通更高效。",
+  },
+] as const;
+
 export async function generateMetadata(): Promise<Metadata> {
   return buildCategoryMetadata(
     "/brands",
     "整木市场",
-    "整木市场栏目，涵盖整木品牌与整木选购 FAQ，帮助用户完成品牌选择与采购决策。",
+    "整木市场首页，聚合整木品牌、品牌介绍与整木选购参考内容，帮助用户更清晰地进入品牌了解与选购方向。",
   );
 }
 
@@ -23,184 +46,216 @@ function BrandMark({ name, logoUrl }: { name: string; logoUrl: string | null }) 
     return (
       <Image
         src={resolveUploadedImageUrl(logoUrl)}
-        alt={`${name} logo`}
-        width={96}
-        height={96}
-        className="h-[84px] w-[84px] rounded-[26px] border border-[rgba(174,149,111,0.18)] bg-white object-contain p-3 shadow-[0_14px_34px_rgba(15,23,42,0.06)]"
+        alt={`${name}品牌标识`}
+        width={72}
+        height={72}
+        className="h-14 w-14 rounded-2xl border border-[rgba(174,149,111,0.16)] bg-white object-contain p-2.5 shadow-[0_12px_28px_rgba(15,23,42,0.06)] sm:h-[72px] sm:w-[72px]"
       />
     );
   }
 
-  return <div className="flex h-[84px] w-[84px] items-center justify-center rounded-[26px] border border-dashed border-[rgba(174,149,111,0.28)] bg-white text-[11px] tracking-[0.18em] text-[#8d7a5a]">LOGO</div>;
+  return (
+    <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-dashed border-[rgba(174,149,111,0.26)] bg-white text-[11px] tracking-[0.14em] text-[#8d7a5a] sm:h-[72px] sm:w-[72px]">
+      品牌
+    </div>
+  );
 }
 
 type DirectoryBrand = Awaited<ReturnType<typeof getBrandDirectoryList>>[number];
 
-function BrandPreviewCard({ item, compact = false }: { item: DirectoryBrand; compact?: boolean }) {
-  const href = `/brands/${item.slug}`;
-
+function ColumnCard({
+  title,
+  description,
+  href,
+  buttonLabel,
+}: {
+  title: string;
+  description: string;
+  href: string;
+  buttonLabel: string;
+}) {
   return (
-    <Link
-      href={href}
-      className={[
-        "group block rounded-[28px] border border-[rgba(181,157,121,0.16)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(250,247,242,0.92))] shadow-[0_16px_40px_rgba(15,23,42,0.05)] transition hover:-translate-y-1 hover:border-[rgba(181,157,121,0.3)] hover:shadow-[0_22px_54px_rgba(15,23,42,0.08)]",
-        compact ? "p-5" : "p-6",
-      ].join(" ")}
-    >
+    <article className="border-t border-[rgba(27,29,33,0.08)] pt-6 sm:pt-7">
+      <p className="text-[11px] tracking-[0.18em] text-[#9d7e4d]">子栏目</p>
+      <h2 className="mt-4 font-serif text-[2rem] leading-[1.04] text-primary sm:text-[2.35rem]">{title}</h2>
+      <p className="mt-4 max-w-md text-[15px] leading-8 text-muted sm:text-base">{description}</p>
+      <Link href={href} className="mt-6 inline-flex items-center text-sm text-primary/78 transition hover:text-accent">
+        {buttonLabel}
+      </Link>
+    </article>
+  );
+}
+
+function BrandOverviewCard({ item }: { item: DirectoryBrand }) {
+  return (
+    <article className="border-t border-[rgba(27,29,33,0.06)] py-5 first:border-t-0 first:pt-0">
       <div className="flex items-start gap-4">
-        <BrandMark name={item.enterpriseName} logoUrl={item.logoUrl} />
+        <div className="hidden sm:block">
+          <BrandMark name={item.enterpriseName} logoUrl={item.logoUrl} />
+        </div>
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                {item.isRecommend ? (
-                  <span className="rounded-full border border-[rgba(181,157,121,0.22)] bg-[rgba(245,236,220,0.8)] px-3 py-1 text-xs text-accent">
-                    推荐
-                  </span>
-                ) : null}
-                <span className="text-[11px] uppercase tracking-[0.18em] text-muted">
-                  {item.memberType === "enterprise_advanced" ? "高级企业" : "企业会员"}
-                </span>
-              </div>
-              <h3 className="mt-3 font-serif text-2xl leading-tight text-primary">{item.enterpriseName}</h3>
-            </div>
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <h3 className="font-serif text-[1.45rem] leading-tight text-primary">{item.enterpriseName}</h3>
             <span className="text-xs text-muted">{item.locationLabel}</span>
           </div>
-
-          <p className="mt-4 line-clamp-2 text-sm leading-7 text-primary/88">{item.headline}</p>
-          <p className="mt-2 line-clamp-3 text-sm leading-7 text-muted">{item.summary}</p>
-
-          <div className="mt-4 flex flex-wrap gap-2 text-xs text-muted">
-            {item.highlights.slice(0, compact ? 2 : 3).map((tag) => (
-              <span key={tag} className="rounded-full border border-border px-3 py-1.5">
-                {tag}
-              </span>
-            ))}
-          </div>
-
-          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-sm">
-            <div className="flex flex-wrap gap-3 text-muted">
-              <span>{item.serviceLine}</span>
-              <span>{item.contactLabel}</span>
-            </div>
-            <span className="text-primary transition group-hover:translate-x-0.5">查看详情</span>
+          <p className="mt-3 max-w-xl line-clamp-2 text-sm leading-7 text-muted">{item.headline}</p>
+          <div className="mt-4">
+            <Link href={`/brands/${item.slug}`} className="text-sm text-primary/72 transition hover:text-accent">
+              查看详情
+            </Link>
           </div>
         </div>
       </div>
-    </Link>
+    </article>
   );
 }
 
 export default async function BrandsPage() {
-  const [category, brands] = await Promise.all([getCategoryWithMetaByHref("/brands"), getBrandDirectoryList(8)]);
-  const recommended = brands.filter((item) => item.isRecommend);
-  const lead = recommended[0] ?? brands[0] ?? null;
-  const spotlight = brands.filter((item) => item.id !== lead?.id).slice(0, 3);
-  const directory = brands.filter((item) => item.id !== lead?.id).slice(0, 4);
+  const brands = await getBrandDirectoryList(4);
 
   return (
-    <CategoryHome basePath="/brands" category={category} searchHref="/brands/all">
-      <section className="mt-8 space-y-8">
-        <article className="overflow-hidden rounded-[36px] border border-[rgba(181,157,121,0.18)] bg-[radial-gradient(circle_at_top_left,rgba(213,183,131,0.15),transparent_32%),linear-gradient(180deg,rgba(255,255,255,0.98),rgba(247,242,235,0.92))] shadow-[0_24px_76px_rgba(34,31,26,0.08)]">
-          <div className="p-7 sm:p-9">
-            <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-              <div className="max-w-3xl">
-                <p className="text-xs uppercase tracking-[0.3em] text-[#9d7e4d]">Brand Directory</p>
-                <h1 className="mt-4 font-serif text-3xl text-primary sm:text-[2.9rem] sm:leading-[1.08]">整木市场</h1>
-              </div>
-              <div className="flex flex-wrap gap-3">
-                <Link href="/brands/all" className="inline-flex items-center justify-center rounded-full bg-accent px-5 py-3 text-sm font-medium text-white transition hover:opacity-92">
-                  浏览全部品牌
-                </Link>
-                <Link href="/brands/all" className="inline-flex items-center justify-center rounded-full border border-border bg-white px-5 py-3 text-sm font-medium text-primary transition hover:bg-surface">
-                  按地区筛选
-                </Link>
-              </div>
+    <div className="min-h-screen">
+      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
+        <nav className="mb-6 flex flex-wrap items-center gap-x-2 gap-y-2 text-sm text-muted" aria-label="面包屑">
+          <Link href="/" className="transition-colors hover:text-accent">
+            首页
+          </Link>
+          <span>/</span>
+          <span className="font-medium text-primary">整木市场</span>
+        </nav>
+
+        <section className="relative py-16 sm:py-24">
+          <div
+            aria-hidden
+            className="absolute left-0 top-2 h-52 w-52 rounded-full bg-[radial-gradient(circle,rgba(212,187,145,0.2),transparent_72%)] blur-2xl"
+          />
+          <div className="relative max-w-4xl">
+            <p className="text-[11px] tracking-[0.22em] text-[#9d7e4d]">栏目首页</p>
+            <h1 className="mt-7 font-serif text-[3.6rem] leading-[0.94] text-primary sm:text-[5.6rem]">整木市场</h1>
+            <p className="mt-10 max-w-[36rem] text-[15px] leading-8 text-muted sm:text-[1rem]">
+              聚合整木品牌与整木选购内容，方便用户从品牌了解、产品方向和选购参考等角度进入整木市场核心内容。
+            </p>
+            <div className="mt-12 flex flex-wrap gap-3 sm:gap-4">
+              <Link
+                href={BRAND_COLUMN_HREF}
+                className="inline-flex min-h-12 items-center justify-center rounded-full bg-[linear-gradient(180deg,rgba(176,150,103,0.96),rgba(142,118,77,0.98))] px-6 py-3 text-sm font-medium text-white shadow-[0_12px_30px_rgba(176,150,103,0.2)] transition hover:brightness-[1.03]"
+              >
+                进入整木品牌
+              </Link>
+              <Link
+                href={BUYING_COLUMN_HREF}
+                className="inline-flex min-h-12 items-center justify-center rounded-full border border-[rgba(27,29,33,0.08)] bg-white/92 px-6 py-3 text-sm font-medium text-primary transition hover:border-[rgba(138,115,77,0.24)] hover:text-accent"
+              >
+                进入整木选购
+              </Link>
             </div>
           </div>
-        </article>
+        </section>
 
-        {lead ? (
-          <article className="grid gap-4 xl:grid-cols-[1.08fr,0.92fr]">
-            <div className="group overflow-hidden rounded-[34px] border border-[rgba(181,157,121,0.18)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(246,240,231,0.92))] p-7 shadow-[0_20px_64px_rgba(34,31,26,0.08)] transition hover:-translate-y-1 hover:shadow-[0_26px_78px_rgba(34,31,26,0.12)]">
-              <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
-                <div className="max-w-2xl">
-                  <p className="text-xs uppercase tracking-[0.28em] text-[#9d7e4d]">Featured Brand</p>
-                  <Link href={`/brands/${lead.slug}`} className="mt-3 inline-block font-serif text-3xl leading-tight text-primary transition hover:text-accent sm:text-[2.4rem]">
-                    {lead.enterpriseName}
-                  </Link>
-                  <p className="mt-4 text-base leading-8 text-primary/88">{lead.headline}</p>
-                  <p className="mt-4 text-sm leading-8 text-muted">{lead.summary}</p>
-                  <div className="mt-5 flex flex-wrap gap-2 text-xs text-muted">
-                    {lead.highlights.map((item) => (
-                      <span key={item} className="rounded-full border border-border px-3 py-1.5">
-                        {item}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex flex-col items-start gap-4 sm:items-end">
-                  <span className="rounded-full bg-accent px-3.5 py-1.5 text-xs text-white">推荐品牌</span>
-                  <BrandMark name={lead.enterpriseName} logoUrl={lead.logoUrl} />
-                </div>
+        <section className="mt-16 grid gap-10 lg:grid-cols-2 lg:gap-12">
+          <ColumnCard
+            title="整木品牌"
+            description="查看整木行业品牌展示、品牌介绍与基础资料，快速了解不同品牌的定位与方向。"
+            href={BRAND_COLUMN_HREF}
+            buttonLabel="了解整木品牌 →"
+          />
+          <ColumnCard
+            title="整木选购"
+            description="查看整木选购相关内容，从材料、工艺、预算、风格与落地需求等角度获取参考。"
+            href={BUYING_COLUMN_HREF}
+            buttonLabel="了解整木选购 →"
+          />
+        </section>
+
+        {brands.length > 0 ? (
+          <section className="mt-20">
+            <div className="grid gap-8 lg:grid-cols-[220px,minmax(0,1fr)] lg:gap-10">
+              <div className="lg:pt-1">
+                <h2 className="font-serif text-[1.85rem] text-primary sm:text-[2.1rem]">品牌速览</h2>
+                <p className="mt-2 text-sm leading-7 text-muted">
+                  保留少量品牌介绍与基础资料，帮助用户快速进入整木品牌栏目。
+                </p>
+                <Link href={BRAND_COLUMN_HREF} className="mt-5 inline-block text-sm text-primary transition hover:text-accent">
+                  进入整木品牌栏目
+                </Link>
               </div>
-              <div className="mt-8 grid gap-4 border-t border-[rgba(181,157,121,0.12)] pt-5 text-sm sm:grid-cols-[1fr,auto] sm:items-center">
-                <div className="space-y-2 text-muted">
-                  <p>{lead.locationLabel}</p>
-                  <p>{lead.serviceLine}</p>
-                </div>
-                <div className="flex flex-wrap gap-3">
-                  {lead.contactHref ? (
-                    <a
-                      href={lead.contactHref}
-                      target={lead.contactHref.startsWith("http") ? "_blank" : undefined}
-                      rel={lead.contactHref.startsWith("http") ? "noreferrer" : undefined}
-                      className="rounded-full border border-[rgba(181,157,121,0.2)] bg-white px-4 py-2 text-accent transition hover:bg-[rgba(255,249,238,0.92)]"
-                    >
-                      {lead.contactLabel}
-                    </a>
-                  ) : (
-                    <span className="rounded-full border border-[rgba(181,157,121,0.2)] bg-white px-4 py-2 text-accent">{lead.contactLabel}</span>
-                  )}
-                  <Link
-                    href={`/brands/${lead.slug}`}
-                    className="rounded-full border border-[rgba(181,157,121,0.2)] bg-white px-4 py-2 text-primary transition hover:bg-[rgba(255,249,238,0.92)]"
-                  >
-                    查看详情
-                  </Link>
-                </div>
+              <div className="grid gap-x-10 md:grid-cols-2">
+                {brands.map((item) => (
+                  <BrandOverviewCard key={item.id} item={item} />
+                ))}
               </div>
             </div>
-
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
-              {spotlight.map((item) => (
-                <BrandPreviewCard key={item.id} item={item} compact />
-              ))}
-            </div>
-          </article>
+          </section>
         ) : null}
 
-        <article className="rounded-[32px] border border-[rgba(181,157,121,0.16)] bg-white/94 p-6 shadow-[0_16px_40px_rgba(15,23,42,0.05)] sm:p-8">
-          <div className="flex flex-wrap items-end justify-between gap-3">
+        <section className="mt-20">
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr),340px] lg:items-start lg:gap-12">
             <div>
-              <h2 className="section-label mb-2 text-primary">品牌列表</h2>
+              <div className="max-w-3xl">
+                <h2 className="font-serif text-[1.85rem] text-primary sm:text-[2.1rem]">选购参考</h2>
+                <p className="mt-2 text-sm leading-7 text-muted sm:text-[15px]">
+                  用常见问题快速建立选购判断，再进入整木选购栏目查看更具体的内容。
+                </p>
+              </div>
+
+              <div className="mt-10 space-y-5">
+                {buyingFaqs.map((item) => (
+                  <Link
+                    key={item.question}
+                    href={BUYING_COLUMN_HREF}
+                    className="group block max-w-3xl border-t border-[rgba(27,29,33,0.06)] pt-7 transition"
+                  >
+                    <article>
+                      <h3 className="font-serif text-[1.3rem] leading-tight text-primary transition group-hover:text-accent">
+                        {item.question}
+                      </h3>
+                      <p className="mt-4 text-sm leading-7 text-muted transition group-hover:text-primary/80">
+                        {item.description}
+                      </p>
+                    </article>
+                  </Link>
+                ))}
+              </div>
+
+              <Link href={BUYING_COLUMN_HREF} className="mt-10 inline-block text-sm text-primary transition hover:text-accent">
+                查看更多整木选购问题 →
+              </Link>
             </div>
-            <Link href="/brands/all" className="text-sm text-accent transition hover:opacity-80">
-              查看全部品牌
+
+            <aside className="mt-1 lg:mt-0">
+              <div className="overflow-hidden rounded-[28px]">
+                <Image
+                  src={BUYING_VISUAL_IMAGE}
+                  alt="整木空间效果参考"
+                  width={900}
+                  height={560}
+                  className="aspect-[16/10] h-auto w-full object-cover"
+                />
+              </div>
+              <div className="mt-6 max-w-[18rem]">
+                <p className="text-base leading-7 text-primary sm:text-[1.05rem]">看看真实整木空间效果</p>
+                <Link
+                  href={BRAND_COLUMN_HREF}
+                  className="mt-4 inline-flex items-center text-sm text-primary/82 transition hover:text-accent"
+                >
+                  查看整木品牌 →
+                </Link>
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <section className="mt-20 border-t border-[rgba(27,29,33,0.08)] pt-8 sm:pt-10">
+          <div className="max-w-3xl">
+            <p className="text-sm leading-7 text-muted">
+              如果你已经明确想先看品牌定位、空间表达与基础资料，可以直接进入整木品牌栏目继续浏览。
+            </p>
+            <Link href={BRAND_COLUMN_HREF} className="mt-5 inline-flex items-center text-base text-primary transition hover:text-accent">
+              查看整木品牌 →
             </Link>
           </div>
-
-          {directory.length === 0 ? (
-            <p className="mt-6 text-sm text-muted">暂无可展示的品牌资料。</p>
-          ) : (
-            <div className="mt-6 grid gap-4 lg:grid-cols-2">
-              {directory.map((item) => (
-                <BrandPreviewCard key={item.id} item={item} />
-              ))}
-            </div>
-          )}
-        </article>
-      </section>
-    </CategoryHome>
+        </section>
+      </div>
+    </div>
   );
 }
