@@ -88,19 +88,17 @@ function ColumnCard({
 
 function BrandOverviewCard({ item }: { item: DirectoryBrand }) {
   return (
-    <article className="border-t border-[rgba(27,29,33,0.06)] py-5 first:border-t-0 first:pt-0">
-      <div className="flex items-start gap-4">
+    <article className="border-t border-[rgba(27,29,33,0.06)] py-7 first:border-t-0 first:pt-0">
+      <div className="flex items-start gap-5">
         <div className="hidden sm:block">
           <BrandMark name={item.enterpriseName} logoUrl={item.logoUrl} />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-end justify-between gap-2">
-            <h3 className="font-serif text-[1.45rem] leading-tight text-primary">{item.enterpriseName}</h3>
-            <span className="text-xs text-muted">{item.locationLabel}</span>
-          </div>
-          <p className="mt-3 max-w-xl line-clamp-2 text-sm leading-7 text-muted">{item.headline}</p>
-          <div className="mt-4">
-            <Link href={`/brands/${item.slug}`} className="text-sm text-primary/72 transition hover:text-accent">
+          <h3 className="font-serif text-[1.6rem] leading-[1.08] text-primary">{item.enterpriseName}</h3>
+          <p className="mt-1 text-[12px] leading-6 text-muted">{item.locationLabel}</p>
+          <p className="mt-4 max-w-[28rem] line-clamp-2 text-sm leading-7 text-muted">{item.headline}</p>
+          <div className="mt-5">
+            <Link href={`/brands/${item.slug}`} className="text-sm text-primary/66 transition hover:text-accent">
               查看详情
             </Link>
           </div>
@@ -169,17 +167,17 @@ export default async function BrandsPage() {
 
         {brands.length > 0 ? (
           <section className="mt-20">
-            <div className="grid gap-8 lg:grid-cols-[220px,minmax(0,1fr)] lg:gap-10">
+            <div className="grid gap-10 lg:grid-cols-[200px,minmax(0,1fr)] lg:gap-14">
               <div className="lg:pt-1">
                 <h2 className="font-serif text-[1.85rem] text-primary sm:text-[2.1rem]">品牌速览</h2>
-                <p className="mt-2 text-sm leading-7 text-muted">
+                <p className="mt-3 max-w-[11rem] text-sm leading-7 text-muted">
                   保留少量品牌介绍与基础资料，帮助用户快速进入整木品牌栏目。
                 </p>
                 <Link href={BRAND_COLUMN_HREF} className="mt-5 inline-block text-sm text-primary transition hover:text-accent">
                   进入整木品牌栏目
                 </Link>
               </div>
-              <div className="grid gap-x-10 md:grid-cols-2">
+              <div className="grid gap-x-12 md:grid-cols-2">
                 {brands.map((item) => (
                   <BrandOverviewCard key={item.id} item={item} />
                 ))}
