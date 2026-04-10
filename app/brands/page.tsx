@@ -90,21 +90,20 @@ function BrandOverviewCard({ item }: { item: DirectoryBrand }) {
   return (
     <Link
       href={`/brands/${item.slug}`}
-      className="group block border-t border-[rgba(27,29,33,0.06)] py-7 first:border-t-0 first:pt-0 transition"
+      className="group block"
     >
-      <article className="flex items-start gap-5">
-        <div className="hidden sm:block">
+      <article className="flex h-full min-h-[252px] flex-col rounded-[30px] border border-[rgba(196,182,154,0.26)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(244,239,231,0.9))] p-7 transition hover:border-[rgba(176,150,103,0.34)]">
+        <div>
           <BrandMark name={item.enterpriseName} logoUrl={item.logoUrl} />
-        </div>
-        <div className="min-w-0 flex-1">
-          <h3 className="font-serif text-[1.6rem] leading-[1.08] text-primary transition group-hover:text-accent">
+          <h3 className="mt-6 font-serif text-[1.55rem] leading-[1.08] text-primary transition group-hover:text-accent">
             {item.enterpriseName}
           </h3>
-          <p className="mt-1 text-[12px] leading-6 text-muted">{item.locationLabel}</p>
-          <p className="mt-4 max-w-[28rem] line-clamp-2 text-sm leading-7 text-muted transition group-hover:text-primary/80">
+          <p className="mt-2 text-[12px] leading-6 text-muted">{item.locationLabel}</p>
+          <p className="mt-5 line-clamp-2 text-sm leading-7 text-muted transition group-hover:text-primary/80">
             {item.headline}
           </p>
         </div>
+        <div className="mt-auto pt-6 text-sm text-primary/70 transition group-hover:text-accent">进入品牌 →</div>
       </article>
     </Link>
   );
@@ -169,22 +168,23 @@ export default async function BrandsPage() {
 
         {brands.length > 0 ? (
           <section className="mt-20">
-            <div className="grid gap-10 lg:grid-cols-[200px,minmax(0,1fr)] lg:gap-14">
-              <div className="lg:pt-1">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+              <div className="max-w-xl">
                 <h2 className="font-serif text-[1.85rem] text-primary sm:text-[2.1rem]">品牌速览</h2>
-                <p className="mt-3 max-w-[11rem] text-sm leading-7 text-muted">
+                <p className="mt-3 text-sm leading-7 text-muted">
                   保留少量品牌介绍与基础资料，帮助用户快速进入整木品牌栏目。
                 </p>
               </div>
-              <div className="grid gap-x-12 md:grid-cols-1 xl:grid-cols-3">
-                {brands.map((item) => (
-                  <BrandOverviewCard key={item.id} item={item} />
-                ))}
-              </div>
+              <Link href={BRAND_COLUMN_HREF} className="inline-flex items-center text-sm text-primary transition hover:text-accent">
+                查看全部整木品牌 →
+              </Link>
             </div>
-            <Link href={BRAND_COLUMN_HREF} className="mt-8 inline-flex items-center text-sm text-primary transition hover:text-accent">
-              查看全部整木品牌 →
-            </Link>
+
+            <div className="mt-8 grid gap-5 lg:grid-cols-3">
+              {brands.map((item) => (
+                <BrandOverviewCard key={item.id} item={item} />
+              ))}
+            </div>
           </section>
         ) : null}
 
