@@ -75,13 +75,25 @@ function ColumnCard({
   buttonLabel: string;
 }) {
   return (
-    <article className="border-t border-[rgba(27,29,33,0.08)] pt-6 sm:pt-7">
-      <p className="text-[11px] tracking-[0.18em] text-[#9d7e4d]">子栏目</p>
-      <h2 className="mt-4 font-serif text-[2rem] leading-[1.04] text-primary sm:text-[2.35rem]">{title}</h2>
-      <p className="mt-4 max-w-md text-[15px] leading-8 text-muted sm:text-base">{description}</p>
-      <Link href={href} className="mt-6 inline-flex items-center text-sm text-primary/78 transition hover:text-accent">
-        {buttonLabel}
-      </Link>
+    <article className="relative overflow-hidden rounded-[30px] px-6 py-7 sm:px-8 sm:py-8">
+      <div
+        aria-hidden
+        className={[
+          "absolute inset-0 rounded-[30px]",
+          title === "整木品牌"
+            ? "bg-[radial-gradient(circle_at_top_left,rgba(212,187,145,0.16),transparent_48%),linear-gradient(180deg,rgba(255,255,255,0.92),rgba(247,242,234,0.8))]"
+            : "bg-[radial-gradient(circle_at_top_left,rgba(190,198,205,0.18),transparent_46%),linear-gradient(180deg,rgba(255,255,255,0.92),rgba(240,243,246,0.78))]",
+        ].join(" ")}
+      />
+      <div className="absolute left-6 right-6 top-0 h-px bg-[rgba(27,29,33,0.08)] sm:left-8 sm:right-8" aria-hidden />
+      <div className="relative">
+        <p className="text-[11px] tracking-[0.18em] text-[#9d7e4d]">子栏目</p>
+        <h2 className="mt-4 font-serif text-[2rem] leading-[1.04] text-primary sm:text-[2.35rem]">{title}</h2>
+        <p className="mt-4 max-w-md text-[15px] leading-8 text-muted sm:text-base">{description}</p>
+        <Link href={href} className="mt-7 inline-flex items-center text-sm text-primary/78 transition hover:text-accent">
+          {buttonLabel}
+        </Link>
+      </div>
     </article>
   );
 }
