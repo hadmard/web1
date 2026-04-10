@@ -124,18 +124,18 @@ export default async function BrandsPage() {
           <span className="font-medium text-primary">整木市场</span>
         </nav>
 
-        <section className="relative py-16 sm:py-24">
+        <section className="relative py-12 sm:py-16">
           <div
             aria-hidden
             className="absolute left-0 top-2 h-52 w-52 rounded-full bg-[radial-gradient(circle,rgba(212,187,145,0.2),transparent_72%)] blur-2xl"
           />
           <div className="relative max-w-4xl">
             <p className="text-[11px] tracking-[0.22em] text-[#9d7e4d]">栏目首页</p>
-            <h1 className="mt-7 font-serif text-[3.6rem] leading-[0.94] text-primary sm:text-[5.6rem]">整木市场</h1>
-            <p className="mt-10 max-w-[36rem] text-[15px] leading-8 text-muted sm:text-[1rem]">
+            <h1 className="mt-3 font-serif text-[2.1rem] leading-[1.08] text-primary sm:text-[2.65rem]">整木市场</h1>
+            <p className="mt-5 max-w-[34rem] text-[15px] leading-8 text-muted sm:text-[1rem]">
               聚合整木品牌与整木选购内容，方便用户从品牌了解、产品方向和选购参考等角度进入整木市场核心内容。
             </p>
-            <div className="mt-12 flex flex-wrap gap-3 sm:gap-4">
+            <div className="mt-8 flex flex-wrap gap-3 sm:gap-4">
               <Link
                 href={BRAND_COLUMN_HREF}
                 className="inline-flex min-h-12 items-center justify-center rounded-full bg-[linear-gradient(180deg,rgba(176,150,103,0.96),rgba(142,118,77,0.98))] px-6 py-3 text-sm font-medium text-white shadow-[0_12px_30px_rgba(176,150,103,0.2)] transition hover:brightness-[1.03]"
@@ -152,7 +152,7 @@ export default async function BrandsPage() {
           </div>
         </section>
 
-        <section className="mt-16 grid gap-10 lg:grid-cols-2 lg:gap-12">
+        <section className="mt-12 grid gap-10 lg:grid-cols-2 lg:gap-12">
           <ColumnCard
             title="整木品牌"
             description="查看整木行业品牌展示、品牌介绍与基础资料，快速了解不同品牌的定位与方向。"
