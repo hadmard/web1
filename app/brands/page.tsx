@@ -131,7 +131,7 @@ export default async function BrandsPage() {
           />
           <div className="relative max-w-4xl">
             <p className="text-[11px] tracking-[0.22em] text-[#9d7e4d]">栏目首页</p>
-            <h1 className="mt-3 font-serif text-[2.1rem] leading-[1.08] text-primary sm:text-[2.65rem]">整木市场</h1>
+            <h1 className="mt-4 font-serif text-3xl text-primary sm:text-[2.8rem] sm:leading-[1.1]">整木市场</h1>
             <p className="mt-5 max-w-[34rem] text-[15px] leading-8 text-muted sm:text-[1rem]">
               聚合整木品牌与整木选购内容，方便用户从品牌了解、产品方向和选购参考等角度进入整木市场核心内容。
             </p>
