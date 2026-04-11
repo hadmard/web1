@@ -252,14 +252,14 @@ export default async function BrandsAllPage({ searchParams }: Props) {
                 <input
                   name="q"
                   defaultValue={q}
-                  className="h-10 min-w-0 flex-1 rounded-full border border-[rgba(181,157,121,0.16)] bg-white px-4 text-sm text-primary placeholder:text-muted shadow-[0_12px_26px_rgba(15,23,42,0.04)] sm:h-11 sm:w-full"
+                  className="h-10 min-w-0 flex-1 rounded-full border border-[rgba(181,157,121,0.16)] bg-white px-3.5 text-[13px] text-primary placeholder:text-[rgba(103,111,124,0.72)] shadow-[0_12px_26px_rgba(15,23,42,0.04)] sm:h-11 sm:w-full sm:px-4 sm:text-sm"
                   placeholder="品牌名 / 企业名 / 产品体系 / 地区关键词"
                 />
                 <input type="hidden" name="region" value={region} />
-                <button className="h-10 min-w-[4.75rem] shrink-0 rounded-full bg-accent px-4 text-sm font-medium text-white sm:h-11 sm:px-5">筛选</button>
+                <button className="h-10 min-w-[4.35rem] shrink-0 rounded-full bg-accent px-3 text-[13px] font-medium text-white sm:h-11 sm:min-w-[4.75rem] sm:px-5 sm:text-sm">筛选</button>
                 <Link
                   href="/brands/all"
-                  className="flex h-10 min-w-[4.9rem] shrink-0 items-center justify-center rounded-full border border-[rgba(181,157,121,0.16)] bg-white px-4 text-sm text-primary shadow-[0_12px_26px_rgba(15,23,42,0.04)] transition hover:bg-surface sm:h-11 sm:inline-flex"
+                  className="flex h-10 min-w-[4.35rem] shrink-0 items-center justify-center rounded-full border border-[rgba(181,157,121,0.16)] bg-white px-3 text-[13px] text-primary shadow-[0_12px_26px_rgba(15,23,42,0.04)] transition hover:bg-surface sm:h-11 sm:min-w-[4.9rem] sm:px-4 sm:text-sm sm:inline-flex"
                 >
                   重置
                 </Link>
