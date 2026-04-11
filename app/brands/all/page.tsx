@@ -248,21 +248,25 @@ export default async function BrandsAllPage({ searchParams }: Props) {
           <div className="border-t border-[rgba(181,157,121,0.16)] p-4 sm:p-7 xl:border-l xl:border-t-0">
             <form method="get" className="bg-transparent">
               <label className="hidden text-xs uppercase tracking-[0.18em] text-[#8d7a5a] sm:block">搜索品牌</label>
-              <div className="flex items-center gap-2 sm:mt-3 sm:grid sm:grid-cols-[minmax(0,1fr),auto,auto] sm:gap-3">
+              <div className="mt-0 grid grid-cols-[minmax(0,1fr)] gap-2.5 sm:mt-3 sm:grid-cols-[minmax(0,1fr),auto,auto] sm:gap-3">
                 <input
                   name="q"
                   defaultValue={q}
-                  className="h-10 min-w-0 flex-1 rounded-full border border-[rgba(181,157,121,0.16)] bg-white px-3.5 text-[13px] text-primary placeholder:text-[rgba(103,111,124,0.72)] shadow-[0_12px_26px_rgba(15,23,42,0.04)] sm:h-11 sm:w-full sm:px-4 sm:text-sm"
+                  className="h-10 min-w-0 rounded-full border border-[rgba(181,157,121,0.16)] bg-white px-3.5 text-[13px] text-primary placeholder:text-[rgba(103,111,124,0.58)] shadow-[0_12px_26px_rgba(15,23,42,0.04)] sm:h-11 sm:w-full sm:px-4 sm:text-sm"
                   placeholder="品牌名 / 企业名 / 产品体系 / 地区关键词"
                 />
                 <input type="hidden" name="region" value={region} />
-                <button className="h-10 min-w-[4.35rem] shrink-0 rounded-full bg-accent px-3 text-[13px] font-medium text-white sm:h-11 sm:min-w-[4.75rem] sm:px-5 sm:text-sm">筛选</button>
-                <Link
-                  href="/brands/all"
-                  className="flex h-10 min-w-[4.35rem] shrink-0 items-center justify-center rounded-full border border-[rgba(181,157,121,0.16)] bg-white px-3 text-[13px] text-primary shadow-[0_12px_26px_rgba(15,23,42,0.04)] transition hover:bg-surface sm:h-11 sm:min-w-[4.9rem] sm:px-4 sm:text-sm sm:inline-flex"
-                >
-                  重置
-                </Link>
+                <div className="grid grid-cols-2 gap-2 sm:contents">
+                  <button className="h-10 rounded-full bg-accent px-3 text-[13px] font-medium text-white sm:h-11 sm:min-w-[4.75rem] sm:px-5 sm:text-sm">
+                    筛选
+                  </button>
+                  <Link
+                    href="/brands/all"
+                    className="flex h-10 items-center justify-center rounded-full border border-[rgba(181,157,121,0.16)] bg-white px-3 text-[13px] text-primary shadow-[0_12px_26px_rgba(15,23,42,0.04)] transition hover:bg-surface sm:h-11 sm:min-w-[4.9rem] sm:px-4 sm:text-sm sm:inline-flex"
+                  >
+                    重置
+                  </Link>
+                </div>
               </div>
             </form>
           </div>

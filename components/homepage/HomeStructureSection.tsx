@@ -26,7 +26,7 @@ export function HomeStructureSection({ cards }: { cards: HomepageStructureCard[]
                     width={1200}
                     height={700}
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 560px"
-                    className="showcase-image h-28 sm:h-32"
+                    className="showcase-image h-24 sm:h-28"
                   />
                 </div>
                 <p className="text-[13px] sm:text-sm text-muted">{card.subtitle}</p>
