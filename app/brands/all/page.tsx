@@ -122,12 +122,18 @@ function BrandCard({ item, featured = false }: { item: BrandCardItem; featured?:
       className={[
         "group h-full rounded-[22px] border border-[rgba(181,157,121,0.14)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,248,243,0.96))] shadow-[0_14px_32px_rgba(15,23,42,0.045)] transition hover:-translate-y-1 hover:border-[rgba(181,157,121,0.26)] hover:shadow-[0_20px_44px_rgba(15,23,42,0.07)] sm:rounded-[26px]",
         featured
-          ? "relative overflow-hidden p-4 before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-[linear-gradient(90deg,transparent,rgba(181,157,121,0.65),transparent)] sm:p-6"
+          ? "relative overflow-hidden p-3.5 before:absolute before:inset-x-0 before:top-0 before:h-px before:bg-[linear-gradient(90deg,transparent,rgba(181,157,121,0.65),transparent)] sm:p-6"
           : "p-5",
       ].join(" ")}
     >
       <div className="flex h-full flex-col">
-        <div className={featured ? "flex items-start gap-3 sm:grid sm:gap-5 sm:grid-cols-[112px,minmax(0,1fr)] sm:items-stretch" : "flex items-start gap-3"}>
+        <div
+          className={
+            featured
+              ? "flex items-start gap-3 sm:grid sm:gap-5 sm:grid-cols-[112px,minmax(0,1fr)] sm:items-stretch"
+              : "flex items-start gap-3"
+          }
+        >
           <Link href={href} className={featured ? "shrink-0 sm:flex sm:h-full sm:min-h-[112px]" : "shrink-0"}>
             <BrandLogo
               name={item.enterpriseName}
@@ -156,11 +162,23 @@ function BrandCard({ item, featured = false }: { item: BrandCardItem; featured?:
           </div>
         </div>
 
-        <p className={featured ? "mt-3 line-clamp-2 text-[12px] leading-5 text-muted sm:mt-6 sm:line-clamp-4 sm:text-[15px] sm:leading-8" : "mt-4 line-clamp-3 text-sm leading-6 text-muted"}>
+        <p
+          className={
+            featured
+              ? "mt-2.5 line-clamp-2 text-[12px] leading-5 text-muted sm:mt-6 sm:line-clamp-4 sm:text-[15px] sm:leading-8"
+              : "mt-4 line-clamp-3 text-sm leading-6 text-muted"
+          }
+        >
           {summary}
         </p>
 
-        <div className={featured ? "mt-auto flex items-center justify-end border-t border-[rgba(181,157,121,0.1)] pt-3 text-sm sm:pt-6" : "mt-auto flex items-center justify-end border-t border-[rgba(181,157,121,0.1)] pt-5 text-sm"}>
+        <div
+          className={
+            featured
+              ? "mt-auto flex items-center justify-end border-t border-[rgba(181,157,121,0.1)] pt-2.5 text-sm sm:pt-6"
+              : "mt-auto flex items-center justify-end border-t border-[rgba(181,157,121,0.1)] pt-5 text-sm"
+          }
+        >
           <Link
             href={href}
             className={[
@@ -228,18 +246,21 @@ export default async function BrandsAllPage({ searchParams }: Props) {
             <h1 className="mt-2 font-serif text-[1.8rem] text-primary sm:mt-3 sm:text-[2.4rem] sm:leading-[1.08]">品牌总览</h1>
           </div>
           <div className="border-t border-[rgba(181,157,121,0.16)] p-4 sm:p-7 xl:border-l xl:border-t-0">
-            <form method="get" className="rounded-[20px] border border-[rgba(181,157,121,0.16)] bg-white/88 p-3 shadow-[0_12px_26px_rgba(15,23,42,0.04)] sm:rounded-[24px] sm:p-4">
+            <form method="get" className="bg-transparent">
               <label className="hidden text-xs uppercase tracking-[0.18em] text-[#8d7a5a] sm:block">搜索品牌</label>
-              <div className="flex items-center gap-2 sm:mt-3 sm:block">
+              <div className="flex items-center gap-2 rounded-full border border-[rgba(181,157,121,0.16)] bg-white/92 p-1.5 shadow-[0_12px_26px_rgba(15,23,42,0.04)] sm:mt-3 sm:grid sm:grid-cols-[minmax(0,1fr),auto,auto] sm:gap-3 sm:rounded-[20px] sm:p-2">
                 <input
                   name="q"
                   defaultValue={q}
-                  className="h-10 min-w-0 flex-1 rounded-full border border-border bg-surface px-4 text-sm text-primary sm:h-11 sm:w-full sm:rounded-[16px]"
+                  className="h-10 min-w-0 flex-1 rounded-full border border-[rgba(181,157,121,0.14)] bg-[rgba(247,243,237,0.85)] px-4 text-sm text-primary placeholder:text-muted sm:h-11 sm:w-full"
                   placeholder="品牌名 / 企业名 / 产品体系 / 地区关键词"
                 />
                 <input type="hidden" name="region" value={region} />
-                <button className="h-10 shrink-0 rounded-full bg-accent px-4 text-sm font-medium text-white sm:mt-4 sm:px-4 sm:py-2">筛选</button>
-                <Link href="/brands/all" className="flex h-10 shrink-0 items-center rounded-full border border-border bg-white px-4 text-sm text-primary transition hover:bg-surface sm:mt-4 sm:inline-flex">
+                <button className="h-10 shrink-0 rounded-full bg-accent px-4 text-sm font-medium text-white sm:h-11 sm:px-5">筛选</button>
+                <Link
+                  href="/brands/all"
+                  className="flex h-10 shrink-0 items-center rounded-full border border-[rgba(181,157,121,0.14)] bg-white px-4 text-sm text-primary transition hover:bg-surface sm:h-11 sm:inline-flex"
+                >
                   重置
                 </Link>
               </div>
@@ -280,7 +301,7 @@ export default async function BrandsAllPage({ searchParams }: Props) {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 sm:gap-5 lg:grid-cols-3">
             {featuredBrands.map((item) => (
               <BrandCard key={`recommended-${item.id}`} item={item} featured />
             ))}
