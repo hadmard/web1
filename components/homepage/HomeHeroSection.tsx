@@ -5,7 +5,7 @@ export function HomeHeroSection({ heroBackground }: { heroBackground: string }) 
   const showHeroImage = heroBackground.trim().length > 0;
 
   return (
-    <section className="home-hero-surface relative overflow-hidden border-b border-border py-10 sm:py-28" data-mouse-zone>
+    <section className="home-hero-surface relative overflow-hidden border-b border-border py-8 sm:py-28" data-mouse-zone>
       <div className="pointer-events-none absolute inset-0 home-hero-fallback" />
       <div className="pointer-events-none absolute home-hero-bloom-a" />
       <div className="pointer-events-none absolute home-hero-bloom-b" />
@@ -35,7 +35,7 @@ export function HomeHeroSection({ heroBackground }: { heroBackground: string }) 
           </h1>
         </div>
 
-        <div data-reveal="fade-up" data-reveal-delay="70" className="mt-3 flex justify-center sm:mt-8">
+        <div data-reveal="fade-up" data-reveal-delay="70" className="mt-2 flex justify-center sm:mt-8">
           <div className="hero-search-shell magnetic-shell w-full max-w-3xl">
             <StructuredSearch hero />
           </div>

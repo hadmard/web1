@@ -15,6 +15,11 @@ function isReadableLabel(text: string | null | undefined): boolean {
   return true;
 }
 
+function sanitizeHomepageArticleTitle(text: string | null | undefined, fallback: string, index: number) {
+  if (isReadableLabel(text)) return text!.trim();
+  return `${fallback}${index + 1}`;
+}
+
 export type HomepageLinkItem = {
   label: string;
   href: string;
@@ -96,6 +101,14 @@ export async function getHomepageData() {
     }
   });
 
+  const safeLatestNews = latestNews.slice(0, 3).map((item, index) => ({
+    ...item,
+    title: sanitizeHomepageArticleTitle(item.title, "行业资讯更新中 ", index),
+  }));
+  const safeHotNews = hotNews.slice(0, 3).map((item, index) => ({
+    ...item,
+    title: sanitizeHomepageArticleTitle(item.title, "热门内容整理中 ", index),
+  }));
   const safeBrands = latestBrands.filter((item) => isReadableLabel(item.enterpriseName));
   const safeTerms = latestTerms.filter((item) => isReadableLabel(item.title));
   const safeStandards = latestStandards.filter((item) => isReadableLabel(item.title));
@@ -162,8 +175,8 @@ export async function getHomepageData() {
 
   return {
     visualSettings,
-    latestNews,
-    hotNews,
+    latestNews: safeLatestNews,
+    hotNews: safeHotNews,
     structureCards,
     middleAd: visualSettings.ads.homeMiddle,
     enterprises,

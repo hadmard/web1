@@ -23,9 +23,9 @@ export function HomeBrandEntrySection({
   const hasEnterpriseImage = enterpriseImage.trim().length > 0;
 
   return (
-    <section className="section-tone-c border-b border-border py-14 sm:py-16">
+    <section className="section-tone-c border-b border-border py-12 sm:py-16">
       <div className="mx-auto grid max-w-6xl gap-4 px-4 sm:px-6 lg:grid-cols-3">
-        <article data-reveal="fade-left" className="glass-panel spotlight-card p-5 lg:col-span-2" data-mouse-zone>
+        <article data-reveal="fade-left" className="glass-panel spotlight-card p-4 sm:p-5 lg:col-span-2" data-mouse-zone>
           <div className="showcase-frame media-zoom-smooth mb-4 overflow-hidden rounded-xl border border-border">
             {middleAd.enabled && hasMiddleAdImage ? (
               <Link href={middleAd.href || "/membership"} className="block">
@@ -35,7 +35,7 @@ export function HomeBrandEntrySection({
                   width={1440}
                   height={320}
                   sizes="(max-width: 1024px) 100vw, 760px"
-                  className="h-40 w-full object-cover object-[center_42%] sm:h-48"
+                  className="h-32 w-full object-cover object-[center_42%] sm:h-48"
                 />
               </Link>
             ) : hasEnterpriseImage ? (
@@ -45,17 +45,17 @@ export function HomeBrandEntrySection({
                 width={1600}
                 height={900}
                 sizes="(max-width: 1024px) 100vw, 760px"
-                className="h-40 w-full object-cover object-[center_42%] sm:h-48"
+                className="h-32 w-full object-cover object-[center_42%] sm:h-48"
               />
             ) : (
-              <div className="h-40 bg-gradient-to-br from-surface-elevated via-surface to-surface-elevated sm:h-48" />
+              <div className="h-32 bg-gradient-to-br from-surface-elevated via-surface to-surface-elevated sm:h-48" />
             )}
           </div>
 
           <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="mb-2 text-[13px] text-muted sm:text-sm">品牌生态</p>
-              <h3 className="font-serif text-lg font-semibold text-primary sm:text-[1.35rem]">关于品牌</h3>
+              <p className="mb-2 text-[13px] text-muted sm:text-sm">品牌入口</p>
+              <h3 className="font-serif text-[1.18rem] font-semibold text-primary sm:text-[1.35rem]">推荐品牌</h3>
             </div>
             {middleAd.enabled && middleAd.title ? (
               <Link href={middleAd.href || "/membership"} className="text-sm font-medium text-accent hover:text-primary">
@@ -69,29 +69,29 @@ export function HomeBrandEntrySection({
               <Link
                 key={enterprise.id}
                 href={enterprise.detailHref}
-                className="interactive-lift spotlight-card block rounded-[22px] border border-border bg-surface p-4"
+                className="interactive-lift spotlight-card block rounded-[20px] border border-border bg-surface p-3.5 sm:rounded-[22px] sm:p-4"
                 data-mouse-zone
               >
                 <div className="flex items-start gap-3">
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-[18px] border border-[rgba(174,149,111,0.18)] bg-white">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[16px] border border-[rgba(174,149,111,0.18)] bg-white sm:h-14 sm:w-14 sm:rounded-[18px]">
                     {enterprise.logoUrl ? (
                       <Image
                         src={resolveUploadedImageUrl(enterprise.logoUrl)}
                         alt={`${enterprise.enterpriseName} logo`}
                         width={72}
                         height={72}
-                        className="h-10 w-10 object-contain"
+                        className="h-8 w-8 object-contain sm:h-10 sm:w-10"
                       />
                     ) : (
                       <span className="text-[10px] tracking-[0.16em] text-[#8d7a5a]">LOGO</span>
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="line-clamp-1 text-sm font-medium text-primary">{enterprise.enterpriseName}</p>
-                    <p className="mt-1 line-clamp-2 text-[13px] leading-6 text-muted">{enterprise.headline}</p>
+                    <p className="line-clamp-1 text-[13px] font-medium text-primary sm:text-sm">{enterprise.enterpriseName}</p>
+                    <p className="mt-1 line-clamp-2 text-[12px] leading-5 text-muted sm:text-[13px] sm:leading-6">{enterprise.headline}</p>
                   </div>
                 </div>
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 sm:mt-3">
                   <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted">
                     {enterprise.locationLabel || "地区信息完善中"}
                   </span>
@@ -102,9 +102,9 @@ export function HomeBrandEntrySection({
           </div>
         </article>
 
-        <article data-reveal="fade-right" data-reveal-delay="80" className="glass-panel spotlight-card p-5" data-mouse-zone>
-          <p className="mb-2 text-[13px] text-muted sm:text-sm">区域热度</p>
-          <h3 className="mb-3 font-serif text-lg font-semibold text-primary sm:text-[1.35rem]">品牌数量</h3>
+        <article data-reveal="fade-right" data-reveal-delay="80" className="glass-panel spotlight-card p-4 sm:p-5" data-mouse-zone>
+          <p className="mb-2 text-[13px] text-muted sm:text-sm">地区热度</p>
+          <h3 className="mb-3 font-serif text-[1.18rem] font-semibold text-primary sm:text-[1.35rem]">品牌数量</h3>
           <ul className="list-cascade space-y-2 text-sm">
             {regionCounts.map((region) => (
               <li key={region.region} className="flex items-center justify-between">
