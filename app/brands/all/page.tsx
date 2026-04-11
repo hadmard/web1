@@ -248,18 +248,18 @@ export default async function BrandsAllPage({ searchParams }: Props) {
           <div className="border-t border-[rgba(181,157,121,0.16)] p-4 sm:p-7 xl:border-l xl:border-t-0">
             <form method="get" className="bg-transparent">
               <label className="hidden text-xs uppercase tracking-[0.18em] text-[#8d7a5a] sm:block">搜索品牌</label>
-              <div className="flex items-center gap-2 rounded-full border border-[rgba(181,157,121,0.16)] bg-white/92 p-1.5 shadow-[0_12px_26px_rgba(15,23,42,0.04)] sm:mt-3 sm:grid sm:grid-cols-[minmax(0,1fr),auto,auto] sm:gap-3 sm:rounded-[20px] sm:p-2">
+              <div className="flex items-center gap-2 sm:mt-3 sm:grid sm:grid-cols-[minmax(0,1fr),auto,auto] sm:gap-3">
                 <input
                   name="q"
                   defaultValue={q}
-                  className="h-10 min-w-0 flex-1 rounded-full border border-[rgba(181,157,121,0.14)] bg-[rgba(247,243,237,0.85)] px-4 text-sm text-primary placeholder:text-muted sm:h-11 sm:w-full"
+                  className="h-10 min-w-0 flex-1 rounded-full border border-[rgba(181,157,121,0.16)] bg-white px-4 text-sm text-primary placeholder:text-muted shadow-[0_12px_26px_rgba(15,23,42,0.04)] sm:h-11 sm:w-full"
                   placeholder="品牌名 / 企业名 / 产品体系 / 地区关键词"
                 />
                 <input type="hidden" name="region" value={region} />
-                <button className="h-10 shrink-0 rounded-full bg-accent px-4 text-sm font-medium text-white sm:h-11 sm:px-5">筛选</button>
+                <button className="h-10 min-w-[4.75rem] shrink-0 rounded-full bg-accent px-4 text-sm font-medium text-white sm:h-11 sm:px-5">筛选</button>
                 <Link
                   href="/brands/all"
-                  className="flex h-10 shrink-0 items-center rounded-full border border-[rgba(181,157,121,0.14)] bg-white px-4 text-sm text-primary transition hover:bg-surface sm:h-11 sm:inline-flex"
+                  className="flex h-10 min-w-[4.9rem] shrink-0 items-center justify-center rounded-full border border-[rgba(181,157,121,0.16)] bg-white px-4 text-sm text-primary shadow-[0_12px_26px_rgba(15,23,42,0.04)] transition hover:bg-surface sm:h-11 sm:inline-flex"
                 >
                   重置
                 </Link>
