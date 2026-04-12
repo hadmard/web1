@@ -1,0 +1,136 @@
+name: Production Sample News Sync
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/prod-sync-sample-news.yml"
+      - "scripts/sync-prod-sample-news.ts"
+
+concurrency:
+  group: prod-sample-news-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Run production sample sync
+        run: |
+          timestamp=$(date +%Y-%m-%dT%H-%M-%S)
+          remote_report="/home/web1/custom/reports/prod-sample-news-sync-$timestamp.json"
+
+          ssh -o BatchMode=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} <<EOF
+            set -e
+            cd /home/web1
+            git fetch origin main
+            git reset --hard origin/main
+
+            if [ -f .env.production ]; then
+              export DATABASE_URL=\$(grep '^DATABASE_URL=' .env.production | head -n 1 | cut -d '=' -f 2- | tr -d '"')
+            elif [ -f .env ]; then
+              export DATABASE_URL=\$(grep '^DATABASE_URL=' .env | head -n 1 | cut -d '=' -f 2- | tr -d '"')
+            fi
+
+            mkdir -p custom/reports
+            npx ts-node --transpile-only -P scripts/tsconfig.scripts.json scripts/sync-prod-sample-news.ts --report "$remote_report"
+          EOF
+
+          mkdir -p custom/reports
+          scp -o BatchMode=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:"$remote_report" custom/reports/
+          echo "REPORT_PATH=custom/reports/$(basename "$remote_report")" >> "$GITHUB_ENV"
+
+      - name: Verify production URLs
+        run: |
+          sleep 15
+          REPORT_PATH="$REPORT_PATH" node - <<'NODE'
+          const fs = require("node:fs");
+
+          const reportPath = process.env.REPORT_PATH;
+          const report = JSON.parse(fs.readFileSync(reportPath, "utf8"));
+
+          const samples = report.items.map((item) => ({
+            article_id: item.article_id,
+            slug: item.slug,
+            old_url: item.old_url.replace(/^https:\/\/jiu\.cnzhengmu\.com/i, "https://cnzhengmu.com"),
+            new_url: item.new_url,
+          }));
+
+          function pick(html, pattern) {
+            const match = html.match(pattern);
+            return match ? match[1] : "";
+          }
+
+          async function verify() {
+            const results = [];
+
+            for (const sample of samples) {
+              const oldRes = await fetch(sample.old_url, { redirect: "manual" });
+              const newRes = await fetch(sample.new_url, { redirect: "manual" });
+              const html = newRes.status === 200 ? await newRes.text() : "";
+              const title = pick(html, /<title>([^<]*)<\/title>/i);
+              const description = pick(html, /<meta[^>]+name="description"[^>]+content="([^"]*)"/i);
+              const canonical = pick(html, /<link[^>]+rel="canonical"[^>]+href="([^"]*)"/i);
+
+              results.push({
+                article_id: sample.article_id,
+                slug: sample.slug,
+                old_url: sample.old_url,
+                old_status: oldRes.status,
+                location: oldRes.headers.get("location"),
+                new_url: sample.new_url,
+                new_status: newRes.status,
+                title,
+                description,
+                canonical,
+                title_ok: newRes.status === 200 && title.includes("｜整木网") && !title.includes("中华整木网"),
+                description_ok: newRes.status === 200 && Boolean(description) && !description.includes("整体木作行业知识共享平台"),
+                canonical_ok: newRes.status === 200 && canonical === sample.new_url,
+                page_ok: newRes.status === 200 && html.includes(sample.slug.replace(/-/g, "")) === false ? true : newRes.status === 200,
+                redirect_ok: oldRes.status === 301 && (() => {
+                  const location = oldRes.headers.get("location") || "";
+                  return location === sample.new_url || location === sample.new_url.replace("https://cnzhengmu.com", "");
+                })(),
+              });
+            }
+
+            report.verification = {
+              checkedAt: new Date().toISOString(),
+              results,
+            };
+
+            fs.writeFileSync(reportPath, JSON.stringify(report, null, 2));
+          }
+
+          verify().catch((error) => {
+            console.error(error);
+            process.exit(1);
+          });
+NODE
+
+      - name: Commit report
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$REPORT_PATH"
+          if git diff --cached --quiet; then
+            echo "No report changes to commit"
+            exit 0
+          fi
+          git commit -m "[skip ci] Add production sample news sync report"
+          git push origin HEAD:main
