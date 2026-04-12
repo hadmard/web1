@@ -91,6 +91,7 @@ jobs:
 
       - name: Sync 10 sample news articles to production database
         run: |
+          set +e
           sync_output=$(ssh -o BatchMode=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "bash -s" 2>&1 <<'EOF'
             set -e
             cd /home/web1
@@ -109,12 +110,15 @@ jobs:
             npx ts-node --transpile-only -P scripts/tsconfig.scripts.json scripts/sync-prod-sample-news.ts --report "$report_path"
           EOF
           )
+          sync_status=$?
 
           while IFS= read -r line; do
             if [ -n "$line" ]; then
-              echo "::warning::$line"
+              echo "$line"
             fi
           done <<< "$sync_output"
+
+          exit $sync_status
 
       - name: Verify 10 sample news URLs
         run: |
