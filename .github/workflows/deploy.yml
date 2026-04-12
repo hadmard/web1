@@ -91,7 +91,7 @@ jobs:
 
       - name: Sync 10 sample news articles to production database
         run: |
-          sync_output=$(ssh -o BatchMode=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "bash -s" <<'EOF'
+          sync_output=$(ssh -o BatchMode=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "bash -s" 2>&1 <<'EOF'
             set -e
             cd /home/web1
 
@@ -103,6 +103,9 @@ jobs:
 
             report_path="custom/reports/prod-sample-news-sync-$(date +%Y-%m-%dT%H-%M-%S).json"
             mkdir -p custom/reports
+            echo "sync step: start"
+            echo "sync step: report_path=$report_path"
+            echo "sync step: database_url_present=$(if [ -n \"$DATABASE_URL\" ]; then echo yes; else echo no; fi)"
             npx ts-node --transpile-only -P scripts/tsconfig.scripts.json scripts/sync-prod-sample-news.ts --report "$report_path"
           EOF
           )

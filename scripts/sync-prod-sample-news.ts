@@ -132,6 +132,8 @@ function loadSamples(): SampleArticle[] {
 }
 
 async function syncOne(sample: SampleArticle): Promise<SyncItemReport> {
+  console.log(`upserting article: ${sample.slug}`);
+
   const slugConflict = await prisma.article.findUnique({
     where: { slug: sample.slug },
     select: { id: true },
@@ -153,8 +155,8 @@ async function syncOne(sample: SampleArticle): Promise<SyncItemReport> {
   const publishedAt = sample.publishedAt ? new Date(sample.publishedAt) : new Date();
   const reviewedAt = sample.reviewedAt ? new Date(sample.reviewedAt) : new Date();
   const sourceUrl = sample.sourceUrl?.trim() || "";
-  const source = sample.source?.trim() || "中华整木网旧站";
-  const reviewNote = sample.reviewNote?.trim() || "样板文章线上同步";
+  const source = "中华整木网旧站";
+  const reviewNote = "样板文章线上同步";
   const status = "approved";
 
   const article = await prisma.article.upsert({
@@ -229,11 +231,18 @@ async function verifyRows(slugs: string[]) {
 }
 
 async function main() {
+  console.log("start sync");
   const reportArg = readArg("report");
   const reportPath = reportArg
     ? resolve(reportArg)
     : resolve(process.cwd(), "custom", "reports", `prod-sample-news-sync-${Date.now()}.json`);
+  console.log("connecting db");
   const dbTarget = resolveDatabaseTarget();
+  console.log(
+    `db target: source=${dbTarget.source} host=${dbTarget.host || "unknown"} port=${dbTarget.port || "unknown"} database=${dbTarget.database || "unknown"}`,
+  );
+  console.log(`env database url present: ${process.env.DATABASE_URL ? "yes" : "no"}`);
+  console.log(`node version: ${process.version}`);
   const samples = loadSamples();
   const items: SyncItemReport[] = [];
 
@@ -257,6 +266,9 @@ async function main() {
 main()
   .catch((error) => {
     console.error(error);
+    if (error instanceof Error && error.stack) {
+      console.error(error.stack);
+    }
     process.exit(1);
   })
   .finally(async () => {
