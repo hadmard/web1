@@ -7,6 +7,11 @@ export function buildNewsPath(segment: string) {
   return `/news/${encodeURIComponent(segment)}`;
 }
 
+export function getArticleSegment(article: { id: string; slug?: string | null }) {
+  const slug = article.slug?.trim();
+  return slug || article.id;
+}
+
 export function buildDictionaryPath(segment: string) {
   return `/dictionary/${encodeURIComponent(segment)}`;
 }

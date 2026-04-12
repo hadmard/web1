@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   applicationName: SITE_NAME,
   title: {
     default: SITE_TITLE,
-    template: `%s | ${SHARE_SITE_NAME}`,
+    template: `%s｜${SITE_NAME}`,
   },
   description: SITE_DESCRIPTION,
   keywords: ["整木", "整木市场", "整木品牌", "整木选购", "整木词库", "整木标准", "整木资讯", "整木评选"],

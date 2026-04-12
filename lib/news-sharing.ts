@@ -1,6 +1,7 @@
 import { articleOrderByPinnedLatest } from "@/lib/articles";
 import { prisma } from "@/lib/prisma";
 import { resolveUploadedImageShareUrl } from "@/lib/uploaded-image";
+import type { Prisma } from "@prisma/client";
 
 export const DEFAULT_NEWS_SHARE_IMAGE = "/api/og/news-default";
 
@@ -20,31 +21,38 @@ export function normalizeNewsSegment(raw: string) {
 
 function buildNewsSegmentCandidates(segment: string) {
   const normalized = normalizeNewsSegment(segment).replace(/\.html$/i, "").trim();
-  const parts = normalized
-    .split(/[-_/]+/)
-    .map((part) => part.trim())
-    .filter(Boolean);
-
-  return Array.from(new Set([normalized, ...parts].filter(Boolean)));
+  return normalized ? [normalized] : [];
 }
 
 export async function findNewsArticleBySegment(segment: string) {
   const candidates = buildNewsSegmentCandidates(segment);
   if (candidates.length === 0) return null;
 
-  return prisma.article.findFirst({
+  const baseWhere: Prisma.ArticleWhereInput = {
+    status: "approved",
+    OR: [{ categoryHref: { startsWith: "/news" } }, { subHref: { startsWith: "/news" } }],
+  };
+
+  const exactMatch = await prisma.article.findFirst({
     where: {
-      status: "approved",
-      OR: [{ categoryHref: { startsWith: "/news" } }, { subHref: { startsWith: "/news" } }],
+      ...baseWhere,
       AND: [
         {
-          OR: candidates.flatMap((candidate) => [
-            { id: candidate },
-            { slug: candidate },
-            { title: candidate },
-            { slug: { contains: candidate } },
-            { title: { contains: candidate } },
-          ]),
+          OR: candidates.flatMap((candidate) => [{ id: candidate }, { slug: candidate }, { title: candidate }]),
+        },
+      ],
+    },
+    orderBy: articleOrderByPinnedLatest,
+  });
+
+  if (exactMatch) return exactMatch;
+
+  return prisma.article.findFirst({
+    where: {
+      ...baseWhere,
+      AND: [
+        {
+          OR: candidates.flatMap((candidate) => [{ slug: { contains: candidate } }, { title: { contains: candidate } }]),
         },
       ],
     },

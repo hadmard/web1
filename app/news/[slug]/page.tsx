@@ -9,7 +9,7 @@ import { NewsViewTracker } from "./NewsViewTracker";
 import { NewsUrlSync } from "./NewsUrlSync";
 import { buildPageMetadata } from "@/lib/seo";
 import { ArticleShareActions } from "@/components/ArticleShareActions";
-import { buildArticleShareVersion, buildNewsPath, buildPublicNewsUrl } from "@/lib/share-config";
+import { buildArticleShareVersion, buildNewsPath, buildPublicNewsUrl, getArticleSegment } from "@/lib/share-config";
 import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
 import { DEFAULT_NEWS_SHARE_IMAGE, findNewsArticleBySegment, normalizeNewsSegment, resolveArticleShareImage } from "@/lib/news-sharing";
 import { prisma } from "@/lib/prisma";
@@ -20,7 +20,6 @@ export const revalidate = 300;
 export const dynamic = "force-dynamic";
 const LEGACY_SITE_URL = "https://jiu.cnzhengmu.com";
 
-const SHARE_SITE_NAME = "中华整木网";
 const NEWS_SUBCATEGORY_META: Record<string, { title: string; description: string }> = {
   trends: {
     title: "行业趋势",
@@ -88,14 +87,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const article = await findNewsArticleBySegment(slug);
   if (!article || article.status !== "approved") return { title: "资讯" };
-  const description = previewText(article.excerpt ?? article.content, 160);
+  const description = previewText(article.excerpt ?? article.content, 100);
   const image = resolveArticleShareImage(article);
+  const articleSegment = getArticleSegment(article);
   return buildPageMetadata({
     title: article.title,
     description,
-    path: buildNewsPath(article.id),
+    path: buildNewsPath(articleSegment),
     type: "article",
-    siteName: SHARE_SITE_NAME,
+    siteName: "整木网",
     image,
     imageAlt: article.title,
   });
@@ -263,7 +263,7 @@ export default async function ArticlePage({ params, searchParams }: Props) {
                       {(item.publishedAt ?? item.updatedAt).toLocaleDateString("zh-CN")}
                     </span>
                   </div>
-                  <Link href={buildNewsPath(item.id)} className="mt-2 block text-[1rem] font-medium leading-8 text-primary hover:text-accent sm:mt-3 sm:text-[1.1rem]">
+                  <Link href={buildNewsPath(getArticleSegment(item))} className="mt-2 block text-[1rem] font-medium leading-8 text-primary hover:text-accent sm:mt-3 sm:text-[1.1rem]">
                     {item.title}
                   </Link>
                   {item.excerpt ? (
@@ -288,13 +288,14 @@ export default async function ArticlePage({ params, searchParams }: Props) {
     notFound();
   }
 
+  const articleSegment = getArticleSegment(article);
   const currentSegment = normalizeNewsSegment(slug);
-  if (currentSegment !== article.id) {
-    const target = new URL(buildNewsPath(article.id), "https://dummy.local");
+  if (currentSegment !== articleSegment) {
+    const target = new URL(buildNewsPath(articleSegment), "https://dummy.local");
     permanentRedirect(`${target.pathname}${target.search}`);
   }
 
-  const articleUrl = buildPublicNewsUrl(article.id);
+  const articleUrl = buildPublicNewsUrl(articleSegment);
   const shareVersion = buildArticleShareVersion(article.updatedAt ?? article.publishedAt ?? article.id);
   const publicBaseUrl = articleUrl.replace(/\/news\/.*$/, "");
   const articleShareImage = resolveArticleShareImage(article);
@@ -342,7 +343,7 @@ export default async function ArticlePage({ params, searchParams }: Props) {
 
   return (
     <article id="news-reading-article" className="mx-auto max-w-6xl px-4 pb-6 pt-2 sm:px-6 sm:py-12">
-      <NewsUrlSync canonicalPath={buildNewsPath(article.id)} />
+      <NewsUrlSync canonicalPath={buildNewsPath(articleSegment)} />
       <NewsViewTracker slug={article.slug} />
       <JsonLd data={articleSchema} />
       <JsonLd data={breadcrumbSchema} />
@@ -427,7 +428,7 @@ export default async function ArticlePage({ params, searchParams }: Props) {
             <ArticleShareActions
               title={article.title}
               shareUrl={articleUrl}
-              siteName={SHARE_SITE_NAME}
+              siteName="整木网"
               className="mt-0"
             />
           </div>
@@ -469,7 +470,7 @@ export default async function ArticlePage({ params, searchParams }: Props) {
               {recommendedArticles.slice(0, 4).map((item) => (
                 <Link
                   key={item.id}
-                  href={buildNewsPath(item.id)}
+                  href={buildNewsPath(getArticleSegment(item))}
                   className="flex items-start gap-3 rounded-xl px-2 py-3 text-sm leading-7 text-primary transition hover:bg-white hover:text-accent"
                 >
                   <span className="mt-2 h-1.5 w-1.5 rounded-full bg-[rgba(180,154,107,0.86)]" />

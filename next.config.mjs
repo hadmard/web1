@@ -10,11 +10,28 @@ const legacyNewsSectionAliasRedirects = [
 const legacyNewsStaticSections = ["baoguang", "hangye", "jingpei", "qiye", "shichang", "top10"];
 const legacyAcademySections = ["jingying", "lingxiu", "zhuanjia"];
 const legacyTopicSections = ["kannanxun", "shanghaijianbohui"];
+const sampleLegacyArticleRedirects = [
+  { source: "/news/qiye/129759.html", destination: "/news/ju-shi-jiang-cheng-zhi-ling-zheng-zhuang-zhong-guo-fan-jia-ju-chuang-xin-lun-tan" },
+  { source: "/companynews/10665932-182579728.html", destination: "/news/si-lu-qi-dian-she-ji-xin-zhang-2025-xi-an-dang-dai-she-ji-zhou-sheng-da-qi-mu" },
+  { source: "/news/qiye/129029.html", destination: "/news/ao-mu-zhi-neng-hu-yan-deng-shang-shi-yong-dong-ni-de-dong-tai-zi-ran-guang-da-za" },
+  { source: "/companynews/10665932-182579618.html", destination: "/news/20-wan-ren-ci-gong-fu-xi-bu-she-ji-kuang-huan-2025-xi-an-dang-dai-she-ji-zhou-yu" },
+  { source: "/companynews/10665932-182579062.html", destination: "/news/ke-ji-yin-ling-xiao-liang-ling-xian-an-ji-er-shang-yong-zhi-ji-xi-lie-xin-pin-fa" },
+  { source: "/news/shichang/130093.html", destination: "/news/2025-nian-shi-jie-lin-mu-ye-da-hui-ji-2025-nian-guang-xi-guo-ji-lin-chan-pin-ji-" },
+  { source: "/companynews/10665932-182579200.html", destination: "/news/ao-shi-mi-si-hei-ke-ji-tu-po-quan-shi-gao-shui-xiao-heng-jing-xi-tong-zhong-su-b" },
+  { source: "/news/qiye/129235.html", destination: "/news/ma-lai-xi-ya-guo-ji-jia-ju-zhan-zhun-bei-jiu-xu-wei-2025-nian-ya-zhou-cai-gou-ji" },
+  { source: "/news/qiye/129331.html", destination: "/news/chun-zhan-xin-pian-shou-zhan-gao-jie-wu-han-zheng-zhuang-ding-zhi-jia-ju-zhan-yu" },
+  { source: "/news/hangye/130005.html", destination: "/news/ye-ji-ni-liu-er-shang-san-ke-shu-jing-li-run-da-zhang-chao-90-fang-shui-cai-liao" },
+];
 
 const nextConfig = {
   reactStrictMode: true,
   async redirects() {
     return [
+      ...sampleLegacyArticleRedirects.map(({ source, destination }) => ({
+        source,
+        destination,
+        statusCode: 301,
+      })),
       {
         source: "/list-:id.html",
         destination: "https://jiu.cnzhengmu.com/list-:id.html",
