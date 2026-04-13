@@ -93,7 +93,14 @@ jobs:
         run: |
           echo "sync local: start"
           echo "sync local: before ssh"
-          ssh -o BatchMode=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "echo sync remote: connected && whoami && pwd && node -v"
+          ssh -o BatchMode=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} <<'EOF'
+          echo "sync remote: entered"
+          whoami
+          pwd
+          node -v
+          echo "database_url_present=${DATABASE_URL:+yes}"
+          echo "sync remote: end"
+          EOF
           echo "sync local: after ssh"
 
       - name: Verify 10 sample news URLs
