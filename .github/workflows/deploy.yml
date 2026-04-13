@@ -94,6 +94,7 @@ jobs:
           echo "sync local: start"
           echo "sync local: before ssh"
           ssh -o BatchMode=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} <<'EOF'
+          cd /home/web1
           echo "sync remote: entered"
           whoami
           pwd
