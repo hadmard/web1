@@ -99,6 +99,8 @@ jobs:
           pwd
           node -v
           echo "database_url_present=${DATABASE_URL:+yes}"
+          node scripts/sync-prod-sample-news.ts
+          echo "sync remote: after script"
           echo "sync remote: end"
           EOF
           echo "sync local: after ssh"
