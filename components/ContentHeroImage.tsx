@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import Image from "next/image";
 import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
 
@@ -18,9 +21,10 @@ export function ContentHeroImage({
   imageClassName,
   adaptiveOnMobile = false,
 }: ContentHeroImageProps) {
+  const [hasError, setHasError] = useState(false);
   const finalSrc = resolveUploadedImageUrl(src?.trim() || fallbackSrc?.trim() || "");
 
-  if (!finalSrc) {
+  if (!finalSrc || hasError) {
     return null;
   }
 
@@ -30,7 +34,13 @@ export function ContentHeroImage({
         <div className="showcase-frame relative overflow-hidden rounded-2xl border border-border sm:hidden">
           {/* Use native img on mobile so the frame can follow the real image ratio. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={finalSrc} alt={alt} className={`block h-auto w-full object-contain ${imageClassName ?? ""}`} loading="lazy" />
+          <img
+            src={finalSrc}
+            alt={alt}
+            className={`block h-auto w-full object-contain ${imageClassName ?? ""}`}
+            loading="lazy"
+            onError={() => setHasError(true)}
+          />
         </div>
       ) : null}
 
@@ -41,6 +51,7 @@ export function ContentHeroImage({
           fill
           sizes="(max-width: 768px) 100vw, 1200px"
           className={`showcase-image absolute inset-0 h-full w-full object-cover ${imageClassName ?? ""}`}
+          onError={() => setHasError(true)}
         />
       </div>
     </>
