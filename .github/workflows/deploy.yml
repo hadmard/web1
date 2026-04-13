@@ -91,72 +91,10 @@ jobs:
 
       - name: Sync 10 sample news articles to production database
         run: |
-          report_path="custom/reports/prod-sample-news-sync-$(date +%Y-%m-%dT%H-%M-%S).json"
           echo "sync local: start"
-          echo "sync local: hostname check start"
-          echo "sync local: ssh target = ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}"
-          echo "sync local: report_path = $report_path"
-          echo "sync local: begin ssh"
-
-          set +e
-          ssh_probe_output=$(ssh -o BatchMode=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "echo sync remote: connected && whoami && pwd && node -v" 2>&1)
-          ssh_probe_status=$?
-          printf '%s\n' "$ssh_probe_output"
-          echo "sync local: ssh probe exit code=$ssh_probe_status"
-
-          if [ "$ssh_probe_status" -ne 0 ]; then
-            echo "__SYNC_EXIT_CODE__=$ssh_probe_status"
-            exit "$ssh_probe_status"
-          fi
-
-          ssh_enter_output=$(ssh -o BatchMode=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "bash -s" 2>&1 <<'EOF'
-            set +e
-            echo "sync remote: entered"
-            echo "sync remote: whoami=$(whoami)"
-            echo "sync remote: pwd=$(pwd)"
-            echo "sync remote: node=$(node -v 2>/dev/null)"
-            echo "sync remote: database_url_present=${DATABASE_URL:+yes}"
-            exit 0
-          EOF
-          )
-          ssh_enter_status=$?
-          printf '%s\n' "$ssh_enter_output"
-          echo "sync local: ssh entered exit code=$ssh_enter_status"
-
-          if [ "$ssh_enter_status" -ne 0 ]; then
-            echo "__SYNC_EXIT_CODE__=$ssh_enter_status"
-            exit "$ssh_enter_status"
-          fi
-
-          ssh -o BatchMode=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "bash -lc" <<EOF
-            set +e
-            cd /home/web1
-
-            if [ -f .env.production ]; then
-              export DATABASE_URL=\$(grep '^DATABASE_URL=' .env.production | head -n 1 | cut -d '=' -f 2- | tr -d '"')
-            elif [ -f .env ]; then
-              export DATABASE_URL=\$(grep '^DATABASE_URL=' .env | head -n 1 | cut -d '=' -f 2- | tr -d '"')
-            fi
-
-            LOG_FILE=/tmp/web1-sync-sample-news.log
-            rm -f "\$LOG_FILE"
-
-            {
-              mkdir -p custom/reports
-              echo "sync step: start"
-              echo "node version: \$(node -v 2>/dev/null)"
-              echo "pwd: \$(pwd)"
-              echo "whoami: \$(whoami)"
-              echo "env database url present: \${DATABASE_URL:+yes}"
-              echo "sync step: report_path=$report_path"
-              npx ts-node --transpile-only -P scripts/tsconfig.scripts.json scripts/sync-prod-sample-news.ts --report "$report_path"
-            } >"\$LOG_FILE" 2>&1
-
-            status=\$?
-            echo "__SYNC_EXIT_CODE__=\$status"
-            cat "\$LOG_FILE"
-            exit \$status
-          EOF
+          echo "sync local: before ssh"
+          ssh -o BatchMode=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "echo sync remote: connected"
+          echo "sync local: after ssh"
 
       - name: Verify 10 sample news URLs
         run: |
