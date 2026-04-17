@@ -1,0 +1,43 @@
+name: Production Build Log Diagnostics
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/prod-build-log-diagnostics.yml"
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Read production build log
+        run: |
+          ssh -o BatchMode=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+            set -e
+            cd /home/web1
+
+            echo "== BUILD LOG FILE =="
+            ls -lh /tmp/web1-build.log || true
+
+            echo "== BUILD LOG TAIL 200 =="
+            tail -n 200 /tmp/web1-build.log || true
+
+            echo "== BUILD LOG TAIL 80 =="
+            tail -n 80 /tmp/web1-build.log || true
+
+            echo "== BUILD LOG WITH LINE NUMBERS (TAIL 120) =="
+            nl -ba /tmp/web1-build.log | tail -n 120 || true
+
+            echo "== BUILD LOG STAGE MARKERS =="
+            grep -nE 'Compiled successfully|Linting and checking validity of types|Collecting page data|Generating static pages|Finalizing page optimization|error|Error|failed|Failed' /tmp/web1-build.log || true
+          EOF
