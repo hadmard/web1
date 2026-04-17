@@ -12,6 +12,7 @@ import { RichContent } from "@/components/RichContent";
 import { ArticleShareActions } from "@/components/ArticleShareActions";
 import { getSiteVisualSettings } from "@/lib/site-visual-settings";
 import { buildPageMetadata, getSiteUrl } from "@/lib/seo";
+import { composeIntentTitle } from "@/lib/compose-intent-title";
 import { buildPublicDictionaryUrl, DEFAULT_DICTIONARY_SHARE_IMAGE } from "@/lib/share-config";
 import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
 import {
@@ -54,12 +55,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (DICTIONARY_SUBCATEGORY_MAP[s]) {
     const sub = DICTIONARY_SUBCATEGORY_MAP[s];
     return buildPageMetadata({
-      title: `${sub.label} | 整木词库`,
+      title: composeIntentTitle({
+        keyword: sub.label,
+        suffix: "是什么意思？整木词库专业解析｜整木网",
+      }),
       description: `整木词库子栏目：${sub.label}。`,
       path: sub.href,
       type: "website",
       image: fallbackShareImage,
       imageAlt: sub.label,
+      absoluteTitle: true,
     });
   }
   const article = await prisma.article.findFirst({
@@ -78,25 +83,33 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const description = metadata.seoDescription || previewText(metadata.intro || (article.excerpt ?? article.content), 160);
     const shareImage = resolveUploadedImageUrl(article.coverImage) || fallbackShareImage;
     return buildPageMetadata({
-      title: metadata.seoTitle || `${article.title} | 中华整木网 · 整木词库`,
+      title: composeIntentTitle({
+        keyword: metadata.seoTitle || article.title,
+        suffix: "是什么意思？整木行业专业解析｜整木网",
+      }),
       description,
       path: `/dictionary/${article.slug}`,
       type: "article",
       image: shareImage,
       imageAlt: article.title,
+      absoluteTitle: true,
     });
   }
 
   const term = await getTermBySlug(s);
-  if (!term) return { title: "词条未找到" };
+  if (!term) return { title: { absolute: "整木词条不存在｜整木网" } };
   const description = previewText(term.definition, 160);
   return buildPageMetadata({
-    title: `${term.title} | 中华整木网 · 整木词库`,
+    title: composeIntentTitle({
+      keyword: term.title,
+      suffix: "是什么意思？整木行业专业解析｜整木网",
+    }),
     description,
     path: `/dictionary/${term.slug}`,
     type: "article",
     image: fallbackShareImage,
     imageAlt: term.title,
+    absoluteTitle: true,
   });
 }
 

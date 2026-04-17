@@ -3,6 +3,7 @@ import { notFound, permanentRedirect, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { buildPageMetadata } from "@/lib/seo";
+import { composeIntentTitle } from "@/lib/compose-intent-title";
 import { RichContent } from "@/components/RichContent";
 import { getBrandDirectoryBySlug } from "@/lib/brand-directory";
 import { parseBrandStructuredHtml } from "@/lib/brand-structured";
@@ -99,33 +100,39 @@ async function findBrandArticleBySegment(segment: string) {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { subSlug } = await params;
-  if (!subSlug || subSlug.length !== 1) return { title: MARKET_TITLE };
+  if (!subSlug || subSlug.length !== 1) return { title: { absolute: "整木品牌专区｜整木网" } };
 
   const segment = normalizeSegment(subSlug[0]);
-  if (segment === "all") return { title: `${MARKET_TITLE}总览` };
+  if (segment === "all") return { title: { absolute: "整木品牌大全_整木定制品牌怎么选_厂家汇总｜整木网" } };
 
   if (segment === "brand") {
     return buildPageMetadata({
-      title: `整木品牌 | 中华整木网 · ${MARKET_TITLE}`,
+      title: "整木品牌专区_整木定制品牌筛选指南｜整木网",
       description: "整木品牌子栏目，支持品牌浏览与对比。",
       path: "/brands/all",
+      absoluteTitle: true,
     });
   }
 
   if (segment === "buying" || segment === "faq") {
     return buildPageMetadata({
-      title: "整木定制选购指南",
+      title: "整木定制怎么选？预算、品牌、避坑全指南｜整木网",
       description: "系统梳理整木定制选购中的关键问题，帮助用户更快完成品牌筛选与咨询决策。",
       path: "/brands/buying",
+      absoluteTitle: true,
     });
   }
 
   const brand = await findBrandBySegment(segment);
   if (brand) {
     return buildPageMetadata({
-      title: `${brand.enterpriseName} | 中华整木网 · ${MARKET_TITLE}`,
+      title: composeIntentTitle({
+        keyword: brand.enterpriseName,
+        suffix: "怎么样？整木定制品牌口碑与产品解析｜整木网",
+      }),
       description: brand.summary,
       path: `/brands/${brand.slug}`,
+      absoluteTitle: true,
     });
   }
 
@@ -133,22 +140,30 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (enterprise) {
     const enterpriseName = enterprise.companyShortName || enterprise.companyName || "企业";
     return buildPageMetadata({
-      title: `${enterpriseName} | 中华整木网 · ${MARKET_TITLE}`,
+      title: composeIntentTitle({
+        keyword: enterpriseName,
+        suffix: "怎么样？整木定制品牌口碑与产品解析｜整木网",
+      }),
       description: "该品牌已关联企业资料，可查看企业详情、联系方式和展示内容。",
       path: `/enterprise/${enterprise.id}`,
+      absoluteTitle: true,
     });
   }
 
   const article = await findBrandArticleBySegment(segment);
-  if (!article) return { title: "品牌内容" };
+  if (!article) return { title: { absolute: "整木品牌内容解析｜整木网" } };
 
   return buildPageMetadata({
-    title: `${article.title} | 中华整木网 · ${MARKET_TITLE}`,
+    title: composeIntentTitle({
+      keyword: article.title,
+      suffix: "｜整木品牌口碑解析｜整木网",
+    }),
     description: previewText(article.excerpt ?? article.content, 160),
     path: `/brands/${article.slug}`,
     type: "article",
     image: article.coverImage ? resolveUploadedImageUrl(article.coverImage) : undefined,
     imageAlt: article.title,
+    absoluteTitle: true,
   });
 }
 

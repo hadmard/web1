@@ -2,7 +2,8 @@
 import { notFound, permanentRedirect } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
-import { buildPageMetadata, composeIntentTitle } from "@/lib/seo";
+import { buildPageMetadata } from "@/lib/seo";
+import { composeIntentTitle } from "@/lib/compose-intent-title";
 import { RichContent } from "@/components/RichContent";
 import { previewText } from "@/lib/text";
 import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
