@@ -136,7 +136,12 @@ jobs:
             echo "[deploy] building next app"
             export NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=4096}"
             export NEXT_TELEMETRY_DISABLED=1
-            npm run build
+            if ! npm run build 2>&1 | tee /tmp/web1-build.log; then
+              echo "::error::[deploy] build output begin"
+              sed -n '1,220p' /tmp/web1-build.log || true
+              echo "::error::[deploy] build output end"
+              exit 1
+            fi
 
             stage="restart"
             echo "[deploy] restarting web1"
