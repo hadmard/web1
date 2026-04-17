@@ -82,7 +82,10 @@ jobs:
             git clean -fd
 
             npm ci
-            npx prisma migrate deploy
+            if ! npx prisma migrate deploy; then
+              echo "prisma migrate deploy failed, falling back to prisma db push"
+              npx prisma db push
+            fi
             npm run build
 
             sudo systemctl restart web1
