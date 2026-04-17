@@ -102,6 +102,14 @@ jobs:
               fi
             }
 
+            restore_next_backup() {
+              if [ -n "${NEXT_BACKUP_DIR:-}" ] && [ -d "${NEXT_BACKUP_DIR}" ]; then
+                rm -rf .next
+                mv "${NEXT_BACKUP_DIR}" .next
+                echo "::warning::[deploy] restored previous .next backup"
+              fi
+            }
+
             stage="git"
             echo "[deploy] fetching latest main"
             git fetch origin main
@@ -134,12 +142,24 @@ jobs:
 
             stage="build"
             echo "[deploy] building next app"
+            NEXT_BACKUP_DIR=""
+            if [ -d .next ]; then
+              NEXT_BACKUP_DIR=".next-backup-$(date +%s)"
+              rm -rf "${NEXT_BACKUP_DIR}"
+              mv .next "${NEXT_BACKUP_DIR}"
+              echo "::warning::[deploy] moved existing .next to ${NEXT_BACKUP_DIR}"
+            fi
             export NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=4096}"
             export NEXT_TELEMETRY_DISABLED=1
             if ! npm run build 2>&1 | tee /tmp/web1-build.log; then
               echo "::error::[deploy] build output begin"
-              sed -n '1,220p' /tmp/web1-build.log || true
+              while IFS= read -r line; do
+                if [ -n "$line" ]; then
+                  echo "::error::[deploy] ${line}"
+                fi
+              done < <(sed -n '1,220p' /tmp/web1-build.log)
               echo "::error::[deploy] build output end"
+              restore_next_backup
               exit 1
             fi
 
@@ -147,12 +167,16 @@ jobs:
             echo "[deploy] restarting web1"
             if ! sudo systemctl restart web1; then
               echo "::error::[deploy] web1 restart failed, dumping service logs"
+              restore_next_backup
               sudo systemctl status web1 --no-pager -l || true
               sudo journalctl -u web1 -n 120 --no-pager || true
               exit 1
             fi
             stage="verify-service"
             sudo systemctl status web1 --no-pager -l
+            if [ -n "${NEXT_BACKUP_DIR:-}" ] && [ -d "${NEXT_BACKUP_DIR}" ]; then
+              rm -rf "${NEXT_BACKUP_DIR}"
+            fi
           EOF
 
       - name: Sync 10 sample news articles to production database
