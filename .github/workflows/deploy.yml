@@ -158,6 +158,13 @@ jobs:
                   echo "::error::[deploy] ${line}"
                 fi
               done < <(sed -n '1,220p' /tmp/web1-build.log)
+              echo "::error::[deploy] build output tail begin"
+              while IFS= read -r line; do
+                if [ -n "$line" ]; then
+                  echo "::error::[deploy] ${line}"
+                fi
+              done < <(tail -n 120 /tmp/web1-build.log)
+              echo "::error::[deploy] build output tail end"
               echo "::error::[deploy] build output end"
               restore_next_backup
               exit 1
