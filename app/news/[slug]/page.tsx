@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { ContentHeroImage } from "@/components/ContentHeroImage";
@@ -8,6 +8,7 @@ import { RichContent } from "@/components/RichContent";
 import { NewsViewTracker } from "./NewsViewTracker";
 import { NewsUrlSync } from "./NewsUrlSync";
 import { buildPageMetadata } from "@/lib/seo";
+import { buildNewsTitle } from "@/lib/seo-title";
 import { ArticleShareActions } from "@/components/ArticleShareActions";
 import { buildArticleShareVersion, buildNewsPath, buildPublicNewsUrl, getArticleSegment } from "@/lib/share-config";
 import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
@@ -22,20 +23,20 @@ const LEGACY_SITE_URL = "https://jiu.cnzhengmu.com";
 
 const NEWS_SUBCATEGORY_META: Record<string, { title: string; description: string }> = {
   trends: {
-    title: "行业趋势",
-    description: "整木资讯行业趋势栏目，聚合木作行业趋势观察与热点动态。",
+    title: "琛屼笟瓒嬪娍",
+    description: "鏁存湪璧勮琛屼笟瓒嬪娍鏍忕洰锛岃仛鍚堟湪浣滆涓氳秼鍔胯瀵熶笌鐑偣鍔ㄦ€併€?",
   },
   enterprise: {
-    title: "企业动态",
-    description: "整木资讯企业动态栏目，聚合品牌新闻、企业动作与市场动态。",
+    title: "浼佷笟鍔ㄦ€?",
+    description: "鏁存湪璧勮浼佷笟鍔ㄦ€佹爮鐩紝鑱氬悎鍝佺墝鏂伴椈銆佷紒涓氬姩浣滀笌甯傚満鍔ㄦ€併€?",
   },
   tech: {
-    title: "技术发展",
-    description: "整木资讯技术发展栏目，聚合工艺升级、材料演进与技术创新内容。",
+    title: "鎶€鏈彂灞?",
+    description: "鏁存湪璧勮鎶€鏈彂灞曟爮鐩紝鑱氬悎宸ヨ壓鍗囩骇銆佹潗鏂欐紨杩涗笌鎶€鏈垱鏂板唴瀹广€?",
   },
   events: {
-    title: "行业活动",
-    description: "整木资讯行业活动栏目，聚合展会、峰会、论坛与行业重要事件。",
+    title: "琛屼笟娲诲姩",
+    description: "鏁存湪璧勮琛屼笟娲诲姩鏍忕洰锛岃仛鍚堝睍浼氥€佸嘲浼氥€佽鍧涗笌琛屼笟閲嶈浜嬩欢銆?",
   },
 };
 
@@ -47,11 +48,11 @@ const NEWS_SUBCATEGORY_HREFS: Record<string, string> = {
 };
 
 const NEWS_SECTION_LABELS: Record<string, string> = {
-  "/news/trends": "行业趋势",
-  "/news/enterprise": "企业动态",
-  "/news/tech": "技术发展",
-  "/news/events": "行业活动",
-  "/news": "整木资讯",
+  "/news/trends": "琛屼笟瓒嬪娍",
+  "/news/enterprise": "浼佷笟鍔ㄦ€?",
+  "/news/tech": "鎶€鏈彂灞?",
+  "/news/events": "琛屼笟娲诲姩",
+  "/news": "鏁存湪璧勮",
 };
 
 type Props = {
@@ -65,42 +66,63 @@ function isLegacyNumericNewsId(value: string) {
   return /^\d+$/.test((value || "").trim());
 }
 
+function getLegacyNewsRedirectId(value: string) {
+  const match = (value || "").trim().match(/^(\d+)(?:-[a-z])?$/i);
+  return match?.[1] ?? null;
+}
+
+function isCorruptedNewsTitle(title?: string | null) {
+  const normalized = (title || "").trim();
+  if (!normalized) return true;
+  if (/\?{3,}/.test(normalized)) return true;
+  if (/\uFFFD/.test(normalized)) return true;
+  return false;
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   if (NEWS_SUB_SLUGS.has(slug)) {
     const subMeta = NEWS_SUBCATEGORY_META[slug];
     return buildPageMetadata({
-      title: subMeta?.title ?? "整木资讯子栏目",
-      description: subMeta?.description ?? "整木资讯子栏目",
+      title: `${subMeta?.title ?? "整木资讯"}｜整木行业资讯`,
+      description: subMeta?.description ?? "整木资讯子栏目。",
       path: `/news/${slug}`,
       type: "website",
       image: DEFAULT_NEWS_SHARE_IMAGE,
+      absoluteTitle: true,
     });
   }
 
-  if (isLegacyNumericNewsId(slug)) {
+  const legacyId = getLegacyNewsRedirectId(slug);
+  if (legacyId) {
     return {
-      title: "整木资讯",
-      alternates: { canonical: `${LEGACY_SITE_URL}/index.php?m=news&c=shows&id=${encodeURIComponent(slug)}` },
+      title: { absolute: "整木行业资讯｜整木网" },
+      alternates: { canonical: `${LEGACY_SITE_URL}/index.php?m=news&c=shows&id=${encodeURIComponent(legacyId)}` },
     };
   }
 
   const article = await findNewsArticleBySegment(slug);
-  if (!article || article.status !== "approved") return { title: "资讯" };
-  const description = previewText(article.excerpt ?? article.content, 100);
+  if (!article || article.status !== "approved" || isCorruptedNewsTitle(article.title)) {
+    return { title: { absolute: "资讯不存在｜整木行业资讯" }, robots: { index: false, follow: false } };
+  }
+
+  const description =
+    previewText(article.excerpt ?? article.content, 80) ||
+    `${(article.title || "").trim()}，整木行业资讯解读`;
   const image = resolveArticleShareImage(article);
   const articleSegment = getArticleSegment(article);
+
   return buildPageMetadata({
-    title: article.title,
+    title: buildNewsTitle(article.title),
     description,
     path: buildNewsPath(articleSegment),
     type: "article",
     siteName: "整木网",
     image,
     imageAlt: article.title,
+    absoluteTitle: true,
   });
 }
-
 function getSearchParamValue(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
@@ -121,7 +143,7 @@ function getHeadlineClass(title: string) {
 
 function resolveNewsSectionLabel(subHref?: string | null, categoryHref?: string | null) {
   const href = (subHref || categoryHref || "").trim();
-  return NEWS_SECTION_LABELS[href] ?? "整木资讯";
+  return NEWS_SECTION_LABELS[href] ?? "鏁存湪璧勮";
 }
 
 function parseKeywordList(keywordSource?: string | null) {
@@ -140,7 +162,7 @@ function stripNewsLeadingOverviewHeading(html?: string | null) {
   if (!source) return "";
 
   return source.replace(
-    /^\s*<(h[1-6]|p)[^>]*>\s*(?:概述|导语|摘要|前言|概况)\s*<\/\1>\s*/i,
+    /^\s*<(h[1-6]|p)[^>]*>\s*(?:姒傝堪|瀵艰|鎽樿|鍓嶈█|姒傚喌)\s*<\/\1>\s*/i,
     "",
   );
 }
@@ -156,16 +178,21 @@ function buildArticleSourceSummary(article: { source?: string | null; sourceUrl?
   if (!sourceName && !sourceUrl) return null;
 
   return {
-    sourceName: sourceName || "原始来源",
+    sourceName: sourceName || "鍘熷鏉ユ簮",
     sourceUrl,
     description: sourceName
-      ? `本文转载自「${sourceName}」，仅用于行业信息交流。`
-      : "本文整理自公开信息，仅用于行业信息交流。",
+      ? `鏈枃杞浇鑷€?${sourceName}銆嶏紝浠呯敤浜庤涓氫俊鎭氦娴併€?`
+      : "鏈枃鏁寸悊鑷叕寮€淇℃伅锛屼粎鐢ㄤ簬琛屼笟淇℃伅浜ゆ祦銆?",
   };
 }
 
 export default async function ArticlePage({ params, searchParams }: Props) {
   const { slug } = await params;
+  const legacyId = getLegacyNewsRedirectId(slug);
+  if (legacyId) {
+    redirect(`${LEGACY_SITE_URL}/index.php?m=news&c=shows&id=${encodeURIComponent(legacyId)}`);
+  }
+
   if (NEWS_SUB_SLUGS.has(slug)) {
     const subMeta = NEWS_SUBCATEGORY_META[slug];
     const subHref = NEWS_SUBCATEGORY_HREFS[slug];
@@ -193,10 +220,10 @@ export default async function ArticlePage({ params, searchParams }: Props) {
 
     return (
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-12">
-        <nav className="mb-8 flex flex-wrap items-center gap-x-2 gap-y-2 text-sm text-muted" aria-label="面包屑">
-          <Link href="/" className="hover:text-accent">首页</Link>
+        <nav className="mb-8 flex flex-wrap items-center gap-x-2 gap-y-2 text-sm text-muted" aria-label="闈㈠寘灞?">
+          <Link href="/" className="hover:text-accent">棣栭〉</Link>
           <span>/</span>
-          <Link href="/news" className="hover:text-accent">整木资讯</Link>
+          <Link href="/news" className="hover:text-accent">鏁存湪璧勮</Link>
           <span>/</span>
           <span className="text-primary">{subMeta.title}</span>
         </nav>
@@ -249,7 +276,7 @@ export default async function ArticlePage({ params, searchParams }: Props) {
 
         <section className="mt-8 rounded-[28px] border border-border bg-[rgba(255,255,255,0.82)] p-5 sm:p-6">
           {items.length === 0 ? (
-            <p className="text-sm text-muted">当前栏目还没有已发布内容。</p>
+            <p className="text-sm text-muted">褰撳墠鏍忕洰杩樻病鏈夊凡鍙戝竷鍐呭銆?</p>
           ) : (
             <ul className="grid gap-4">
               {items.map((item) => (
@@ -281,10 +308,7 @@ export default async function ArticlePage({ params, searchParams }: Props) {
   }
 
   const article = await findNewsArticleBySegment(slug);
-  if (!article || article.status !== "approved") {
-    if (isLegacyNumericNewsId(slug)) {
-      redirect(`${LEGACY_SITE_URL}/index.php?m=news&c=shows&id=${encodeURIComponent(slug)}`);
-    }
+  if (!article || article.status !== "approved" || isCorruptedNewsTitle(article.title)) {
     notFound();
   }
 
@@ -335,8 +359,8 @@ export default async function ArticlePage({ params, searchParams }: Props) {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: "首页", item: publicBaseUrl },
-      { "@type": "ListItem", position: 2, name: "整木资讯", item: `${publicBaseUrl}/news` },
+      { "@type": "ListItem", position: 1, name: "棣栭〉", item: publicBaseUrl },
+      { "@type": "ListItem", position: 2, name: "鏁存湪璧勮", item: `${publicBaseUrl}/news` },
       { "@type": "ListItem", position: 3, name: article.title, item: articleUrl },
     ],
   };
@@ -349,10 +373,10 @@ export default async function ArticlePage({ params, searchParams }: Props) {
       <JsonLd data={breadcrumbSchema} />
 
       <div className="mx-auto max-w-[860px]">
-        <nav className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-2 px-1 text-[15px] text-primary/52 sm:mb-6 sm:px-0 sm:text-[15px] sm:text-primary/52" aria-label="面包屑">
-          <Link href="/" className="hover:text-accent">首页</Link>
+        <nav className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-2 px-1 text-[15px] text-primary/52 sm:mb-6 sm:px-0 sm:text-[15px] sm:text-primary/52" aria-label="闈㈠寘灞?">
+          <Link href="/" className="hover:text-accent">棣栭〉</Link>
           <span>/</span>
-          <Link href="/news" className="hover:text-accent">整木资讯</Link>
+          <Link href="/news" className="hover:text-accent">鏁存湪璧勮</Link>
           <span className="hidden sm:inline">/</span>
           <span className="hidden max-w-[36rem] truncate font-medium text-primary/78 sm:inline">{article.title}</span>
         </nav>
@@ -369,18 +393,18 @@ export default async function ArticlePage({ params, searchParams }: Props) {
           ) : null}
 
           <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 px-0.5 text-[14px] text-primary/50 sm:mt-5 sm:px-0 sm:text-[14px] sm:text-primary/50">
-            <span>发布时间：{new Date(article.publishedAt ?? article.updatedAt).toLocaleDateString("zh-CN")}</span>
-            {article.displayAuthor ? <span>作者：{article.displayAuthor}</span> : null}
+            <span>鍙戝竷鏃堕棿锛?{new Date(article.publishedAt ?? article.updatedAt).toLocaleDateString("zh-CN")}</span>
+            {article.displayAuthor ? <span>浣滆€咃細{article.displayAuthor}</span> : null}
             {article.source ? (
               article.sourceUrl ? (
                 <a href={article.sourceUrl} target="_blank" rel="noreferrer" className="transition-colors hover:text-accent">
-                  来源：{article.source}
+                  鏉ユ簮锛?{article.source}
                 </a>
               ) : (
-                <span>来源：{article.source}</span>
+                <span>鏉ユ簮锛?{article.source}</span>
               )
             ) : null}
-            {article.versionLabel ? <span>版本：{article.versionLabel}</span> : null}
+            {article.versionLabel ? <span>鐗堟湰锛?{article.versionLabel}</span> : null}
           </div>
         </header>
 
@@ -406,29 +430,29 @@ export default async function ArticlePage({ params, searchParams }: Props) {
           <RichContent html={stripNewsLeadingOverviewHeading(article.content)} className="prose prose-neutral dark:prose-invert max-w-none" />
           {sourceSummary ? (
             <section className="mt-10 rounded-2xl border border-[rgba(15,23,42,0.08)] bg-[#f6f7f9] px-5 py-4 text-[14px] leading-7 text-[#666] sm:px-6">
-              <h2 className="text-[15px] font-semibold text-[#333]">信息来源</h2>
+              <h2 className="text-[15px] font-semibold text-[#333]">淇℃伅鏉ユ簮</h2>
               <p className="mt-2">{sourceSummary.description}</p>
               {sourceSummary.sourceUrl ? (
                 <p className="mt-2">
-                  原文链接：
+                  鍘熸枃閾炬帴锛?
                   <a
                     href={sourceSummary.sourceUrl}
                     target="_blank"
                     rel="nofollow noreferrer"
                     className="ml-1 text-[#1677ff] transition-colors hover:underline"
                   >
-                    点击查看原文
+                    鐐瑰嚮鏌ョ湅鍘熸枃
                   </a>
                 </p>
               ) : null}
-              <p className="mt-2 text-[13px] text-[#7a7a7a]">如涉及版权问题，请联系删除。</p>
+              <p className="mt-2 text-[13px] text-[#7a7a7a]">濡傛秹鍙婄増鏉冮棶棰橈紝璇疯仈绯诲垹闄ゃ€?</p>
             </section>
           ) : null}
           <div className="mt-5 pt-1 sm:mt-6 sm:pt-2">
             <ArticleShareActions
               title={article.title}
               shareUrl={articleUrl}
-              siteName="整木网"
+              siteName="鏁存湪缃?"
               className="mt-0"
             />
           </div>
@@ -436,14 +460,14 @@ export default async function ArticlePage({ params, searchParams }: Props) {
 
         {article.applicableScenarios ? (
           <section className="mt-10 rounded-[24px] border border-border bg-surface-elevated px-5 py-6 sm:px-7">
-            <h2 className="mb-2 text-lg font-semibold text-primary">适用场景</h2>
+            <h2 className="mb-2 text-lg font-semibold text-primary">閫傜敤鍦烘櫙</h2>
             <p className="leading-7 text-muted">{article.applicableScenarios}</p>
           </section>
         ) : null}
 
         {keywords.length > 0 ? (
           <section className="mt-10 rounded-[24px] border border-border bg-surface-elevated px-5 py-6 sm:px-7">
-            <h2 className="mb-4 text-lg font-semibold text-primary">核心关键词</h2>
+            <h2 className="mb-4 text-lg font-semibold text-primary">鏍稿績鍏抽敭璇?</h2>
             <div className="flex flex-wrap gap-2.5">
               {keywords.map((keyword) => (
                 <Link
@@ -461,9 +485,9 @@ export default async function ArticlePage({ params, searchParams }: Props) {
         {recommendedArticles.length > 0 ? (
           <section className="mt-10 rounded-[20px] bg-[#fafafa] px-4 py-4 sm:px-5">
             <div className="mb-4 flex items-center justify-between gap-4">
-              <h2 className="text-lg font-semibold text-primary">相关阅读</h2>
+              <h2 className="text-lg font-semibold text-primary">鐩稿叧闃呰</h2>
               <Link href="/news/all" className="text-sm text-muted hover:text-accent">
-                查看更多
+                鏌ョ湅鏇村
               </Link>
             </div>
             <div className="divide-y divide-[rgba(15,23,42,0.08)]">
@@ -484,3 +508,5 @@ export default async function ArticlePage({ params, searchParams }: Props) {
     </article>
   );
 }
+
+

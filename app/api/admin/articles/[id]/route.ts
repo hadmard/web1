@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
+import { normalizeRichTextField } from "@/lib/brand-content";
 import { writeOperationLog } from "@/lib/operation-log";
 import { canChangeReviewStatus, canDirectlyDeleteArticle, canDirectlyEditArticle, canReviewSubmissions } from "@/lib/content-permissions";
 import { isValidTermStructuredContent, normalizeTermContent } from "@/lib/term-structured";
 import { findDuplicateArticleByTitle, normalizeArticleTitle } from "@/lib/article-title";
 import { formatKeywordCsv, syncArticleKeywords } from "@/lib/news-keywords-v2";
 import { buildNewsPath } from "@/lib/share-config";
+import { pushApprovedNewsToBaidu } from "@/lib/baidu-submit";
 
 function isAdmin(session: { role: string | null } | null) {
   return session?.role === "SUPER_ADMIN" || session?.role === "ADMIN";
@@ -42,6 +44,7 @@ function revalidateArticlePaths(article: {
   if (isNews) {
     revalidatePath("/news");
     revalidatePath("/news/all");
+    revalidatePath("/sitemap.xml");
     if (article.subHref) {
       revalidatePath(article.subHref);
     }
@@ -88,6 +91,7 @@ export async function PATCH(
     select: {
       id: true,
       authorMemberId: true,
+      status: true,
       publishedAt: true,
       categoryHref: true,
       subHref: true,
@@ -146,7 +150,7 @@ export async function PATCH(
   if (typeof source === "string") data.source = source.trim() || null;
   if (typeof sourceUrl === "string") data.sourceUrl = sourceUrl.trim() || null;
   if (typeof displayAuthor === "string") data.displayAuthor = displayAuthor.trim() || null;
-  if (typeof content === "string") data.content = isDictionary ? normalizeTermContent(content) : content;
+  if (typeof content === "string") data.content = isDictionary ? normalizeTermContent(content) : normalizeRichTextField(content) ?? "";
   if (typeof coverImage === "string") data.coverImage = coverImage.trim() || null;
   if (typeof subHref === "string") data.subHref = subHref.trim() || null;
   if (typeof categoryHref === "string") data.categoryHref = categoryHref.trim() || null;
@@ -223,6 +227,9 @@ export async function PATCH(
       slug: true,
       title: true,
       source: true,
+      generationBatchId: true,
+      keywordSeed: true,
+      keywordIntent: true,
       sourceUrl: true,
       displayAuthor: true,
       categoryHref: true,
@@ -285,6 +292,28 @@ export async function PATCH(
       detail: JSON.stringify({ status: data.status }),
     });
   }
+
+  if (data.status === "approved" && target.status !== "approved") {
+    await pushApprovedNewsToBaidu(
+      {
+        id: article.id,
+        title: article.title,
+        slug: article.slug,
+        content: article.content,
+        status: article.status,
+        categoryHref: article.categoryHref,
+        subHref: article.subHref,
+      },
+      {
+        actorId: session.sub,
+        actorEmail: session.email,
+        source: "admin_article_patch",
+      },
+    ).catch((error) => {
+      console.error("admin article review baidu push failed:", error);
+    });
+  }
+
   return NextResponse.json(article);
 }
 

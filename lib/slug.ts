@@ -1,5 +1,5 @@
 import { pinyin } from "pinyin-pro";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "./prisma";
 
 export function slugify(input: string) {
   const source = String(input || "").trim();

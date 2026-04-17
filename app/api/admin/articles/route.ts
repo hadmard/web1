@@ -1,17 +1,20 @@
 import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { defaultContentStatusForSubmission } from "@/lib/member-access";
+import { normalizeRichTextField } from "@/lib/brand-content";
 import { resolveTagSlugs } from "@/lib/tag-suggest";
 import { generateUniqueArticleSlug } from "@/lib/slug";
 import { isContentReviewRequired } from "@/lib/app-settings";
 import { isValidTermStructuredContent, normalizeTermContent } from "@/lib/term-structured";
 import { findDuplicateArticleByTitle, normalizeArticleTitle } from "@/lib/article-title";
 import { formatKeywordCsv, syncArticleKeywords } from "@/lib/news-keywords-v2";
-
 import { resolveTabKeyFromHref } from "@/lib/content-taxonomy";
 import { buildContentTabWhere } from "@/lib/content-taxonomy";
+import { pushApprovedNewsToBaidu } from "@/lib/baidu-submit";
+
 export const dynamic = "force-dynamic";
 
 function getMutationErrorMessage(error: unknown, fallback: string) {
@@ -53,8 +56,8 @@ export async function GET(request: NextRequest) {
 
   const status = searchParams.get("status");
   const categoryHref = searchParams.get("categoryHref");
-  const q = searchParams.get("q")?.trim();
   const tab = searchParams.get("tab");
+  const q = searchParams.get("q")?.trim();
   const where: any = {};
   if (status && ["draft", "pending", "approved", "rejected"].includes(status)) {
     where.status = status;
@@ -83,6 +86,28 @@ export async function GET(request: NextRequest) {
           { tagSlugs: { contains: q, mode: "insensitive" } },
           { keywords: { contains: q, mode: "insensitive" } },
           { manualKeywords: { contains: q, mode: "insensitive" } },
+          { keywordItems: { some: { keyword: { contains: q, mode: "insensitive" } } } },
+          {
+            authorMember: {
+              is: {
+                OR: [
+                  { name: { contains: q, mode: "insensitive" } },
+                  { email: { contains: q, mode: "insensitive" } },
+                ],
+              },
+            },
+          },
+          {
+            ownedEnterprise: {
+              is: {
+                OR: [
+                  { companyName: { contains: q, mode: "insensitive" } },
+                  { companyShortName: { contains: q, mode: "insensitive" } },
+                  { brand: { is: { name: { contains: q, mode: "insensitive" } } } },
+                ],
+              },
+            },
+          },
         ],
       },
     ];
@@ -99,6 +124,9 @@ export async function GET(request: NextRequest) {
         title: true,
         slug: true,
         source: true,
+        generationBatchId: true,
+        keywordSeed: true,
+        keywordIntent: true,
         sourceUrl: true,
         displayAuthor: true,
         excerpt: true,
@@ -187,8 +215,11 @@ export async function POST(request: NextRequest) {
     const isDictionary =
       (typeof categoryHref === "string" && categoryHref.startsWith("/dictionary")) ||
       (typeof subHref === "string" && subHref.startsWith("/dictionary"));
-    const normalizedContent =
-      isDictionary && typeof content === "string" ? normalizeTermContent(content) : typeof content === "string" ? content : "";
+    const normalizedContent = isDictionary
+      ? typeof content === "string"
+        ? normalizeTermContent(content)
+        : ""
+      : normalizeRichTextField(content) ?? "";
     if (isDictionary) {
       if (!isValidTermStructuredContent(normalizedContent)) {
         return NextResponse.json({ error: "\u8bcd\u5e93\u5185\u5bb9\u5fc5\u987b\u6309\u56fa\u5b9a\u5c0f\u6807\u9898\u5206\u8282\u683c\u5f0f\u63d0\u4ea4" }, { status: 400 });
@@ -242,6 +273,9 @@ export async function POST(request: NextRequest) {
         title: normalizedTitle,
         slug: slugTrim,
         source: typeof source === "string" ? source.trim() || null : null,
+        generationBatchId: null,
+        keywordSeed: null,
+        keywordIntent: null,
         sourceUrl: typeof sourceUrl === "string" ? sourceUrl.trim() || null : null,
         displayAuthor: typeof displayAuthor === "string" ? displayAuthor.trim() || null : null,
         excerpt: typeof excerpt === "string" ? excerpt.trim() || null : null,
@@ -302,6 +336,29 @@ export async function POST(request: NextRequest) {
         { error: `\u53d1\u5e03\u5931\u8d25\uff1a${reason}\u3002\u672c\u6b21\u6587\u7ae0\u672a\u4fdd\u5b58\uff0c\u8bf7\u4fee\u6b63\u540e\u91cd\u8bd5\u3002` },
         { status: 500 },
       );
+    }
+
+    await pushApprovedNewsToBaidu(
+      {
+        id: article.id,
+        title: article.title,
+        slug: article.slug,
+        content: normalizedContent,
+        status: article.status,
+        categoryHref: article.categoryHref,
+        subHref: article.subHref,
+      },
+      {
+        actorId: session.sub,
+        actorEmail: session.email,
+        source: "admin_article_create",
+      },
+    ).catch((error) => {
+      console.error("admin article baidu push failed:", error);
+    });
+
+    if (article.status === "approved" && ((article.categoryHref ?? "").startsWith("/news") || (article.subHref ?? "").startsWith("/news"))) {
+      revalidatePath("/sitemap.xml");
     }
 
     return NextResponse.json(article);

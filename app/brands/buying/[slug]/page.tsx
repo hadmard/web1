@@ -1,8 +1,8 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
-import { buildPageMetadata } from "@/lib/seo";
+import { buildPageMetadata, composeIntentTitle } from "@/lib/seo";
 import { RichContent } from "@/components/RichContent";
 import { previewText } from "@/lib/text";
 import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
@@ -67,19 +67,24 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const article = await findBuyingArticleBySegment(slug);
   if (!article) {
     return buildPageMetadata({
-      title: "整木选购内容",
+      title: "整木选购内容解析｜整木网",
       description: "整木选购内容详情页。",
       path: `/brands/buying/${encodeURIComponent(normalizeSegment(slug))}`,
+      absoluteTitle: true,
     });
   }
 
   return buildPageMetadata({
-    title: `${article.title} | 中华整木网 · 整木选购`,
+    title: composeIntentTitle({
+      keyword: article.title,
+      suffix: "｜整木定制选购指南｜整木网",
+    }),
     description: previewText(article.excerpt ?? article.content, 160),
     path: `/brands/buying/${encodeURIComponent(article.slug)}`,
     type: "article",
     image: article.coverImage ? resolveUploadedImageUrl(article.coverImage) : undefined,
     imageAlt: article.title,
+    absoluteTitle: true,
   });
 }
 
@@ -95,12 +100,12 @@ export default async function BuyingArticleDetailPage({ params }: Props) {
 
   return (
     <article className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-12">
-      <nav className="mb-6 flex flex-wrap items-center gap-x-2 gap-y-2 text-sm text-muted" aria-label="面包屑">
-        <Link href="/" className="hover:text-accent">首页</Link>
+      <nav className="mb-6 flex flex-wrap items-center gap-x-2 gap-y-2 text-sm text-muted" aria-label="\u9762\u5305\u5c51">
+        <Link href="/" className="hover:text-accent">\u9996\u9875</Link>
         <span>/</span>
-        <Link href="/brands" className="hover:text-accent">整木市场</Link>
+        <Link href="/brands" className="hover:text-accent">\u6574\u6728\u5e02\u573a</Link>
         <span>/</span>
-        <Link href="/brands/buying" className="hover:text-accent">整木选购</Link>
+        <Link href="/brands/buying" className="hover:text-accent">\u6574\u6728\u9009\u8d2d</Link>
         <span>/</span>
         <span className="text-primary">{article.title}</span>
       </nav>
@@ -110,14 +115,14 @@ export default async function BuyingArticleDetailPage({ params }: Props) {
         {article.excerpt ? <p className="mt-3 max-w-3xl text-[15px] leading-8 text-muted sm:text-base">{article.excerpt}</p> : null}
         <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-primary/56">
           <span>{new Date(article.publishedAt ?? article.updatedAt).toLocaleDateString("zh-CN")}</span>
-          {article.displayAuthor ? <span>作者：{article.displayAuthor}</span> : null}
+          {article.displayAuthor ? <span>\u4f5c\u8005\uff1a{article.displayAuthor}</span> : null}
           {article.source ? (
             article.sourceUrl ? (
               <a href={article.sourceUrl} target="_blank" rel="noreferrer" className="transition-colors hover:text-accent">
-                来源：{article.source}
+                \u6765\u6e90\uff1a{article.source}
               </a>
             ) : (
-              <span>来源：{article.source}</span>
+              <span>\u6765\u6e90\uff1a{article.source}</span>
             )
           ) : null}
         </div>
@@ -136,3 +141,4 @@ export default async function BuyingArticleDetailPage({ params }: Props) {
     </article>
   );
 }
+

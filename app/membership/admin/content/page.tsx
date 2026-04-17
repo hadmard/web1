@@ -94,6 +94,9 @@ type ArticleItem = {
   title: string;
   slug: string;
   source?: string | null;
+  generationBatchId?: string | null;
+  keywordSeed?: string | null;
+  keywordIntent?: string | null;
   sourceUrl?: string | null;
   displayAuthor?: string | null;
   excerpt?: string | null;
@@ -1529,14 +1532,14 @@ export default function AdminContentPage() {
           >
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-primary">搜索内容</p>
-              <p className="mt-1 text-xs text-muted">可按标题、摘要、正文、来源、作者、关键词快速查找已发布或已存在的内容。</p>
+              <p className="mt-1 text-xs text-muted">可按标题、摘要、正文、来源、作者、标签、前台关键词、提交账号、归属企业或品牌名快速查找内容。</p>
             </div>
             <div className="flex min-w-0 flex-1 gap-2">
               <input
                 className="h-11 min-w-0 flex-1 rounded-2xl border border-[rgba(194,182,154,0.28)] bg-white/90 px-4 text-sm text-primary placeholder:text-muted focus:border-[rgba(180,154,107,0.45)] focus:outline-none focus:ring-2 focus:ring-[rgba(180,154,107,0.18)]"
                 value={manageSearchDraft}
                 onChange={(e) => setManageSearchDraft(e.target.value)}
-                placeholder="输入标题、来源、作者、关键词"
+                placeholder="输入标题、来源、作者、标签、关键词、账号、企业或品牌"
               />
               <button type="submit" className="rounded-2xl bg-accent px-4 py-2 text-sm font-medium text-white">
                 搜索
