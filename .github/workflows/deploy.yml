@@ -151,7 +151,14 @@ jobs:
             fi
             export NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=4096}"
             export NEXT_TELEMETRY_DISABLED=1
-            if ! npm run build 2>&1 | tee /tmp/web1-build.log; then
+            echo "::warning::[deploy] memory before build"
+            free -m || true
+            set +e
+            npm run build > /tmp/web1-build.log 2>&1
+            build_exit_code=$?
+            set -e
+            if [ "$build_exit_code" -ne 0 ]; then
+              echo "::error::[deploy] build exit code=${build_exit_code}"
               echo "::error::[deploy] build output begin"
               while IFS= read -r line; do
                 if [ -n "$line" ]; then
@@ -165,6 +172,9 @@ jobs:
                 fi
               done < <(tail -n 120 /tmp/web1-build.log)
               echo "::error::[deploy] build output tail end"
+              echo "::error::[deploy] system log tail begin"
+              sudo journalctl -n 80 --no-pager || true
+              echo "::error::[deploy] system log tail end"
               echo "::error::[deploy] build output end"
               restore_next_backup
               exit 1
