@@ -20,6 +20,16 @@ function sanitizeHomepageArticleTitle(text: string | null | undefined, fallback:
   return `${fallback}${index + 1}`;
 }
 
+function pickReadableHomepageArticles<T extends { title: string | null | undefined }>(items: T[], limit: number) {
+  return items
+    .filter((item) => isReadableLabel(item.title))
+    .slice(0, limit)
+    .map((item) => ({
+      ...item,
+      title: item.title!.trim(),
+    }));
+}
+
 export type HomepageLinkItem = {
   label: string;
   href: string;
@@ -63,13 +73,13 @@ export async function getHomepageData() {
     prisma.article.findMany({
       where: { status: "approved", OR: [{ categoryHref: { startsWith: "/news" } }, { subHref: { startsWith: "/news" } }] },
       orderBy: articleOrderByPinnedLatest,
-      take: 6,
+      take: 20,
       select: { id: true, title: true, slug: true },
     }),
     prisma.article.findMany({
       where: { status: "approved", OR: [{ categoryHref: { startsWith: "/news" } }, { subHref: { startsWith: "/news" } }] },
       orderBy: articleOrderByPinnedPopular,
-      take: 6,
+      take: 20,
       select: { id: true, title: true, slug: true },
     }),
     getBrandDirectoryList(8),
@@ -101,14 +111,8 @@ export async function getHomepageData() {
     }
   });
 
-  const safeLatestNews = latestNews.slice(0, 3).map((item, index) => ({
-    ...item,
-    title: sanitizeHomepageArticleTitle(item.title, "行业资讯更新中 ", index),
-  }));
-  const safeHotNews = hotNews.slice(0, 3).map((item, index) => ({
-    ...item,
-    title: sanitizeHomepageArticleTitle(item.title, "热门内容整理中 ", index),
-  }));
+  const safeLatestNews = pickReadableHomepageArticles(latestNews, 10);
+  const safeHotNews = pickReadableHomepageArticles(hotNews, 10);
   const safeBrands = latestBrands.filter((item) => isReadableLabel(item.enterpriseName));
   const safeTerms = latestTerms.filter((item) => isReadableLabel(item.title));
   const safeStandards = latestStandards.filter((item) => isReadableLabel(item.title));
