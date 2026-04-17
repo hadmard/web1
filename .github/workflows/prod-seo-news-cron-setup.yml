@@ -1,0 +1,77 @@
+name: Setup SEO News Cron
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/prod-seo-news-cron-setup.yml"
+      - "scripts/run-seo-news-cron.sh"
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Manual verify and install cron
+        shell: bash
+        run: |
+          ssh -o BatchMode=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} <<'EOF'
+            set -euo pipefail
+
+            cd /home/web1
+            git fetch origin main
+            git reset --hard origin/main
+
+            user_name="$(whoami)"
+            project_dir="$(pwd)"
+            if [ -f .env.production ]; then
+              env_file="/home/web1/.env.production"
+            elif [ -f .env ]; then
+              env_file="/home/web1/.env"
+            else
+              env_file="missing"
+            fi
+
+            mkdir -p /home/web1/logs
+
+            echo "::warning::SEO_CRON_PROJECT_DIR=${project_dir}"
+            echo "::warning::SEO_CRON_USER=${user_name}"
+            echo "::warning::SEO_CRON_ENV_FILE=${env_file}"
+            echo "::warning::SEO_CRON_MANUAL_COMMAND=/bin/bash /home/web1/scripts/run-seo-news-cron.sh --count 2 --mode manual"
+
+            /bin/bash /home/web1/scripts/run-seo-news-cron.sh --count 2 --mode manual
+
+            manual_verify="$(tail -n 40 /home/web1/logs/seo-news-cron.log | grep 'VERIFY ' | tail -n 1 | sed 's/^.*VERIFY //')"
+            if [ -z "$manual_verify" ]; then
+              echo "::error::SEO_CRON_MANUAL_RESULT_MISSING"
+              exit 1
+            fi
+
+            echo "::warning::SEO_CRON_MANUAL_RESULT=${manual_verify}"
+
+            tmp_cron="$(mktemp)"
+            {
+              crontab -l 2>/dev/null | grep -v '/home/web1/scripts/run-seo-news-cron.sh' || true
+              echo "30 7 * * * /bin/bash /home/web1/scripts/run-seo-news-cron.sh --count 2"
+            } > "$tmp_cron"
+            crontab "$tmp_cron"
+            rm -f "$tmp_cron"
+
+            next_run="$(date -d 'tomorrow 07:30' '+%Y-%m-%d %H:%M:%S %Z' 2>/dev/null || true)"
+            current_cron="$(crontab -l | tr '\n' ';')"
+
+            echo "::warning::SEO_CRON_INSTALLED=30 7 * * * /bin/bash /home/web1/scripts/run-seo-news-cron.sh --count 2"
+            echo "::warning::SEO_CRON_LOG_FILE=/home/web1/logs/seo-news-cron.log"
+            echo "::warning::SEO_CRON_NEXT_RUN=${next_run}"
+            echo "::warning::SEO_CRON_PAUSE=crontab -l | grep -v '/home/web1/scripts/run-seo-news-cron.sh' | crontab -"
+            echo "::warning::SEO_CRON_CURRENT=${current_cron}"
+          EOF
