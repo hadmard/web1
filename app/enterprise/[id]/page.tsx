@@ -697,8 +697,10 @@ function CaseCard({ item }: { item: GalleryCard }) {
           />
         </div>
         <div className="bg-white px-4 py-4 md:px-6 md:py-5">
-          <p className="text-[11px] uppercase tracking-[0.2em] text-[#a47b45]">{item.category}</p>
-          <p className="mt-2.5 line-clamp-2 text-base font-medium leading-7 text-[#241c15] md:mt-3 md:text-lg">{item.title}</p>
+          <p className="line-clamp-1 min-h-[1rem] text-[11px] uppercase tracking-[0.2em] text-[#a47b45]">{item.category}</p>
+          <p className="mt-2.5 line-clamp-1 min-h-[1.75rem] text-base font-medium leading-7 text-[#241c15] md:mt-3 md:min-h-[1.9rem] md:text-lg">
+            {item.title}
+          </p>
         </div>
       </>
     );
