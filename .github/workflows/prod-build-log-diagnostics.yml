@@ -21,8 +21,12 @@ jobs:
           ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
 
       - name: Read production build log
+        shell: bash
         run: |
-          ssh -o BatchMode=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+          set -euo pipefail
+          log_file="$RUNNER_TEMP/prod-build-log.txt"
+
+          ssh -o BatchMode=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF' | tee "$log_file"
             set -e
             cd /home/web1
 
@@ -41,3 +45,24 @@ jobs:
             echo "== BUILD LOG STAGE MARKERS =="
             grep -nE 'Compiled successfully|Linting and checking validity of types|Collecting page data|Generating static pages|Finalizing page optimization|error|Error|failed|Failed' /tmp/web1-build.log || true
           EOF
+
+          echo "## Production build log tail" >> "$GITHUB_STEP_SUMMARY"
+          echo '```text' >> "$GITHUB_STEP_SUMMARY"
+          tail -n 120 "$log_file" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+          python - <<'PY' "$log_file"
+          import pathlib
+          import sys
+
+          path = pathlib.Path(sys.argv[1])
+          lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+          tail = lines[-80:]
+          chunk_size = 8
+
+          print("::warning::/tmp/web1-build.log tail annotations follow")
+          for index in range(0, len(tail), chunk_size):
+              chunk = tail[index:index + chunk_size]
+              message = " | ".join(part.strip().replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A") for part in chunk)
+              print(f"::warning::{message}")
+          PY
