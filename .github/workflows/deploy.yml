@@ -152,7 +152,11 @@ jobs:
             export NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=4096}"
             export NEXT_TELEMETRY_DISABLED=1
             echo "::warning::[deploy] memory before build"
-            free -h || true
+            while IFS= read -r line; do
+              if [ -n "$line" ]; then
+                echo "::warning::[deploy] ${line}"
+              fi
+            done < <(free -h 2>/dev/null || true)
             set +e
             npm run build > /tmp/web1-build.log 2>&1
             build_exit_code=$?
@@ -160,9 +164,17 @@ jobs:
             if [ "$build_exit_code" -ne 0 ]; then
               echo "::error::[deploy] build exit code=${build_exit_code}"
               echo "::error::[deploy] memory after build failure"
-              free -h || true
+              while IFS= read -r line; do
+                if [ -n "$line" ]; then
+                  echo "::error::[deploy] ${line}"
+                fi
+              done < <(free -h 2>/dev/null || true)
               echo "::error::[deploy] dmesg tail begin"
-              sudo dmesg | tail -n 50 || true
+              while IFS= read -r line; do
+                if [ -n "$line" ]; then
+                  echo "::error::[deploy] ${line}"
+                fi
+              done < <(sudo dmesg 2>/dev/null | tail -n 50 || true)
               echo "::error::[deploy] dmesg tail end"
               echo "::error::[deploy] build output begin"
               while IFS= read -r line; do
