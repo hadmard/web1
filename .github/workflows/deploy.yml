@@ -76,6 +76,15 @@ jobs:
           ssh -o BatchMode=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
             set -euo pipefail
             cd /home/web1
+            stage="bootstrap"
+
+            on_error() {
+              code=$?
+              echo "::error::[deploy] stage=${stage} command=${BASH_COMMAND} exit_code=${code}"
+              sudo systemctl status web1 --no-pager -l || true
+              exit "$code"
+            }
+            trap on_error ERR
 
             load_env() {
               if [ -f .env.production ]; then
@@ -93,43 +102,51 @@ jobs:
               fi
             }
 
+            stage="git"
             echo "[deploy] fetching latest main"
             git fetch origin main
             git reset --hard origin/main
             git clean -fd -e .next
 
+            stage="install"
             echo "[deploy] installing dependencies"
             if ! npm ci --no-audit --no-fund; then
-              echo "[deploy] npm ci failed, falling back to npm install"
+              echo "::warning::[deploy] npm ci failed, falling back to npm install"
               npm install --include=dev --no-audit --no-fund
             fi
 
+            stage="env"
             load_env
-            echo "[deploy] DATABASE_URL present: ${DATABASE_URL:+yes}"
+            echo "::warning::[deploy] DATABASE_URL present: ${DATABASE_URL:+yes}"
 
+            stage="prisma-generate"
             echo "[deploy] generating prisma client"
             npx prisma generate
 
+            stage="prisma-sync"
             echo "[deploy] syncing prisma schema"
             if ! npx prisma migrate deploy; then
-              echo "prisma migrate deploy failed, falling back to prisma db push"
+              echo "::warning::[deploy] prisma migrate deploy failed, falling back to prisma db push"
               if ! npx prisma db push; then
-                echo "[deploy] prisma db push also failed, continuing with existing schema"
+                echo "::warning::[deploy] prisma db push also failed, continuing with existing schema"
               fi
             fi
 
+            stage="build"
             echo "[deploy] building next app"
             export NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=4096}"
             export NEXT_TELEMETRY_DISABLED=1
             npm run build
 
+            stage="restart"
             echo "[deploy] restarting web1"
             if ! sudo systemctl restart web1; then
-              echo "[deploy] web1 restart failed, dumping service logs"
+              echo "::error::[deploy] web1 restart failed, dumping service logs"
               sudo systemctl status web1 --no-pager -l || true
               sudo journalctl -u web1 -n 120 --no-pager || true
               exit 1
             fi
+            stage="verify-service"
             sudo systemctl status web1 --no-pager -l
           EOF
 
