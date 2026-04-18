@@ -14,6 +14,15 @@ const CATEGORY_HERO_KEY_MAP: Record<string, BackgroundImageKey> = {
   "/awards": "awardsHero",
 };
 
+const NEWS_SUBCATEGORY_DESCRIPTIONS: Record<string, string> = {
+  "企业动态": "汇聚整木品牌动态、企业新闻与招商信息，了解品牌加盟、企业布局与行业最新动向。",
+  "技术发展": "聚焦整木工艺、板材材料与生产技术升级，解析环保板材、工艺做法与行业技术趋势。",
+  "行业活动": "汇集整木展会、设计周与行业论坛信息，获取展会时间、品牌亮相与行业趋势发布。",
+};
+
+const NEWS_SUBCATEGORY_KEYWORDS =
+  "整木品牌动态,整木加盟,整木厂家,整木工艺,环保板材,整木展会,广州设计周,建博会,定制家具工艺";
+
 type SubcategoryEntry = { title: string; href: string };
 
 interface CategoryHomeProps {
@@ -114,6 +123,7 @@ export async function CategoryHome({
                     {displayDesc}
                   </p>
                 )}
+                {isNewsEditorial ? <p className="sr-only">{NEWS_SUBCATEGORY_KEYWORDS}</p> : null}
               </div>
             </div>
 
@@ -215,6 +225,12 @@ export async function CategoryHome({
                           进入栏目
                         </Link>
                       </div>
+
+                      {isNewsEditorial && NEWS_SUBCATEGORY_DESCRIPTIONS[sub.label] ? (
+                        <p className="mt-3 text-sm leading-7 text-muted">
+                          {NEWS_SUBCATEGORY_DESCRIPTIONS[sub.label]}
+                        </p>
+                      ) : null}
 
                       {latest.length > 0 ? (
                         <ul className={`mt-4 ${isNewsEditorial ? "space-y-3" : isEditorial ? "space-y-2.5" : "space-y-1.5"}`}>

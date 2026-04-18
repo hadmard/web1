@@ -10,7 +10,43 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Print CI runtime versions
+        run: |
+          echo "::notice::[validate] node=$(node -v)"
+          echo "::notice::[validate] npm=$(npm -v)"
+
+      - name: Enforce Node 20 in CI
+        run: |
+          NODE_MAJOR=$(node -v | sed 's/v//' | cut -d. -f1)
+          if [ "$NODE_MAJOR" -ne 20 ]; then
+            echo "❌ Node version must be 20.x"
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Build application
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: npm run build
+
   deploy:
+    needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -29,6 +65,8 @@ jobs:
 
             host_name=$(hostname 2>/dev/null || true)
             host_ips=$(hostname -I 2>/dev/null | tr '\n' ';' || true)
+            server_node=$(node -v 2>/dev/null || true)
+            server_npm=$(npm -v 2>/dev/null || true)
             web1_detail=$(systemctl show web1 --no-pager -p Id -p ActiveState -p FragmentPath -p WorkingDirectory -p ExecStart -p EnvironmentFile 2>/dev/null | tr '\n' ';')
             services=$(systemctl list-units --type=service --all --no-pager | grep -Ei 'web1|node|next|pm2|cnzhengmu' | tr -s ' ' | tr '\n' ';' || true)
             ports=$(sudo ss -ltnp | grep -E ':80 |:443 |:3000 |:3001 |:3002 |:3010 |:3011 ' | tr '\n' ';' || true)
@@ -57,6 +95,8 @@ jobs:
 
             echo "HOST_NAME=$host_name"
             echo "HOST_IPS=$host_ips"
+            echo "SERVER_NODE=$server_node"
+            echo "SERVER_NPM=$server_npm"
             echo "WEB1_DETAIL=$web1_detail"
             echo "SERVICES=$services"
             echo "PORTS=$ports"
@@ -77,6 +117,7 @@ jobs:
             set -euo pipefail
             cd /home/web1
             stage="bootstrap"
+            BACKUP_MARKER_FILE="/tmp/web1-next-backup-path"
 
             on_error() {
               code=$?
@@ -106,6 +147,7 @@ jobs:
               if [ -n "${NEXT_BACKUP_DIR:-}" ] && [ -d "${NEXT_BACKUP_DIR}" ]; then
                 rm -rf .next
                 mv "${NEXT_BACKUP_DIR}" .next
+                rm -f "${BACKUP_MARKER_FILE}"
                 echo "::warning::[deploy] restored previous .next backup"
               fi
             }
@@ -117,6 +159,11 @@ jobs:
             git clean -fd -e .next
 
             stage="install"
+            NODE_MAJOR=$(node -v | sed 's/v//' | cut -d. -f1)
+            if [ "$NODE_MAJOR" -ne 20 ]; then
+              echo "❌ Server Node version must be 20.x"
+              exit 1
+            fi
             echo "[deploy] installing dependencies"
             if ! npm ci --no-audit --no-fund; then
               echo "::warning::[deploy] npm ci failed, falling back to npm install"
@@ -147,7 +194,10 @@ jobs:
               NEXT_BACKUP_DIR=".next-backup-$(date +%s)"
               rm -rf "${NEXT_BACKUP_DIR}"
               mv .next "${NEXT_BACKUP_DIR}"
+              printf '%s\n' "/home/web1/${NEXT_BACKUP_DIR}" > "${BACKUP_MARKER_FILE}"
               echo "::warning::[deploy] moved existing .next to ${NEXT_BACKUP_DIR}"
+            else
+              rm -f "${BACKUP_MARKER_FILE}"
             fi
             export NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=4096}"
             export NEXT_TELEMETRY_DISABLED=1
@@ -205,8 +255,140 @@ jobs:
             fi
             stage="verify-service"
             sudo systemctl status web1 --no-pager -l
-            if [ -n "${NEXT_BACKUP_DIR:-}" ] && [ -d "${NEXT_BACKUP_DIR}" ]; then
-              rm -rf "${NEXT_BACKUP_DIR}"
+          EOF
+
+      - name: Health check production site
+        run: |
+          node - <<'NODE'
+          const baseUrl = "https://cnzhengmu.com";
+
+          function firstMatch(input, pattern) {
+            const match = input.match(pattern);
+            return match ? match[1] : "";
+          }
+
+          function normalizeAssetUrl(value) {
+            if (!value) return "";
+            if (value.startsWith("http://") || value.startsWith("https://")) return value;
+            return new URL(value, baseUrl).toString();
+          }
+
+          async function fetchText(url) {
+            const response = await fetch(url, { redirect: "follow" });
+            const text = await response.text();
+            return { response, text };
+          }
+
+          async function fetchHead(url) {
+            return fetch(url, { method: "GET", redirect: "follow" });
+          }
+
+          (async () => {
+            const failures = [];
+
+            const homepage = await fetchText(baseUrl);
+            const homepageStatus = homepage.response.status;
+            console.log(`HEALTH homepage status=${homepageStatus}`);
+            if (homepageStatus !== 200) {
+              failures.push(`homepage expected 200 but got ${homepageStatus}`);
+            }
+
+            const html = homepage.text;
+            const cssHref = normalizeAssetUrl(firstMatch(html, /href=\"([^\"]*\/_next\/static\/css\/[^"]+\.css[^"]*)\"/i));
+            const jsSrc = normalizeAssetUrl(firstMatch(html, /src=\"([^\"]*\/_next\/static\/chunks\/[^"]+\.js[^"]*)\"/i));
+
+            if (!cssHref) {
+              failures.push("could not find homepage CSS asset");
+            }
+
+            if (!jsSrc) {
+              failures.push("could not find homepage JS asset");
+            }
+
+            if (cssHref) {
+              const cssResponse = await fetchHead(cssHref);
+              const cssType = cssResponse.headers.get("content-type") || "";
+              console.log(`HEALTH css url=${cssHref}`);
+              console.log(`HEALTH css status=${cssResponse.status} content_type=${cssType}`);
+              if (cssResponse.status !== 200) {
+                failures.push(`css expected 200 but got ${cssResponse.status}`);
+              }
+              if (!/text\/css/i.test(cssType)) {
+                failures.push(`css expected text/css but got ${cssType || "missing"}`);
+              }
+            }
+
+            if (jsSrc) {
+              const jsResponse = await fetchHead(jsSrc);
+              const jsType = jsResponse.headers.get("content-type") || "";
+              console.log(`HEALTH js url=${jsSrc}`);
+              console.log(`HEALTH js status=${jsResponse.status} content_type=${jsType}`);
+              if (jsResponse.status !== 200) {
+                failures.push(`js expected 200 but got ${jsResponse.status}`);
+              }
+              if (!/(application|text)\/javascript/i.test(jsType)) {
+                failures.push(`js expected javascript content-type but got ${jsType || "missing"}`);
+              }
+            }
+
+            if (failures.length > 0) {
+              for (const failure of failures) {
+                console.error(`::error::[health] ${failure}`);
+              }
+              process.exit(1);
+            }
+
+            console.log("HEALTH overall=ok");
+          })().catch((error) => {
+            console.error(`::error::[health] ${error instanceof Error ? error.stack || error.message : String(error)}`);
+            process.exit(1);
+          });
+          NODE
+
+      - name: Roll back production assets on failure
+        if: failure()
+        run: |
+          ssh -o BatchMode=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+            set -euo pipefail
+            cd /home/web1
+            BACKUP_MARKER_FILE="/tmp/web1-next-backup-path"
+
+            if [ ! -f "${BACKUP_MARKER_FILE}" ]; then
+              echo "::warning::[rollback] no backup marker present"
+              exit 0
+            fi
+
+            backup_dir="$(cat "${BACKUP_MARKER_FILE}")"
+            if [ -z "${backup_dir}" ] || [ ! -d "${backup_dir}" ]; then
+              echo "::warning::[rollback] backup directory missing: ${backup_dir}"
+              rm -f "${BACKUP_MARKER_FILE}"
+              exit 0
+            fi
+
+            rm -rf .next
+            mv "${backup_dir}" .next
+            rm -f "${BACKUP_MARKER_FILE}"
+            sudo systemctl restart web1
+            sudo systemctl status web1 --no-pager -l || true
+            echo "::warning::[rollback] restored previous .next and restarted web1"
+          EOF
+
+      - name: Remove backup after successful health check
+        if: success()
+        run: |
+          ssh -o BatchMode=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+            set -euo pipefail
+            BACKUP_MARKER_FILE="/tmp/web1-next-backup-path"
+
+            if [ ! -f "${BACKUP_MARKER_FILE}" ]; then
+              exit 0
+            fi
+
+            backup_dir="$(cat "${BACKUP_MARKER_FILE}")"
+            rm -f "${BACKUP_MARKER_FILE}"
+            if [ -n "${backup_dir}" ] && [ -d "${backup_dir}" ]; then
+              rm -rf "${backup_dir}"
+              echo "::notice::[deploy] cleaned backup directory ${backup_dir}"
             fi
           EOF
 
