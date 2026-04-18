@@ -105,7 +105,7 @@ async function main() {
 
     const topic = buildTopic(seed, row.keywordIntent, plan);
     const article = buildArticle(topic, row.generationBatchId ?? `refresh-${new Date().toISOString().slice(0, 10)}`);
-    const newSlug = await generateUniqueArticleSlug(article.title);
+    const newSlug = row.title === article.title ? row.slug : await generateUniqueArticleSlug(article.title);
 
     results.push({
       id: row.id,
