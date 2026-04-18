@@ -66,6 +66,11 @@ fi
 
 echo "[$(timestamp)] ENV loaded file=$ENV_FILE database_url_present=${DATABASE_URL:+yes}"
 
+if [[ "${SEO_NEWS_AUTOGEN_ENABLED:-false}" != "true" ]]; then
+  echo "[$(timestamp)] SKIP seo news generation disabled by SEO_NEWS_AUTOGEN_ENABLED"
+  exit 0
+fi
+
 RUN_OUTPUT="$(mktemp /tmp/seo-news-run.XXXXXX.log)"
 START_ISO="$(date -Iseconds)"
 

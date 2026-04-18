@@ -198,6 +198,7 @@ export async function POST(request: NextRequest) {
     data: {
       title: normalizedTitle,
       slug: slugTrim,
+      sourceType: "manual",
       source: typeof source === "string" ? source.trim() || null : null,
       sourceUrl: typeof sourceUrl === "string" ? sourceUrl.trim() || null : null,
       displayAuthor: typeof displayAuthor === "string" ? displayAuthor.trim() || null : null,

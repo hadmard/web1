@@ -7,6 +7,7 @@ type ArticleItem = {
   excerpt?: string | null;
   content: string;
   status: Status;
+  sourceType?: string | null;
   source?: string | null;
   generationBatchId?: string | null;
   isPinned?: boolean;
@@ -107,7 +108,7 @@ function ArticleReviewList({
                     {TEXT.pinned}
                   </span>
                 )}
-                {item.source === "auto_seo_generator" && (
+                {(item.sourceType === "ai_generated" || item.source === "auto_seo_generator") && (
                   <span className="rounded-full border border-[rgba(180,154,107,0.38)] bg-[rgba(180,154,107,0.08)] px-2 py-0.5 text-[11px] text-primary">
                     {TEXT.seoDraft}
                   </span>
@@ -116,7 +117,7 @@ function ArticleReviewList({
               {item.excerpt && (
                 <p className="mt-1 whitespace-pre-line text-xs text-muted">{`${TEXT.summary}: ${item.excerpt}`}</p>
               )}
-              {item.source === "auto_seo_generator" && item.generationBatchId && (
+              {(item.sourceType === "ai_generated" || item.source === "auto_seo_generator") && item.generationBatchId && (
                 <p className="mt-1 text-xs text-muted">{`${TEXT.batch}: ${item.generationBatchId}`}</p>
               )}
               {tab === "standards" && (() => {
@@ -179,8 +180,8 @@ export function ReviewPanels({
   onEditChange: (item: ChangeRequestItem) => void;
   onReviewChange: (id: string, status: "approved" | "rejected") => void;
 }) {
-  const seoPendingItems = pendingItems.filter((item) => item.source === "auto_seo_generator");
-  const regularPendingItems = pendingItems.filter((item) => item.source !== "auto_seo_generator");
+  const seoPendingItems = pendingItems.filter((item) => item.sourceType === "ai_generated" || item.source === "auto_seo_generator");
+  const regularPendingItems = pendingItems.filter((item) => item.sourceType !== "ai_generated" && item.source !== "auto_seo_generator");
 
   return (
     <section className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">

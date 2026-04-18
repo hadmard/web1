@@ -93,6 +93,7 @@ type ArticleItem = {
   id: string;
   title: string;
   slug: string;
+  sourceType?: string | null;
   source?: string | null;
   generationBatchId?: string | null;
   keywordSeed?: string | null;
@@ -153,6 +154,12 @@ type ChangeRequestItem = {
   };
   submitter: { name: string | null; email: string; role: string | null };
 };
+
+type ManageSourceFilter = "all" | "manual" | "ai_generated" | "imported";
+
+function parseManageSourceFilter(raw: string | null): ManageSourceFilter {
+  return raw === "manual" || raw === "ai_generated" || raw === "imported" ? raw : "all";
+}
 
 const COVER_IMAGE_MAX_BYTES = 2 * 1024 * 1024;
 
@@ -258,6 +265,7 @@ export default function AdminContentPage() {
   const mode = parseMode(searchParams.get("mode"));
   const tab = parseTab(searchParams.get("tab"));
   const searchQuery = searchParams.get("q")?.trim() ?? "";
+  const sourceTypeFilter = parseManageSourceFilter(searchParams.get("sourceType"));
 
   const [session, setSession] = useState<SessionInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -334,6 +342,7 @@ export default function AdminContentPage() {
   const [reviewAction, setReviewAction] = useState<Status | null>(null);
   const [highlightedItemId, setHighlightedItemId] = useState<string | null>(null);
   const [manageSearchDraft, setManageSearchDraft] = useState(searchQuery);
+  const [manageSourceTypeDraft, setManageSourceTypeDraft] = useState<ManageSourceFilter>(sourceTypeFilter);
 
 
   const selectedTabDef = useMemo(() => CONTENT_TAB_DEFS.find((x) => x.key === tab) ?? CONTENT_TAB_DEFS[0], [tab]);
@@ -564,10 +573,11 @@ export default function AdminContentPage() {
   const loadList = useCallback(async () => {
     const sp = new URLSearchParams({ limit: "100", tab });
     if (searchQuery) sp.set("q", searchQuery);
+    if (sourceTypeFilter !== "all") sp.set("sourceType", sourceTypeFilter);
     const res = await fetch(`/api/admin/articles?${sp.toString()}`, { credentials: "include", cache: "no-store" });
     const data = await res.json().catch(() => ({}));
     setItems(Array.isArray(data.items) ? data.items : []);
-  }, [searchQuery, tab]);
+  }, [searchQuery, sourceTypeFilter, tab]);
 
   const loadReview = useCallback(async () => {
     const sp = new URLSearchParams({ status: "pending", limit: "200", tab });
@@ -641,6 +651,10 @@ export default function AdminContentPage() {
   useEffect(() => {
     setManageSearchDraft(searchQuery);
   }, [searchQuery]);
+
+  useEffect(() => {
+    setManageSourceTypeDraft(sourceTypeFilter);
+  }, [sourceTypeFilter]);
 
   useEffect(() => {
     if (!highlightedItemId || mode !== "manage") return;
@@ -1147,14 +1161,18 @@ export default function AdminContentPage() {
     const nextParams = new URLSearchParams(searchParams.toString());
     if (next) nextParams.set("q", next);
     else nextParams.delete("q");
+    if (manageSourceTypeDraft !== "all") nextParams.set("sourceType", manageSourceTypeDraft);
+    else nextParams.delete("sourceType");
     const nextUrl = nextParams.toString() ? `${pathname}?${nextParams.toString()}` : pathname;
     router.replace(nextUrl, { scroll: false });
   }
 
   function clearManageSearch() {
     setManageSearchDraft("");
+    setManageSourceTypeDraft("all");
     const nextParams = new URLSearchParams(searchParams.toString());
     nextParams.delete("q");
+    nextParams.delete("sourceType");
     const nextUrl = nextParams.toString() ? `${pathname}?${nextParams.toString()}` : pathname;
     router.replace(nextUrl, { scroll: false });
   }
@@ -1535,6 +1553,16 @@ export default function AdminContentPage() {
               <p className="mt-1 text-xs text-muted">可按标题、摘要、正文、来源、作者、标签、前台关键词、提交账号、归属企业或品牌名快速查找内容。</p>
             </div>
             <div className="flex min-w-0 flex-1 gap-2">
+              <select
+                className="h-11 rounded-2xl border border-[rgba(194,182,154,0.28)] bg-white/90 px-4 text-sm text-primary focus:border-[rgba(180,154,107,0.45)] focus:outline-none focus:ring-2 focus:ring-[rgba(180,154,107,0.18)]"
+                value={manageSourceTypeDraft}
+                onChange={(e) => setManageSourceTypeDraft(parseManageSourceFilter(e.target.value))}
+              >
+                <option value="all">全部来源</option>
+                <option value="manual">人工发布</option>
+                <option value="ai_generated">AI生成</option>
+                <option value="imported">采集导入</option>
+              </select>
               <input
                 className="h-11 min-w-0 flex-1 rounded-2xl border border-[rgba(194,182,154,0.28)] bg-white/90 px-4 text-sm text-primary placeholder:text-muted focus:border-[rgba(180,154,107,0.45)] focus:outline-none focus:ring-2 focus:ring-[rgba(180,154,107,0.18)]"
                 value={manageSearchDraft}
@@ -1544,7 +1572,7 @@ export default function AdminContentPage() {
               <button type="submit" className="rounded-2xl bg-accent px-4 py-2 text-sm font-medium text-white">
                 搜索
               </button>
-              {(searchQuery || manageSearchDraft) && (
+              {(searchQuery || manageSearchDraft || sourceTypeFilter !== "all" || manageSourceTypeDraft !== "all") && (
                 <button type="button" onClick={clearManageSearch} className="rounded-2xl border border-border px-4 py-2 text-sm text-primary hover:bg-surface">
                   清除
                 </button>

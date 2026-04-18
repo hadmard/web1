@@ -6,6 +6,7 @@ type ArticleItem = {
   slug: string;
   content: string;
   status: Status;
+  sourceType?: string | null;
   isPinned?: boolean;
   publishedAt?: string | null;
   viewCount?: number;
@@ -31,6 +32,18 @@ const STATUS_CLASSNAME: Record<Status, string> = {
   approved: "border-[rgba(34,197,94,0.35)] bg-emerald-50 text-emerald-700",
   rejected: "border-[rgba(239,68,68,0.35)] bg-red-50 text-red-600",
 };
+
+function sourceTypeLabel(value?: string | null) {
+  if (value === "ai_generated") return "AI生成";
+  if (value === "imported") return "采集";
+  return "人工";
+}
+
+function sourceTypeClassName(value?: string | null) {
+  if (value === "ai_generated") return "border-[rgba(180,154,107,0.38)] bg-[rgba(180,154,107,0.08)] text-primary";
+  if (value === "imported") return "border-[rgba(59,130,246,0.28)] bg-[rgba(59,130,246,0.08)] text-sky-700";
+  return "border-[rgba(34,197,94,0.28)] bg-[rgba(34,197,94,0.08)] text-emerald-700";
+}
 
 function submitterLabel(user?: { name: string | null; email: string; role: string | null } | null) {
   if (!user) return "未知账号";
@@ -126,6 +139,9 @@ export function ManageContentList({
                         置顶
                       </span>
                     ) : null}
+                    <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${sourceTypeClassName(item.sourceType)}`}>
+                      {sourceTypeLabel(item.sourceType)}
+                    </span>
                   </p>
                   <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-2.5 text-xs text-muted">
                     <MetaItem label="提交账号" value={submitterLabel(item.authorMember ?? null)} />

@@ -16,6 +16,7 @@ import { DEFAULT_NEWS_SHARE_IMAGE, findNewsArticleBySegment, normalizeNewsSegmen
 import { prisma } from "@/lib/prisma";
 import { articleOrderByPinnedLatest } from "@/lib/articles";
 import { getRecommendedNews, isValidKeywordCandidate } from "@/lib/news-keywords-v2";
+import { resolveArticleSourceType } from "@/lib/article-source";
 
 export const revalidate = 300;
 export const dynamic = "force-dynamic";
@@ -172,12 +173,12 @@ function normalizeArticleSourceValue(value?: string | null) {
   return normalized.length > 0 ? normalized : "";
 }
 
-function isAutoSeoArticleSource(value?: string | null) {
-  return normalizeArticleSourceValue(value) === "auto_seo_generator";
+function isAutoSeoArticleSource(article: { sourceType?: string | null; source?: string | null; sourceUrl?: string | null }) {
+  return resolveArticleSourceType(article) === "ai_generated";
 }
 
-function buildArticleSourceSummary(article: { source?: string | null; sourceUrl?: string | null }) {
-  if (isAutoSeoArticleSource(article.source)) return null;
+function buildArticleSourceSummary(article: { sourceType?: string | null; source?: string | null; sourceUrl?: string | null }) {
+  if (isAutoSeoArticleSource(article)) return null;
   const sourceName = normalizeArticleSourceValue(article.source);
   const sourceUrl = normalizeArticleSourceValue(article.sourceUrl);
   if (!sourceName && !sourceUrl) return null;
@@ -400,7 +401,7 @@ export default async function ArticlePage({ params, searchParams }: Props) {
           <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 px-0.5 text-[14px] text-primary/50 sm:mt-5 sm:px-0 sm:text-[14px] sm:text-primary/50">
             <span>鍙戝竷鏃堕棿锛?{new Date(article.publishedAt ?? article.updatedAt).toLocaleDateString("zh-CN")}</span>
             {article.displayAuthor ? <span>浣滆€咃細{article.displayAuthor}</span> : null}
-            {article.source && !isAutoSeoArticleSource(article.source) ? (
+            {article.source && !isAutoSeoArticleSource(article) ? (
               article.sourceUrl ? (
                 <a href={article.sourceUrl} target="_blank" rel="noreferrer" className="transition-colors hover:text-accent">
                   鏉ユ簮锛?{article.source}

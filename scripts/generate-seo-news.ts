@@ -17,6 +17,7 @@ type GeneratedSeoArticle = {
   publishedAt: Date | null;
   categoryHref: "/news";
   subHref: "/news/trends";
+  sourceType: "ai_generated";
   source: "auto_seo_generator";
   generationBatchId: string;
   keywordSeed: string;
@@ -251,6 +252,7 @@ function buildArticle(topic: SeoTopicCandidate, batchId: string): GeneratedSeoAr
     publishedAt: null,
     categoryHref: "/news",
     subHref: pickSubHref(),
+    sourceType: "ai_generated",
     source: "auto_seo_generator",
     generationBatchId: batchId,
     keywordSeed: topic.keywordSeed,
@@ -283,6 +285,7 @@ async function persistGeneratedArticles(articles: GeneratedSeoArticle[]) {
       data: {
         title: article.title,
         slug,
+        sourceType: article.sourceType,
         source: article.source,
         generationBatchId: article.generationBatchId,
         keywordSeed: article.keywordSeed,
@@ -307,24 +310,6 @@ async function persistGeneratedArticles(articles: GeneratedSeoArticle[]) {
       },
     });
 
-    const keywordItems = article.keywords
-      .split(",")
-      .map((item) => item.trim())
-      .filter(Boolean)
-      .slice(0, 5);
-
-    if (keywordItems.length > 0) {
-      await prisma.newsKeyword.createMany({
-        data: keywordItems.map((keyword, index) => ({
-          newsId: record.id,
-          keyword,
-          weightScore: String(100 - index),
-          isManual: true,
-          sortOrder: index,
-        })),
-      });
-    }
-
     saved.push({ ...record, excerpt: article.excerpt, keywords: article.keywords, audience: article.audience });
   }
 
@@ -332,6 +317,9 @@ async function persistGeneratedArticles(articles: GeneratedSeoArticle[]) {
 }
 
 async function main() {
+  if (process.env.SEO_NEWS_AUTOGEN_ENABLED !== "true") {
+    throw new Error("SEO news generation is temporarily disabled");
+  }
   const count = Math.max(1, Math.min(5, Number.parseInt(readArg("count") || "3", 10) || 3));
   const dryRun = process.argv.includes("--dry-run") || process.argv.includes("--dryRun");
   const batchId = `seo-${new Date().toISOString().slice(0, 10)}-${createHash("md5").update(String(Date.now())).digest("hex").slice(0, 6)}`;

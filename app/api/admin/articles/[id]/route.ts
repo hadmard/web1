@@ -226,6 +226,7 @@ export async function PATCH(
       id: true,
       slug: true,
       title: true,
+      sourceType: true,
       source: true,
       generationBatchId: true,
       keywordSeed: true,

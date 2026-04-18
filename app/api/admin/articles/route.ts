@@ -14,6 +14,7 @@ import { formatKeywordCsv, syncArticleKeywords } from "@/lib/news-keywords-v2";
 import { resolveTabKeyFromHref } from "@/lib/content-taxonomy";
 import { buildContentTabWhere } from "@/lib/content-taxonomy";
 import { pushApprovedNewsToBaidu } from "@/lib/baidu-submit";
+import { isArticleSourceType } from "@/lib/article-source";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +58,7 @@ export async function GET(request: NextRequest) {
   const status = searchParams.get("status");
   const categoryHref = searchParams.get("categoryHref");
   const tab = searchParams.get("tab");
+  const sourceType = searchParams.get("sourceType");
   const q = searchParams.get("q")?.trim();
   const where: any = {};
   if (status && ["draft", "pending", "approved", "rejected"].includes(status)) {
@@ -71,6 +73,9 @@ export async function GET(request: NextRequest) {
   const tabWhere = buildContentTabWhere(resolvedTab);
   if (tabWhere) {
     where.AND = [...(Array.isArray(where.AND) ? where.AND : []), tabWhere];
+  }
+  if (isArticleSourceType(sourceType)) {
+    where.sourceType = sourceType;
   }
   if (q) {
     where.AND = [
@@ -123,6 +128,7 @@ export async function GET(request: NextRequest) {
         id: true,
         title: true,
         slug: true,
+        sourceType: true,
         source: true,
         generationBatchId: true,
         keywordSeed: true,
@@ -272,6 +278,7 @@ export async function POST(request: NextRequest) {
       data: {
         title: normalizedTitle,
         slug: slugTrim,
+        sourceType: "manual",
         source: typeof source === "string" ? source.trim() || null : null,
         generationBatchId: null,
         keywordSeed: null,

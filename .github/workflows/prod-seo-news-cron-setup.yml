@@ -2,113 +2,13 @@ name: Setup SEO News Cron
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/prod-seo-news-cron-setup.yml"
-      - "scripts/run-seo-news-cron.sh"
-      - "scripts/verify-seo-news-batch.ts"
 
 jobs:
-  setup:
+  disabled:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    defaults:
-      run:
-        shell: bash
-
     steps:
-      - name: Setup SSH
+      - name: SEO auto generation disabled
+        shell: bash
         run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
-
-      - name: Manual verify and install cron
-        run: |
-          ssh -o BatchMode=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} <<'EOF'
-            set -euo pipefail
-
-            cd /home/web1
-
-            for _ in $(seq 1 36); do
-              if pgrep -af 'npm ci|npm install|next build|git fetch origin main|git reset --hard origin/main' >/dev/null 2>&1; then
-                sleep 10
-              else
-                break
-              fi
-            done
-
-            git fetch origin main
-            git reset --hard origin/main
-            sed -i 's/\r$//' /home/web1/scripts/run-seo-news-cron.sh /home/web1/scripts/verify-seo-news-batch.ts
-
-            project_dir="$(pwd)"
-            user_name="$(whoami)"
-
-            if [ -f .env.production ]; then
-              env_file="/home/web1/.env.production"
-            elif [ -f .env ]; then
-              env_file="/home/web1/.env"
-            else
-              echo "Missing production env file in /home/web1" >&2
-              exit 1
-            fi
-
-            set -a
-            . "$env_file"
-            set +a
-
-            manual_start="$(date -Iseconds)"
-
-            set +e
-            manual_output="$(
-              /bin/bash /home/web1/scripts/run-seo-news-cron.sh --count 2 --mode manual 2>&1
-            )"
-            manual_exit=$?
-            set -e
-
-            printf '%s\n' "$manual_output"
-
-            verify_json="$(npx ts-node --transpile-only -P scripts/tsconfig.scripts.json scripts/verify-seo-news-batch.ts --since "$manual_start")"
-            saved_count="$(printf '%s' "$verify_json" | sed -n 's/.*"savedCount":\([0-9][0-9]*\).*/\1/p' | head -n 1)"
-
-            echo "::notice::SEO_CRON_PROJECT_DIR=$project_dir"
-            echo "::notice::SEO_CRON_USER=$user_name"
-            echo "::notice::SEO_CRON_ENV_FILE=$env_file"
-            echo "::notice::SEO_CRON_MANUAL_EXIT=$manual_exit"
-            echo "::notice::SEO_CRON_RESULT=$verify_json"
-
-            if [ "$manual_exit" -ne 0 ]; then
-              while IFS= read -r line; do
-                if [ -n "$line" ]; then
-                  echo "::error::$line"
-                fi
-              done < <(printf '%s\n' "$manual_output" | tail -n 20)
-              echo "::error::SEO_CRON_MANUAL_EXIT=$manual_exit"
-              exit "$manual_exit"
-            fi
-
-            if [ -z "$saved_count" ] || [ "$saved_count" -lt 1 ]; then
-              echo "No new auto_seo_generator articles were created" >&2
-              exit 1
-            fi
-
-            tmp_cron="$(mktemp)"
-            {
-              crontab -l 2>/dev/null | grep -v '/home/web1/scripts/run-seo-news-cron.sh' || true
-              echo "30 7 * * * /bin/bash /home/web1/scripts/run-seo-news-cron.sh --count 2"
-            } > "$tmp_cron"
-            crontab "$tmp_cron"
-            rm -f "$tmp_cron"
-
-            next_run="$(date -d 'tomorrow 07:30' '+%Y-%m-%d %H:%M:%S %Z' 2>/dev/null || true)"
-            current_cron="$(crontab -l | tr '\n' ';')"
-
-            echo "::notice::SEO_CRON_INSTALLED=30 7 * * * /bin/bash /home/web1/scripts/run-seo-news-cron.sh --count 2"
-            echo "::notice::SEO_CRON_LOG_FILE=/home/web1/logs/seo-news-cron.log"
-            echo "::notice::SEO_CRON_NEXT_RUN=$next_run"
-            echo "::notice::SEO_CRON_PAUSE=crontab -l | grep -v '/home/web1/scripts/run-seo-news-cron.sh' | crontab -"
-            echo "::notice::SEO_CRON_CURRENT=$current_cron"
-          EOF
+          echo "::error::SEO auto generation has been disabled. Cron installation is blocked until the article source isolation fix is accepted."
+          exit 1

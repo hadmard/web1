@@ -353,6 +353,7 @@ model Article {
   id                  String        @id @default(cuid())
   title               String
   slug                String        @unique
+  sourceType          String        @default("manual") @map("source_type")
   source              String?
   generationBatchId   String?       @map("generation_batch_id")
   keywordSeed         String?       @map("keyword_seed")
@@ -402,6 +403,7 @@ model Article {
   @@index([keywords])
   @@index([manualKeywords])
   @@index([contentHash])
+  @@index([sourceType])
   @@index([generationBatchId])
   @@index([keywordSeed])
   @@index([keywordIntent])

@@ -289,6 +289,7 @@ async function createImportedArticle(candidate: ImportedNewsCandidate, actor?: {
     data: {
       title: candidate.title,
       slug,
+      sourceType: "imported",
       source: candidate.sourceName || null,
       sourceUrl: candidate.originalUrl,
       contentHash: candidate.contentHash,
