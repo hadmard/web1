@@ -15,9 +15,9 @@ const CATEGORY_HERO_KEY_MAP: Record<string, BackgroundImageKey> = {
 };
 
 const NEWS_SUBCATEGORY_DESCRIPTIONS: Record<string, string> = {
-  "企业动态": "汇聚整木品牌动态、企业新闻与招商信息，了解品牌加盟、企业布局与行业最新动向。",
-  "技术发展": "聚焦整木工艺、板材材料与生产技术升级，解析环保板材、工艺做法与行业技术趋势。",
-  "行业活动": "汇集整木展会、设计周与行业论坛信息，获取展会时间、品牌亮相与行业趋势发布。",
+  企业动态: "汇聚整木品牌动态、企业新闻与招商信息，了解品牌加盟、企业布局与行业最新动向。",
+  技术发展: "聚焦整木工艺、板材材料与生产技术升级，解析环保板材、工艺做法与行业技术趋势。",
+  行业活动: "汇集整木展会、设计周与行业论坛信息，获取展会时间、品牌亮相与行业趋势发布。",
 };
 
 const NEWS_SUBCATEGORY_KEYWORDS =
@@ -88,8 +88,8 @@ export async function CategoryHome({
                 <div
                   className={`flex shrink-0 items-center justify-center border border-border bg-surface text-accent ${
                     isEditorial
-                        ? "h-16 w-16 rounded-[22px] shadow-[0_16px_32px_-24px_rgba(15,23,42,0.35)] sm:h-[72px] sm:w-[72px]"
-                        : "h-14 w-14 rounded-2xl sm:h-16 sm:w-16"
+                      ? "h-16 w-16 rounded-[22px] shadow-[0_16px_32px_-24px_rgba(15,23,42,0.35)] sm:h-[72px] sm:w-[72px]"
+                      : "h-14 w-14 rounded-2xl sm:h-16 sm:w-16"
                   }`}
                 >
                   <Image

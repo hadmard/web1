@@ -59,6 +59,15 @@ function unique<T>(items: T[]) {
   return Array.from(new Set(items));
 }
 
+function assertAutoSeoWritableTarget(type: "article" | "category" | "tag" | "dictionary" | "brand" | "enterprise") {
+  if (type === "category" || type === "tag") {
+    throw new Error(`SEO auto generation cannot write ${type}`);
+  }
+  if (type !== "article") {
+    throw new Error(`SEO auto generation cannot write ${type}`);
+  }
+}
+
 function buildArticleKeywords(topic: SeoTopicCandidate) {
   const words = unique(
     [
@@ -280,6 +289,7 @@ async function loadExistingNewsRows(): Promise<ExistingNewsRow[]> {
 async function persistGeneratedArticles(articles: GeneratedSeoArticle[]) {
   const saved = [];
   for (const article of articles) {
+    assertAutoSeoWritableTarget("article");
     const slug = await generateUniqueArticleSlug(article.title);
     const record = await prisma.article.create({
       data: {
