@@ -4,7 +4,7 @@ import { normalizeRichTextField } from "../lib/brand-content";
 import { generateUniqueArticleSlug } from "../lib/slug";
 import { buildSeoContentHash, findSeoLeadDuplicateReason } from "../lib/seo-dedup";
 import { SEO_CORE_INTERNAL_LINKS } from "../lib/seo-keyword-seeds";
-import { pickSeoTopicsForGeneration, type SeoTopicCandidate, type SeoTopicSelectionStats } from "../lib/seo-topic-generator";
+import { pickSeoTopicsForGeneration, type BodySkeleton, type SeoTopicCandidate, type SeoTopicSelectionStats } from "../lib/seo-topic-generator";
 
 type GeneratedSeoArticle = {
   title: string;
@@ -24,6 +24,9 @@ type GeneratedSeoArticle = {
   keywordIntent: string;
   contentHash: string;
   audience: "c_end" | "b_end";
+  titleStyle: SeoTopicCandidate["titleStyle"];
+  titleFrame: string;
+  bodySkeleton: BodySkeleton;
 };
 
 type ExistingNewsRow = {
@@ -48,13 +51,6 @@ function readArg(name: string) {
   return index >= 0 ? process.argv[index + 1] ?? "" : "";
 }
 
-function stripHtml(input: string) {
-  return String(input || "")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
 function unique<T>(items: T[]) {
   return Array.from(new Set(items));
 }
@@ -74,7 +70,7 @@ function buildArticleKeywords(topic: SeoTopicCandidate) {
       topic.keywordSeed,
       topic.audience === "c_end" ? "整木定制" : "",
       topic.title.includes("预算") ? "整木定制预算" : "",
-      topic.title.includes("多少钱") ? "整木定制价格" : "",
+      topic.title.includes("多少钱") || topic.title.includes("价格") ? "整木定制价格" : "",
       topic.title.includes("板材") || topic.title.includes("多层板") ? "整木板材" : "",
       topic.title.includes("工厂") ? "整木工厂获客" : "",
       topic.title.includes("门店") ? "整木门店成交" : "",
@@ -92,16 +88,14 @@ function pickSubHref(): GeneratedSeoArticle["subHref"] {
 function buildInternalLinks(topic: SeoTopicCandidate) {
   const filtered = SEO_CORE_INTERNAL_LINKS.filter((item) => !topic.title.includes(item.keyword));
   const selected = (
-    filtered.length >= 2
-      ? filtered
-      : SEO_CORE_INTERNAL_LINKS.filter((item) => !topic.title.includes(item.title))
+    filtered.length >= 2 ? filtered : SEO_CORE_INTERNAL_LINKS.filter((item) => !topic.title.includes(item.title))
   ).slice(0, 3);
 
   return selected.map((item) => ({
-      title: item.title,
-      slug: item.slug,
-      href: `/news/${item.slug}`,
-    }));
+    title: item.title,
+    slug: item.slug,
+    href: `/news/${item.slug}`,
+  }));
 }
 
 function paragraph(text: string) {
@@ -116,42 +110,224 @@ function linkSentence(text: string, href: string, title: string) {
   return paragraph(`${text}<a href="${href}">${title}</a>。`);
 }
 
-function buildConsumerBody(topic: SeoTopicCandidate, links: ReturnType<typeof buildInternalLinks>) {
-  const isPrice = topic.title.includes("多少钱") || topic.title.includes("预算") || topic.title.includes("报价");
-  const isMaterial = topic.title.includes("实木") || topic.title.includes("多层板") || topic.title.includes("板材");
+function buildConsumerLead(topic: SeoTopicCandidate) {
+  switch (topic.titleStyle) {
+    case "scene":
+      return `${topic.keywordSeed}不是只看单价就能判断的问题。很多业主真正关心的是100㎡要花多少钱、10万够不够、哪些空间先做更稳，这些都要先拆成场景和预算边界。`;
+    case "contrast":
+      return `${topic.keywordSeed}看起来像在比价格，实际上比的是报价边界、材料结构和交付复杂度。只看单价很容易觉得“差不多”，真正拉开差距的往往是方案范围和落地难度。`;
+    case "avoidance":
+      return `${topic.keywordSeed}最怕的不是一开始贵一点，而是中途不断加项、返工和延期。先把最容易出问题的环节看清楚，反而更容易把预算和结果都控住。`;
+    case "cognition":
+      return `${topic.keywordSeed}之所以难判断，往往不是信息太少，而是判断顺序错了。先分清自己更看重统一效果、材料质感还是预算效率，再看报价和品牌，决策会清楚很多。`;
+    default:
+      return `${topic.keywordSeed}没有一个简单答案，因为价格、材料和交付能力都会一起影响结果。真正稳妥的做法，不是只问一句“多少钱”，而是把预算拆分、影响因素和决策标准一次看明白。`;
+  }
+}
 
+function buildBusinessLead(topic: SeoTopicCandidate) {
+  switch (topic.titleStyle) {
+    case "contrast":
+      return `${topic.keywordSeed}之所以总觉得没效果，很多时候不是因为没投流量，而是客户进站后没有看到真正能帮助决策的内容。搜索进来的客户，如果第一屏看不到报价逻辑、案例边界和交付能力，询盘质量就很难高。`;
+    case "question":
+      return `${topic.keywordSeed}不是简单地发几篇资讯就够了。真正能带来客户的内容，必须直接对应客户正在搜索的问题，让客户在咨询前就知道你解决什么、适合谁、报价逻辑是什么。`;
+    default:
+      return `${topic.keywordSeed}这类问题的核心，不在渠道多不多，而在内容有没有把客户的犹豫点讲明白。预算、案例、交付、工期和材料判断如果都模糊，门店和工厂就很容易把流量浪费在无效沟通上。`;
+  }
+}
+
+function buildSkeletonSections(topic: SeoTopicCandidate) {
+  const isBusiness = topic.audience === "b_end";
+
+  if (isBusiness) {
+    switch (topic.bodySkeleton) {
+      case "pricing_compare":
+        return [
+          {
+            heading: "为什么客户会觉得报价差异大",
+            body: "对工厂或门店来说，客户最容易流失的阶段不是留资前，而是看完内容后仍然弄不懂价格差异。没有把板材、工艺、五金、安装和交付边界讲清楚，客户只会把所有报价都看成“差不多”，最后转去比更低的价格。",
+          },
+          {
+            heading: "哪些内容最能缩短比价周期",
+            body: "最有效的内容不是泛泛宣传，而是把报价单怎么看、案例适合谁、工期如何安排、不同方案差在哪几篇讲透。客户一旦能在网站上看懂这些内容，询盘质量和到店后的沟通效率都会明显提升。",
+          },
+          {
+            heading: "低价为什么反而容易拖慢成交",
+            body: "如果内容只强调低价，很容易吸引大量不匹配的客户。真正高质量的询盘，往往来自那些看完报价逻辑、交付流程和案例边界之后，已经知道自己要问什么的人。",
+          },
+          {
+            heading: "更稳的内容布局怎么做",
+            body: "先布局预算、报价、案例和交付能力，再补品牌介绍和活动资讯。这样搜索客户在进入网站后能顺着自己的决策路径往下看，成交动作就不会只靠销售临场发挥。",
+          },
+        ];
+      case "scenario_solution":
+        return [
+          {
+            heading: "先把客户的场景说具体",
+            body: "门店和工厂常见的问题，是内容说了很多“实力”，却没有讲客户所在的真实场景。比如100㎡改善型住宅、别墅项目、小户型预算有限，这些场景一旦说具体，客户就会更容易判断自己是否适合。",
+          },
+          {
+            heading: "方案和预算要一起落地",
+            body: "客户看内容时最需要的，不是抽象优势，而是不同预算能做什么、哪些空间必须先做、哪些部分可以后置。场景化内容一旦建立，询盘自然会更接近真实需求。",
+          },
+          {
+            heading: "哪些地方最适合做取舍",
+            body: "真正能帮助成交的内容，要把预算优先级、材料档次和交付节奏讲明白。这样客户到店前就已经形成预期，现场沟通会更容易进入方案确认，而不是从头解释一遍。",
+          },
+          {
+            heading: "为什么这种内容更容易留资",
+            body: "因为客户看到的是自己的问题被回答，而不是企业单方面输出。场景越清晰，客户越容易代入，也越愿意继续留下联系方式或预约到店。",
+          },
+        ];
+      case "industry_cognition":
+        return [
+          {
+            heading: "先澄清一个常见误区",
+            body: "很多团队以为“多发内容”就等于“有获客”。但对整木行业来说，真正决定效果的，是内容有没有对应客户搜索意图，而不是文章数量本身。",
+          },
+          {
+            heading: "为什么行业里没有统一答案",
+            body: "整木客户的决策路径天然更长，既要比预算，也要看材料、案例和交付能力。没有哪一篇内容能解决全部问题，所以内容结构必须顺着客户的判断顺序来搭建。",
+          },
+          {
+            heading: "真正影响结果的因素是什么",
+            body: "是否讲清预算边界、案例适配、交付流程和材料差异，往往比投放渠道本身更影响询盘质量。客户越早在内容里看懂这些信息，后续的成交效率越高。",
+          },
+          {
+            heading: "给工厂或门店的判断建议",
+            body: "优先补齐那些客户正在搜、却还没人讲清的高意向问题。与其追求内容数量，不如先把少数真正能促进询盘和成交的页面做深做透。",
+          },
+        ];
+      default:
+        return [
+          {
+            heading: "先明确客户的问题到底卡在哪",
+            body: "高意向客户通常不会只问一句“多少钱”，而是会同时关心预算、案例、材料和交付。内容如果只能回答一小部分，询盘自然很难留下来。",
+          },
+          {
+            heading: "设计与交付能力要一起展示",
+            body: "客户并不只在意效果图，还会判断你有没有能力把方案真正落地。所以案例不能只放结果图，还要补充户型、预算和施工交付信息。",
+          },
+          {
+            heading: "报价内容必须能对上客户预期",
+            body: "如果网站上的报价内容太模糊，客户进站后还是不知道大概要花多少钱、差异在哪里，就很容易继续流失到别家。报价逻辑讲得越清楚，成交过程越省力。",
+          },
+          {
+            heading: "最后如何把内容接到成交动作",
+            body: "每篇内容都要让客户知道下一步该做什么，比如看案例、预约沟通或提交需求。只有把内容和动作串起来，才会变成真正的成交工具。",
+          },
+        ];
+    }
+  }
+
+  switch (topic.bodySkeleton) {
+    case "budget_breakdown":
+      return [
+        {
+          heading: "用户最常见的预算误区",
+          body: "很多人一上来只问整木定制多少钱一平，但忽略了空间范围、造型复杂度和安装条件。结果看似单价合理，后面却不断因为加项和变更超出预算。",
+        },
+        {
+          heading: "预算通常由哪些部分构成",
+          body: "整木定制预算通常要拆成柜体、木门、墙板、顶面造型、五金、油漆工艺和安装运输几部分。面积一样、覆盖范围不同，最后总价就会差很多。",
+        },
+        {
+          heading: "哪些环节最容易超支",
+          body: "最常见的超支点，不是主材本身，而是中途加做护墙板、复杂收口、升级五金、现场返工和补充安装。前期如果不把清单边界说清楚，后面很难控住总价。",
+        },
+        {
+          heading: "怎么把预算控制得更稳",
+          body: "更稳的做法是先定总预算，再区分必做空间和可后置空间，最后再考虑材料升级。这样看到报价时，你就能更快判断哪些钱该花、哪些加项可以先放一放。",
+        },
+      ];
+    case "pricing_compare":
+      return [
+        {
+          heading: "为什么整木价格差异会很大",
+          body: "整木报价看起来都叫整木定制，但背后包含的范围可能完全不同。有的只算柜体，有的把木门、墙板、顶面造型和安装都算进去，单看总价很容易误判。",
+        },
+        {
+          heading: "板材、工艺、五金和安装差在哪",
+          body: "真正拉开价格差距的，往往是板材结构、饰面工艺、五金等级、现场安装复杂度和交付难度。尤其是复杂收口和异形空间，往往比单纯的材料升级更影响总价。",
+        },
+        {
+          heading: "报价单到底该怎么看",
+          body: "先看有没有把空间范围写清，再看材料等级、五金配置、工艺做法和安装是否包含。谁把清单边界写得更完整，谁的报价就更有参考价值。",
+        },
+        {
+          heading: "如何避免只看低价",
+          body: "低价方案最容易把关键部分拆开另算，或者把后期最容易加项的工序留到现场再补。与其比谁便宜，不如先确认谁把范围和交付讲得更清楚。",
+        },
+      ];
+    case "scenario_solution":
+      return [
+        {
+          heading: "先看自己属于什么场景",
+          body: "整木定制的预算和方案，跟户型、面积和使用周期关系很大。100㎡改善型住宅、别墅项目、小户型刚需，这些场景的优先级本来就不一样，不能直接套同一套价格逻辑。",
+        },
+        {
+          heading: "预算或方案该怎么分配",
+          body: "更稳妥的分配顺序通常是先做客厅、主卧和必须落地的收纳空间，再决定木门、墙板和造型部分的投入比例。这样既能保证整体效果，也不容易一开始就把预算压满。",
+        },
+        {
+          heading: "哪些地方可以做取舍",
+          body: "如果预算有限，优先保留基础柜体、关键门墙界面和高频使用空间，把复杂造型、低频空间和高成本升级项后置，通常更容易兼顾效果和成本。",
+        },
+        {
+          heading: "怎样更稳地落地",
+          body: "先把空间优先级、预算边界和材料等级三件事定下来，再让门店或工厂出方案。这样报价和方案更容易对齐，后续施工和交付也会更顺。",
+        },
+      ];
+    case "industry_cognition":
+      return [
+        {
+          heading: "先澄清一个认知误区",
+          body: "很多人以为整木定制应该像成品家具一样有统一价格，其实行业里很难有标准答案。整木更像是方案组合，范围和做法稍微一变，价格就会跟着变。",
+        },
+        {
+          heading: "为什么行业里没有统一标准答案",
+          body: "不同门店和工厂的报价方式、材料结构、五金标准和安装边界都不一样。只看一个数字，往往只能看到结果，看不到背后的成本逻辑。",
+        },
+        {
+          heading: "真正影响选择的因素是什么",
+          body: "预算边界、材料取舍、交付能力和后期维护成本，通常比“品牌名气大不大”更直接影响实际体验。先看这些因素，判断会更准确。",
+        },
+        {
+          heading: "给用户的判断建议",
+          body: "不要急着先比最低价，而是先弄清楚自己最看重的是什么：统一效果、材料稳定性，还是预算效率。顺序一旦理顺，很多问题自然会有答案。",
+        },
+      ];
+    default:
+      return [
+        {
+          heading: "先明确需求到底是什么",
+          body: "做整木定制前，先想清楚自己要解决的是统一风格、提高收纳、改善材料质感，还是控制预算效率。需求越清楚，后面的报价和方案越容易判断。",
+        },
+        {
+          heading: "看设计能力也要看交付能力",
+          body: "效果图做得好不代表现场就一定能落地。真正值得比较的，是设计是否和施工、安装、收口这些细节配得上。",
+        },
+        {
+          heading: "报价是否真的和需求匹配",
+          body: "有些报价看起来很便宜，但并没有把关键空间、五金配置或安装环节包含进去。判断时要看方案是不是和你的需求对得上，而不是只看总价。",
+        },
+        {
+          heading: "最后怎么做决定更稳",
+          body: "把预算、方案边界和材料等级三件事一起核对，再去比较品牌或门店。这样做虽然慢一点，但能明显减少后面返工和加项的风险。",
+        },
+      ];
+  }
+}
+
+function buildConsumerBody(topic: SeoTopicCandidate, links: ReturnType<typeof buildInternalLinks>) {
+  const sections = buildSkeletonSections(topic);
   return [
-    paragraph(
-      isPrice
-        ? "整木定制多少钱一平没有统一答案，很多业主真正想问的是100平要花多少钱、10万够不够、预算该怎么分配才不容易超支。判断价格时，先看空间范围，再看板材、工艺和安装复杂度，比直接问单价更有参考价值。"
-        : isMaterial
-          ? "整木定制选实木还是多层板，关键不只是哪个更贵，而是你的预算、空间稳定性要求和后期使用习惯更适合哪一种。很多家庭一开始只盯材料名称，最后反而忽略了基层结构和交付细节。"
-          : "整木定制值不值，往往不是一句好或不好就能说清。真正影响体验的，是预算边界、设计落地、材料选择和施工周期有没有提前想明白。",
-    ),
-    heading(isPrice ? "先把预算问题拆开，不要只盯单价" : "先搞清自己最在意的是什么"),
-    paragraph(
-      isPrice
-        ? "不少业主一开口就问整木定制多少钱一平，但实际报价很少只按单一面积计算。墙板、木门、柜体、顶面造型、五金、油漆工艺和现场安装，都会让价格拉开差距。更稳妥的做法，是先确认哪些空间必须做，哪些项目可以后置，再去拆预算。"
-        : isMaterial
-          ? "如果你更在意天然纹理和触感，实木更容易打动人；如果你更在意稳定性、性价比和后期维护，多层板通常更好控制。问题在于，很多门店只讲概念，不讲结构和工艺，业主听完还是不知道该怎么选。"
-          : "整木定制更适合看重统一感、木作细节和个性化落地的家庭。如果只是为了解决基础收纳，未必要一步到位做整木；但如果你在意墙门柜一体化和长期居住体验，就要把预算、设计和交付一起放到决策里。",
-    ),
-    heading(isMaterial ? "材料判断，别只看名字" : "报价差异，往往出在范围和工艺"),
-    paragraph(
-      isMaterial
-        ? "实木、多层板、木皮饰面和漆面处理，看起来只是材料区别，实际会影响稳定性、气味控制、变形风险和预算。真正该问的，不只是是不是实木，还包括基层怎么做、封边怎么处理、背板厚度是多少、现场安装后能不能稳。"
-        : "同样写着整木定制，不同门店报价差出不少并不奇怪。常见原因不是谁故意报高，而是项目边界不同。有的只含基础柜体，有的把护墙板、门套、木门、五金和安装都算进去。比较报价前，先看清清单里到底含了什么。",
-    ),
+    paragraph(buildConsumerLead(topic)),
+    ...sections.flatMap((section) => [heading(section.heading), paragraph(section.body)]),
     linkSentence(
-      links[0]?.title.includes("预算")
-        ? "如果你还不清楚整木定制的价格区间，可以参考"
-        : SEO_CORE_INTERNAL_LINKS[0].prompt,
+      SEO_CORE_INTERNAL_LINKS[0].prompt,
       links[0]?.href ?? "/news/zheng-mu-ding-zhi-duo-shao-qian-yi-ping",
       links[0]?.title ?? SEO_CORE_INTERNAL_LINKS[0].title,
-    ),
-    heading("真正容易出问题的，通常是设计和交付"),
-    paragraph(
-      "很多业主后悔的，不是最初单价高了几百，而是方案图和现场落地不一致、尺寸返工、安装拖期，最后入住时间被打乱。看品牌或门店时，最好要求对方拿出同类户型案例、完整节点图和交付排期。能把过程讲清楚的团队，通常比只会讲风格更靠谱。",
     ),
     linkSentence(
       SEO_CORE_INTERNAL_LINKS[1].prompt,
@@ -159,13 +335,7 @@ function buildConsumerBody(topic: SeoTopicCandidate, links: ReturnType<typeof bu
       links[1]?.title ?? SEO_CORE_INTERNAL_LINKS[1].title,
     ),
     heading("总结"),
-    paragraph(
-      isPrice
-        ? "整木定制价格没有标准答案，但预算逻辑是可以提前看清的。先分清空间范围、材料档次和施工复杂度，再去比品牌和报价，通常比直接比单价更不容易踩坑。"
-        : isMaterial
-          ? "整木定制选实木还是多层板，没有绝对标准，关键是你的预算、稳定性要求和使用场景是否匹配。只要把结构、工艺和交付一起看，选择就会清晰很多。"
-          : "整木定制值不值，核心不在于跟风，而在于你的需求和预算有没有对上。先把最重要的空间、材料和工期想明白，再做决定，整体出错率会低很多。",
-    ),
+    paragraph("整木定制不是不能问价格，而是不能只问价格。把预算拆分、影响因素和决策顺序理清以后，再去比材料、门店和品牌，通常更容易避开低价陷阱和后期加项。"),
     linkSentence(
       SEO_CORE_INTERNAL_LINKS[2].prompt,
       links[2]?.href ?? "/news/zheng-mu-ding-zhi-zen-me-xuan-pin-pai",
@@ -175,36 +345,14 @@ function buildConsumerBody(topic: SeoTopicCandidate, links: ReturnType<typeof bu
 }
 
 function buildBusinessBody(topic: SeoTopicCandidate, links: ReturnType<typeof buildInternalLinks>) {
-  const isFactory = topic.title.includes("工厂");
-
+  const sections = buildSkeletonSections(topic);
   return [
-    paragraph(
-      isFactory
-        ? "整木工厂怎么接单，很多团队第一反应是做网站、投广告、发案例，但最后还是没有客户。问题通常不在渠道本身，而在网站内容没有回答客户正在搜索的问题，导致流量来了也留不下询盘。"
-        : "整木门店转化率低，很多时候不是客户太少，而是客户在到店前没有建立起足够信任。预算、材料、案例和交付这些问题如果在线上讲不清，门店后续成交就会变得很被动。",
-    ),
-    heading(isFactory ? "先看客户会不会留下来" : "先看客户为什么迟迟不下决定"),
-    paragraph(
-      isFactory
-        ? "不少工厂网站首页写满企业介绍和实力展示，却没有直面客户真正会搜的问题。比如报价怎么构成、不同板材怎么选、工期多久、案例适合什么户型，这些才是客户进入网站后最容易决定要不要继续咨询的内容。"
-        : "客户到店前往往已经比较过价格、材料和案例，如果网站内容只是活动海报或品牌口号，客户就很难形成明确预期。等到线下沟通时，销售只能从头解释，成交节奏自然会被拖慢。",
-    ),
-    heading(isFactory ? "网站内容要服务询盘，不是只服务展示" : "报价、案例和预约动作必须连起来"),
-    paragraph(
-      isFactory
-        ? "一篇内容最好只回答一个明确问题，然后自然引导到案例、报价思路或咨询入口。这样做的意义，不只是拿搜索流量，更是在客户第一次接触时就把筛选和教育做在前面。询盘质量高不高，很多时候就是在这一步拉开的。"
-        : "很多门店转化低，不是不会谈单，而是客户在看完案例后没有下一步动作，在看到报价前也没有建立预期。内容要把预算逻辑、案例对照和预约动作串起来，客户才知道下一步该做什么。",
-    ),
+    paragraph(buildBusinessLead(topic)),
+    ...sections.flatMap((section) => [heading(section.heading), paragraph(section.body)]),
     linkSentence(
       SEO_CORE_INTERNAL_LINKS[0].prompt,
       links[0]?.href ?? "/news/zheng-mu-ding-zhi-duo-shao-qian-yi-ping",
       links[0]?.title ?? SEO_CORE_INTERNAL_LINKS[0].title,
-    ),
-    heading(isFactory ? "先覆盖高意图问题，再做品牌露出" : "先把门店优势说具体，才更容易成交"),
-    paragraph(
-      isFactory
-        ? "对工厂来说，最先应该布局的，不是空泛行业稿，而是“多少钱、怎么选、工期多久、材料怎么判断”这类高意图问题。因为真正能带来线索的，通常不是宣传口号，而是解决客户决策疑问的内容。"
-        : "对门店来说，应该把同城案例、主推材质、适合户型和交付周期写得更具体。客户越能在内容里看到真实场景，越容易提前建立信任，留资和预约的概率也会更高。",
     ),
     linkSentence(
       SEO_CORE_INTERNAL_LINKS[1].prompt,
@@ -212,11 +360,7 @@ function buildBusinessBody(topic: SeoTopicCandidate, links: ReturnType<typeof bu
       links[1]?.title ?? SEO_CORE_INTERNAL_LINKS[1].title,
     ),
     heading("总结"),
-    paragraph(
-      isFactory
-        ? "整木工厂想通过网站拿客户，关键不是内容发得多，而是每篇内容都能对应一个明确搜索意图，并把客户自然带到询盘动作上。先把高意图问题写透，线索质量通常会比单纯投广告更稳。"
-        : "整木门店要提升成交率，不能只盯线下话术，更要把线上内容做成信任前置工具。客户在网站上先看懂预算、材料和案例，到店之后才更容易进入成交。",
-    ),
+    paragraph("工厂和门店真正需要的，不是更多泛流量，而是更明确的高意向问题内容。谁能在客户搜索阶段把预算、案例、交付和报价讲清楚，谁就更容易拿到高质量询盘和更顺的成交节奏。"),
     linkSentence(
       SEO_CORE_INTERNAL_LINKS[2].prompt,
       links[2]?.href ?? "/news/zheng-mu-ding-zhi-zen-me-xuan-pin-pai",
@@ -226,23 +370,26 @@ function buildBusinessBody(topic: SeoTopicCandidate, links: ReturnType<typeof bu
 }
 
 function buildExcerpt(topic: SeoTopicCandidate) {
-  if (topic.title.includes("多少钱")) {
-    return "整木定制多少钱一平没有统一答案，很多业主真正关心的是100平要花多少钱、10万够不够、预算怎么分配才不容易超支。本文把整木定制价格区间和预算逻辑一次讲清。";
-  }
-  if (topic.title.includes("实木") || topic.title.includes("多层板")) {
-    return "整木定制选实木还是多层板，很多人一开始只看材料名字，最后却在预算、稳定性和环保上选偏了。本文重点讲清两类常见板材怎么判断、分别适合什么家庭。";
-  }
-  if (topic.title.includes("工厂")) {
-    return "整木工厂怎么接单，很多团队做了网站却一直没有客户，核心问题往往不是没流量，而是内容没有对上客户搜索意图。本文重点讲清工厂网站该先布局哪些内容，才更容易拿到询盘。";
-  }
-  if (topic.title.includes("门店")) {
-    return "整木门店转化率低，很多时候不是客户太少，而是预算、案例和交付逻辑没有在线上提前讲清。本文重点拆解门店内容怎么布局，才能让客户更愿意留资和到店。";
+  if (topic.audience === "b_end") {
+    if (topic.titleStyle === "contrast") {
+      return `${topic.keywordSeed}为什么总没效果，很多时候问题不在流量，而在网站内容没有回应客户最关心的预算、案例和交付问题。本文重点拆解哪些内容最容易带来有效询盘和真实成交。`;
+    }
+    return `${topic.keywordSeed}不能只靠发资讯或投广告，关键是让客户在浏览内容时就看懂报价逻辑、案例边界和下一步动作。本文重点讲清工厂或门店该先布局哪些高意向内容。`;
   }
 
-  return `${topic.keywordSeed}不是一句好不好就能说清，很多问题都卡在预算、材料和交付判断上。本文重点把这类问题拆开讲清，帮助你更快做决定。`.slice(0, 156);
+  if (topic.titleStyle === "scene") {
+    return `${topic.keywordSeed}不是只看单价就够，很多业主真正关心的是100平要花多少钱、10万够不够、哪些空间最容易超预算。本文把预算拆分、价格差异和决策顺序一次讲清。`;
+  }
+  if (topic.titleStyle === "contrast") {
+    return `${topic.keywordSeed}看起来像在比价格，实际比的是报价边界、材料结构和交付复杂度。本文重点拆解整木定制为什么会有明显价差，以及判断贵在哪的几个关键点。`;
+  }
+  if (topic.titleStyle === "avoidance") {
+    return `${topic.keywordSeed}最怕的不是一开始贵一点，而是中途加项、返工和延期。本文重点讲清哪些地方最容易踩坑、最容易超预算，以及下决定前要先问清哪些问题。`;
+  }
+  return `${topic.keywordSeed}没有统一答案，真正影响判断的通常是预算边界、材料选择和交付能力。本文会从预算拆分、价格影响因素和决策建议三个方面，帮你把问题看清。`;
 }
 
-function buildArticle(topic: SeoTopicCandidate, batchId: string): GeneratedSeoArticle {
+export function buildArticle(topic: SeoTopicCandidate, batchId: string): GeneratedSeoArticle {
   const internalLinks = buildInternalLinks(topic);
   const content =
     topic.audience === "b_end" ? buildBusinessBody(topic, internalLinks) : buildConsumerBody(topic, internalLinks);
@@ -268,6 +415,9 @@ function buildArticle(topic: SeoTopicCandidate, batchId: string): GeneratedSeoAr
     keywordIntent: topic.keywordIntent,
     contentHash: buildSeoContentHash(topic.title, normalizedContent),
     audience: topic.audience,
+    titleStyle: topic.titleStyle,
+    titleFrame: topic.titleFrame,
+    bodySkeleton: topic.bodySkeleton,
   };
 }
 
@@ -308,7 +458,7 @@ async function persistGeneratedArticles(articles: GeneratedSeoArticle[]) {
         status: "pending",
         publishedAt: null,
         manualKeywords: article.keywords,
-        reviewNote: `SEO自动生成草稿；批次 ${article.generationBatchId}；种子词 ${article.keywordSeed}；意图 ${article.keywordIntent}`,
+        reviewNote: `SEO自动生成草稿；批次 ${article.generationBatchId}；种子词 ${article.keywordSeed}；意图 ${article.keywordIntent}；titleStyle=${article.titleStyle}；titleFrame=${article.titleFrame}；bodySkeleton=${article.bodySkeleton}`,
       },
       select: {
         id: true,
@@ -320,7 +470,15 @@ async function persistGeneratedArticles(articles: GeneratedSeoArticle[]) {
       },
     });
 
-    saved.push({ ...record, excerpt: article.excerpt, keywords: article.keywords, audience: article.audience });
+    saved.push({
+      ...record,
+      excerpt: article.excerpt,
+      keywords: article.keywords,
+      audience: article.audience,
+      titleStyle: article.titleStyle,
+      titleFrame: article.titleFrame,
+      bodySkeleton: article.bodySkeleton,
+    });
   }
 
   return saved;
@@ -362,6 +520,9 @@ async function main() {
       if (generated.some((item) => item.keywordSeed === topic.keywordSeed && item.keywordIntent === topic.keywordIntent)) {
         continue;
       }
+      if (generated.length > 0 && generated[generated.length - 1]?.bodySkeleton === topic.bodySkeleton) {
+        continue;
+      }
 
       const article = buildArticle(topic, batchId);
       article.slug = await generateUniqueArticleSlug(article.title);
@@ -384,8 +545,18 @@ async function main() {
           dryRun: true,
           generationBatchId: batchId,
           candidateCount: candidates.length,
+          historyWindowDays: stats.historyWindowDays,
           stats: runStats,
           generatedCount: generated.length,
+          candidates: candidates.slice(0, 10).map((item) => ({
+            title: item.title,
+            keywordSeed: item.keywordSeed,
+            keywordIntent: item.keywordIntent,
+            titleStyle: item.titleStyle,
+            titleFrame: item.titleFrame,
+            bodySkeleton: item.bodySkeleton,
+            score: item.score,
+          })),
           items: generated.map((item) => ({
             title: item.title,
             excerpt: item.excerpt,
@@ -397,6 +568,9 @@ async function main() {
             keywordSeed: item.keywordSeed,
             keywordIntent: item.keywordIntent,
             audience: item.audience,
+            titleStyle: item.titleStyle,
+            titleFrame: item.titleFrame,
+            bodySkeleton: item.bodySkeleton,
             internalLinks: item.internalLinks,
             content: item.content,
           })),
@@ -415,6 +589,7 @@ async function main() {
         dryRun: false,
         generationBatchId: batchId,
         requestedCount: count,
+        historyWindowDays: stats.historyWindowDays,
         stats: runStats,
         generatedCount: generated.length,
         savedCount: saved.length,
@@ -427,11 +602,13 @@ async function main() {
   );
 }
 
-void main()
-  .catch((error) => {
-    console.error(error instanceof Error ? error.stack || error.message : error);
-    process.exitCode = 1;
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+if (require.main === module) {
+  void main()
+    .catch((error) => {
+      console.error(error instanceof Error ? error.stack || error.message : error);
+      process.exitCode = 1;
+    })
+    .finally(async () => {
+      await prisma.$disconnect();
+    });
+}
