@@ -59,6 +59,7 @@ jobs:
             echo "::warning::SEO_CRON_ENV_FILE=${env_file}"
             echo "::warning::SEO_CRON_MANUAL_COMMAND=/bin/bash /home/web1/scripts/run-seo-news-cron.sh --count 2 --mode manual"
 
+            manual_start="$(date -Iseconds)"
             set +e
             /bin/bash /home/web1/scripts/run-seo-news-cron.sh --count 2 --mode manual
             manual_exit=$?
@@ -76,7 +77,72 @@ jobs:
               exit "$manual_exit"
             fi
 
-            manual_verify="$(tail -n 80 /home/web1/logs/seo-news-cron.log | grep 'VERIFY ' | tail -n 1 | sed 's/^.*VERIFY //' || true)"
+            manual_verify="$(
+              cd /home/web1
+              node - "$manual_start" <<'NODE'
+const { PrismaClient } = require("@prisma/client");
+
+const prisma = new PrismaClient();
+const since = new Date(process.argv[2]);
+
+(async () => {
+  const latest = await prisma.article.findFirst({
+    where: {
+      source: "auto_seo_generator",
+      createdAt: { gte: since },
+    },
+    orderBy: [{ createdAt: "desc" }],
+    select: {
+      generationBatchId: true,
+    },
+  });
+
+  if (!latest?.generationBatchId) {
+    console.log("");
+    return;
+  }
+
+  const rows = await prisma.article.findMany({
+    where: {
+      generationBatchId: latest.generationBatchId,
+    },
+    orderBy: [{ createdAt: "asc" }],
+    select: {
+      title: true,
+      slug: true,
+      status: true,
+      source: true,
+      categoryHref: true,
+      subHref: true,
+    },
+  });
+
+  console.log(
+    JSON.stringify({
+      generationBatchId: latest.generationBatchId,
+      savedCount: rows.length,
+      pendingCount: rows.filter((row) => row.status === "pending").length,
+      autoSeoCount: rows.filter((row) => row.source === "auto_seo_generator").length,
+      statuses: Array.from(new Set(rows.map((row) => row.status))),
+      items: rows.map((row) => ({
+        title: row.title,
+        slug: row.slug,
+        status: row.status,
+        categoryHref: row.categoryHref,
+        subHref: row.subHref,
+      })),
+    })
+  );
+})()
+  .catch(() => {
+    console.log("");
+    process.exit(0);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });
+NODE
+            )"
             if [ -z "$manual_verify" ]; then
               echo "::error::SEO_CRON_MANUAL_RESULT_MISSING"
               while IFS= read -r line; do
