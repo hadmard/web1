@@ -61,6 +61,7 @@ jobs:
 
             manual_start="$(date -Iseconds)"
             set +e
+            export SEO_CRON_TEE_STDOUT=1
             /bin/bash /home/web1/scripts/run-seo-news-cron.sh --count 2 --mode manual
             manual_exit=$?
             set -e
