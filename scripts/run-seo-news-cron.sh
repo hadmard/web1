@@ -27,8 +27,7 @@ done
 
 mkdir -p "$LOG_DIR"
 touch "$LOG_FILE"
-
-if [[ "${SEO_CRON_TEE_STDOUT:-0}" == "1" ]]; then
+if [[ "$MODE" == "manual" ]]; then
   exec > >(tee -a "$LOG_FILE") 2>&1
 else
   exec >>"$LOG_FILE" 2>&1

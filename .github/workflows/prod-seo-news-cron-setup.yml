@@ -7,11 +7,15 @@ on:
     paths:
       - ".github/workflows/prod-seo-news-cron-setup.yml"
       - "scripts/run-seo-news-cron.sh"
+      - "scripts/verify-seo-news-batch.ts"
 
 jobs:
   setup:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
 
     steps:
       - name: Setup SSH
@@ -22,14 +26,12 @@ jobs:
           ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
 
       - name: Manual verify and install cron
-        shell: bash
         run: |
           ssh -o BatchMode=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} <<'EOF'
             set -euo pipefail
 
             cd /home/web1
 
-            echo "::warning::SEO_CRON_WAIT=waiting_for_active_deploy_processes"
             for _ in $(seq 1 36); do
               if pgrep -af 'npm ci|npm install|next build|git fetch origin main|git reset --hard origin/main' >/dev/null 2>&1; then
                 sleep 10
@@ -40,127 +42,48 @@ jobs:
 
             git fetch origin main
             git reset --hard origin/main
-            sed -i 's/\r$//' /home/web1/scripts/run-seo-news-cron.sh
+            sed -i 's/\r$//' /home/web1/scripts/run-seo-news-cron.sh /home/web1/scripts/verify-seo-news-batch.ts
 
-            user_name="$(whoami)"
             project_dir="$(pwd)"
+            user_name="$(whoami)"
+
             if [ -f .env.production ]; then
               env_file="/home/web1/.env.production"
             elif [ -f .env ]; then
               env_file="/home/web1/.env"
             else
-              env_file="missing"
+              echo "Missing production env file in /home/web1" >&2
+              exit 1
             fi
 
-            mkdir -p /home/web1/logs
-
-            echo "::warning::SEO_CRON_PROJECT_DIR=${project_dir}"
-            echo "::warning::SEO_CRON_USER=${user_name}"
-            echo "::warning::SEO_CRON_ENV_FILE=${env_file}"
-            echo "::warning::SEO_CRON_MANUAL_COMMAND=/bin/bash /home/web1/scripts/run-seo-news-cron.sh --count 2 --mode manual"
+            set -a
+            . "$env_file"
+            set +a
 
             manual_start="$(date -Iseconds)"
+
             set +e
-            export SEO_CRON_TEE_STDOUT=1
             /bin/bash /home/web1/scripts/run-seo-news-cron.sh --count 2 --mode manual
             manual_exit=$?
             set -e
 
+            verify_json="$(npx ts-node --transpile-only -P scripts/tsconfig.scripts.json scripts/verify-seo-news-batch.ts --since "$manual_start")"
+            saved_count="$(printf '%s' "$verify_json" | sed -n 's/.*"savedCount":\([0-9][0-9]*\).*/\1/p' | head -n 1)"
+
+            echo "SEO_CRON_PROJECT_DIR=$project_dir"
+            echo "SEO_CRON_USER=$user_name"
+            echo "SEO_CRON_ENV_FILE=$env_file"
+            echo "SEO_CRON_MANUAL_EXIT=$manual_exit"
+            echo "SEO_CRON_RESULT=$verify_json"
+
             if [ "$manual_exit" -ne 0 ]; then
-              echo "::error::SEO_CRON_MANUAL_EXIT=${manual_exit}"
-              echo "::error::SEO_CRON_LOG_TAIL_BEGIN"
-              while IFS= read -r line; do
-                if [ -n "$line" ]; then
-                  echo "::error::${line}"
-                fi
-              done < <(tail -n 120 /home/web1/logs/seo-news-cron.log || true)
-              echo "::error::SEO_CRON_LOG_TAIL_END"
               exit "$manual_exit"
             fi
 
-            manual_verify="$(
-              cd /home/web1
-              if [ -f "$env_file" ]; then
-                set -a
-                # shellcheck disable=SC1090
-                . "$env_file"
-                set +a
-              fi
-              node - "$manual_start" <<'NODE'
-              const { PrismaClient } = require("@prisma/client");
-
-              const prisma = new PrismaClient();
-              const since = new Date(process.argv[2]);
-
-              (async () => {
-                const latest = await prisma.article.findFirst({
-                  where: {
-                    source: "auto_seo_generator",
-                    createdAt: { gte: since },
-                  },
-                  orderBy: [{ createdAt: "desc" }],
-                  select: {
-                    generationBatchId: true,
-                  },
-                });
-
-                if (!latest?.generationBatchId) {
-                  console.log("");
-                  return;
-                }
-
-                const rows = await prisma.article.findMany({
-                  where: {
-                    generationBatchId: latest.generationBatchId,
-                  },
-                  orderBy: [{ createdAt: "asc" }],
-                  select: {
-                    title: true,
-                    slug: true,
-                    status: true,
-                    source: true,
-                    categoryHref: true,
-                    subHref: true,
-                  },
-                });
-
-                console.log(
-                  JSON.stringify({
-                    generationBatchId: latest.generationBatchId,
-                    savedCount: rows.length,
-                    pendingCount: rows.filter((row) => row.status === "pending").length,
-                    autoSeoCount: rows.filter((row) => row.source === "auto_seo_generator").length,
-                    statuses: Array.from(new Set(rows.map((row) => row.status))),
-                    items: rows.map((row) => ({
-                      title: row.title,
-                      slug: row.slug,
-                      status: row.status,
-                      categoryHref: row.categoryHref,
-                      subHref: row.subHref,
-                    })),
-                  })
-                );
-              })()
-                .catch(() => {
-                  console.log("");
-                  process.exit(0);
-                })
-                .finally(async () => {
-                  await prisma.$disconnect();
-                });
-              NODE
-            )"
-            if [ -z "$manual_verify" ]; then
-              echo "::error::SEO_CRON_MANUAL_RESULT_MISSING"
-              while IFS= read -r line; do
-                if [ -n "$line" ]; then
-                  echo "::error::${line}"
-                fi
-              done < <(tail -n 120 /home/web1/logs/seo-news-cron.log || true)
+            if [ -z "$saved_count" ] || [ "$saved_count" -lt 1 ]; then
+              echo "No new auto_seo_generator articles were created" >&2
               exit 1
             fi
-
-            echo "::warning::SEO_CRON_MANUAL_RESULT=${manual_verify}"
 
             tmp_cron="$(mktemp)"
             {
@@ -173,9 +96,9 @@ jobs:
             next_run="$(date -d 'tomorrow 07:30' '+%Y-%m-%d %H:%M:%S %Z' 2>/dev/null || true)"
             current_cron="$(crontab -l | tr '\n' ';')"
 
-            echo "::warning::SEO_CRON_INSTALLED=30 7 * * * /bin/bash /home/web1/scripts/run-seo-news-cron.sh --count 2"
-            echo "::warning::SEO_CRON_LOG_FILE=/home/web1/logs/seo-news-cron.log"
-            echo "::warning::SEO_CRON_NEXT_RUN=${next_run}"
-            echo "::warning::SEO_CRON_PAUSE=crontab -l | grep -v '/home/web1/scripts/run-seo-news-cron.sh' | crontab -"
-            echo "::warning::SEO_CRON_CURRENT=${current_cron}"
+            echo "SEO_CRON_INSTALLED=30 7 * * * /bin/bash /home/web1/scripts/run-seo-news-cron.sh --count 2"
+            echo "SEO_CRON_LOG_FILE=/home/web1/logs/seo-news-cron.log"
+            echo "SEO_CRON_NEXT_RUN=$next_run"
+            echo "SEO_CRON_PAUSE=crontab -l | grep -v '/home/web1/scripts/run-seo-news-cron.sh' | crontab -"
+            echo "SEO_CRON_CURRENT=$current_cron"
           EOF
