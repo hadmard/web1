@@ -172,17 +172,22 @@ function normalizeArticleSourceValue(value?: string | null) {
   return normalized.length > 0 ? normalized : "";
 }
 
+function isAutoSeoArticleSource(value?: string | null) {
+  return normalizeArticleSourceValue(value) === "auto_seo_generator";
+}
+
 function buildArticleSourceSummary(article: { source?: string | null; sourceUrl?: string | null }) {
+  if (isAutoSeoArticleSource(article.source)) return null;
   const sourceName = normalizeArticleSourceValue(article.source);
   const sourceUrl = normalizeArticleSourceValue(article.sourceUrl);
   if (!sourceName && !sourceUrl) return null;
 
   return {
-    sourceName: sourceName || "鍘熷鏉ユ簮",
+    sourceName: sourceName || "原始来源",
     sourceUrl,
     description: sourceName
-      ? `鏈枃杞浇鑷€?${sourceName}銆嶏紝浠呯敤浜庤涓氫俊鎭氦娴併€?`
-      : "鏈枃鏁寸悊鑷叕寮€淇℃伅锛屼粎鐢ㄤ簬琛屼笟淇℃伅浜ゆ祦銆?",
+      ? `本文转载自「${sourceName}」，仅用于行业信息交流。`
+      : "本文整理自公开信息，仅用于行业信息交流。",
   };
 }
 
@@ -395,7 +400,7 @@ export default async function ArticlePage({ params, searchParams }: Props) {
           <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 px-0.5 text-[14px] text-primary/50 sm:mt-5 sm:px-0 sm:text-[14px] sm:text-primary/50">
             <span>鍙戝竷鏃堕棿锛?{new Date(article.publishedAt ?? article.updatedAt).toLocaleDateString("zh-CN")}</span>
             {article.displayAuthor ? <span>浣滆€咃細{article.displayAuthor}</span> : null}
-            {article.source ? (
+            {article.source && !isAutoSeoArticleSource(article.source) ? (
               article.sourceUrl ? (
                 <a href={article.sourceUrl} target="_blank" rel="noreferrer" className="transition-colors hover:text-accent">
                   鏉ユ簮锛?{article.source}
@@ -430,22 +435,22 @@ export default async function ArticlePage({ params, searchParams }: Props) {
           <RichContent html={stripNewsLeadingOverviewHeading(article.content)} className="prose prose-neutral dark:prose-invert max-w-none" />
           {sourceSummary ? (
             <section className="mt-10 rounded-2xl border border-[rgba(15,23,42,0.08)] bg-[#f6f7f9] px-5 py-4 text-[14px] leading-7 text-[#666] sm:px-6">
-              <h2 className="text-[15px] font-semibold text-[#333]">淇℃伅鏉ユ簮</h2>
+              <h2 className="text-[15px] font-semibold text-[#333]">信息来源</h2>
               <p className="mt-2">{sourceSummary.description}</p>
               {sourceSummary.sourceUrl ? (
                 <p className="mt-2">
-                  鍘熸枃閾炬帴锛?
+                  原文链接：
                   <a
                     href={sourceSummary.sourceUrl}
                     target="_blank"
                     rel="nofollow noreferrer"
                     className="ml-1 text-[#1677ff] transition-colors hover:underline"
                   >
-                    鐐瑰嚮鏌ョ湅鍘熸枃
+                    点击查看原文
                   </a>
                 </p>
               ) : null}
-              <p className="mt-2 text-[13px] text-[#7a7a7a]">濡傛秹鍙婄増鏉冮棶棰橈紝璇疯仈绯诲垹闄ゃ€?</p>
+              <p className="mt-2 text-[13px] text-[#7a7a7a]">如涉及版权问题，请联系删除。</p>
             </section>
           ) : null}
           <div className="mt-5 pt-1 sm:mt-6 sm:pt-2">
