@@ -79,6 +79,12 @@ jobs:
 
             manual_verify="$(
               cd /home/web1
+              if [ -f "$env_file" ]; then
+                set -a
+                # shellcheck disable=SC1090
+                . "$env_file"
+                set +a
+              fi
               node - "$manual_start" <<'NODE'
 const { PrismaClient } = require("@prisma/client");
 
