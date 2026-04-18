@@ -63,20 +63,30 @@ jobs:
             manual_start="$(date -Iseconds)"
 
             set +e
-            /bin/bash /home/web1/scripts/run-seo-news-cron.sh --count 2 --mode manual
+            manual_output="$(
+              /bin/bash /home/web1/scripts/run-seo-news-cron.sh --count 2 --mode manual 2>&1
+            )"
             manual_exit=$?
             set -e
+
+            printf '%s\n' "$manual_output"
 
             verify_json="$(npx ts-node --transpile-only -P scripts/tsconfig.scripts.json scripts/verify-seo-news-batch.ts --since "$manual_start")"
             saved_count="$(printf '%s' "$verify_json" | sed -n 's/.*"savedCount":\([0-9][0-9]*\).*/\1/p' | head -n 1)"
 
-            echo "SEO_CRON_PROJECT_DIR=$project_dir"
-            echo "SEO_CRON_USER=$user_name"
-            echo "SEO_CRON_ENV_FILE=$env_file"
-            echo "SEO_CRON_MANUAL_EXIT=$manual_exit"
-            echo "SEO_CRON_RESULT=$verify_json"
+            echo "::notice::SEO_CRON_PROJECT_DIR=$project_dir"
+            echo "::notice::SEO_CRON_USER=$user_name"
+            echo "::notice::SEO_CRON_ENV_FILE=$env_file"
+            echo "::notice::SEO_CRON_MANUAL_EXIT=$manual_exit"
+            echo "::notice::SEO_CRON_RESULT=$verify_json"
 
             if [ "$manual_exit" -ne 0 ]; then
+              while IFS= read -r line; do
+                if [ -n "$line" ]; then
+                  echo "::error::$line"
+                fi
+              done < <(printf '%s\n' "$manual_output" | tail -n 20)
+              echo "::error::SEO_CRON_MANUAL_EXIT=$manual_exit"
               exit "$manual_exit"
             fi
 
@@ -96,9 +106,9 @@ jobs:
             next_run="$(date -d 'tomorrow 07:30' '+%Y-%m-%d %H:%M:%S %Z' 2>/dev/null || true)"
             current_cron="$(crontab -l | tr '\n' ';')"
 
-            echo "SEO_CRON_INSTALLED=30 7 * * * /bin/bash /home/web1/scripts/run-seo-news-cron.sh --count 2"
-            echo "SEO_CRON_LOG_FILE=/home/web1/logs/seo-news-cron.log"
-            echo "SEO_CRON_NEXT_RUN=$next_run"
-            echo "SEO_CRON_PAUSE=crontab -l | grep -v '/home/web1/scripts/run-seo-news-cron.sh' | crontab -"
-            echo "SEO_CRON_CURRENT=$current_cron"
+            echo "::notice::SEO_CRON_INSTALLED=30 7 * * * /bin/bash /home/web1/scripts/run-seo-news-cron.sh --count 2"
+            echo "::notice::SEO_CRON_LOG_FILE=/home/web1/logs/seo-news-cron.log"
+            echo "::notice::SEO_CRON_NEXT_RUN=$next_run"
+            echo "::notice::SEO_CRON_PAUSE=crontab -l | grep -v '/home/web1/scripts/run-seo-news-cron.sh' | crontab -"
+            echo "::notice::SEO_CRON_CURRENT=$current_cron"
           EOF
