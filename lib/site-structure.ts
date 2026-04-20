@@ -75,6 +75,12 @@ export const categories: Category[] = [
     ],
   },
   {
+    href: "/youxuan",
+    title: "整木优选",
+    desc: "行业书籍与木作护理精选频道",
+    subcategories: [],
+  },
+  {
     href: "/membership",
     title: "会员系统",
     desc: "企业自运营后台与内容共建入口",

@@ -14,7 +14,7 @@ export const metadata: Metadata = buildPageMetadata({
   title: SITE_TITLE,
   description: SITE_DESCRIPTION,
   path: "/",
-  keywords: ["整木网", "整木资讯", "整木标准", "整木市场", "整木词库", "整木评选"],
+  keywords: ["整木网", "整木资讯", "整木标准", "整木市场", "整木词库", "整木评选", "整木优选"],
 });
 
 export default async function HomePage() {

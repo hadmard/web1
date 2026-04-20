@@ -7,6 +7,7 @@ import { Header } from "@/components/Header";
 import { JsonLd } from "@/components/JsonLd";
 import { RouteHistoryManager } from "@/components/RouteHistoryManager";
 import { getCategories } from "@/lib/categories";
+import { YOUXUAN_H5_URL } from "@/lib/youxuan";
 import { SHARE_SITE_NAME, SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, absoluteUrl, getSiteUrl } from "@/lib/seo";
 
 const baseUrl = getSiteUrl();
@@ -58,7 +59,7 @@ const navOrder: string[] = [
   "/standards",
   "/awards",
   "/brands",
-  "/membership",
+  "/youxuan",
 ];
 
 const jsonLdGraph = [
@@ -95,24 +96,32 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
 
   const navItems = navOrder
     .map((href) => {
-      const cat = categories.find((c) => c.href === href || (href === "/membership" && c.href === "/membership"));
+      const cat = categories.find((c) => c.href === href);
+      if (href === "/youxuan") {
+        return {
+          href: YOUXUAN_H5_URL,
+          label: cat?.title ?? "整木优选",
+          desc: cat?.desc,
+          external: true,
+          featured: true,
+        };
+      }
       return {
         href,
-        label: cat?.title ?? (href === "/membership" ? "会员系统" : href),
-        isMembership: href === "/membership",
+        label: cat?.title ?? href,
         desc: cat?.desc,
         subcategories: cat?.subcategories?.length ? cat.subcategories : undefined,
       };
     })
     .flatMap((item) =>
-      item.href === "/membership"
+      item.label === "整木优选"
         ? [
+            item,
             {
               href: "https://jiu.cnzhengmu.com",
               label: "整木旧站",
               external: true,
             },
-            item,
           ]
         : [item],
     );
