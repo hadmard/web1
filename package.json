@@ -27,6 +27,7 @@
     "generate:seo-news": "ts-node --transpile-only -P scripts/tsconfig.scripts.json scripts/generate-seo-news.ts",
     "import:news": "ts-node --transpile-only scripts/import-news-feed.ts",
     "migrate:legacy-news-batch": "ts-node --transpile-only -P scripts/tsconfig.scripts.json scripts/migrate-legacy-news-batch.ts",
+    "news:corrupted:handle": "ts-node --transpile-only -P scripts/tsconfig.scripts.json scripts/handle-corrupted-news.ts",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",

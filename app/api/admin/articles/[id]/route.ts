@@ -10,6 +10,7 @@ import { findDuplicateArticleByTitle, normalizeArticleTitle } from "@/lib/articl
 import { formatKeywordCsv, syncArticleKeywords } from "@/lib/news-keywords-v2";
 import { buildNewsPath } from "@/lib/share-config";
 import { pushApprovedNewsToBaidu } from "@/lib/baidu-submit";
+import { buildDirtyTextErrorMessage } from "@/lib/article-input-guard";
 
 function isAdmin(session: { role: string | null } | null) {
   return session?.role === "SUPER_ADMIN" || session?.role === "ADMIN";
@@ -210,6 +211,34 @@ export async function PATCH(
 
   if (isDictionary && typeof data.content === "string" && !isValidTermStructuredContent(data.content as string)) {
     return NextResponse.json({ error: "词库内容必须按固定小标题分节格式提交" }, { status: 400 });
+  }
+
+  /*
+  const dirtyTextError = buildDirtyTextErrorMessage([
+    { label: "标题", value: typeof data.title === "string" ? (data.title as string) : null },
+    { label: "摘要", value: typeof data.excerpt === "string" ? (data.excerpt as string) : null },
+    { label: "正文", value: typeof data.content === "string" ? (data.content as string) : null },
+    { label: "作者", value: typeof data.displayAuthor === "string" ? (data.displayAuthor as string) : null },
+    { label: "来源", value: typeof data.source === "string" ? (data.source as string) : null },
+    { label: "概念总结", value: typeof data.conceptSummary === "string" ? (data.conceptSummary as string) : null },
+    { label: "适用场景", value: typeof data.applicableScenarios === "string" ? (data.applicableScenarios as string) : null },
+    { label: "版本标签", value: typeof data.versionLabel === "string" ? (data.versionLabel as string) : null },
+    { label: "手工关键词", value: typeof data.manualKeywords === "string" ? (data.manualKeywords as string) : null },
+  ]);
+  */
+  const dirtyTextError = buildDirtyTextErrorMessage([
+    { label: "\u6807\u9898", value: typeof data.title === "string" ? (data.title as string) : null },
+    { label: "\u6458\u8981", value: typeof data.excerpt === "string" ? (data.excerpt as string) : null },
+    { label: "\u6b63\u6587", value: typeof data.content === "string" ? (data.content as string) : null },
+    { label: "\u4f5c\u8005", value: typeof data.displayAuthor === "string" ? (data.displayAuthor as string) : null },
+    { label: "\u6765\u6e90", value: typeof data.source === "string" ? (data.source as string) : null },
+    { label: "\u6982\u5ff5\u603b\u7ed3", value: typeof data.conceptSummary === "string" ? (data.conceptSummary as string) : null },
+    { label: "\u9002\u7528\u573a\u666f", value: typeof data.applicableScenarios === "string" ? (data.applicableScenarios as string) : null },
+    { label: "\u7248\u672c\u6807\u7b7e", value: typeof data.versionLabel === "string" ? (data.versionLabel as string) : null },
+    { label: "\u624b\u5de5\u5173\u952e\u8bcd", value: typeof data.manualKeywords === "string" ? (data.manualKeywords as string) : null },
+  ]);
+  if (dirtyTextError) {
+    return NextResponse.json({ error: dirtyTextError }, { status: 400 });
   }
 
   if (Object.keys(data).length === 0) {

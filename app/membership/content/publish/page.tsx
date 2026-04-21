@@ -79,6 +79,7 @@ import {
 } from "@/lib/term-structured";
 import { InlinePageBackLink } from "@/components/InlinePageBackLink";
 import { PUBLIC_CONTACT_PHONE } from "@/lib/public-site-config";
+import { buildDirtyTextErrorMessage } from "@/lib/article-input-guard";
 
 type MemberType = "enterprise_basic" | "enterprise_advanced" | "personal";
 type Status = "draft" | "pending" | "approved" | "rejected";
@@ -690,6 +691,22 @@ function PublishCenterPageInner() {
       isPinned,
     };
 
+    const dirtyTextError = buildDirtyTextErrorMessage([
+      { label: "标题", value: payload.title },
+      { label: "摘要", value: payload.excerpt },
+      { label: "正文", value: payload.content },
+      { label: "作者", value: payload.displayAuthor },
+      { label: "来源", value: payload.source },
+      { label: "概念总结", value: payload.conceptSummary },
+      { label: "适用场景", value: payload.applicableScenarios },
+      { label: "版本标签", value: payload.versionLabel },
+    ]);
+    if (dirtyTextError) {
+      setMessage(dirtyTextError);
+      setLoading(false);
+      return;
+    }
+
     const res = await fetch("/api/member/articles", {
       method: "POST",
       credentials: "include",
@@ -840,21 +857,31 @@ function PublishCenterPageInner() {
             : safeTab === "industry-data"
               ? buildDataStructuredHtml(editDataStructured)
               : safeTab === "awards"
-                ? buildAwardStructuredHtml(editAwardStructured)
+              ? buildAwardStructuredHtml(editAwardStructured)
                 : editContent;
+    const payload = {
+      title: editTitle,
+      slug: editSlug,
+      excerpt: editExcerpt,
+      content: composedEditContent,
+      coverImage: safeTab === "brands" ? editBrandStructured.logoUrl.trim() || null : editCoverImage.trim() || null,
+      subHref: subOptions.length > 0 ? editSubHref || subHref || null : null,
+      reason: editReason,
+    };
+    const dirtyTextError = buildDirtyTextErrorMessage([
+      { label: "标题", value: payload.title },
+      { label: "摘要", value: payload.excerpt },
+      { label: "正文", value: payload.content },
+    ]);
+    if (dirtyTextError) {
+      setMessage(dirtyTextError);
+      return;
+    }
     const res = await fetch(`/api/member/articles/${editingId}/changes`, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: editTitle,
-        slug: editSlug,
-        excerpt: editExcerpt,
-        content: composedEditContent,
-        coverImage: safeTab === "brands" ? editBrandStructured.logoUrl.trim() || null : editCoverImage.trim() || null,
-        subHref: subOptions.length > 0 ? editSubHref || subHref || null : null,
-        reason: editReason,
-      }),
+      body: JSON.stringify(payload),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {

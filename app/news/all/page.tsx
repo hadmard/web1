@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { articleOrderByPinnedLatest, articleOrderByPinnedOldest } from "@/lib/articles";
 import { buildNewsPath } from "@/lib/share-config";
+import { decodeEscapedUnicode } from "@/lib/text";
 
 export const revalidate = 300;
 export const dynamic = "force-dynamic";
@@ -413,13 +414,13 @@ export default async function NewsAllPage({ searchParams }: Props) {
                   href={buildNewsPath(x.id)}
                   className="line-clamp-2 text-[15px] font-medium leading-6 text-primary hover:text-accent sm:text-lg sm:leading-8"
                 >
-                  {x.title}
+                  {decodeEscapedUnicode(x.title)}
                 </Link>
                 <p className="mt-1.5 text-xs text-muted">
                   <span className="hidden sm:inline">{getNewsSectionLabel(x.subHref)} · </span>
                   {(x.publishedAt ?? x.updatedAt).toLocaleDateString("zh-CN")}
                 </p>
-                {x.excerpt ? <p className="mt-1.5 hidden line-clamp-2 text-[13px] leading-6 text-muted sm:mt-3 sm:block sm:line-clamp-3 sm:text-sm sm:leading-7">{x.excerpt}</p> : null}
+                {x.excerpt ? <p className="mt-1.5 hidden line-clamp-2 text-[13px] leading-6 text-muted sm:mt-3 sm:block sm:line-clamp-3 sm:text-sm sm:leading-7">{decodeEscapedUnicode(x.excerpt)}</p> : null}
               </li>
             ))}
           </ul>

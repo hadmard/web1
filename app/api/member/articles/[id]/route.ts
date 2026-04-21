@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
+import { normalizeRichTextField } from "@/lib/brand-content";
 import { isValidTermStructuredContent, normalizeTermContent } from "@/lib/term-structured";
 import { findDuplicateArticleByTitle, normalizeArticleTitle } from "@/lib/article-title";
+import { buildDirtyTextErrorMessage } from "@/lib/article-input-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +46,7 @@ export async function PATCH(
   const data: Record<string, unknown> = {};
   if (typeof body.title === "string") data.title = normalizeArticleTitle(body.title);
   if (typeof body.excerpt === "string") data.excerpt = body.excerpt.trim() || null;
-  if (typeof body.content === "string") data.content = body.content;
+  if (typeof body.content === "string") data.content = normalizeRichTextField(body.content) ?? "";
   if (typeof body.coverImage === "string") data.coverImage = body.coverImage.trim() || null;
   if (typeof body.subHref === "string") data.subHref = body.subHref.trim() || null;
   if (typeof body.categoryHref === "string") data.categoryHref = body.categoryHref.trim() || null;
@@ -69,6 +71,15 @@ export async function PATCH(
   }
   if (isDictionary && typeof data.content === "string" && !isValidTermStructuredContent(data.content)) {
     return NextResponse.json({ error: "词库内容必须按固定小标题分节格式提交" }, { status: 400 });
+  }
+
+  const dirtyTextError = buildDirtyTextErrorMessage([
+    { label: "标题", value: typeof data.title === "string" ? (data.title as string) : null },
+    { label: "摘要", value: typeof data.excerpt === "string" ? (data.excerpt as string) : null },
+    { label: "正文", value: typeof data.content === "string" ? (data.content as string) : null },
+  ]);
+  if (dirtyTextError) {
+    return NextResponse.json({ error: dirtyTextError }, { status: 400 });
   }
 
   if (Object.keys(data).length === 0) {

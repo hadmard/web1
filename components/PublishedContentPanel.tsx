@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { decodeEscapedUnicode } from "@/lib/text";
 
 type Item = {
   id: string;
@@ -30,17 +31,13 @@ export function PublishedContentPanel({
     <section className="mt-8">
       <article
         className={`glass-panel ${
-          isNewsEditorial
-            ? "p-6 sm:p-8"
-            : isEditorial
-              ? "p-6 sm:p-8"
-              : "p-5 sm:p-6"
+          isNewsEditorial ? "p-6 sm:p-8" : isEditorial ? "p-6 sm:p-8" : "p-5 sm:p-6"
         }`}
       >
-        <h2 className="section-label mb-2 text-primary">{sectionTitle}</h2>
+        <h2 className="section-label mb-2 text-primary">{decodeEscapedUnicode(sectionTitle)}</h2>
 
         {items.length === 0 ? (
-          <p className="text-sm text-muted">暂无已发布内容。</p>
+          <p className="text-sm text-muted">{"\u6682\u65e0\u5df2\u53d1\u5e03\u5185\u5bb9\u3002"}</p>
         ) : (
           <ul className={isEditorial ? "grid gap-4 md:grid-cols-2" : "space-y-3"}>
             {items.map((item) => (
@@ -56,12 +53,15 @@ export function PublishedContentPanel({
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex min-w-0 items-start gap-2">
-                    <span className={`shrink-0 rounded-full bg-black ${isEditorial ? "mt-2 h-1.5 w-1.5" : "mt-1.5 h-1.5 w-1.5"}`} aria-hidden />
+                    <span
+                      className={`shrink-0 rounded-full bg-black ${isEditorial ? "mt-2 h-1.5 w-1.5" : "mt-1.5 h-1.5 w-1.5"}`}
+                      aria-hidden
+                    />
                     <Link
                       href={item.href}
                       className={`${isEditorial ? "line-clamp-1 text-[15px] leading-7" : "line-clamp-1 text-sm"} text-primary hover:text-accent`}
                     >
-                      {item.title}
+                      {decodeEscapedUnicode(item.title)}
                     </Link>
                   </div>
 
@@ -70,13 +70,15 @@ export function PublishedContentPanel({
                       href={item.editHref}
                       className="rounded border border-border px-2 py-1 text-xs text-muted hover:border-accent/40 hover:text-accent"
                     >
-                      提出修改
+                      {"\u63d0\u51fa\u4fee\u6539"}
                     </Link>
                   ) : null}
                 </div>
 
                 {item.meta ? (
-                  <p className={`text-muted ${isEditorial ? "mt-3 text-xs uppercase tracking-[0.08em]" : "mt-1 text-xs"}`}>{item.meta}</p>
+                  <p className={`text-muted ${isEditorial ? "mt-3 text-xs uppercase tracking-[0.08em]" : "mt-1 text-xs"}`}>
+                    {decodeEscapedUnicode(item.meta)}
+                  </p>
                 ) : null}
               </li>
             ))}
@@ -86,13 +88,13 @@ export function PublishedContentPanel({
         <Link
           href={categoryHref}
           className={`inline-flex w-fit items-center gap-2 rounded-full border border-[rgba(194,182,154,0.24)] bg-[linear-gradient(180deg,rgba(255,252,246,0.96),rgba(246,240,231,0.9))] px-3.5 py-1.5 text-[13px] font-medium text-[#7d6846] shadow-[0_10px_24px_rgba(15,23,42,0.04),inset_0_1px_0_rgba(255,255,255,0.9)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[rgba(170,154,122,0.34)] hover:text-[#6f5b3d] ${
-            isEditorial
-              ? "mt-6"
-              : "mt-4"
+            isEditorial ? "mt-6" : "mt-4"
           }`}
         >
-          查看更多
-          <span aria-hidden="true" className="text-[12px] text-[#b49a6b]">-&gt;</span>
+          {"\u67e5\u770b\u66f4\u591a"}
+          <span aria-hidden="true" className="text-[12px] text-[#b49a6b]">
+            -&gt;
+          </span>
         </Link>
       </article>
     </section>

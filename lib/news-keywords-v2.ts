@@ -219,6 +219,12 @@ function safeParseJsonArray(input: string | null | undefined) {
 async function loadWhitelistEntries() {
   const rows = await prisma.industryWhitelist.findMany({
     where: { status: true },
+    select: {
+      word: true,
+      category: true,
+      weight: true,
+      synonyms: true,
+    },
     orderBy: [{ weight: "desc" }, { word: "asc" }],
   }).catch(() => []);
 
@@ -321,7 +327,7 @@ function collectNerCandidates(text: string, title: string, whitelistLookup: Map<
   const found = new Map<string, KeywordCandidate>();
 
   const pushCandidate = (rawKeyword: string, context: string, ruleSource: string, inTitle = false) => {
-    const keyword = rawKeyword.trim().replace(/[锛?锛?銆?!锛侊紵]+$/g, "");
+    const keyword = rawKeyword.trim().replace(/[，。！？!?]+$/g, "");
     if (!isValidBrandCandidate(keyword, whitelistLookup)) return;
 
     const prev = found.get(keyword);
@@ -356,7 +362,7 @@ function collectNerCandidates(text: string, title: string, whitelistLookup: Map<
     }
   }
 
-  const suffixRegex = /([A-Za-z0-9\u4e00-\u9fa5]{2,8}(?:鏈ㄤ笟|鏈ㄤ綔|瀹跺眳|瀹剁|鏁存湪|闆嗗洟|鍥介檯))/g;
+  const suffixRegex = /([A-Za-z0-9\u4e00-\u9fa5]{2,8}(?:木业|木作|家居|家私|整木|集团|国际))/g;
   let suffixMatch: RegExpExecArray | null;
   while ((suffixMatch = suffixRegex.exec(sourceText)) !== null) {
     const keyword = suffixMatch[1]?.trim();
@@ -379,7 +385,7 @@ function collectNerCandidates(text: string, title: string, whitelistLookup: Map<
       continue;
     }
 
-    if (/^[\u4e00-\u9fa5]{2,6}$/.test(token) && titleText.includes(token) && /浜浉|鍙傚睍|鎵撻€爘鍙戝竷|绛剧害|鍗囩骇/.test(sourceText)) {
+    if (/^[\u4e00-\u9fa5]{2,6}$/.test(token) && titleText.includes(token) && /亮相|参展|发布|签约|升级/.test(sourceText)) {
       pushCandidate(token, sentence, "title", true);
     }
   }
@@ -583,13 +589,13 @@ export async function syncArticleKeywords(options: {
         await tx.industryWhitelist.upsert({
           where: { word: brand.brandName },
           update: {
-            category: "鍝佺墝",
+            category: "品牌",
             weight: 1,
             status: true,
           },
           create: {
             word: brand.brandName,
-            category: "鍝佺墝",
+            category: "品牌",
             weight: 1,
             status: true,
           },
@@ -648,28 +654,55 @@ function getArticleKeywordList(article: Pick<RelatedArticle, "keywords" | "manua
 }
 
 export async function getRecommendedNews(articleId: string, limit = 8) {
-  const current = await prisma.article.findUnique({
-    where: { id: articleId },
-    select: {
-      id: true,
-      title: true,
-      subHref: true,
-      keywords: true,
-      manualKeywords: true,
-      recommendIds: true,
-    },
-  });
-
-  if (!current) return [];
-
-  const manualIds = parseRecommendIds(current.recommendIds);
-  if (manualIds.length > 0) {
-    return prisma.article.findMany({
-      where: {
-        id: { in: manualIds.filter((id) => id !== articleId) },
-        status: "approved",
+  try {
+    const current = await prisma.article.findUnique({
+      where: { id: articleId },
+      select: {
+        id: true,
+        title: true,
+        subHref: true,
+        keywords: true,
+        manualKeywords: true,
+        recommendIds: true,
       },
-      take: limit,
+    });
+
+    if (!current) return [];
+
+    const manualIds = parseRecommendIds(current.recommendIds);
+    if (manualIds.length > 0) {
+      return prisma.article.findMany({
+        where: {
+          id: { in: manualIds.filter((id) => id !== articleId) },
+          status: "approved",
+        },
+        take: limit,
+        select: {
+          id: true,
+          title: true,
+          excerpt: true,
+          coverImage: true,
+          subHref: true,
+          publishedAt: true,
+          updatedAt: true,
+          keywords: true,
+          manualKeywords: true,
+        },
+      });
+    }
+
+    const entries = await loadWhitelistEntries();
+    const lookup = buildWhitelistLookup(entries);
+    const currentKeywords = getArticleKeywordList(current);
+    const coreKeywords = currentKeywords.slice(0, 3);
+
+    const candidates = await prisma.article.findMany({
+      where: {
+        status: "approved",
+        id: { not: articleId },
+      },
+      orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }],
+      take: 80,
       select: {
         id: true,
         title: true,
@@ -682,60 +715,37 @@ export async function getRecommendedNews(articleId: string, limit = 8) {
         manualKeywords: true,
       },
     });
+
+    const scored = candidates
+      .map((candidate) => {
+        const candidateKeywords = getArticleKeywordList(candidate);
+        const overlap = coreKeywords.filter((keyword) => candidateKeywords.includes(keyword));
+        const overlapCount = overlap.length;
+
+        let score = overlapCount >= 3 ? 5 : overlapCount === 2 ? 3 : overlapCount === 1 ? 1 : 0;
+        score += coreKeywords.filter((keyword) => candidate.title.includes(keyword)).length * 0.5;
+        score += overlap.reduce((sum, keyword) => sum + (getKeywordWeightFromLookup(keyword, lookup) === 3 ? 1 : 0), 0);
+
+        return { ...candidate, recommendScore: score };
+      })
+      .filter((item) => item.recommendScore > 0)
+      .sort((a, b) => {
+        const timeA = (a.publishedAt ?? a.updatedAt).getTime();
+        const timeB = (b.publishedAt ?? b.updatedAt).getTime();
+        return b.recommendScore - a.recommendScore || timeB - timeA;
+      });
+
+    if (scored.length >= 6) return scored.slice(0, limit);
+
+    const usedIds = new Set(scored.map((item) => item.id));
+    const sameSection = candidates.filter((item) => item.subHref && item.subHref === current.subHref && !usedIds.has(item.id));
+    const latest = candidates.filter((item) => !usedIds.has(item.id));
+    return [...scored, ...sameSection, ...latest]
+      .filter((item, index, list) => list.findIndex((row) => row.id === item.id) === index)
+      .slice(0, limit);
+  } catch {
+    return [];
   }
-
-  const entries = await loadWhitelistEntries();
-  const lookup = buildWhitelistLookup(entries);
-  const currentKeywords = getArticleKeywordList(current);
-  const coreKeywords = currentKeywords.slice(0, 3);
-
-  const candidates = await prisma.article.findMany({
-    where: {
-      status: "approved",
-      id: { not: articleId },
-    },
-    orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }],
-    take: 80,
-    select: {
-      id: true,
-      title: true,
-      excerpt: true,
-      coverImage: true,
-      subHref: true,
-      publishedAt: true,
-      updatedAt: true,
-      keywords: true,
-      manualKeywords: true,
-    },
-  });
-
-  const scored = candidates
-    .map((candidate) => {
-      const candidateKeywords = getArticleKeywordList(candidate);
-      const overlap = coreKeywords.filter((keyword) => candidateKeywords.includes(keyword));
-      const overlapCount = overlap.length;
-
-      let score = overlapCount >= 3 ? 5 : overlapCount === 2 ? 3 : overlapCount === 1 ? 1 : 0;
-      score += coreKeywords.filter((keyword) => candidate.title.includes(keyword)).length * 0.5;
-      score += overlap.reduce((sum, keyword) => sum + (getKeywordWeightFromLookup(keyword, lookup) === 3 ? 1 : 0), 0);
-
-      return { ...candidate, recommendScore: score };
-    })
-    .filter((item) => item.recommendScore > 0)
-    .sort((a, b) => {
-      const timeA = (a.publishedAt ?? a.updatedAt).getTime();
-      const timeB = (b.publishedAt ?? b.updatedAt).getTime();
-      return b.recommendScore - a.recommendScore || timeB - timeA;
-    });
-
-  if (scored.length >= 6) return scored.slice(0, limit);
-
-  const usedIds = new Set(scored.map((item) => item.id));
-  const sameSection = candidates.filter((item) => item.subHref && item.subHref === current.subHref && !usedIds.has(item.id));
-  const latest = candidates.filter((item) => !usedIds.has(item.id));
-  return [...scored, ...sameSection, ...latest]
-    .filter((item, index, list) => list.findIndex((row) => row.id === item.id) === index)
-    .slice(0, limit);
 }
 
 export async function resolveCanonicalKeywordName(name: string) {

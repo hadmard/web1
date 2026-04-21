@@ -17,6 +17,7 @@ import { prisma } from "@/lib/prisma";
 import { articleOrderByPinnedLatest } from "@/lib/articles";
 import { getRecommendedNews, isValidKeywordCandidate } from "@/lib/news-keywords-v2";
 import { resolveArticleSourceType } from "@/lib/article-source";
+import { decodeEscapedUnicode } from "@/lib/text";
 
 export const revalidate = 300;
 export const dynamic = "force-dynamic";
@@ -29,15 +30,15 @@ const NEWS_SUBCATEGORY_META: Record<string, { title: string; description: string
   },
   enterprise: {
     title: "企业动态",
-    description: "整木资讯企业动态栏目，聚合品牌新闻、企业动作与市场动态。",
+    description: "汇聚整木品牌动态、企业新闻与招商信息，了解品牌加盟、企业布局与行业最新动向。",
   },
   tech: {
     title: "技术发展",
-    description: "整木资讯技术发展栏目，聚合工艺升级、材料演进与技术创新内容。",
+    description: "聚焦整木工艺、板材材料与生产技术升级，解析环保板材、工艺做法与行业技术趋势。",
   },
   events: {
     title: "行业活动",
-    description: "整木资讯行业活动栏目，聚合展会、峰会、论坛与行业重要事件。",
+    description: "汇集整木展会、设计周与行业论坛信息，获取展会时间、品牌亮相与行业趋势发布。",
   },
 };
 
@@ -73,7 +74,7 @@ function getLegacyNewsRedirectId(value: string) {
 }
 
 function isCorruptedNewsTitle(title?: string | null) {
-  const normalized = (title || "").trim();
+  const normalized = decodeEscapedUnicode((title || "").trim());
   if (!normalized) return true;
   if (/\?{3,}/.test(normalized)) return true;
   if (/\uFFFD/.test(normalized)) return true;
@@ -107,20 +108,23 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return { title: { absolute: "资讯不存在｜整木行业资讯" }, robots: { index: false, follow: false } };
   }
 
+  const displayTitle = decodeEscapedUnicode(article.title || "");
+  const displayExcerpt = decodeEscapedUnicode(article.excerpt ?? "");
+  const displayContent = decodeEscapedUnicode(article.content);
   const description =
-    previewText(article.excerpt ?? article.content, 80) ||
-    `${(article.title || "").trim()}，整木行业资讯解读`;
+    previewText(displayExcerpt || displayContent, 80) ||
+    `${displayTitle.trim()}，整木行业资讯解读`;
   const image = resolveArticleShareImage(article);
   const articleSegment = getArticleSegment(article);
 
   return buildPageMetadata({
-    title: buildNewsTitle(article.title),
+    title: buildNewsTitle(displayTitle),
     description,
     path: buildNewsPath(articleSegment),
     type: "article",
     siteName: "整木网",
     image,
-    imageAlt: article.title,
+    imageAlt: displayTitle,
     absoluteTitle: true,
   });
 }
@@ -297,11 +301,11 @@ export default async function ArticlePage({ params, searchParams }: Props) {
                     </span>
                   </div>
                   <Link href={buildNewsPath(getArticleSegment(item))} className="mt-2 block text-[1rem] font-medium leading-8 text-primary hover:text-accent sm:mt-3 sm:text-[1.1rem]">
-                    {item.title}
+                    {decodeEscapedUnicode(item.title)}
                   </Link>
                   {item.excerpt ? (
                     <p className="mt-2 line-clamp-3 text-sm leading-7 text-muted sm:mt-3">
-                      {item.excerpt}
+                      {decodeEscapedUnicode(item.excerpt)}
                     </p>
                   ) : null}
                 </li>
@@ -317,6 +321,14 @@ export default async function ArticlePage({ params, searchParams }: Props) {
   if (!article || article.status !== "approved" || isCorruptedNewsTitle(article.title)) {
     notFound();
   }
+
+  const displayTitle = decodeEscapedUnicode(article.title);
+  const displayExcerpt = decodeEscapedUnicode(article.excerpt ?? "");
+  const displayConceptSummary = decodeEscapedUnicode(article.conceptSummary ?? "");
+  const displayApplicableScenarios = decodeEscapedUnicode(article.applicableScenarios ?? "");
+  const displayAuthor = decodeEscapedUnicode(article.displayAuthor ?? "");
+  const displaySource = decodeEscapedUnicode(article.source ?? "");
+  const displayContent = decodeEscapedUnicode(article.content);
 
   const articleSegment = getArticleSegment(article);
   const currentSegment = normalizeNewsSegment(slug);
@@ -338,9 +350,9 @@ export default async function ArticlePage({ params, searchParams }: Props) {
     "@context": "https://schema.org",
     "@type": "Article",
     "@id": `${articleUrl}#article`,
-    headline: article.title,
-    description: previewText(article.excerpt ?? article.content, 200),
-    author: article.displayAuthor ? [{ "@type": "Person", name: article.displayAuthor }] : undefined,
+    headline: displayTitle,
+    description: previewText(displayExcerpt || displayContent, 200),
+    author: displayAuthor ? [{ "@type": "Person", name: displayAuthor }] : undefined,
     datePublished: article.publishedAt ?? article.updatedAt,
     dateModified: article.updatedAt,
     inLanguage: "zh-CN",
@@ -355,7 +367,7 @@ export default async function ArticlePage({ params, searchParams }: Props) {
       {
         "@type": "ImageObject",
         url: articleShareImage.startsWith("http") ? articleShareImage : `${publicBaseUrl}${articleShareImage}`,
-        caption: article.title,
+        caption: displayTitle,
         representativeOfPage: true,
       },
     ],
@@ -367,7 +379,7 @@ export default async function ArticlePage({ params, searchParams }: Props) {
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "首页", item: publicBaseUrl },
       { "@type": "ListItem", position: 2, name: "整木资讯", item: `${publicBaseUrl}/news` },
-      { "@type": "ListItem", position: 3, name: article.title, item: articleUrl },
+      { "@type": "ListItem", position: 3, name: displayTitle, item: articleUrl },
     ],
   };
 
@@ -384,30 +396,30 @@ export default async function ArticlePage({ params, searchParams }: Props) {
           <span>/</span>
           <Link href="/news" className="hover:text-accent">整木资讯</Link>
           <span className="hidden sm:inline">/</span>
-          <span className="hidden max-w-[36rem] truncate font-medium text-primary/78 sm:inline">{article.title}</span>
+          <span className="hidden max-w-[36rem] truncate font-medium text-primary/78 sm:inline">{displayTitle}</span>
         </nav>
 
         <header className="px-1 sm:px-0">
-          <h1 className={`${getHeadlineClass(article.title)} max-w-[10.5em] font-serif font-semibold text-primary sm:max-w-none`}>
-            {article.title}
+          <h1 className={`${getHeadlineClass(displayTitle)} max-w-[10.5em] font-serif font-semibold text-primary sm:max-w-none`}>
+            {displayTitle}
           </h1>
 
-          {article.conceptSummary ? (
+          {displayConceptSummary ? (
             <p className="mt-5 max-w-[42rem] text-[15px] leading-7 text-muted sm:text-base">
-              {article.conceptSummary}
+              {displayConceptSummary}
             </p>
           ) : null}
 
           <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 px-0.5 text-[14px] text-primary/50 sm:mt-5 sm:px-0 sm:text-[14px] sm:text-primary/50">
             <span>发布时间：{new Date(article.publishedAt ?? article.updatedAt).toLocaleDateString("zh-CN")}</span>
-            {article.displayAuthor ? <span>作者：{article.displayAuthor}</span> : null}
-            {article.source && !isAutoSeoArticleSource(article) ? (
+            {displayAuthor ? <span>作者：{displayAuthor}</span> : null}
+            {displaySource && !isAutoSeoArticleSource(article) ? (
               article.sourceUrl ? (
                 <a href={article.sourceUrl} target="_blank" rel="noreferrer" className="transition-colors hover:text-accent">
-                  来源：{article.source}
+                  来源：{displaySource}
                 </a>
               ) : (
-                <span>来源：{article.source}</span>
+                <span>来源：{displaySource}</span>
               )
             ) : null}
             {article.versionLabel ? <span>版本：{article.versionLabel}</span> : null}
@@ -418,7 +430,7 @@ export default async function ArticlePage({ params, searchParams }: Props) {
           <div className="overflow-hidden rounded-[28px] border border-[rgba(15,23,42,0.08)] bg-[rgba(255,255,255,0.94)] p-3 shadow-[0_24px_52px_-40px_rgba(15,23,42,0.16)] sm:rounded-[30px] sm:p-4 sm:shadow-[0_28px_58px_-42px_rgba(15,23,42,0.16)]">
             <ContentHeroImage
               src={article.coverImage}
-              alt={article.title}
+              alt={displayTitle}
               adaptiveOnMobile
               containerClassName="aspect-[16/9] rounded-[24px] border-0 bg-transparent p-0 sm:rounded-[26px]"
               imageClassName="rounded-[24px] object-cover object-[center_42%] p-0 sm:rounded-[26px]"
@@ -426,14 +438,14 @@ export default async function ArticlePage({ params, searchParams }: Props) {
           </div>
         </div>
 
-        {article.excerpt ? (
+        {displayExcerpt ? (
           <blockquote className="mt-10 border-l-[3px] border-l-[rgba(221,226,232,0.96)] pl-5 pr-1 text-[15px] leading-8 text-muted sm:mt-8 sm:pl-6">
-            {article.excerpt}
+            {displayExcerpt}
           </blockquote>
         ) : null}
 
         <div className="mt-8 rounded-[24px] border border-[rgba(15,23,42,0.06)] bg-[rgba(255,255,255,0.94)] px-5 py-7 shadow-[0_22px_44px_-38px_rgba(15,23,42,0.12)] sm:rounded-[26px] sm:px-8 sm:py-9 sm:shadow-[0_24px_48px_-40px_rgba(15,23,42,0.12)]">
-          <RichContent html={stripNewsLeadingOverviewHeading(article.content)} className="prose prose-neutral dark:prose-invert max-w-none" />
+          <RichContent html={stripNewsLeadingOverviewHeading(displayContent)} className="prose prose-neutral dark:prose-invert max-w-none" />
           {sourceSummary ? (
             <section className="mt-10 rounded-2xl border border-[rgba(15,23,42,0.08)] bg-[#f6f7f9] px-5 py-4 text-[14px] leading-7 text-[#666] sm:px-6">
               <h2 className="text-[15px] font-semibold text-[#333]">信息来源</h2>
@@ -456,7 +468,7 @@ export default async function ArticlePage({ params, searchParams }: Props) {
           ) : null}
           <div className="mt-5 pt-1 sm:mt-6 sm:pt-2">
             <ArticleShareActions
-              title={article.title}
+              title={displayTitle}
               shareUrl={articleUrl}
               siteName="整木网"
               className="mt-0"
@@ -464,10 +476,10 @@ export default async function ArticlePage({ params, searchParams }: Props) {
           </div>
         </div>
 
-        {article.applicableScenarios ? (
+        {displayApplicableScenarios ? (
           <section className="mt-10 rounded-[24px] border border-border bg-surface-elevated px-5 py-6 sm:px-7">
             <h2 className="mb-2 text-lg font-semibold text-primary">适用场景</h2>
-            <p className="leading-7 text-muted">{article.applicableScenarios}</p>
+            <p className="leading-7 text-muted">{displayApplicableScenarios}</p>
           </section>
         ) : null}
 
@@ -504,7 +516,7 @@ export default async function ArticlePage({ params, searchParams }: Props) {
                   className="flex items-start gap-3 rounded-xl px-2 py-3 text-sm leading-7 text-primary transition hover:bg-white hover:text-accent"
                 >
                   <span className="mt-2 h-1.5 w-1.5 rounded-full bg-[rgba(180,154,107,0.86)]" />
-                  <span className="flex-1">{item.title}</span>
+                  <span className="flex-1">{decodeEscapedUnicode(item.title)}</span>
                 </Link>
               ))}
             </div>

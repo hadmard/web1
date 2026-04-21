@@ -21,6 +21,7 @@ import {
   findEffectiveSubcategoryAccess,
   getEffectiveMemberAccessForMember,
 } from "@/lib/member-access-resolver";
+import { buildDirtyTextErrorMessage } from "@/lib/article-input-guard";
 
 const MEMBER_CONTENT_STATUSES = new Set(["draft", "pending", "approved", "rejected"]);
 
@@ -181,6 +182,17 @@ export async function POST(request: NextRequest) {
     if (!isValidTermStructuredContent(normalizedContent)) {
       return NextResponse.json({ error: "词库内容必须按固定小标题分节格式提交" }, { status: 400 });
     }
+  }
+  const dirtyTextError = buildDirtyTextErrorMessage([
+    { label: "标题", value: normalizedTitle },
+    { label: "摘要", value: typeof excerpt === "string" ? excerpt.trim() : null },
+    { label: "正文", value: normalizedContent },
+    { label: "作者", value: typeof displayAuthor === "string" ? displayAuthor.trim() : null },
+    { label: "来源", value: typeof source === "string" ? source.trim() : null },
+    { label: "手工关键词", value: typeof manualKeywords === "string" ? manualKeywords.trim() : null },
+  ]);
+  if (dirtyTextError) {
+    return NextResponse.json({ error: dirtyTextError }, { status: 400 });
   }
   const customSlug = typeof slug === "string" ? slug.trim() : "";
   const slugTrim = await generateUniqueArticleSlug(customSlug || title);

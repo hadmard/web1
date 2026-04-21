@@ -15,6 +15,28 @@ export function previewText(input: string, max = 160): string {
   return `${plain.slice(0, max).trim()}...`;
 }
 
+export function decodeEscapedUnicode(input: string): string {
+  if (!input || !/\\u[0-9a-fA-F]{4}/.test(input)) return input;
+
+  let value = input;
+  for (let i = 0; i < 2; i += 1) {
+    if (!/\\u[0-9a-fA-F]{4}/.test(value)) break;
+    try {
+      value = JSON.parse(
+        `"${value
+          .replace(/\\/g, "\\\\")
+          .replace(/"/g, '\\"')
+          .replace(/\r/g, "\\r")
+          .replace(/\n/g, "\\n")}"`
+      );
+    } catch {
+      return input;
+    }
+  }
+
+  return value;
+}
+
 function normalizeSentenceText(input: string): string {
   return stripHtml(input)
     .replace(/[，,]{2,}/g, "，")

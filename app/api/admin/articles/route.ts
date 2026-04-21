@@ -15,6 +15,7 @@ import { resolveTabKeyFromHref } from "@/lib/content-taxonomy";
 import { buildContentTabWhere } from "@/lib/content-taxonomy";
 import { pushApprovedNewsToBaidu } from "@/lib/baidu-submit";
 import { isArticleSourceType } from "@/lib/article-source";
+import { buildDirtyTextErrorMessage } from "@/lib/article-input-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -230,6 +231,20 @@ export async function POST(request: NextRequest) {
       if (!isValidTermStructuredContent(normalizedContent)) {
         return NextResponse.json({ error: "\u8bcd\u5e93\u5185\u5bb9\u5fc5\u987b\u6309\u56fa\u5b9a\u5c0f\u6807\u9898\u5206\u8282\u683c\u5f0f\u63d0\u4ea4" }, { status: 400 });
       }
+    }
+    const dirtyTextError = buildDirtyTextErrorMessage([
+      { label: "标题", value: normalizedTitle },
+      { label: "摘要", value: typeof excerpt === "string" ? excerpt.trim() : null },
+      { label: "正文", value: normalizedContent },
+      { label: "作者", value: typeof displayAuthor === "string" ? displayAuthor.trim() : null },
+      { label: "来源", value: typeof source === "string" ? source.trim() : null },
+      { label: "概念总结", value: typeof conceptSummary === "string" ? conceptSummary.trim() : null },
+      { label: "适用场景", value: typeof applicableScenarios === "string" ? applicableScenarios.trim() : null },
+      { label: "版本标签", value: typeof versionLabel === "string" ? versionLabel.trim() : null },
+      { label: "手工关键词", value: typeof manualKeywords === "string" ? manualKeywords.trim() : null },
+    ]);
+    if (dirtyTextError) {
+      return NextResponse.json({ error: dirtyTextError }, { status: 400 });
     }
     const customSlug = typeof slug === "string" ? slug.trim() : "";
     const slugTrim = await generateUniqueArticleSlug(customSlug || normalizedTitle);

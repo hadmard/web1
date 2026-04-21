@@ -3,8 +3,10 @@ import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { buildArticleDiffSummary, buildArticlePatchData } from "@/lib/article-change";
 import { writeOperationLog } from "@/lib/operation-log";
+import { normalizeRichTextField } from "@/lib/brand-content";
 import { isValidTermStructuredContent, normalizeTermContent } from "@/lib/term-structured";
 import { findDuplicateArticleByTitle, normalizeArticleTitle } from "@/lib/article-title";
+import { buildDirtyTextErrorMessage } from "@/lib/article-input-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +42,7 @@ export async function POST(
       (article.categoryHref?.startsWith("/dictionary") || article.subHref?.startsWith("/dictionary")) &&
       typeof body.content === "string"
         ? normalizeTermContent(body.content)
-        : body.content,
+        : normalizeRichTextField(body.content),
     coverImage: body.coverImage,
     subHref: body.subHref,
     categoryHref: body.categoryHref,
@@ -71,6 +73,15 @@ export async function POST(
     if (!isValidTermStructuredContent(patch.patchContent)) {
       return NextResponse.json({ error: "词库正文需为小标题分节格式（小标题+正文）" }, { status: 400 });
     }
+  }
+
+  const dirtyTextError = buildDirtyTextErrorMessage([
+    { label: "标题", value: patch.patchTitle },
+    { label: "摘要", value: patch.patchExcerpt },
+    { label: "正文", value: patch.patchContent },
+  ]);
+  if (dirtyTextError) {
+    return NextResponse.json({ error: dirtyTextError }, { status: 400 });
   }
 
   const reason = typeof body.reason === "string" ? body.reason.trim() : "";

@@ -63,6 +63,7 @@ import {
   normalizeTermContent,
 } from "@/lib/term-structured";
 import { InlinePageBackLink } from "@/components/InlinePageBackLink";
+import { buildDirtyTextErrorMessage } from "@/lib/article-input-guard";
 
 type Status = "draft" | "pending" | "approved" | "rejected";
 type Mode = "publish" | "manage" | "review";
@@ -777,44 +778,59 @@ export default function AdminContentPage() {
             : tab === "industry-data"
               ? buildDataStructuredHtml(dataStructured)
               : tab === "awards"
-                ? buildAwardStructuredHtml(awardStructured)
+              ? buildAwardStructuredHtml(awardStructured)
                 : content;
+    const payload = {
+      title: title.trim(),
+      slug: slug.trim() || null,
+      source: source.trim() || null,
+      sourceUrl: sourceUrl.trim() || null,
+      displayAuthor: displayAuthor.trim() || null,
+      ownedEnterpriseId: supportsOwnedEnterprise ? ownedEnterpriseId || null : null,
+      excerpt: excerpt || null,
+      content: composedContent,
+      coverImage:
+        tab === "brands"
+          ? brandStructured.logoUrl.trim() || null
+          : coverImage.trim() || null,
+      applicableScenarios:
+        tab === "standards"
+          ? standardStructured.scope.trim() || null
+          : tab === "industry-data"
+            ? dataStructured.methodology.trim() || null
+            : null,
+      versionLabel:
+        tab === "standards"
+          ? standardStructured.versionNote.trim() || null
+          : tab === "awards"
+            ? (awardStructured.year ? `${awardStructured.year}版` : null)
+            : null,
+      categoryHref: selectedCategory.href,
+      subHref: subOptions.length > 0 ? subHref || null : null,
+      tagSlugs: tagSlugs || null,
+      manualKeywords: manualKeywords || null,
+      recommendIds: recommendIds || null,
+      faqJson: tab === "terms" || tab === "standards" ? stringifyDocumentMetadata(documentMeta) : null,
+      syncToMainSite: true,
+      isPinned,
+    };
+    const dirtyTextError = buildDirtyTextErrorMessage([
+      { label: "标题", value: payload.title },
+      { label: "摘要", value: payload.excerpt },
+      { label: "正文", value: payload.content },
+      { label: "作者", value: payload.displayAuthor },
+      { label: "来源", value: payload.source },
+      { label: "适用场景", value: payload.applicableScenarios },
+      { label: "版本标签", value: payload.versionLabel },
+      { label: "手工关键词", value: payload.manualKeywords },
+    ]);
+    if (dirtyTextError) {
+      setMessage(dirtyTextError);
+      return;
+    }
     const res = await fetch("/api/admin/articles", {
       method: "POST", credentials: "include", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: title.trim(),
-        slug: slug.trim() || null,
-        source: source.trim() || null,
-        sourceUrl: sourceUrl.trim() || null,
-        displayAuthor: displayAuthor.trim() || null,
-        ownedEnterpriseId: supportsOwnedEnterprise ? ownedEnterpriseId || null : null,
-        excerpt: excerpt || null,
-        content: composedContent,
-        coverImage:
-          tab === "brands"
-            ? brandStructured.logoUrl.trim() || null
-            : coverImage.trim() || null,
-        applicableScenarios:
-          tab === "standards"
-            ? standardStructured.scope.trim() || null
-            : tab === "industry-data"
-              ? dataStructured.methodology.trim() || null
-              : null,
-        versionLabel:
-          tab === "standards"
-            ? standardStructured.versionNote.trim() || null
-            : tab === "awards"
-              ? (awardStructured.year ? `${awardStructured.year}版` : null)
-              : null,
-        categoryHref: selectedCategory.href,
-        subHref: subOptions.length > 0 ? subHref || null : null,
-        tagSlugs: tagSlugs || null,
-        manualKeywords: manualKeywords || null,
-        recommendIds: recommendIds || null,
-        faqJson: tab === "terms" || tab === "standards" ? stringifyDocumentMetadata(documentMeta) : null,
-        syncToMainSite: true,
-        isPinned,
-      }),
+      body: JSON.stringify(payload),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) { setMessage(data.error ?? "发布失败"); return; }
@@ -973,43 +989,59 @@ export default function AdminContentPage() {
             : tab === "industry-data"
               ? buildDataStructuredHtml(editDataStructured)
               : tab === "awards"
-                ? buildAwardStructuredHtml(editAwardStructured)
+              ? buildAwardStructuredHtml(editAwardStructured)
                 : editContent;
+    const payload = {
+      title: editTitle,
+      slug: editSlug || undefined,
+      source: editSource || null,
+      sourceUrl: editSourceUrl || null,
+      displayAuthor: editDisplayAuthor || null,
+      ownedEnterpriseId: supportsOwnedEnterprise ? editOwnedEnterpriseId || null : null,
+      excerpt: editExcerpt || null,
+      content: composedEditContent,
+      coverImage:
+        tab === "brands"
+          ? editBrandStructured.logoUrl.trim() || null
+          : editCoverImage.trim() || null,
+      applicableScenarios:
+        tab === "standards"
+          ? editStandardStructured.scope.trim() || null
+          : tab === "industry-data"
+            ? editDataStructured.methodology.trim() || null
+            : undefined,
+      versionLabel:
+        tab === "standards"
+          ? editStandardStructured.versionNote.trim() || null
+          : tab === "awards"
+            ? (editAwardStructured.year ? `${editAwardStructured.year}版` : null)
+            : undefined,
+      subHref: subOptions.length > 0 ? editSubHref || subHref || null : null,
+      tagSlugs: editTagSlugs || null,
+      manualKeywords: editManualKeywords || null,
+      recommendIds: editRecommendIds || null,
+      faqJson: tab === "terms" || tab === "standards" ? stringifyDocumentMetadata(editDocumentMeta) : null,
+      isPinned: editIsPinned,
+      status: nextStatus,
+    };
+    const dirtyTextError = buildDirtyTextErrorMessage([
+      { label: "标题", value: payload.title },
+      { label: "摘要", value: payload.excerpt },
+      { label: "正文", value: payload.content },
+      { label: "作者", value: payload.displayAuthor },
+      { label: "来源", value: payload.source },
+      { label: "适用场景", value: payload.applicableScenarios ?? null },
+      { label: "版本标签", value: payload.versionLabel ?? null },
+      { label: "手工关键词", value: payload.manualKeywords ?? null },
+    ]);
+    if (dirtyTextError) {
+      setMessage(dirtyTextError);
+      setReviewAction(null);
+      return;
+    }
     const res = await fetch(`/api/admin/articles/${editingId}`, {
       method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: editTitle,
-        slug: editSlug || undefined,
-        source: editSource || null,
-        sourceUrl: editSourceUrl || null,
-        displayAuthor: editDisplayAuthor || null,
-        ownedEnterpriseId: supportsOwnedEnterprise ? editOwnedEnterpriseId || null : null,
-        excerpt: editExcerpt || null,
-        content: composedEditContent,
-        coverImage:
-          tab === "brands"
-            ? editBrandStructured.logoUrl.trim() || null
-            : editCoverImage.trim() || null,
-        applicableScenarios:
-          tab === "standards"
-            ? editStandardStructured.scope.trim() || null
-            : tab === "industry-data"
-              ? editDataStructured.methodology.trim() || null
-              : undefined,
-        versionLabel:
-          tab === "standards"
-            ? editStandardStructured.versionNote.trim() || null
-            : tab === "awards"
-              ? (editAwardStructured.year ? `${editAwardStructured.year}版` : null)
-              : undefined,
-        subHref: subOptions.length > 0 ? editSubHref || subHref || null : null,
-        tagSlugs: editTagSlugs || null,
-        manualKeywords: editManualKeywords || null,
-        recommendIds: editRecommendIds || null,
-        faqJson: tab === "terms" || tab === "standards" ? stringifyDocumentMetadata(editDocumentMeta) : null,
-        isPinned: editIsPinned,
-        status: nextStatus,
-      }),
+      body: JSON.stringify(payload),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) { setMessage(data.error ?? "保存失败"); setReviewAction(null); return; }

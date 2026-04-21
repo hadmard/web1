@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { NEWS_SUBCATEGORY_OPTIONS } from "@/lib/content-taxonomy";
 import { InlinePageBackLink } from "@/components/InlinePageBackLink";
+import { buildDirtyTextErrorMessage } from "@/lib/article-input-guard";
 
 type ArticleItem = {
   id: string;
@@ -125,6 +126,16 @@ export default function MembershipContentNewsPage() {
       categoryHref: "/news",
       syncToMainSite: true,
     };
+
+    const dirtyTextError = buildDirtyTextErrorMessage([
+      { label: "标题", value: payload.title },
+      { label: "正文", value: payload.content },
+    ]);
+    if (dirtyTextError) {
+      setMessage(dirtyTextError);
+      setLoading(false);
+      return;
+    }
 
     const res = await fetch("/api/member/articles", {
       method: "POST",
@@ -255,14 +266,14 @@ export default function MembershipContentNewsPage() {
         >
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-primary">搜索我的资讯</p>
-            <p className="mt-1 text-xs text-muted">支持按标题、摘要、正文、来源、作者、关键词查找。</p>
+            <p className="mt-1 text-xs text-muted">支持按标题、摘要、正文、来源、作者、标签、关键词、企业或品牌名查找。</p>
           </div>
           <div className="flex min-w-0 flex-1 gap-2">
             <input
               className="h-11 min-w-0 flex-1 rounded-2xl border border-[rgba(194,182,154,0.28)] bg-white/90 px-4 text-sm text-primary placeholder:text-muted focus:border-[rgba(180,154,107,0.45)] focus:outline-none focus:ring-2 focus:ring-[rgba(180,154,107,0.18)]"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="输入标题、作者、来源、关键词"
+              placeholder="输入标题、作者、来源、标签、关键词、企业或品牌"
             />
             <button type="submit" className="rounded-2xl bg-accent px-4 py-2 text-sm font-medium text-white">
               搜索
