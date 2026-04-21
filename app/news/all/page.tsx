@@ -24,11 +24,11 @@ type Props = {
 
 const PAGE_SIZE = 20;
 const SUB_OPTIONS = [
-  { value: "", label: "\u5168\u90e8" },
-  { value: "/news/trends", label: "\u884c\u4e1a\u8d8b\u52bf" },
-  { value: "/news/enterprise", label: "\u4f01\u4e1a\u52a8\u6001" },
-  { value: "/news/tech", label: "\u6280\u672f\u53d1\u5c55" },
-  { value: "/news/events", label: "\u884c\u4e1a\u6d3b\u52a8" },
+  { value: "", label: "全部" },
+  { value: "/news/trends", label: "行业趋势" },
+  { value: "/news/enterprise", label: "企业动态" },
+  { value: "/news/tech", label: "技术发展" },
+  { value: "/news/events", label: "行业活动" },
 ] as const;
 
 type RangeKey = "" | "7d" | "30d" | "year";
@@ -75,14 +75,14 @@ function getActiveSubLabel(value: string) {
 }
 
 function getActiveRangeLabel(value: RangeKey) {
-  if (value === "7d") return "\u8fd17\u5929";
-  if (value === "30d") return "\u8fd130\u5929";
-  if (value === "year") return "\u4eca\u5e74";
-  return "\u5168\u90e8\u65f6\u95f4";
+  if (value === "7d") return "近7天";
+  if (value === "30d") return "近30天";
+  if (value === "year") return "今年";
+  return "全部时间";
 }
 
 function getActiveSortLabel(value: SortKey) {
-  return value === "oldest" ? "\u6700\u65e9\u4f18\u5148" : "\u6700\u65b0\u4f18\u5148";
+  return value === "oldest" ? "最早优先" : "最新优先";
 }
 
 function getNewsSectionLabel(href?: string | null) {
@@ -212,28 +212,28 @@ export default async function NewsAllPage({ searchParams }: Props) {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-7 sm:px-6 sm:py-12">
-      <nav className="mb-8 hidden text-sm text-muted sm:block" aria-label="\u9762\u5305\u5c51">
+      <nav className="mb-8 hidden text-sm text-muted sm:block" aria-label="面包屑">
         <Link href="/" className="hover:text-accent">
-          \u9996\u9875
+          首页
         </Link>
         <span className="mx-2">/</span>
         <Link href="/news" className="hover:text-accent">
-          \u6574\u6728\u8d44\u8baf
+          整木资讯
         </Link>
         <span className="mx-2">/</span>
-        <span className="text-primary">\u5168\u90e8\u8d44\u8baf</span>
+        <span className="text-primary">全部资讯</span>
       </nav>
 
       <section className="glass-panel p-6 sm:p-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h1 className="font-serif text-[2rem] font-semibold tracking-tight text-primary sm:text-[2.6rem]">\u8d44\u8baf\u4e2d\u5fc3</h1>
+            <h1 className="font-serif text-[2rem] font-semibold tracking-tight text-primary sm:text-[2.6rem]">资讯中心</h1>
             <p className="mt-2 max-w-2xl text-sm leading-7 text-muted sm:mt-3">
-              \u7528\u66f4\u8f7b\u76c8\u7684\u65b9\u5f0f\u6d4f\u89c8\u6574\u6728\u8d44\u8baf\uff0c\u6309\u680f\u76ee\u3001\u65f6\u95f4\u4e0e\u641c\u7d22\u8bcd\u5feb\u901f\u7b5b\u9009\uff1b\u53ef\u5339\u914d\u6807\u9898\u3001\u6458\u8981\u3001\u6b63\u6587\u3001\u6765\u6e90\u3001\u4f5c\u8005\u3001\u6807\u7b7e\u548c\u5173\u952e\u8bcd\u3002
+              用更轻盈的方式浏览整木资讯，按栏目、时间与搜索词快速筛选；可匹配标题、摘要、正文、来源、作者、标签和关键词。
             </p>
           </div>
           <div className="hidden rounded-full border border-border bg-white/80 px-4 py-2 text-sm text-muted shadow-[0_16px_32px_-28px_rgba(15,23,42,0.3)] sm:block">
-            \u5171 {total} \u7bc7\u8d44\u8baf
+            共 {total} 篇资讯
           </div>
         </div>
 
@@ -245,19 +245,19 @@ export default async function NewsAllPage({ searchParams }: Props) {
               name="q"
               defaultValue={q}
               className="min-w-0 flex-1 rounded-full border border-border bg-surface px-4 py-3 text-sm"
-              placeholder="\u6807\u9898 / \u6458\u8981 / \u6b63\u6587\u5173\u952e\u8bcd"
+              placeholder="标题 / 摘要 / 正文关键词"
             />
-            <button className="btn-primary shrink-0 px-4 py-3 text-sm">\u641c\u7d22</button>
+            <button className="btn-primary shrink-0 px-4 py-3 text-sm">搜索</button>
           </div>
-          <div className="mt-3 text-xs text-muted">\u5171 {total} \u7bc7\u8d44\u8baf / {activeSubLabel} / {activeRangeLabel} / {activeSortLabel}</div>
+          <div className="mt-3 text-xs text-muted">共 {total} 篇资讯 / {activeSubLabel} / {activeRangeLabel} / {activeSortLabel}</div>
 
           <details className="mt-3 rounded-[18px] border border-border bg-white/72">
             <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium text-primary">
-              \u5c55\u5f00\u7b5b\u9009
+              展开筛选
             </summary>
             <div className="space-y-4 border-t border-border px-4 py-4">
               <div>
-                <p className="mb-2 text-xs text-muted">\u680f\u76ee</p>
+                <p className="mb-2 text-xs text-muted">栏目</p>
                 <div className="flex flex-wrap gap-2 text-xs">
                   {SUB_OPTIONS.map((s) => (
                     <Link
@@ -272,13 +272,13 @@ export default async function NewsAllPage({ searchParams }: Props) {
               </div>
 
               <div>
-                <p className="mb-2 text-xs text-muted">\u65f6\u95f4</p>
+                <p className="mb-2 text-xs text-muted">时间</p>
                 <div className="flex flex-wrap gap-2 text-xs">
                   {[
-                    { key: "", label: "\u5168\u90e8\u65f6\u95f4" },
-                    { key: "7d", label: "\u8fd17\u5929" },
-                    { key: "30d", label: "\u8fd130\u5929" },
-                    { key: "year", label: "\u4eca\u5e74" },
+                    { key: "", label: "全部时间" },
+                    { key: "7d", label: "近7天" },
+                    { key: "30d", label: "近30天" },
+                    { key: "year", label: "今年" },
                   ].map((r) => (
                     <Link
                       key={r.key || "mobile-all-range"}
@@ -292,38 +292,38 @@ export default async function NewsAllPage({ searchParams }: Props) {
               </div>
 
               <div>
-                <p className="mb-2 text-xs text-muted">\u6392\u5e8f</p>
+                <p className="mb-2 text-xs text-muted">排序</p>
                 <div className="flex flex-wrap gap-2 text-xs">
                   <Link
                     href={buildQuery({ sort: "latest", page: "1" })}
                     className={`rounded-full border px-3 py-1.5 ${sort === "latest" ? "border-accent bg-white text-accent" : "border-border bg-white/72 text-muted hover:text-primary"}`}
                   >
-                    \u6700\u65b0\u4f18\u5148
+                    最新优先
                   </Link>
                   <Link
                     href={buildQuery({ sort: "oldest", page: "1" })}
                     className={`rounded-full border px-3 py-1.5 ${sort === "oldest" ? "border-accent bg-white text-accent" : "border-border bg-white/72 text-muted hover:text-primary"}`}
                   >
-                    \u6700\u65e9\u4f18\u5148
+                    最早优先
                   </Link>
                 </div>
               </div>
 
               <div className="grid gap-3">
                 <div>
-                  <label className="mb-1 block text-xs text-muted">\u5f00\u59cb\u65e5\u671f</label>
+                  <label className="mb-1 block text-xs text-muted">开始日期</label>
                   <input type="date" name="start" defaultValue={params.start ?? ""} className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm" />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs text-muted">\u7ed3\u675f\u65e5\u671f</label>
+                  <label className="mb-1 block text-xs text-muted">结束日期</label>
                   <input type="date" name="end" defaultValue={params.end ?? ""} className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-sm" />
                 </div>
               </div>
 
               <div className="flex gap-2">
-                <button className="btn-primary px-5 py-2.5 text-sm">\u7b5b\u9009</button>
+                <button className="btn-primary px-5 py-2.5 text-sm">筛选</button>
                 <Link href="/news/all" className="rounded-full border border-border px-5 py-2.5 text-sm text-primary hover:bg-surface">
-                  \u91cd\u7f6e
+                  重置
                 </Link>
               </div>
             </div>
@@ -344,10 +344,10 @@ export default async function NewsAllPage({ searchParams }: Props) {
           <div className="mx-1 h-5 w-px bg-border" />
 
           {[
-            { key: "", label: "\u5168\u90e8\u65f6\u95f4" },
-            { key: "7d", label: "\u6700\u8fd17\u5929" },
-            { key: "30d", label: "\u6700\u8fd130\u5929" },
-            { key: "year", label: "\u4eca\u5e74" },
+            { key: "", label: "全部时间" },
+            { key: "7d", label: "最近7天" },
+            { key: "30d", label: "最近30天" },
+            { key: "year", label: "今年" },
           ].map((r) => (
             <Link
               key={r.key || "all"}
@@ -364,40 +364,40 @@ export default async function NewsAllPage({ searchParams }: Props) {
             href={buildQuery({ sort: "latest", page: "1" })}
             className={`rounded-full border px-3 py-1.5 ${sort === "latest" ? "border-accent bg-white text-accent" : "border-border bg-white/72 text-muted hover:text-primary"}`}
           >
-            \u6700\u65b0\u4f18\u5148
+            最新优先
           </Link>
           <Link
             href={buildQuery({ sort: "oldest", page: "1" })}
             className={`rounded-full border px-3 py-1.5 ${sort === "oldest" ? "border-accent bg-white text-accent" : "border-border bg-white/72 text-muted hover:text-primary"}`}
           >
-            \u6700\u65e9\u4f18\u5148
+            最早优先
           </Link>
         </div>
 
         <form method="get" className="mt-6 hidden gap-3 rounded-[22px] border border-border bg-[rgba(255,255,255,0.78)] p-5 md:grid md:grid-cols-4">
           <div className="md:col-span-2">
-            <label className="mb-1 block text-xs text-muted">\u641c\u7d22\u8bcd</label>
+            <label className="mb-1 block text-xs text-muted">搜索词</label>
             <input
               name="q"
               defaultValue={q}
               className="w-full rounded-2xl border border-border bg-surface px-4 py-3"
-              placeholder="\u6807\u9898 / \u6458\u8981 / \u6b63\u6587 / \u6765\u6e90 / \u4f5c\u8005 / \u6807\u7b7e / \u5173\u952e\u8bcd"
+              placeholder="标题 / 摘要 / 正文 / 来源 / 作者 / 标签 / 关键词"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-muted">\u5f00\u59cb\u65e5\u671f</label>
+            <label className="mb-1 block text-xs text-muted">开始日期</label>
             <input type="date" name="start" defaultValue={params.start ?? ""} className="w-full rounded-2xl border border-border bg-surface px-4 py-3" />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-muted">\u7ed3\u675f\u65e5\u671f</label>
+            <label className="mb-1 block text-xs text-muted">结束日期</label>
             <input type="date" name="end" defaultValue={params.end ?? ""} className="w-full rounded-2xl border border-border bg-surface px-4 py-3" />
           </div>
           <input type="hidden" name="sort" value={sort} />
           <input type="hidden" name="sub" value={sub} />
           <div className="flex gap-2 md:col-span-4">
-            <button className="btn-primary px-5 py-2.5 text-sm">\u7b5b\u9009</button>
+            <button className="btn-primary px-5 py-2.5 text-sm">筛选</button>
             <Link href="/news/all" className="rounded-full border border-border px-5 py-2.5 text-sm text-primary hover:bg-surface">
-              \u91cd\u7f6e
+              重置
             </Link>
           </div>
         </form>
@@ -405,7 +405,7 @@ export default async function NewsAllPage({ searchParams }: Props) {
 
       <section className="mt-5 rounded-[22px] border border-border bg-[rgba(255,255,255,0.82)] p-3 sm:mt-8 sm:rounded-[24px] sm:p-6">
         {items.length === 0 ? (
-          <p className="text-sm text-muted">\u672a\u627e\u5230\u7b26\u5408\u6761\u4ef6\u7684\u8d44\u8baf\u3002</p>
+          <p className="text-sm text-muted">未找到符合条件的资讯。</p>
         ) : (
           <ul className="grid gap-2 sm:gap-4">
             {items.map((x) => (
@@ -428,20 +428,20 @@ export default async function NewsAllPage({ searchParams }: Props) {
 
         <div className="mt-6 flex items-center justify-between text-sm">
           <span className="text-muted">
-            \u7b2c {page} / {totalPages} \u9875
+            第 {page} / {totalPages} 页
           </span>
           <div className="flex gap-2">
             <Link
               href={buildQuery({ page: String(Math.max(1, page - 1)) })}
               className={`rounded-full border px-4 py-2 ${page <= 1 ? "pointer-events-none border-border text-muted opacity-50" : "border-border text-primary hover:bg-surface"}`}
             >
-              \u4e0a\u4e00\u9875
+              上一页
             </Link>
             <Link
               href={buildQuery({ page: String(Math.min(totalPages, page + 1)) })}
               className={`rounded-full border px-4 py-2 ${page >= totalPages ? "pointer-events-none border-border text-muted opacity-50" : "border-border text-primary hover:bg-surface"}`}
             >
-              \u4e0b\u4e00\u9875
+              下一页
             </Link>
           </div>
         </div>
