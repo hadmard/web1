@@ -84,7 +84,7 @@ export function PageBackButton() {
             <path d="M11.7 4.3a1 1 0 0 1 0 1.4L8.4 9H16a1 1 0 1 1 0 2H8.4l3.3 3.3a1 1 0 1 1-1.4 1.4l-5-5a1 1 0 0 1 0-1.4l5-5a1 1 0 0 1 1.4 0Z" />
           </svg>
         </span>
-        <span className="pr-1">{"\u8fd4\u56de"}</span>
+        <span className="pr-1">返回</span>
       </button>
     </div>
   );

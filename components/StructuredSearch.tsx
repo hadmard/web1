@@ -28,16 +28,16 @@ export function StructuredSearch({ hero = false }: { hero?: boolean }) {
           name="q"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder={"\u8f93\u5165\u5173\u952e\u8bcd"}
+          placeholder="输入关键词"
           className="h-11 min-w-0 flex-1 rounded-xl border border-transparent bg-transparent px-4 text-sm text-primary placeholder:text-muted focus:border-accent/35 focus:outline-none focus:ring-2 focus:ring-accent/20"
-          aria-label={"\u641c\u7d22\u5173\u952e\u8bcd"}
+          aria-label="搜索关键词"
         />
 
         <button
           type="submit"
           className="h-11 shrink-0 rounded-xl bg-[var(--color-accent)] px-6 text-sm font-medium text-white transition hover:brightness-105 focus:outline-none focus:ring-2 focus:ring-accent/35"
         >
-          {"\u641c\u7d22"}
+          搜索
         </button>
       </div>
     </form>

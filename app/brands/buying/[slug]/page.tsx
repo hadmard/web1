@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { buildPageMetadata } from "@/lib/seo";
 import { composeIntentTitle } from "@/lib/compose-intent-title";
 import { RichContent } from "@/components/RichContent";
-import { previewText } from "@/lib/text";
+import { decodeEscapedUnicode, previewText } from "@/lib/text";
 import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
 
 export const dynamic = "force-dynamic";
@@ -77,14 +77,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   return buildPageMetadata({
     title: composeIntentTitle({
-      keyword: article.title,
+      keyword: decodeEscapedUnicode(article.title),
       suffix: "｜整木定制选购指南｜整木网",
     }),
-    description: previewText(article.excerpt ?? article.content, 160),
+    description: previewText(decodeEscapedUnicode(article.excerpt ?? article.content), 160),
     path: `/brands/buying/${encodeURIComponent(article.slug)}`,
     type: "article",
     image: article.coverImage ? resolveUploadedImageUrl(article.coverImage) : undefined,
-    imageAlt: article.title,
+    imageAlt: decodeEscapedUnicode(article.title),
     absoluteTitle: true,
   });
 }
@@ -99,31 +99,37 @@ export default async function BuyingArticleDetailPage({ params }: Props) {
     permanentRedirect(`/brands/buying/${encodeURIComponent(article.slug)}`);
   }
 
+  const displayTitle = decodeEscapedUnicode(article.title);
+  const displayExcerpt = decodeEscapedUnicode(article.excerpt ?? "");
+  const displayAuthor = decodeEscapedUnicode(article.displayAuthor ?? "");
+  const displaySource = decodeEscapedUnicode(article.source ?? "");
+  const displayContent = decodeEscapedUnicode(article.content);
+
   return (
     <article className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-12">
-      <nav className="mb-6 flex flex-wrap items-center gap-x-2 gap-y-2 text-sm text-muted" aria-label="\u9762\u5305\u5c51">
-        <Link href="/" className="hover:text-accent">\u9996\u9875</Link>
+      <nav className="mb-6 flex flex-wrap items-center gap-x-2 gap-y-2 text-sm text-muted" aria-label="面包屑">
+        <Link href="/" className="hover:text-accent">首页</Link>
         <span>/</span>
-        <Link href="/brands" className="hover:text-accent">\u6574\u6728\u5e02\u573a</Link>
+        <Link href="/brands" className="hover:text-accent">整木市场</Link>
         <span>/</span>
-        <Link href="/brands/buying" className="hover:text-accent">\u6574\u6728\u9009\u8d2d</Link>
+        <Link href="/brands/buying" className="hover:text-accent">整木选购</Link>
         <span>/</span>
-        <span className="text-primary">{article.title}</span>
+        <span className="text-primary">{displayTitle}</span>
       </nav>
 
       <header className="rounded-[30px] border border-[rgba(181,157,121,0.16)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(247,242,235,0.92))] px-6 py-6 shadow-[0_18px_48px_rgba(15,23,42,0.06)] sm:px-8 sm:py-7">
-        <h1 className="font-serif text-[2.1rem] leading-[1.18] text-primary sm:text-[2.8rem]">{article.title}</h1>
-        {article.excerpt ? <p className="mt-3 max-w-3xl text-[15px] leading-8 text-muted sm:text-base">{article.excerpt}</p> : null}
+        <h1 className="font-serif text-[2.1rem] leading-[1.18] text-primary sm:text-[2.8rem]">{displayTitle}</h1>
+        {displayExcerpt ? <p className="mt-3 max-w-3xl text-[15px] leading-8 text-muted sm:text-base">{displayExcerpt}</p> : null}
         <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-primary/56">
           <span>{new Date(article.publishedAt ?? article.updatedAt).toLocaleDateString("zh-CN")}</span>
-          {article.displayAuthor ? <span>\u4f5c\u8005\uff1a{article.displayAuthor}</span> : null}
-          {article.source ? (
+          {displayAuthor ? <span>作者：{displayAuthor}</span> : null}
+          {displaySource ? (
             article.sourceUrl ? (
               <a href={article.sourceUrl} target="_blank" rel="noreferrer" className="transition-colors hover:text-accent">
-                \u6765\u6e90\uff1a{article.source}
+                来源：{displaySource}
               </a>
             ) : (
-              <span>\u6765\u6e90\uff1a{article.source}</span>
+              <span>来源：{displaySource}</span>
             )
           ) : null}
         </div>
@@ -132,12 +138,12 @@ export default async function BuyingArticleDetailPage({ params }: Props) {
       {article.coverImage ? (
         <div className="mt-8 overflow-hidden rounded-[28px] border border-[rgba(15,23,42,0.08)] bg-white p-3 shadow-[0_24px_52px_-40px_rgba(15,23,42,0.16)]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={resolveUploadedImageUrl(article.coverImage)} alt={article.title} className="aspect-[16/9] w-full rounded-[22px] object-cover" />
+          <img src={resolveUploadedImageUrl(article.coverImage)} alt={displayTitle} className="aspect-[16/9] w-full rounded-[22px] object-cover" />
         </div>
       ) : null}
 
       <section className="mt-8 rounded-[28px] border border-[rgba(15,23,42,0.06)] bg-[rgba(255,255,255,0.94)] px-6 py-7 shadow-[0_22px_44px_-38px_rgba(15,23,42,0.12)] sm:px-8 sm:py-9">
-        <RichContent html={article.content} className="prose prose-neutral max-w-none" />
+        <RichContent html={displayContent} className="prose prose-neutral max-w-none" />
       </section>
     </article>
   );

@@ -6,6 +6,7 @@ import { articleOrderByPinnedLatest } from "@/lib/articles";
 import { prisma } from "@/lib/prisma";
 import { buildNoIndexMetadata } from "@/lib/seo";
 import { buildNewsPath } from "@/lib/share-config";
+import { decodeEscapedUnicode } from "@/lib/text";
 
 export const revalidate = 300;
 export const metadata: Metadata = buildNoIndexMetadata(
@@ -20,24 +21,24 @@ type Props = {
 };
 
 const T = {
-  title: "\u884c\u4e1a\u641c\u7d22",
-  hint: "\u8f93\u5165\u5173\u952e\u8bcd\u540e\uff0c\u7ed3\u679c\u5c06\u81ea\u52a8\u6309\u7f51\u7ad9\u5927\u7c7b\u5206\u7ec4\u5c55\u793a\u3002",
-  resultTitle: "\u641c\u7d22\u7ed3\u679c",
-  keywordPrefix: "\u5173\u952e\u8bcd\uff1a",
-  viewAll: "\u67e5\u770b\u5168\u90e8",
-  emptyExcerpt: "\u6682\u65e0\u6458\u8981",
-  updatedAt: "\u66f4\u65b0\u4e8e ",
-  news: "\u8d44\u8baf",
-  standards: "\u6807\u51c6",
-  dictionary: "\u8bcd\u5e93",
-  brands: "\u54c1\u724c",
-  awards: "\u8bc4\u9009",
-  emptyNews: "\u6682\u65e0\u76f8\u5173\u8d44\u8baf",
-  emptyStandards: "\u6682\u65e0\u76f8\u5173\u6807\u51c6",
-  emptyDictionary: "\u6682\u65e0\u76f8\u5173\u8bcd\u5e93\u5185\u5bb9",
-  emptyBrands: "\u6682\u65e0\u76f8\u5173\u54c1\u724c",
-  emptyAwards: "\u6682\u65e0\u76f8\u5173\u8bc4\u9009\u5185\u5bb9",
-};
+  title: "行业搜索",
+  hint: "输入关键词后，结果将自动按网站大类分组展示。",
+  resultTitle: "搜索结果",
+  keywordPrefix: "关键词：",
+  viewAll: "查看全部",
+  emptyExcerpt: "暂无摘要",
+  updatedAt: "更新于 ",
+  news: "资讯",
+  standards: "标准",
+  dictionary: "词库",
+  brands: "品牌",
+  awards: "评选",
+  emptyNews: "暂无相关资讯",
+  emptyStandards: "暂无相关标准",
+  emptyDictionary: "暂无相关词库内容",
+  emptyBrands: "暂无相关品牌",
+  emptyAwards: "暂无相关评选内容",
+} as const;
 
 function stripHtml(value: string | null | undefined) {
   return (value ?? "")
@@ -201,9 +202,9 @@ export default async function SearchPage({ searchParams }: Props) {
               {news.map((item) => (
                 <li key={item.id} className="rounded-xl border border-border bg-surface-elevated p-3">
                   <Link href={buildNewsPath(item.id)} className="font-medium text-primary hover:text-accent">
-                    {item.title}
+                    {decodeEscapedUnicode(item.title)}
                   </Link>
-                  <p className="mt-1 text-sm text-muted">{excerpt(item.excerpt)}</p>
+                  <p className="mt-1 text-sm text-muted">{excerpt(decodeEscapedUnicode(item.excerpt ?? ""))}</p>
                   <p className="mt-2 text-xs text-muted">
                     {T.updatedAt}
                     {item.updatedAt.toLocaleDateString("zh-CN")}
@@ -228,9 +229,9 @@ export default async function SearchPage({ searchParams }: Props) {
               {standards.map((item) => (
                 <li key={item.id} className="rounded-xl border border-border bg-surface-elevated p-3">
                   <Link href={`/standards/${item.slug || item.id}`} className="font-medium text-primary hover:text-accent">
-                    {item.title}
+                    {decodeEscapedUnicode(item.title)}
                   </Link>
-                  <p className="mt-1 text-sm text-muted">{excerpt(item.excerpt)}</p>
+                  <p className="mt-1 text-sm text-muted">{excerpt(decodeEscapedUnicode(item.excerpt ?? ""))}</p>
                   <p className="mt-2 text-xs text-muted">
                     {T.updatedAt}
                     {item.updatedAt.toLocaleDateString("zh-CN")}
@@ -255,9 +256,9 @@ export default async function SearchPage({ searchParams }: Props) {
               {dictionary.map((item) => (
                 <li key={item.id} className="rounded-xl border border-border bg-surface-elevated p-3">
                   <Link href={`/dictionary/${item.slug || item.id}`} className="font-medium text-primary hover:text-accent">
-                    {item.title}
+                    {decodeEscapedUnicode(item.title)}
                   </Link>
-                  <p className="mt-1 text-sm text-muted">{excerpt(item.excerpt)}</p>
+                  <p className="mt-1 text-sm text-muted">{excerpt(decodeEscapedUnicode(item.excerpt ?? ""))}</p>
                   <p className="mt-2 text-xs text-muted">
                     {T.updatedAt}
                     {item.updatedAt.toLocaleDateString("zh-CN")}
@@ -282,9 +283,9 @@ export default async function SearchPage({ searchParams }: Props) {
               {brands.map((item) => (
                 <li key={item.id} className="rounded-xl border border-border bg-surface-elevated p-3">
                   <Link href={`/brands/${item.slug || item.id}`} className="font-medium text-primary hover:text-accent">
-                    {item.title}
+                    {decodeEscapedUnicode(item.title)}
                   </Link>
-                  <p className="mt-1 text-sm text-muted">{excerpt(item.excerpt)}</p>
+                  <p className="mt-1 text-sm text-muted">{excerpt(decodeEscapedUnicode(item.excerpt ?? ""))}</p>
                   <p className="mt-2 text-xs text-muted">
                     {T.updatedAt}
                     {item.updatedAt.toLocaleDateString("zh-CN")}
@@ -309,9 +310,9 @@ export default async function SearchPage({ searchParams }: Props) {
               {awards.map((item) => (
                 <li key={item.id} className="rounded-xl border border-border bg-surface-elevated p-3">
                   <Link href={`/awards/${item.slug || item.id}`} className="font-medium text-primary hover:text-accent">
-                    {item.title}
+                    {decodeEscapedUnicode(item.title)}
                   </Link>
-                  <p className="mt-1 text-sm text-muted">{excerpt(item.description)}</p>
+                  <p className="mt-1 text-sm text-muted">{excerpt(decodeEscapedUnicode(item.description ?? ""))}</p>
                   <p className="mt-2 text-xs text-muted">
                     {T.updatedAt}
                     {item.updatedAt.toLocaleDateString("zh-CN")}

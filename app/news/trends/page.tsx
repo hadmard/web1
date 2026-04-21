@@ -5,24 +5,25 @@ import { DEFAULT_NEWS_SHARE_IMAGE } from "@/lib/news-sharing";
 import { prisma } from "@/lib/prisma";
 import { articleOrderByPinnedLatest } from "@/lib/articles";
 import { buildNewsPath, getArticleSegment } from "@/lib/share-config";
+import { decodeEscapedUnicode } from "@/lib/text";
 
 export const revalidate = 300;
 export const dynamic = "force-dynamic";
 
 const TEXT = {
-  home: "\u9996\u9875",
-  news: "\u6574\u6728\u8d44\u8baf",
-  trends: "\u884c\u4e1a\u8d8b\u52bf",
-  enterprise: "\u4f01\u4e1a\u52a8\u6001",
-  tech: "\u6280\u672f\u53d1\u5c55",
-  events: "\u884c\u4e1a\u6d3b\u52a8",
-  searchLabel: "\u680f\u76ee\u5185\u641c\u7d22",
-  searchAction: "\u641c\u7d22\u672c\u680f\u76ee",
+  home: "首页",
+  news: "整木资讯",
+  trends: "行业趋势",
+  enterprise: "企业动态",
+  tech: "技术发展",
+  events: "行业活动",
+  searchLabel: "栏目内搜索",
+  searchAction: "搜索本栏目",
   heroDesc:
-    "\u6574\u6728\u8d44\u8baf\u884c\u4e1a\u8d8b\u52bf\u680f\u76ee\uff0c\u805a\u5408\u6574\u6728\u5b9a\u5236\u4ef7\u683c\u3001\u9884\u7b97\u3001\u9009\u8d2d\u4e0e\u95e8\u5e97\u5de5\u5382\u8fd0\u8425\u7b49\u9ad8\u9891\u95ee\u9898\u5185\u5bb9\u3002",
+    "整木资讯行业趋势栏目，聚合整木定制价格、预算、选购与门店工厂运营等高频问题内容。",
   seoIntro:
-    "\u672c\u680f\u76ee\u6c47\u603b\u6574\u6728\u5b9a\u5236\u76f8\u5173\u7684\u4ef7\u683c\u3001\u9884\u7b97\u3001\u9009\u8d2d\u53ca\u884c\u4e1a\u8fd0\u8425\u95ee\u9898\uff0c\u6db5\u76d6\u6574\u6728\u5b9a\u5236\u591a\u5c11\u94b1\u4e00\u5e73\u3001\u6574\u6728\u5b9a\u5236\u9884\u7b97\u600e\u4e48\u63a7\u5236\u3001\u6574\u6728\u5b9a\u5236\u600e\u4e48\u9009\u54c1\u724c\u7b49\u9ad8\u9891\u641c\u7d22\u95ee\u9898\u3002\u540c\u65f6\u4e5f\u5305\u542b\u6574\u6728\u95e8\u5e97\u6210\u4ea4\u3001\u6574\u6728\u5de5\u5382\u83b7\u5ba2\u4e0e\u8be2\u76d8\u8f6c\u5316\u7b49\u5b9e\u9645\u8fd0\u8425\u5185\u5bb9\uff0c\u5e2e\u52a9\u4e1a\u4e3b\u4e0e\u4ece\u4e1a\u8005\u66f4\u6e05\u6670\u5730\u4e86\u89e3\u6574\u6728\u5b9a\u5236\u51b3\u7b56\u903b\u8f91\u4e0e\u884c\u4e1a\u5b9e\u9645\u60c5\u51b5\u3002",
-  empty: "\u5f53\u524d\u680f\u76ee\u8fd8\u6ca1\u6709\u5df2\u53d1\u5e03\u5185\u5bb9\u3002",
+    "本栏目汇总整木定制相关的价格、预算、选购及行业运营问题，涵盖整木定制多少钱一平、整木定制预算怎么控制、整木定制怎么选品牌等高频搜索问题。同时也包含整木门店成交、整木工厂获客与询盘转化等实际运营内容，帮助业主与从业者更清晰地了解整木定制决策逻辑与行业实际情况。",
+  empty: "当前栏目还没有已发布内容。",
 } as const;
 
 const SIBLING_LINKS = [
@@ -35,7 +36,7 @@ const SIBLING_LINKS = [
 export async function generateMetadata(): Promise<Metadata> {
   return buildPageMetadata({
     title:
-      "\u6574\u6728\u5b9a\u5236\u591a\u5c11\u94b1\u4e00\u5e73\uff1f\u600e\u4e48\u9009\u4e0d\u8e29\u5751\uff5c\u9884\u7b97\u4e0e\u95e8\u5e97\u5de5\u5382\u95ee\u9898\u5168\u89e3",
+      "整木定制多少钱一平？怎么选不踩坑｜预算与门店工厂问题全解",
     description: TEXT.seoIntro,
     path: "/news/trends",
     type: "website",
@@ -64,7 +65,7 @@ export default async function NewsTrendsPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-12">
-      <nav className="mb-8 flex flex-wrap items-center gap-x-2 gap-y-2 text-sm text-muted" aria-label="\u9762\u5305\u5c51">
+      <nav className="mb-8 flex flex-wrap items-center gap-x-2 gap-y-2 text-sm text-muted" aria-label="面包屑">
         <Link href="/" className="hover:text-accent">{TEXT.home}</Link>
         <span>/</span>
         <Link href="/news" className="hover:text-accent">{TEXT.news}</Link>
@@ -139,11 +140,11 @@ export default async function NewsTrendsPage() {
                   </span>
                 </div>
                 <Link href={buildNewsPath(getArticleSegment(item))} className="mt-2 block text-[1rem] font-medium leading-8 text-primary hover:text-accent sm:mt-3 sm:text-[1.1rem]">
-                  {item.title}
+                  {decodeEscapedUnicode(item.title)}
                 </Link>
                 {item.excerpt ? (
                   <p className="mt-2 line-clamp-3 text-sm leading-7 text-muted sm:mt-3">
-                    {item.excerpt}
+                    {decodeEscapedUnicode(item.excerpt)}
                   </p>
                 ) : null}
               </li>
