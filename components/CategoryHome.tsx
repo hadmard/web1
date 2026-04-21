@@ -116,7 +116,7 @@ export async function CategoryHome({
                 </h1>
                 {isNewsEditorial ? (
                   <p className="mt-3 text-sm leading-7 text-muted sm:text-[15px]">
-                    行业趋势与企业动态信息中心
+                    行业趋势与企业动态信息中心。
                   </p>
                 ) : (
                   <p className={`mt-2 text-muted ${isEditorial ? "max-w-2xl text-sm leading-7 sm:text-[15px]" : "text-sm sm:text-base"}`}>
