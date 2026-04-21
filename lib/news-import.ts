@@ -4,6 +4,7 @@ import { previewText } from "./text";
 import { generateUniqueArticleSlug } from "./slug";
 import { syncArticleKeywords } from "./news-keywords-v2";
 import { writeOperationLog } from "./operation-log";
+import { assertNoDirtyText } from "./article-input-guard";
 
 const DEFAULT_USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36 CNZhengmuNewsImporter/1.0";
@@ -284,6 +285,15 @@ async function findDuplicateArticle(candidate: ImportedNewsCandidate) {
 }
 
 async function createImportedArticle(candidate: ImportedNewsCandidate, actor?: { actorId?: string | null; actorEmail?: string | null }) {
+  assertNoDirtyText(
+    [
+      { label: "标题", value: candidate.title },
+      { label: "摘要", value: candidate.summary },
+      { label: "正文", value: candidate.contentHtml },
+      { label: "来源", value: candidate.sourceName },
+    ],
+    "新闻导入已拦截",
+  );
   const slug = await generateUniqueArticleSlug(candidate.title);
   const article = await prisma.article.create({
     data: {

@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { prisma } from "../lib/prisma";
 import { normalizeRichTextField } from "../lib/brand-content";
 import { generateUniqueArticleSlug } from "../lib/slug";
+import { assertNoDirtyText } from "../lib/article-input-guard";
 import { buildSeoContentHash, findSeoLeadDuplicateReason } from "../lib/seo-dedup";
 import { SEO_CORE_INTERNAL_LINKS } from "../lib/seo-keyword-seeds";
 import { pickSeoTopicsForGeneration, type BodySkeleton, type SeoTopicCandidate, type SeoTopicSelectionStats } from "../lib/seo-topic-generator";
@@ -440,6 +441,19 @@ async function persistGeneratedArticles(articles: GeneratedSeoArticle[]) {
   const saved = [];
   for (const article of articles) {
     assertAutoSeoWritableTarget("article");
+    assertNoDirtyText(
+      [
+        { label: "标题", value: article.title },
+        { label: "摘要", value: article.excerpt },
+        { label: "正文", value: article.content },
+        { label: "关键词", value: article.keywords },
+        {
+          label: "审核备注",
+          value: `SEO自动生成草稿；批次 ${article.generationBatchId}；种子词 ${article.keywordSeed}；意图 ${article.keywordIntent}`,
+        },
+      ],
+      "SEO 新闻生成已拦截",
+    );
     const slug = await generateUniqueArticleSlug(article.title);
     const record = await prisma.article.create({
       data: {

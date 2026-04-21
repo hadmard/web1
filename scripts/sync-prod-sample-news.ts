@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { normalizeRichTextField } from "../lib/brand-content";
+import { assertNoDirtyText } from "../lib/article-input-guard";
 
 type SampleArticle = {
   id: string;
@@ -158,6 +159,17 @@ async function syncOne(sample: SampleArticle): Promise<SyncItemReport> {
   const source = "中华整木网旧站";
   const reviewNote = "样板文章线上同步";
   const status = "approved";
+
+  assertNoDirtyText(
+    [
+      { label: "标题", value: title },
+      { label: "摘要", value: excerpt },
+      { label: "正文", value: normalizedContent },
+      { label: "来源", value: source },
+      { label: "审核备注", value: reviewNote },
+    ],
+    "样例新闻同步已拦截",
+  );
 
   const article = await prisma.article.upsert({
     where: { id: sample.id },
