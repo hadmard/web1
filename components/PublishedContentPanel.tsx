@@ -37,7 +37,7 @@ export function PublishedContentPanel({
         <h2 className="section-label mb-2 text-primary">{decodeEscapedUnicode(sectionTitle)}</h2>
 
         {items.length === 0 ? (
-          <p className="text-sm text-muted">{"\u6682\u65e0\u5df2\u53d1\u5e03\u5185\u5bb9\u3002"}</p>
+          <p className="text-sm text-muted">暂无已发布内容。</p>
         ) : (
           <ul className={isEditorial ? "grid gap-4 md:grid-cols-2" : "space-y-3"}>
             {items.map((item) => (
@@ -70,7 +70,7 @@ export function PublishedContentPanel({
                       href={item.editHref}
                       className="rounded border border-border px-2 py-1 text-xs text-muted hover:border-accent/40 hover:text-accent"
                     >
-                      {"\u63d0\u51fa\u4fee\u6539"}
+                      提出修改
                     </Link>
                   ) : null}
                 </div>
@@ -91,7 +91,7 @@ export function PublishedContentPanel({
             isEditorial ? "mt-6" : "mt-4"
           }`}
         >
-          {"\u67e5\u770b\u66f4\u591a"}
+          查看更多
           <span aria-hidden="true" className="text-[12px] text-[#b49a6b]">
             -&gt;
           </span>

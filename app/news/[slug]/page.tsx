@@ -251,7 +251,7 @@ export default async function ArticlePage({ params, searchParams }: Props) {
               </p>
               <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="text-xs font-medium uppercase tracking-[0.12em] text-[#9a8560]">
-                  {"\u680f\u76ee\u5185\u641c\u7d22"}
+                  栏目内搜索
                 </div>
                 <Link
                   href={`/news/all?sub=${encodeURIComponent(subHref)}&search=1`}
@@ -261,7 +261,7 @@ export default async function ArticlePage({ params, searchParams }: Props) {
                     <circle cx="8.5" cy="8.5" r="4.75" stroke="currentColor" strokeWidth="1.5" />
                     <path d="M12.2 12.2 16 16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                   </svg>
-                  <span>{"\u641c\u7d22\u672c\u680f\u76ee"}</span>
+                  <span>搜索本栏目</span>
                 </Link>
               </div>
             </div>
