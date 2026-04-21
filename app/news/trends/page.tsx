@@ -35,8 +35,7 @@ const SIBLING_LINKS = [
 
 export async function generateMetadata(): Promise<Metadata> {
   return buildPageMetadata({
-    title:
-      "整木定制多少钱一平？怎么选不踩坑｜预算与门店工厂问题全解",
+    title: "整木定制多少钱一平？怎么选不踩坑｜预算与门店工厂问题全解",
     description: TEXT.seoIntro,
     path: "/news/trends",
     type: "website",
