@@ -5,6 +5,7 @@ import { getCategoryByHref } from "@/lib/site-structure";
 import { getCategoryIcon } from "@/lib/category-icons";
 import { getSiteVisualSettings } from "@/lib/site-visual-settings";
 import type { BackgroundImageKey } from "@/lib/site-visual-config";
+import { NEWS_AFTERMARKET_SUBCATEGORY } from "@/lib/news-aftermarket";
 
 const CATEGORY_HERO_KEY_MAP: Record<string, BackgroundImageKey> = {
   "/news": "newsHero",
@@ -24,6 +25,13 @@ const NEWS_SUBCATEGORY_KEYWORDS =
   "整木品牌动态,整木加盟,整木厂家,整木工艺,环保板材,整木展会,广州设计周,建博会,定制家具工艺";
 
 type SubcategoryEntry = { title: string; href: string };
+
+function getNewsSubcategoryDescription(label: string, href: string) {
+  if (href === NEWS_AFTERMARKET_SUBCATEGORY.href) {
+    return "聚焦木门、木饰面、柜体、护墙板等木作场景的清洁养护建议，以及进口护理产品推荐。";
+  }
+  return NEWS_SUBCATEGORY_DESCRIPTIONS[label];
+}
 
 interface CategoryHomeProps {
   basePath: string;
@@ -68,7 +76,7 @@ export async function CategoryHome({
 
   return (
     <div className="min-h-screen">
-      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-12">
+      <div className={`mx-auto px-4 py-10 sm:px-6 sm:py-12 ${isNewsEditorial ? "max-w-7xl" : "max-w-6xl"}`}>
         <nav className={isEditorial ? "mb-8 text-sm text-muted" : "mb-6 text-sm text-muted"} aria-label="面包屑">
           <Link href="/" className="transition-colors hover:text-accent">
             首页
@@ -200,7 +208,15 @@ export async function CategoryHome({
                 <h2 className="section-label text-primary">资讯分栏</h2>
               </div>
 
-              <div className={`grid ${isNewsEditorial ? "gap-5 sm:grid-cols-2 xl:grid-cols-4" : isEditorial ? "gap-4 sm:grid-cols-2 xl:grid-cols-4" : "gap-3 sm:grid-cols-2"}`}>
+              <div
+                className={`grid ${
+                  isNewsEditorial
+                    ? "gap-5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5"
+                    : isEditorial
+                      ? "gap-4 sm:grid-cols-2 xl:grid-cols-4"
+                      : "gap-3 sm:grid-cols-2"
+                }`}
+              >
                 {subcategories.map((sub) => {
                   const latest = (subcategoryLatest?.[sub.href] ?? []).slice(0, 3);
                   return (
@@ -208,32 +224,32 @@ export async function CategoryHome({
                       key={sub.href}
                       className={`border border-border bg-surface-elevated transition-colors hover:border-accent/45 ${
                         isNewsEditorial
-                          ? "rounded-[20px] p-4"
+                          ? "flex min-h-[248px] flex-col rounded-[20px] p-5"
                           : isEditorial
                             ? "rounded-[20px] p-4"
                             : "rounded-xl p-3"
                       }`}
                     >
-                      <div className="flex items-center justify-between gap-2">
-                        <Link href={getSubHref(sub.href)} className={`${isNewsEditorial ? "text-lg" : isEditorial ? "text-base" : "text-sm"} font-semibold text-primary hover:text-accent`}>
+                      <div className="flex items-start justify-between gap-3">
+                        <Link href={getSubHref(sub.href)} className={`${isNewsEditorial ? "block min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-lg leading-tight" : isEditorial ? "text-base" : "text-sm"} font-semibold text-primary hover:text-accent`} title={sub.label}>
                           {sub.label}
                         </Link>
                         <Link
                           href={getSubHref(sub.href)}
-                          className="apple-inline-link shrink-0"
+                          className="apple-inline-link shrink-0 whitespace-nowrap"
                         >
                           进入栏目
                         </Link>
                       </div>
 
-                      {isNewsEditorial && NEWS_SUBCATEGORY_DESCRIPTIONS[sub.label] ? (
+                      {isNewsEditorial && getNewsSubcategoryDescription(sub.label, sub.href) ? (
                         <p className="mt-3 text-sm leading-7 text-muted">
-                          {NEWS_SUBCATEGORY_DESCRIPTIONS[sub.label]}
+                          {getNewsSubcategoryDescription(sub.label, sub.href)}
                         </p>
                       ) : null}
 
                       {latest.length > 0 ? (
-                        <ul className={`mt-4 ${isNewsEditorial ? "space-y-3" : isEditorial ? "space-y-2.5" : "space-y-1.5"}`}>
+                        <ul className={`mt-4 ${isNewsEditorial ? "flex-1 space-y-3" : isEditorial ? "space-y-2.5" : "space-y-1.5"}`}>
                           {latest.map((item) => (
                             <li key={`${sub.href}-${item.href}`} className="flex min-w-0 items-start gap-2">
                               <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-black/75" aria-hidden />
@@ -252,6 +268,10 @@ export async function CategoryHome({
                             </li>
                           ))}
                         </ul>
+                      ) : isNewsEditorial ? (
+                        <div className="mt-4 flex flex-1 items-end">
+                          <p className="text-sm leading-6 text-muted">该栏目已接入资讯首页，发布后会在这里展示最新文章。</p>
+                        </div>
                       ) : null}
                     </article>
                   );

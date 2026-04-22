@@ -1,4 +1,6 @@
-﻿export type CategoryOption = {
+import { NEWS_AFTERMARKET_SUBCATEGORY } from "@/lib/news-aftermarket";
+
+export type CategoryOption = {
   href: string;
   label: string;
   subs: Array<{ href: string; label: string }>;
@@ -19,6 +21,11 @@ export const NEWS_SUBCATEGORY_OPTIONS = [
   { href: "/news/enterprise", label: "企业动态" },
   { href: "/news/tech", label: "技术发展" },
   { href: "/news/events", label: "行业活动" },
+] as const;
+
+export const ADMIN_NEWS_SUBCATEGORY_OPTIONS = [
+  ...NEWS_SUBCATEGORY_OPTIONS,
+  { href: NEWS_AFTERMARKET_SUBCATEGORY.href, label: NEWS_AFTERMARKET_SUBCATEGORY.label },
 ] as const;
 
 export const MEMBER_PUBLISH_CATEGORY_OPTIONS: CategoryOption[] = [
@@ -70,6 +77,15 @@ export const MEMBER_PUBLISH_CATEGORY_OPTIONS: CategoryOption[] = [
   },
 ];
 
+export const ADMIN_PUBLISH_CATEGORY_OPTIONS: CategoryOption[] = [
+  {
+    href: "/news",
+    label: "整木资讯",
+    subs: [...ADMIN_NEWS_SUBCATEGORY_OPTIONS],
+  },
+  ...MEMBER_PUBLISH_CATEGORY_OPTIONS.slice(1),
+];
+
 export const CONTENT_TAB_DEFS: Array<{ key: ContentTabKey; href: string; label: string }> = [
   { key: "articles", href: "/news", label: "整木资讯" },
   { key: "brands", href: "/brands", label: "整木市场" },
@@ -105,10 +121,7 @@ export function buildContentTabWhere(tab: ContentTabKey | string | null) {
 
   if (normalized === "brands") {
     return {
-      OR: [
-        { categoryHref: "/brands" },
-        { subHref: { startsWith: "/brands/brand" } },
-      ],
+      OR: [{ categoryHref: "/brands" }, { subHref: { startsWith: "/brands/brand" } }],
     };
   }
 
@@ -144,11 +157,50 @@ export function buildContentTabWhere(tab: ContentTabKey | string | null) {
   return null;
 }
 
-export const MEMBER_ALLOWED_CATEGORY_HREFS = new Set(
-  MEMBER_PUBLISH_CATEGORY_OPTIONS.map((x) => x.href)
-);
+export const MEMBER_ALLOWED_CATEGORY_HREFS = new Set(MEMBER_PUBLISH_CATEGORY_OPTIONS.map((x) => x.href));
 
-export const PERSONAL_ALLOWED_CATEGORY_HREFS = new Set([
-  "/dictionary",
-  "/standards",
-]);
+export const PERSONAL_ALLOWED_CATEGORY_HREFS = new Set(["/dictionary", "/standards"]);
+
+const ALL_CATEGORY_OPTIONS: CategoryOption[] = ADMIN_PUBLISH_CATEGORY_OPTIONS;
+
+export function getCategoryOptionByHref(href?: string | null) {
+  const value = (href ?? "").trim();
+  if (!value) return null;
+  return ALL_CATEGORY_OPTIONS.find((item) => item.href === value) ?? null;
+}
+
+export function getSubcategoryOptionByHref(href?: string | null) {
+  const value = (href ?? "").trim();
+  if (!value) return null;
+  for (const category of ALL_CATEGORY_OPTIONS) {
+    const hit = category.subs.find((item) => item.href === value);
+    if (hit) return { category, subcategory: hit };
+  }
+  return null;
+}
+
+export function getContentLocationLabel(categoryHref?: string | null, subHref?: string | null) {
+  const subHit = getSubcategoryOptionByHref(subHref);
+  if (subHit) {
+    return {
+      categoryLabel: subHit.category.label,
+      subcategoryLabel: subHit.subcategory.label,
+      fullLabel: `${subHit.category.label} / ${subHit.subcategory.label}`,
+    };
+  }
+
+  const categoryHit = getCategoryOptionByHref(categoryHref);
+  if (categoryHit) {
+    return {
+      categoryLabel: categoryHit.label,
+      subcategoryLabel: null,
+      fullLabel: categoryHit.label,
+    };
+  }
+
+  return {
+    categoryLabel: categoryHref?.trim() || "未分类",
+    subcategoryLabel: subHref?.trim() || null,
+    fullLabel: [categoryHref?.trim(), subHref?.trim()].filter(Boolean).join(" / ") || "未分类",
+  };
+}

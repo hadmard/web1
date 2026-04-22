@@ -18,6 +18,7 @@ import { articleOrderByPinnedLatest } from "@/lib/articles";
 import { getRecommendedNews, isValidKeywordCandidate } from "@/lib/news-keywords-v2";
 import { resolveArticleSourceType } from "@/lib/article-source";
 import { decodeEscapedUnicode } from "@/lib/text";
+import { NEWS_AFTERMARKET_SUBCATEGORY, getNewsAftermarketConfig, parseProductRecommendations } from "@/lib/news-aftermarket";
 
 export const revalidate = 300;
 export const dynamic = "force-dynamic";
@@ -40,6 +41,10 @@ const NEWS_SUBCATEGORY_META: Record<string, { title: string; description: string
     title: "行业活动",
     description: "汇集整木展会、设计周与行业论坛信息，获取展会时间、品牌亮相与行业趋势发布。",
   },
+  aftermarket: {
+    title: NEWS_AFTERMARKET_SUBCATEGORY.label,
+    description: "聚焦木制品清洁、养护、保养与进口护理产品推荐，覆盖木门、木饰面、柜体、护墙板和木家具等护理场景。",
+  },
 };
 
 const NEWS_SUBCATEGORY_HREFS: Record<string, string> = {
@@ -47,6 +52,7 @@ const NEWS_SUBCATEGORY_HREFS: Record<string, string> = {
   enterprise: "/news/enterprise",
   tech: "/news/tech",
   events: "/news/events",
+  aftermarket: NEWS_AFTERMARKET_SUBCATEGORY.href,
 };
 
 const NEWS_SECTION_LABELS: Record<string, string> = {
@@ -54,6 +60,7 @@ const NEWS_SECTION_LABELS: Record<string, string> = {
   "/news/enterprise": "企业动态",
   "/news/tech": "技术发展",
   "/news/events": "行业活动",
+  [NEWS_AFTERMARKET_SUBCATEGORY.href]: NEWS_AFTERMARKET_SUBCATEGORY.label,
   "/news": "整木资讯",
 };
 
@@ -62,7 +69,7 @@ type Props = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
-const NEWS_SUB_SLUGS = new Set(["trends", "enterprise", "tech", "events"]);
+const NEWS_SUB_SLUGS = new Set(["trends", "enterprise", "tech", "events", NEWS_AFTERMARKET_SUBCATEGORY.slug]);
 
 function isLegacyNumericNewsId(value: string) {
   return /^\d+$/.test((value || "").trim());
@@ -345,6 +352,11 @@ export default async function ArticlePage({ params, searchParams }: Props) {
   const keywords = parseKeywordList(article.manualKeywords ?? article.keywords);
   const recommendedArticles = await getRecommendedNews(article.id, 4);
   const sourceSummary = buildArticleSourceSummary(article);
+  const aftermarketConfig = await getNewsAftermarketConfig();
+  const productRecommendations = parseProductRecommendations(article.productRecommendations).slice(
+    0,
+    aftermarketConfig.detailRecommendCount,
+  );
 
   const articleSchema = {
     "@context": "https://schema.org",
@@ -495,6 +507,47 @@ export default async function ArticlePage({ params, searchParams }: Props) {
                 >
                   {keyword}
                 </Link>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {productRecommendations.length > 0 ? (
+          <section className="mt-10 rounded-[24px] border border-[rgba(194,182,154,0.28)] bg-[linear-gradient(180deg,rgba(255,252,246,0.98),rgba(246,240,231,0.92))] px-5 py-6 shadow-[0_18px_40px_-34px_rgba(180,154,107,0.28)] sm:px-7">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-primary">相关产品推荐</h2>
+                <p className="mt-1 text-sm leading-7 text-muted">文章已关联木作清洁养护商品，可继续前往商城或商品详情页了解。</p>
+              </div>
+            </div>
+            <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {productRecommendations.map((item) => (
+                <a
+                  key={`${item.title}-${item.url}`}
+                  href={item.url}
+                  target={item.url.startsWith("http") ? "_blank" : undefined}
+                  rel={item.url.startsWith("http") ? "noreferrer" : undefined}
+                  className="rounded-[20px] border border-[rgba(194,182,154,0.26)] bg-white/88 p-4 transition hover:-translate-y-0.5 hover:border-[rgba(170,154,122,0.42)]"
+                >
+                  {item.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={resolveUploadedImageUrl(item.imageUrl)}
+                      alt={item.title}
+                      className="h-40 w-full rounded-[16px] object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="flex h-40 items-center justify-center rounded-[16px] bg-[rgba(250,245,237,0.92)] text-sm text-muted">
+                      木作护理推荐
+                    </div>
+                  )}
+                  <h3 className="mt-4 text-base font-semibold leading-7 text-primary">{item.title}</h3>
+                  {item.sellingPoint ? <p className="mt-2 text-sm leading-7 text-muted">{item.sellingPoint}</p> : null}
+                  <span className="mt-4 inline-flex items-center rounded-full border border-[rgba(180,154,107,0.34)] px-4 py-2 text-sm font-medium text-[#7b6542]">
+                    去商城
+                  </span>
+                </a>
               ))}
             </div>
           </section>

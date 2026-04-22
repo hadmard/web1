@@ -1,4 +1,6 @@
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { prisma } from "../lib/prisma";
 import { normalizeRichTextField } from "../lib/brand-content";
 import { generateUniqueArticleSlug } from "../lib/slug";
@@ -6,6 +8,12 @@ import { assertNoDirtyText } from "../lib/article-input-guard";
 import { buildSeoContentHash, findSeoLeadDuplicateReason } from "../lib/seo-dedup";
 import { SEO_CORE_INTERNAL_LINKS } from "../lib/seo-keyword-seeds";
 import { pickSeoTopicsForGeneration, type BodySkeleton, type SeoTopicCandidate, type SeoTopicSelectionStats } from "../lib/seo-topic-generator";
+import {
+  DEFAULT_NEWS_AFTERMARKET_CONFIG,
+  NEWS_AFTERMARKET_SUBCATEGORY,
+  getNewsAftermarketConfig,
+  stringifyProductRecommendations,
+} from "../lib/news-aftermarket";
 
 type GeneratedSeoArticle = {
   title: string;
@@ -17,13 +25,14 @@ type GeneratedSeoArticle = {
   status: "pending";
   publishedAt: Date | null;
   categoryHref: "/news";
-  subHref: "/news/trends";
+  subHref: string;
   sourceType: "ai_generated";
   source: "auto_seo_generator";
   generationBatchId: string;
   keywordSeed: string;
   keywordIntent: string;
   contentHash: string;
+  productRecommendations?: string | null;
   audience: "c_end" | "b_end";
   titleStyle: SeoTopicCandidate["titleStyle"];
   titleFrame: string;
@@ -54,6 +63,41 @@ function readArg(name: string) {
 
 function unique<T>(items: T[]) {
   return Array.from(new Set(items));
+}
+
+function loadLocalEnvIfNeeded() {
+  const envFiles = [resolve(process.cwd(), ".env.production"), resolve(process.cwd(), ".env")];
+
+  for (const filePath of envFiles) {
+    let content = "";
+    try {
+      content = readFileSync(filePath, "utf8");
+    } catch {
+      continue;
+    }
+
+    for (const rawLine of content.split(/\r?\n/)) {
+      const line = rawLine.trim();
+      if (!line || line.startsWith("#")) continue;
+      const separatorIndex = line.indexOf("=");
+      if (separatorIndex <= 0) continue;
+
+      const key = line.slice(0, separatorIndex).trim();
+      if (!key || process.env[key]?.trim()) continue;
+
+      let value = line.slice(separatorIndex + 1).trim();
+      if (
+        (value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'"))
+      ) {
+        value = value.slice(1, -1);
+      }
+
+      process.env[key] = value;
+    }
+
+    break;
+  }
 }
 
 function assertAutoSeoWritableTarget(type: "article" | "category" | "tag" | "dictionary" | "brand" | "enterprise") {
@@ -390,6 +434,85 @@ function buildExcerpt(topic: SeoTopicCandidate) {
   return `${topic.keywordSeed}没有统一答案，真正影响判断的通常是预算边界、材料选择和交付能力。本文会从预算拆分、价格影响因素和决策建议三个方面，帮你把问题看清。`;
 }
 
+function getAftermarketSeason(date: Date) {
+  const month = date.getMonth() + 1;
+  if (month >= 3 && month <= 5) return "春季";
+  if (month >= 6 && month <= 8) return "夏季";
+  if (month >= 9 && month <= 11) return "秋季";
+  return "冬季";
+}
+
+function buildAftermarketTitle(date: Date) {
+  const season = getAftermarketSeason(date);
+  const frames = [
+    `${season}木制品清洁养护怎么做更稳妥？高端木作日常保养与进口护理产品推荐`,
+    `木门木饰面怎么清洁保养？${season}整木后市场护理建议与进口产品推荐`,
+    `高端木作日常护理指南：木饰面、柜体、护墙板清洁养护与进口产品怎么选`,
+    `整木后市场观察：进口木作护理产品如何用于木门、柜体与护墙板日常养护`,
+  ];
+  return frames[date.getDate() % frames.length] ?? frames[0];
+}
+
+function buildAftermarketExcerpt(title: string) {
+  return `${title}。文章围绕木门、木饰面、柜体、护墙板与木家具等场景，梳理清洁误区、日常养护建议，以及适合高端木作护理的进口产品选择思路。`;
+}
+
+function buildAftermarketContent(date: Date) {
+  const season = getAftermarketSeason(date);
+  return normalizeRichTextField(
+    [
+      paragraph("木作空间越高端，后期清洁和养护越不能用“通用清洁剂”一把抓。尤其是木门、木饰面、柜体、护墙板和木家具这类长期可见面，一旦清洁方式不当，容易出现漆面发乌、表层失光、木皮边缘受潮或污渍反复附着的问题。"),
+      heading("为什么整木项目更需要重视后市场护理"),
+      paragraph("很多用户在前期更关注设计、材质和安装，却容易忽略交付后的长期维护。实际上，整木项目是否能持续保持质感，很大程度取决于日常护理是否专业。对高端木作来说，护理产品需要兼顾温和清洁、表面保护和长期稳定性，不能只追求“去污快”。"),
+      heading(`${season}木制品清洁养护常见误区`),
+      paragraph("常见误区包括使用强碱性或高酒精清洁剂、湿布长时间覆盖木饰面、把地板护理油直接用于柜体和木门表面，以及在没有明确适配说明的情况下频繁混用不同产品。对于开放漆、木皮饰面和高定柜体，这些做法都可能放大后期维护风险。"),
+      heading("更适合高端木作的护理思路"),
+      paragraph("更稳妥的做法，是根据木作表面状态区分“日常除尘”“局部清洁”“定期养护”三种动作。日常阶段以低残留、温和型清洁为主；出现指印、水痕或轻度污渍时，再使用适合木作表面的专项护理产品；到换季阶段，再补充更有针对性的养护步骤，帮助木作表面维持稳定光泽和触感。"),
+      heading("为什么进口护理产品更适合做后市场推荐"),
+      paragraph("对于整木售后与高端私宅维护来说，国外原装进口、且有库存的木制品清洁养护产品更容易形成稳定交付。一方面，成熟品牌通常会把不同材质、不同漆面、不同使用场景区分得更清楚；另一方面，现货库存能减少推荐后无法及时到货的转化损耗，也更适合用于售后服务配套。"),
+      heading("哪些场景更适合文章带商品转化"),
+      paragraph("当用户正在搜索“木门怎么清洁”“木饰面怎么保养”“护墙板有手印怎么处理”“高端木作用什么护理产品”这类问题时，内容里自然带出适配产品，转化路径会更顺。比起直接堆砌广告，先把问题讲透，再给出适合的护理产品建议，更符合整木后市场内容的专业感。"),
+      heading("选购和使用时要重点确认什么"),
+      paragraph("建议优先确认产品是否适合木门、木饰面、柜体、护墙板或木家具等具体场景，是否明确标注适用表面，是否属于进口原装渠道，以及当前是否有库存。对推广内容来说，也应避免虚构功效和夸大效果，把“适用场景、使用频率、现货情况、服务配套”写清楚，才更有利于 SEO 和真实转化。"),
+      heading("结语"),
+      paragraph("整木后市场不是简单的售后补充，而是高端木作长期价值的一部分。围绕木作清洁、养护和保养建立持续内容，再结合进口护理产品与现货商品链接，才能把“资讯阅读”真正延伸成“护理方案了解”和“商品转化”两条链路。"),
+    ].join(""),
+  ) ?? "";
+}
+
+function buildAftermarketArticle(
+  batchId: string,
+  productRecommendations: string | null,
+  seoKeywordTemplate: string[],
+): GeneratedSeoArticle {
+  const now = new Date();
+  const title = buildAftermarketTitle(now);
+  const content = buildAftermarketContent(now);
+  return {
+    title,
+    excerpt: buildAftermarketExcerpt(title),
+    keywords: seoKeywordTemplate.slice(0, 5).join(","),
+    content,
+    slug: "",
+    internalLinks: [],
+    status: "pending",
+    publishedAt: null,
+    categoryHref: "/news",
+    subHref: NEWS_AFTERMARKET_SUBCATEGORY.href,
+    sourceType: "ai_generated",
+    source: "auto_seo_generator",
+    generationBatchId: batchId,
+    keywordSeed: "木制品清洁养护",
+    keywordIntent: "aftermarket_conversion",
+    contentHash: buildSeoContentHash(title, content),
+    productRecommendations,
+    audience: "c_end",
+    titleStyle: "scene",
+    titleFrame: "aftermarket_care",
+    bodySkeleton: "scenario_solution",
+  };
+}
+
 export function buildArticle(topic: SeoTopicCandidate, batchId: string): GeneratedSeoArticle {
   const internalLinks = buildInternalLinks(topic);
   const content =
@@ -469,6 +592,7 @@ async function persistGeneratedArticles(articles: GeneratedSeoArticle[]) {
         contentHash: article.contentHash,
         categoryHref: article.categoryHref,
         subHref: article.subHref,
+        productRecommendations: article.productRecommendations ?? null,
         status: "pending",
         publishedAt: null,
         manualKeywords: article.keywords,
@@ -499,11 +623,13 @@ async function persistGeneratedArticles(articles: GeneratedSeoArticle[]) {
 }
 
 async function main() {
-  if (process.env.SEO_NEWS_AUTOGEN_ENABLED !== "true") {
-    throw new Error("SEO news generation is temporarily disabled");
-  }
+  loadLocalEnvIfNeeded();
   const count = Math.max(1, Math.min(5, Number.parseInt(readArg("count") || "3", 10) || 3));
   const dryRun = process.argv.includes("--dry-run") || process.argv.includes("--dryRun");
+  if (!dryRun && process.env.SEO_NEWS_AUTOGEN_ENABLED !== "true") {
+    throw new Error("SEO news generation is temporarily disabled");
+  }
+  const config = await getNewsAftermarketConfig().catch(() => DEFAULT_NEWS_AFTERMARKET_CONFIG);
   const batchId = `seo-${new Date().toISOString().slice(0, 10)}-${createHash("md5").update(String(Date.now())).digest("hex").slice(0, 6)}`;
 
   const [{ picked, candidates, stats, selectionMode }, existingArticles] = await Promise.all([
@@ -543,6 +669,15 @@ async function main() {
       generated.push(article);
     }
   }
+
+  const aftermarketProductRecommendations = stringifyProductRecommendations(config.defaultProductPool);
+  const aftermarketArticle = buildAftermarketArticle(
+    batchId,
+    aftermarketProductRecommendations,
+    config.seoKeywordTemplate,
+  );
+  aftermarketArticle.slug = await generateUniqueArticleSlug(aftermarketArticle.title);
+  generated.push(aftermarketArticle);
 
   const runStats: GeneratorRunStats = {
     ...stats,
@@ -585,6 +720,7 @@ async function main() {
             titleStyle: item.titleStyle,
             titleFrame: item.titleFrame,
             bodySkeleton: item.bodySkeleton,
+            productRecommendations: item.productRecommendations,
             internalLinks: item.internalLinks,
             content: item.content,
           })),

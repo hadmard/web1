@@ -1,3 +1,5 @@
+import { getContentLocationLabel } from "@/lib/content-taxonomy";
+
 type Status = "draft" | "pending" | "approved" | "rejected";
 
 type ArticleItem = {
@@ -11,6 +13,8 @@ type ArticleItem = {
   publishedAt?: string | null;
   viewCount?: number;
   previewHref?: string | null;
+  categoryHref?: string | null;
+  subHref?: string | null;
   authorMember?: {
     id: string;
     name: string | null;
@@ -87,6 +91,16 @@ function ViewCountBadge({ value }: { value: number }) {
   );
 }
 
+function LocationBadge({ categoryHref, subHref }: { categoryHref?: string | null; subHref?: string | null }) {
+  const location = getContentLocationLabel(categoryHref, subHref);
+  return (
+    <span className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-[rgba(180,154,107,0.28)] bg-[rgba(180,154,107,0.08)] px-3 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
+      <span className="text-[10px] uppercase tracking-[0.14em] text-[#9f8964]">栏目</span>
+      <span className="text-[13px] font-medium text-[#65543b]">{location.fullLabel}</span>
+    </span>
+  );
+}
+
 export function ManageContentList({
   items,
   canEdit,
@@ -121,7 +135,7 @@ export function ManageContentList({
                 }`}
               >
                 <div className="min-w-0 flex-1">
-                  <p className="flex items-center gap-2 text-[15px] font-medium text-primary">
+                  <p className="flex flex-wrap items-center gap-2 text-[15px] font-medium text-primary">
                     {item.previewHref ? (
                       <a
                         href={item.previewHref}
@@ -144,6 +158,7 @@ export function ManageContentList({
                     </span>
                   </p>
                   <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-2.5 text-xs text-muted">
+                    <LocationBadge categoryHref={item.categoryHref} subHref={item.subHref} />
                     <MetaItem label="提交账号" value={submitterLabel(item.authorMember ?? null)} />
                     <MetaItem label="发布时间" value={formatPublishedAt(item.publishedAt)} />
                     {item.status === "approved" ? <ViewCountBadge value={item.viewCount ?? 0} /> : null}

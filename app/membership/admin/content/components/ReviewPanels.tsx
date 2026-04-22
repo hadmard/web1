@@ -1,3 +1,5 @@
+import { getContentLocationLabel } from "@/lib/content-taxonomy";
+
 type Status = "draft" | "pending" | "approved" | "rejected";
 
 type ArticleItem = {
@@ -11,6 +13,8 @@ type ArticleItem = {
   source?: string | null;
   generationBatchId?: string | null;
   isPinned?: boolean;
+  categoryHref?: string | null;
+  subHref?: string | null;
   authorMember?: {
     id: string;
     name: string | null;
@@ -32,36 +36,39 @@ type ChangeRequestItem = {
     excerpt?: string | null;
     content?: string | null;
     isPinned?: boolean;
+    categoryHref?: string | null;
+    subHref?: string | null;
   };
   submitter: { name: string | null; email: string; role: string | null };
 };
 
 const TEXT = {
-  unknownUser: "\u672a\u77e5\u8d26\u53f7",
-  superAdmin: "\u4e3b\u7ba1\u7406\u5458",
-  admin: "\u5b50\u7ba1\u7406\u5458",
-  member: "\u4f1a\u5458",
-  seoDraft: "SEO \u8349\u7a3f",
-  noSeoDraft: "\u6682\u65e0\u81ea\u52a8\u751f\u6210\u7684 SEO \u8349\u7a3f",
-  pendingArticles: "\u5f85\u5ba1\u6838\u8d44\u8baf",
-  pendingChanges: "\u5f85\u5ba1\u6838\u4fee\u6539\u7533\u8bf7",
-  empty: "\u6682\u65e0",
-  pinned: "\u7f6e\u9876",
-  summary: "\u6458\u8981",
-  batch: "\u6279\u6b21",
-  submitter: "\u63d0\u4ea4\u8d26\u53f7",
-  standardCode: "\u6807\u51c6\u7f16\u53f7",
-  version: "\u7248\u672c",
-  notFilled: "\u672a\u586b\u5199",
-  editThenReview: "\u4fee\u6539\u540e\u5ba1\u6838",
-  approve: "\u901a\u8fc7",
-  reject: "\u9a73\u56de",
-  reason: "\u8bf4\u660e",
-  draftTitle: "\u62df\u4fee\u6539\u6807\u9898",
-  draftExcerpt: "\u62df\u4fee\u6539\u6458\u8981",
-  draftContent: "\u62df\u4fee\u6539\u6b63\u6587\uff1a\u5df2\u63d0\u4ea4",
-  reviewWithAdjustments: "\u67e5\u770b\u5e76\u8c03\u6574\u540e\u901a\u8fc7",
-  directApprove: "\u76f4\u63a5\u901a\u8fc7",
+  unknownUser: "未知账号",
+  superAdmin: "主管理员",
+  admin: "子管理员",
+  member: "会员",
+  seoDraft: "SEO 草稿",
+  noSeoDraft: "暂无自动生成的 SEO 草稿",
+  pendingArticles: "待审核资讯",
+  pendingChanges: "待审核修改申请",
+  empty: "暂无",
+  pinned: "置顶",
+  summary: "摘要",
+  batch: "批次",
+  submitter: "提交账号",
+  standardCode: "标准编号",
+  version: "版本",
+  notFilled: "未填写",
+  editThenReview: "修改后审核",
+  approve: "通过",
+  reject: "驳回",
+  reason: "说明",
+  draftTitle: "拟修改标题",
+  draftExcerpt: "拟修改摘要",
+  draftContent: "拟修改正文：已提交",
+  reviewWithAdjustments: "查看并调整后通过",
+  directApprove: "直接通过",
+  category: "栏目",
 } as const;
 
 function submitterLabel(user?: { name: string | null; email: string; role: string | null } | null) {
@@ -73,6 +80,11 @@ function submitterLabel(user?: { name: string | null; email: string; role: strin
         ? TEXT.admin
         : TEXT.member;
   return `${user.name?.trim() || user.email} (${roleLabel})`;
+}
+
+function LocationLine({ categoryHref, subHref }: { categoryHref?: string | null; subHref?: string | null }) {
+  const location = getContentLocationLabel(categoryHref, subHref);
+  return <p className="mt-1 text-xs text-muted">{`${TEXT.category}: ${location.fullLabel}`}</p>;
 }
 
 function ArticleReviewList({
@@ -101,7 +113,7 @@ function ArticleReviewList({
         <ul className="space-y-2">
           {items.map((item) => (
             <li key={item.id} className="border-b border-border pb-3 last:border-b-0 last:pb-0">
-              <p className="flex items-center gap-2 text-sm">
+              <p className="flex flex-wrap items-center gap-2 text-sm">
                 <span>{item.title}</span>
                 {item.isPinned && (
                   <span className="rounded-full border border-accent/40 px-2 py-0.5 text-[11px] text-accent">
@@ -114,6 +126,7 @@ function ArticleReviewList({
                   </span>
                 )}
               </p>
+              <LocationLine categoryHref={item.categoryHref} subHref={item.subHref} />
               {item.excerpt && (
                 <p className="mt-1 whitespace-pre-line text-xs text-muted">{`${TEXT.summary}: ${item.excerpt}`}</p>
               )}
@@ -214,6 +227,7 @@ export function ReviewPanels({
             {pendingChanges.map((item) => (
               <li key={item.id} className="rounded border p-3">
                 <p className="text-sm font-medium">{item.article.title}</p>
+                <LocationLine categoryHref={item.article.categoryHref} subHref={item.article.subHref} />
                 <p className="mt-1 text-xs text-muted">{`${TEXT.submitter}: ${submitterLabel(item.submitter)}`}</p>
                 {item.reason && <p className="mt-1 text-xs text-muted">{`${TEXT.reason}: ${item.reason}`}</p>}
                 {item.diffSummary ? (

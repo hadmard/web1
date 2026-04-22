@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { articleOrderByPinnedLatest } from "@/lib/articles";
 import { buildNewsPath, getArticleSegment } from "@/lib/share-config";
 import { decodeEscapedUnicode } from "@/lib/text";
+import { NEWS_AFTERMARKET_SUBCATEGORY } from "@/lib/news-aftermarket";
 
 export const revalidate = 300;
 export const dynamic = "force-dynamic";
@@ -31,6 +32,7 @@ const SIBLING_LINKS = [
   { href: "/news/enterprise", title: TEXT.enterprise, active: false },
   { href: "/news/tech", title: TEXT.tech, active: false },
   { href: "/news/events", title: TEXT.events, active: false },
+  { href: NEWS_AFTERMARKET_SUBCATEGORY.href, title: NEWS_AFTERMARKET_SUBCATEGORY.label, active: false },
 ] as const;
 
 export async function generateMetadata(): Promise<Metadata> {

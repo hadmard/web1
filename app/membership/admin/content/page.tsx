@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { CONTENT_TAB_DEFS, MEMBER_PUBLISH_CATEGORY_OPTIONS, resolveTabKeyFromHref, type ContentTabKey } from "@/lib/content-taxonomy";
+import { ADMIN_PUBLISH_CATEGORY_OPTIONS, CONTENT_TAB_DEFS, resolveTabKeyFromHref, type ContentTabKey } from "@/lib/content-taxonomy";
 import { ManageContentList } from "@/app/membership/admin/content/components/ManageContentListClean";
 import { ReviewPanels } from "@/app/membership/admin/content/components/ReviewPanels";
 import { ImageCropDialog } from "@/components/ImageCropDialog";
@@ -110,6 +110,7 @@ type ArticleItem = {
   keywords?: string | null;
   manualKeywords?: string | null;
   recommendIds?: string | null;
+  productRecommendations?: string | null;
   faqJson?: string | null;
   isPinned?: boolean;
   publishedAt?: string | null;
@@ -309,6 +310,7 @@ export default function AdminContentPage() {
   const [tagSlugs, setTagSlugs] = useState("");
   const [manualKeywords, setManualKeywords] = useState("");
   const [recommendIds, setRecommendIds] = useState("");
+  const [productRecommendations, setProductRecommendations] = useState("");
   const [isPinned, setIsPinned] = useState(false);
   const [documentMeta, setDocumentMeta] = useState<DocumentMetadata>(createEmptyDocumentMetadata());
 
@@ -333,6 +335,7 @@ export default function AdminContentPage() {
   const [editTagSlugs, setEditTagSlugs] = useState("");
   const [editManualKeywords, setEditManualKeywords] = useState("");
   const [editRecommendIds, setEditRecommendIds] = useState("");
+  const [editProductRecommendations, setEditProductRecommendations] = useState("");
   const [editSubHref, setEditSubHref] = useState("");
   const [editIsPinned, setEditIsPinned] = useState(false);
   const [editDocumentMeta, setEditDocumentMeta] = useState<DocumentMetadata>(createEmptyDocumentMetadata());
@@ -347,7 +350,7 @@ export default function AdminContentPage() {
 
 
   const selectedTabDef = useMemo(() => CONTENT_TAB_DEFS.find((x) => x.key === tab) ?? CONTENT_TAB_DEFS[0], [tab]);
-  const selectedCategory = useMemo(() => MEMBER_PUBLISH_CATEGORY_OPTIONS.find((x) => x.href === selectedTabDef.href) ?? MEMBER_PUBLISH_CATEGORY_OPTIONS[0], [selectedTabDef.href]);
+  const selectedCategory = useMemo(() => ADMIN_PUBLISH_CATEGORY_OPTIONS.find((x) => x.href === selectedTabDef.href) ?? ADMIN_PUBLISH_CATEGORY_OPTIONS[0], [selectedTabDef.href]);
   const subOptions = selectedCategory.subs;
   const supportsOwnedEnterprise = tab === "articles";
   const isDocumentTab = tab === "terms" || tab === "standards";
@@ -810,6 +813,7 @@ export default function AdminContentPage() {
       tagSlugs: tagSlugs || null,
       manualKeywords: manualKeywords || null,
       recommendIds: recommendIds || null,
+      productRecommendations: productRecommendations || null,
       faqJson: tab === "terms" || tab === "standards" ? stringifyDocumentMetadata(documentMeta) : null,
       syncToMainSite: true,
       isPinned,
@@ -858,6 +862,7 @@ export default function AdminContentPage() {
     setTagSlugs("");
     setManualKeywords("");
     setRecommendIds("");
+    setProductRecommendations("");
     setIsPinned(false);
     autoSlugRef.current = "";
     autoSeoRef.current = { seoTitle: "", seoKeywords: "", seoDescription: "" };
@@ -911,6 +916,7 @@ export default function AdminContentPage() {
     setEditTagSlugs(item.tagSlugs ?? "");
     setEditManualKeywords(item.manualKeywords ?? "");
     setEditRecommendIds(item.recommendIds ?? "");
+    setEditProductRecommendations(item.productRecommendations ?? "");
     setEditSubHref(item.subHref ?? subHref);
     setEditIsPinned(item.isPinned === true);
     setEditDocumentMeta(nextMeta);
@@ -968,6 +974,7 @@ export default function AdminContentPage() {
     setEditTagSlugs(item.patchTagSlugs ?? item.article.tagSlugs ?? "");
     setEditManualKeywords(items.find((entry) => entry.id === item.article.id)?.manualKeywords ?? pendingItems.find((entry) => entry.id === item.article.id)?.manualKeywords ?? "");
     setEditRecommendIds(items.find((entry) => entry.id === item.article.id)?.recommendIds ?? pendingItems.find((entry) => entry.id === item.article.id)?.recommendIds ?? "");
+    setEditProductRecommendations(items.find((entry) => entry.id === item.article.id)?.productRecommendations ?? pendingItems.find((entry) => entry.id === item.article.id)?.productRecommendations ?? "");
     setEditSubHref(item.patchSubHref ?? item.article.subHref ?? subHref);
     setEditIsPinned(item.article.isPinned === true);
     autoEditSlugRef.current = slugify(item.patchTitle ?? item.article.title ?? "");
@@ -1020,6 +1027,7 @@ export default function AdminContentPage() {
       tagSlugs: editTagSlugs || null,
       manualKeywords: editManualKeywords || null,
       recommendIds: editRecommendIds || null,
+      productRecommendations: editProductRecommendations || null,
       faqJson: tab === "terms" || tab === "standards" ? stringifyDocumentMetadata(editDocumentMeta) : null,
       isPinned: editIsPinned,
       status: nextStatus,
@@ -1543,6 +1551,14 @@ export default function AdminContentPage() {
                   placeholder="如：图森,整木定制,乌镇国际设计周"
                 />
                 <p className="text-xs text-muted">可直接手动填写；如果不想手填，点击右侧“自动生成”。保存后这里的关键词会优先用于前台展示、关键词页和相关阅读。</p>
+                <label className="block text-sm text-muted">相关产品推荐 JSON（可选，最多 3 个）</label>
+                <textarea
+                  className="w-full rounded border border-border bg-surface px-3 py-2 min-h-[110px] font-mono text-xs"
+                  value={productRecommendations}
+                  onChange={(e) => setProductRecommendations(e.target.value)}
+                  placeholder={'[{"title":"WOCA 木作清洁养护产品","url":"/product/981746066","sellingPoint":"进口护理方向"},{"title":"整木优选护理频道","url":"https://csj.cnzhengmu.com/h5/index.html?id=1#/category/care"}]'}
+                />
+                <p className="text-xs text-muted">支持 `/product/商品ID`、`/youxuan` 或 H5 绝对地址；字段支持 `title`、`url`、`imageUrl`、`sellingPoint`。</p>
               </>
             )}
             {tab !== "terms" && tab !== "brands" && tab !== "standards" && tab !== "industry-data" && tab !== "awards" && (
@@ -1837,6 +1853,14 @@ export default function AdminContentPage() {
                   placeholder="如：图森,整木定制,乌镇国际设计周"
                 />
                 <p className="text-xs text-muted">可直接手动调整；如果想重算，点击右侧“自动生成”。保存后这里的关键词会优先覆盖系统抽取结果，并用于前台展示与相关推荐。</p>
+                <label className="block text-sm text-muted">相关产品推荐 JSON（可选，最多 3 个）</label>
+                <textarea
+                  className="w-full rounded border border-border bg-surface px-3 py-2 min-h-[110px] font-mono text-xs"
+                  value={editProductRecommendations}
+                  onChange={(e) => setEditProductRecommendations(e.target.value)}
+                  placeholder={'[{"title":"WOCA 木作清洁养护产品","url":"/product/981746066","sellingPoint":"进口护理方向"}]'}
+                />
+                <p className="text-xs text-muted">保存后会在资讯详情页底部展示“相关产品推荐”；留空则不展示。</p>
               </>
             )}
             {tab !== "brands" && (

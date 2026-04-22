@@ -1,4 +1,6 @@
-﻿/**
+import { NEWS_AFTERMARKET_SUBCATEGORY } from "@/lib/news-aftermarket";
+
+/**
  * 站点结构：七大栏目 + 会员系统
  */
 export interface SubCategory {
@@ -29,6 +31,7 @@ export const categories: Category[] = [
       { href: "/news/enterprise", label: "企业动态" },
       { href: "/news/tech", label: "技术发展" },
       { href: "/news/events", label: "行业活动" },
+      { href: NEWS_AFTERMARKET_SUBCATEGORY.href, label: NEWS_AFTERMARKET_SUBCATEGORY.label },
     ],
   },
   {

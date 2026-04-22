@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { articleOrderByPinnedLatest, articleOrderByPinnedOldest } from "@/lib/articles";
 import { buildNewsPath } from "@/lib/share-config";
 import { decodeEscapedUnicode } from "@/lib/text";
+import { NEWS_AFTERMARKET_SUBCATEGORY } from "@/lib/news-aftermarket";
 
 export const revalidate = 300;
 export const dynamic = "force-dynamic";
@@ -29,6 +30,7 @@ const SUB_OPTIONS = [
   { value: "/news/enterprise", label: "企业动态" },
   { value: "/news/tech", label: "技术发展" },
   { value: "/news/events", label: "行业活动" },
+  { value: NEWS_AFTERMARKET_SUBCATEGORY.href, label: NEWS_AFTERMARKET_SUBCATEGORY.label },
 ] as const;
 
 type RangeKey = "" | "7d" | "30d" | "year";
@@ -90,6 +92,7 @@ function getNewsSectionLabel(href?: string | null) {
   if (href === "/news/enterprise") return "企业动态";
   if (href === "/news/tech") return "技术发展";
   if (href === "/news/events") return "行业活动";
+  if (href === NEWS_AFTERMARKET_SUBCATEGORY.href) return NEWS_AFTERMARKET_SUBCATEGORY.label;
   return "资讯";
 }
 

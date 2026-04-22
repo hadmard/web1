@@ -387,6 +387,7 @@ model Article {
   keywords            String?
   manualKeywords      String?       @map("manual_keywords")
   recommendIds        String?       @map("recommend_ids")
+  productRecommendations String?    @map("product_recommendations")
   syncToMainSite      Boolean       @default(false)
   isPinned            Boolean       @default(false)
   viewCount           Int           @default(0)

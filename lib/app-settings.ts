@@ -7,6 +7,7 @@ export const APP_SETTING_KEYS = {
   MEMBER_DOWNLOAD_REPORT_ENABLED: "member_download_report_enabled",
   SITE_VISUAL_SETTINGS: "site_visual_settings",
   MEMBERSHIP_RULES: "membership_rules",
+  NEWS_AFTERMARKET_CONFIG: "news_aftermarket_config",
 } as const;
 
 function parseBool(raw: string | null | undefined, fallback: boolean) {

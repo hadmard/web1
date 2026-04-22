@@ -11,6 +11,7 @@ import { formatKeywordCsv, syncArticleKeywords } from "@/lib/news-keywords-v2";
 import { buildNewsPath } from "@/lib/share-config";
 import { pushApprovedNewsToBaidu } from "@/lib/baidu-submit";
 import { buildDirtyTextErrorMessage } from "@/lib/article-input-guard";
+import { parseProductRecommendations, stringifyProductRecommendations } from "@/lib/news-aftermarket";
 
 function isAdmin(session: { role: string | null } | null) {
   return session?.role === "SUPER_ADMIN" || session?.role === "ADMIN";
@@ -129,6 +130,7 @@ export async function PATCH(
     reviewNote,
     manualKeywords,
     recommendIds,
+    productRecommendations,
   } = body;
 
   const nextCategoryHref =
@@ -177,6 +179,9 @@ export async function PATCH(
   if (typeof tagSlugs === "string") data.tagSlugs = tagSlugs.trim() || null;
   if (typeof manualKeywords === "string") data.manualKeywords = formatKeywordCsv(manualKeywords.split(/[,\n，]+/)) || null;
   if (typeof recommendIds === "string") data.recommendIds = recommendIds.trim() || null;
+  if (typeof productRecommendations === "string") {
+    data.productRecommendations = stringifyProductRecommendations(parseProductRecommendations(productRecommendations));
+  }
   if (typeof faqJson === "string") data.faqJson = faqJson.trim() || null;
   if (typeof isPinned === "boolean") data.isPinned = isPinned;
   if (syncToMainSite !== undefined) data.syncToMainSite = syncToMainSite === true;
@@ -273,6 +278,7 @@ export async function PATCH(
       keywords: true,
       manualKeywords: true,
       recommendIds: true,
+      productRecommendations: true,
       isPinned: true,
       status: true,
       reviewNote: true,

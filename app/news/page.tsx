@@ -7,6 +7,7 @@ import { articleOrderByPinnedLatest } from "@/lib/articles";
 import { prisma } from "@/lib/prisma";
 import { buildNewsPath } from "@/lib/share-config";
 import { decodeEscapedUnicode } from "@/lib/text";
+import { getNewsAftermarketConfig, NEWS_AFTERMARKET_SUBCATEGORY } from "@/lib/news-aftermarket";
 
 export const revalidate = 300;
 
@@ -22,6 +23,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function NewsPage() {
   const category = await getCategoryWithMetaByHref("/news");
   const subcategories = category?.subcategories ?? [];
+  const aftermarketConfig = await getNewsAftermarketConfig();
 
   const [articles, subcategoryRows] = await Promise.all([
     prisma.article.findMany({
@@ -41,7 +43,7 @@ export default async function NewsPage() {
             OR: [{ subHref: sub.href }, { categoryHref: sub.href }],
           },
           orderBy: articleOrderByPinnedLatest,
-          take: 3,
+          take: sub.href === NEWS_AFTERMARKET_SUBCATEGORY.href ? aftermarketConfig.homeDisplayCount : 3,
           select: { id: true, title: true, slug: true },
         })
       )
