@@ -534,14 +534,27 @@ function scoreCandidate(candidate: SeoTopicCandidate, acceptedTitles: string[]) 
   };
 }
 
-function buildSelectionPlan(count: number) {
-  if (count <= 3) return ["buying", "buying", "trend"] as SeoContentLine[];
+function getLatestNewsLine(existingReferences: ExistingSeoReference[]): SeoContentLine {
+  const latestNews = existingReferences.find(
+    (item) => (item.categoryHref || "").startsWith("/news") || (item.subHref || "").startsWith("/news"),
+  );
+
+  if ((latestNews?.subHref || "").startsWith("/news/tech")) return "tech";
+  return "trend";
+}
+
+function buildSelectionPlan(count: number, preferredDailyNewsLine: SeoContentLine) {
+  if (count <= 3) return ["buying", "buying", preferredDailyNewsLine] as SeoContentLine[];
   if (count === 4) return ["buying", "buying", "trend", "tech"] as SeoContentLine[];
   return ["buying", "buying", "buying", "trend", "tech"] as SeoContentLine[];
 }
 
-function pickByPlan(candidates: SeoTopicCandidate[], count: number) {
-  const plan = buildSelectionPlan(count);
+function pickByPlan(candidates: SeoTopicCandidate[], count: number, preferredDailyNewsLine: SeoContentLine) {
+  const plan = buildSelectionPlan(count, preferredDailyNewsLine);
+  const quotas = plan.reduce<Record<string, number>>((acc, line) => {
+    acc[line] = (acc[line] || 0) + 1;
+    return acc;
+  }, {});
   const picked: SeoTopicCandidate[] = [];
 
   for (const line of plan) {
@@ -560,12 +573,27 @@ function pickByPlan(candidates: SeoTopicCandidate[], count: number) {
 
   for (const candidate of candidates) {
     if (picked.length >= count) break;
+    if ((picked.filter((item) => item.contentLine === candidate.contentLine).length || 0) >= (quotas[candidate.contentLine] || 0)) {
+      continue;
+    }
     if (picked.some((item) => item.keywordSeed === candidate.keywordSeed)) continue;
     if (picked.some((item) => getTitleSimilarity(item.title, candidate.title) >= 0.84)) continue;
     if (!titleNaturalnessCheck(candidate.title).ok) continue;
     if (!mainSeedBatchDiversityCheck(candidate, picked).ok) continue;
     if (!titleSuffixDiversityCheck(candidate.title, picked.map((item) => item.title)).ok) continue;
     picked.push(candidate);
+  }
+
+  if (count >= 4) {
+    for (const candidate of candidates) {
+      if (picked.length >= count) break;
+      if (picked.some((item) => item.keywordSeed === candidate.keywordSeed)) continue;
+      if (picked.some((item) => getTitleSimilarity(item.title, candidate.title) >= 0.84)) continue;
+      if (!titleNaturalnessCheck(candidate.title).ok) continue;
+      if (!mainSeedBatchDiversityCheck(candidate, picked).ok) continue;
+      if (!titleSuffixDiversityCheck(candidate.title, picked.map((item) => item.title)).ok) continue;
+      picked.push(candidate);
+    }
   }
 
   return picked.slice(0, count);
@@ -611,6 +639,7 @@ export async function pickSeoTopicsForGeneration(count = 3) {
 
   const existingReferences = await loadExistingSeoReferences();
   const buyingExistingCount = existingReferences.filter(isBuyingArticle).length;
+  const preferredDailyNewsLine = getLatestNewsLine(existingReferences) === "trend" ? "tech" : "trend";
 
   const boosted = candidates
     .map((candidate) => ({
@@ -623,7 +652,7 @@ export async function pickSeoTopicsForGeneration(count = 3) {
     }))
     .sort((a, b) => b.totalScore - a.totalScore);
 
-  let picked = pickByPlan(boosted, count);
+  let picked = pickByPlan(boosted, count, preferredDailyNewsLine);
   if (count >= 4) {
     const trendAiCandidate = boosted.find(
       (item) => item.contentLine === "trend" && /AI/.test(item.title) && titleNaturalnessCheck(item.title).ok,
@@ -641,9 +670,12 @@ export async function pickSeoTopicsForGeneration(count = 3) {
       if (techIndex >= 0) picked[techIndex] = techAiCandidate;
     }
   } else if (count >= 3 && !picked.some((item) => /AI/.test(item.title))) {
-    const aiCandidate = boosted.find((item) => /AI/.test(item.title) && titleNaturalnessCheck(item.title).ok);
+    const aiCandidate = boosted.find(
+      (item) =>
+        item.contentLine === preferredDailyNewsLine && /AI/.test(item.title) && titleNaturalnessCheck(item.title).ok,
+    );
     if (aiCandidate) {
-      const replacementIndex = picked.findIndex((item) => item.contentLine === aiCandidate.contentLine);
+      const replacementIndex = picked.findIndex((item) => item.contentLine === preferredDailyNewsLine);
       if (replacementIndex >= 0) picked[replacementIndex] = aiCandidate;
     }
   }
