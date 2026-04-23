@@ -1,11 +1,10 @@
 ﻿"use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import {
   CONTENT_TAB_DEFS,
-  resolveTabKeyFromHref,
   type ContentTabKey,
 } from "@/lib/content-taxonomy";
 
@@ -18,15 +17,11 @@ type SidebarGroup = {
   withAuditBadge?: boolean;
 };
 
-type PendingArticle = { categoryHref?: string | null; subHref?: string | null };
-type PendingChange = {
-  article?: { categoryHref?: string | null; subHref?: string | null } | null;
-};
-
 type CollapseState = Record<string, boolean>;
 
 const COLLAPSE_STORAGE_KEY = "admin_sidebar_collapse_state_v1";
 const SCROLL_STORAGE_KEY = "admin_sidebar_scroll_top_v1";
+const ADMIN_AUDIT_COUNTS_REFRESH_EVENT = "admin-audit-counts-refresh";
 
 const SIDEBAR: SidebarGroup[] = [
   {
@@ -173,19 +168,9 @@ export default function AdminLayoutClient({ children }: { children: React.ReactN
     })();
   }, []);
 
-  useEffect(() => {
+  const loadAuditCounts = useCallback(async () => {
     if (role !== "SUPER_ADMIN" && role !== "ADMIN") {
-      setPendingEnterpriseVerificationCount(0);
-      return;
-    }
-    (async () => {
-      const [aRes, cRes, vRes] = await Promise.all([
-        fetch("/api/admin/articles?status=pending&limit=500", { credentials: "include" }),
-        fetch("/api/admin/article-change-requests?status=pending&limit=500", { credentials: "include" }),
-        fetch("/api/admin/enterprise-verifications?status=pending&limit=500", { credentials: "include" }),
-      ]);
-
-      const nextCounts: Record<ContentTabKey, number> = {
+      setAuditCounts({
         articles: 0,
         brands: 0,
         buying: 0,
@@ -194,36 +179,86 @@ export default function AdminLayoutClient({ children }: { children: React.ReactN
         "industry-data": 0,
         awards: 0,
         gallery: 0,
-      };
+      });
+      setPendingEnterpriseVerificationCount(0);
+      return;
+    }
 
-      if (aRes.ok) {
-        const data = await aRes.json();
-        const items: PendingArticle[] = Array.isArray(data.items) ? data.items : [];
-        for (const item of items) {
-          const key = resolveTabKeyFromHref(item.categoryHref, item.subHref);
-          nextCounts[key] += 1;
-        }
-      }
+    const [articleResponses, changeResponses, vRes] = await Promise.all([
+      Promise.all(
+        CONTENT_TAB_DEFS.map((tabDef) =>
+          fetch(`/api/admin/articles?status=pending&limit=1&tab=${tabDef.key}`, {
+            credentials: "include",
+            cache: "no-store",
+          })
+        )
+      ),
+      Promise.all(
+        CONTENT_TAB_DEFS.map((tabDef) =>
+          fetch(`/api/admin/article-change-requests?status=pending&limit=1&tab=${tabDef.key}`, {
+            credentials: "include",
+            cache: "no-store",
+          })
+        )
+      ),
+      fetch("/api/admin/enterprise-verifications?status=pending&limit=1", {
+        credentials: "include",
+        cache: "no-store",
+      }),
+    ]);
 
-      if (cRes.ok) {
-        const data = await cRes.json();
-        const items: PendingChange[] = Array.isArray(data.items) ? data.items : [];
-        for (const item of items) {
-          const key = resolveTabKeyFromHref(item.article?.categoryHref, item.article?.subHref);
-          nextCounts[key] += 1;
-        }
-      }
+    const nextCounts: Record<ContentTabKey, number> = {
+      articles: 0,
+      brands: 0,
+      buying: 0,
+      terms: 0,
+      standards: 0,
+      "industry-data": 0,
+      awards: 0,
+      gallery: 0,
+    };
 
-      setAuditCounts(nextCounts);
-      if (vRes.ok) {
-        const data = await vRes.json();
-        const items = Array.isArray(data.items) ? data.items : [];
-        setPendingEnterpriseVerificationCount(items.length);
-      } else {
-        setPendingEnterpriseVerificationCount(0);
-      }
-    })();
+    await Promise.all(
+      CONTENT_TAB_DEFS.map(async (tabDef, index) => {
+        const [articleData, changeData] = await Promise.all([
+          articleResponses[index]?.ok ? articleResponses[index].json().catch(() => ({})) : Promise.resolve({}),
+          changeResponses[index]?.ok ? changeResponses[index].json().catch(() => ({})) : Promise.resolve({}),
+        ]);
+        nextCounts[tabDef.key] = Number(articleData.total ?? 0) + Number(changeData.total ?? 0);
+      })
+    );
+
+    setAuditCounts(nextCounts);
+    if (vRes.ok) {
+      const data = await vRes.json().catch(() => ({}));
+      setPendingEnterpriseVerificationCount(Number(data.total ?? 0));
+    } else {
+      setPendingEnterpriseVerificationCount(0);
+    }
   }, [role]);
+
+  useEffect(() => {
+    void loadAuditCounts();
+  }, [loadAuditCounts]);
+
+  useEffect(() => {
+    if (role !== "SUPER_ADMIN" && role !== "ADMIN") return;
+
+    const refresh = () => {
+      if (document.visibilityState === "hidden") return;
+      void loadAuditCounts();
+    };
+
+    window.addEventListener(ADMIN_AUDIT_COUNTS_REFRESH_EVENT, refresh);
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+
+    return () => {
+      window.removeEventListener(ADMIN_AUDIT_COUNTS_REFRESH_EVENT, refresh);
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [loadAuditCounts, role]);
 
   useEffect(() => {
     setMobileSidebarOpen(false);

@@ -164,6 +164,7 @@ function parseManageSourceFilter(raw: string | null): ManageSourceFilter {
 }
 
 const COVER_IMAGE_MAX_BYTES = 2 * 1024 * 1024;
+const ADMIN_AUDIT_COUNTS_REFRESH_EVENT = "admin-audit-counts-refresh";
 
 const BRAND_REGION_OPTIONS = ["全国", "华东", "华中", "华南", "西南", "西北", "华北", "东北"] as const;
 
@@ -258,6 +259,11 @@ function scrollToManagedItem(itemId: string, behavior: ScrollBehavior = "smooth"
   const top = window.scrollY + element.getBoundingClientRect().top - 170;
   window.scrollTo({ top: Math.max(0, top), behavior });
   return true;
+}
+
+function notifyAdminAuditCountsRefresh() {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(ADMIN_AUDIT_COUNTS_REFRESH_EVENT));
 }
 
 export default function AdminContentPage() {
@@ -1059,6 +1065,7 @@ export default function AdminContentPage() {
     setEditingId(null); setEditingChangeId(null); setEditOwnedEnterpriseId(""); setReviewAction(null);
     if (mode === "review") {
       await loadReview();
+      notifyAdminAuditCountsRefresh();
     } else {
       await loadList();
       const returnItemId = manageReturnItemIdRef.current ?? savedEditingId;
@@ -1098,12 +1105,14 @@ export default function AdminContentPage() {
     }
     setMessage(`已${status === "approved" ? "通过" : "驳回"}。`);
     await loadReview();
+    notifyAdminAuditCountsRefresh();
   }
 
   async function reviewChange(id: string, status: "approved" | "rejected") {
     const res = await fetch(`/api/admin/article-change-requests/${id}`, { method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) });
     if (!res.ok) { setMessage("修改申请审核失败"); return; }
     await loadReview();
+    notifyAdminAuditCountsRefresh();
   }
 
   async function saveEditAndApproveChange() {
