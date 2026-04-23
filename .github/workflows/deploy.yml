@@ -442,82 +442,57 @@ jobs:
               exit "$manual_exit"
             fi
 
-            node - "$start_iso" <<'NODE'
+            if [ ! -f /home/web1/logs/seo-news-cron-status.json ]; then
+              echo "::error::SEO_MANUAL_STATUS_FILE_MISSING=/home/web1/logs/seo-news-cron-status.json"
+              exit 1
+            fi
+
+            while IFS= read -r line; do
+              if [ -n "$line" ]; then
+                echo "::warning::SEO_MANUAL_STATUS=$line"
+              fi
+            done < /home/web1/logs/seo-news-cron-status.json
+
+            verify_line="$(grep 'VERIFY {' /home/web1/logs/seo-news-cron.log | tail -n 1 || true)"
+            if [ -z "$verify_line" ]; then
+              echo "::error::SEO_MANUAL_VERIFY_LINE_MISSING"
+              tail -n 80 /home/web1/logs/seo-news-cron.log | while IFS= read -r line; do
+                if [ -n "$line" ]; then
+                  echo "::warning::SEO_MANUAL_LOG=$line"
+                fi
+              done
+              exit 1
+            fi
+
+            echo "::warning::SEO_MANUAL_VERIFY=$verify_line"
+
+            batch_id="$(sed -n 's/.*"generationBatchId":"\([^"]*\)".*/\1/p' /home/web1/logs/seo-news-cron-status.json | head -n 1)"
+            if [ -z "$batch_id" ]; then
+              echo "::error::SEO_MANUAL_BATCH_ID_MISSING"
+              exit 1
+            fi
+
+            node - "$batch_id" <<'NODE'
             const { PrismaClient } = require("@prisma/client");
 
             const prisma = new PrismaClient();
-            const since = new Date(process.argv[2]);
+            const batchId = process.argv[2];
 
             (async () => {
-              const latest = await prisma.article.findFirst({
-                where: {
-                  source: "auto_dual_line_seo_generator",
-                  createdAt: { gte: since },
-                },
-                orderBy: [{ createdAt: "desc" }],
-                select: {
-                  generationBatchId: true,
-                },
-              });
+              const reg = await prisma.$queryRawUnsafe(`SELECT to_regclass('public.baidu_push_jobs') AS name`);
+              let count = 0;
 
-              if (!latest?.generationBatchId) {
-                throw new Error(`no_batch_found_since_${since.toISOString()}`);
-              }
-
-              const rows = await prisma.article.findMany({
-                where: {
-                  generationBatchId: latest.generationBatchId,
-                },
-                orderBy: [{ createdAt: "asc" }],
-                select: {
-                  id: true,
-                  title: true,
-                  status: true,
-                  contentLine: true,
-                  categoryLabel: true,
-                  subCategoryLabel: true,
-                  categoryHref: true,
-                  subHref: true,
-                  publishedAt: true,
-                },
-              });
-
-              const ids = rows.map((row) => row.id);
-              let jobs = [];
-              if (ids.length) {
-                try {
-                  jobs = await prisma.$queryRawUnsafe(
-                    `SELECT article_id, status, source, pushed_at, last_error FROM baidu_push_jobs WHERE article_id IN (${ids.map((id) => `'${id}'`).join(",")}) ORDER BY article_id ASC`,
-                  );
-                } catch (error) {
-                  const message = error instanceof Error ? error.message : String(error);
-                  if (!/baidu_push_jobs/i.test(message)) {
-                    throw error;
-                  }
-                }
-              }
-
-              console.log(`::warning::SEO_MANUAL_BATCH_ID=${latest.generationBatchId}`);
-              console.log(`::warning::SEO_MANUAL_SAVED_COUNT=${rows.length}`);
-              console.log(`::warning::SEO_MANUAL_PENDING_COUNT=${rows.filter((row) => row.status === "pending").length}`);
-              for (const row of rows) {
-                console.log(
-                  `::warning::SEO_MANUAL_ITEM=${JSON.stringify({
-                    title: row.title,
-                    status: row.status,
-                    contentLine: row.contentLine,
-                    categoryLabel: row.categoryLabel,
-                    subCategoryLabel: row.subCategoryLabel,
-                    categoryHref: row.categoryHref,
-                    subHref: row.subHref,
-                    publishedAt: row.publishedAt,
-                  })}`,
+              if (Array.isArray(reg) && reg[0]?.name) {
+                const rows = await prisma.$queryRawUnsafe(
+                  `SELECT COUNT(*)::int AS count FROM baidu_push_jobs WHERE article_id IN (SELECT id FROM articles WHERE generation_batch_id = '${batchId}')`,
                 );
+                count = Number(rows?.[0]?.count || 0);
               }
-              console.log(`::warning::SEO_MANUAL_BAIDU_JOBS=${JSON.stringify(jobs)}`);
+
+              console.log(`::warning::SEO_MANUAL_BAIDU_JOB_COUNT=${count}`);
             })()
               .catch((error) => {
-                console.error(`::error::SEO_MANUAL_VERIFY_FAILED=${error instanceof Error ? error.stack || error.message : String(error)}`);
+                console.error(`::error::SEO_MANUAL_BAIDU_CHECK_FAILED=${error instanceof Error ? error.stack || error.message : String(error)}`);
                 process.exit(1);
               })
               .finally(async () => {
