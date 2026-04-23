@@ -556,42 +556,54 @@ function pickByPlan(candidates: SeoTopicCandidate[], count: number, preferredDai
     return acc;
   }, {});
   const picked: SeoTopicCandidate[] = [];
+  const canUseCandidate = (
+    candidate: SeoTopicCandidate,
+    strict = true,
+    enforceQuota = true,
+  ) => {
+    if (
+      enforceQuota &&
+      (picked.filter((item) => item.contentLine === candidate.contentLine).length || 0) >= (quotas[candidate.contentLine] || 0)
+    ) {
+      return false;
+    }
+    if (picked.some((item) => item.keywordSeed === candidate.keywordSeed)) return false;
+    if (picked.some((item) => getTitleSimilarity(item.title, candidate.title) >= (strict ? 0.84 : 0.92))) return false;
+    if (!titleNaturalnessCheck(candidate.title).ok) return false;
+    if (strict && !mainSeedBatchDiversityCheck(candidate, picked).ok) return false;
+    return titleSuffixDiversityCheck(candidate.title, picked.map((item) => item.title)).ok;
+  };
 
   for (const line of plan) {
     const next = candidates
       .filter((item) => item.contentLine === line)
-      .find((item) => {
-        if (picked.some((pickedItem) => pickedItem.keywordSeed === item.keywordSeed)) return false;
-        if (picked.some((pickedItem) => getTitleSimilarity(pickedItem.title, item.title) >= 0.84)) return false;
-        if (!titleNaturalnessCheck(item.title).ok) return false;
-        if (!mainSeedBatchDiversityCheck(item, picked).ok) return false;
-        return titleSuffixDiversityCheck(item.title, picked.map((pickedItem) => pickedItem.title)).ok;
-      });
+      .find((item) => canUseCandidate(item, true, true));
 
     if (next) picked.push(next);
   }
 
   for (const candidate of candidates) {
     if (picked.length >= count) break;
-    if ((picked.filter((item) => item.contentLine === candidate.contentLine).length || 0) >= (quotas[candidate.contentLine] || 0)) {
-      continue;
-    }
-    if (picked.some((item) => item.keywordSeed === candidate.keywordSeed)) continue;
-    if (picked.some((item) => getTitleSimilarity(item.title, candidate.title) >= 0.84)) continue;
-    if (!titleNaturalnessCheck(candidate.title).ok) continue;
-    if (!mainSeedBatchDiversityCheck(candidate, picked).ok) continue;
-    if (!titleSuffixDiversityCheck(candidate.title, picked.map((item) => item.title)).ok) continue;
+    if (!canUseCandidate(candidate, true, true)) continue;
     picked.push(candidate);
+  }
+
+  for (const line of plan) {
+    if (picked.length >= count) break;
+    while ((picked.filter((item) => item.contentLine === line).length || 0) < (quotas[line] || 0)) {
+      const fallback = candidates
+        .filter((item) => item.contentLine === line)
+        .find((item) => canUseCandidate(item, false, true));
+      if (!fallback) break;
+      picked.push(fallback);
+      if (picked.length >= count) break;
+    }
   }
 
   if (count >= 4) {
     for (const candidate of candidates) {
       if (picked.length >= count) break;
-      if (picked.some((item) => item.keywordSeed === candidate.keywordSeed)) continue;
-      if (picked.some((item) => getTitleSimilarity(item.title, candidate.title) >= 0.84)) continue;
-      if (!titleNaturalnessCheck(candidate.title).ok) continue;
-      if (!mainSeedBatchDiversityCheck(candidate, picked).ok) continue;
-      if (!titleSuffixDiversityCheck(candidate.title, picked.map((item) => item.title)).ok) continue;
+      if (!canUseCandidate(candidate, false, false)) continue;
       picked.push(candidate);
     }
   }
