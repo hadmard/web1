@@ -27,6 +27,20 @@ jobs:
             cd /home/web1
             sed -i 's/\r$//' /home/web1/scripts/run-seo-news-cron.sh
 
+            if [ -f /home/web1/.env.production ]; then
+              env_file="/home/web1/.env.production"
+            else
+              env_file="/home/web1/.env"
+            fi
+
+            if [ -f "$env_file" ]; then
+              if grep -q '^SEO_NEWS_AUTOGEN_ENABLED=' "$env_file"; then
+                sed -i 's/^SEO_NEWS_AUTOGEN_ENABLED=.*/SEO_NEWS_AUTOGEN_ENABLED=true/' "$env_file"
+              else
+                printf '\nSEO_NEWS_AUTOGEN_ENABLED=true\n' >> "$env_file"
+              fi
+            fi
+
             cron_tz="CRON_TZ=Asia/Shanghai"
             cron_entry_generate="30 7 * * * /bin/bash /home/web1/scripts/run-seo-news-cron.sh --count 3"
             cron_entry_check_740="40 7 * * * /bin/bash /home/web1/scripts/run-seo-news-cron.sh --mode check"
@@ -34,6 +48,8 @@ jobs:
 
             echo "SEO_CRON_PROJECT_DIR=$(pwd)"
             echo "SEO_CRON_USER=$(whoami)"
+            echo "SEO_CRON_ENV_FILE=$env_file"
+            echo "SEO_CRON_AUTOGEN=$(grep '^SEO_NEWS_AUTOGEN_ENABLED=' \"$env_file\" 2>/dev/null || true)"
             echo "SEO_CRON_TZ=$cron_tz"
             echo "SEO_CRON_TARGET_GENERATE=$cron_entry_generate"
             echo "SEO_CRON_TARGET_CHECK_740=$cron_entry_check_740"
@@ -44,7 +60,7 @@ jobs:
 
             tmp_cron="$(mktemp)"
             {
-              crontab -l 2>/dev/null | grep -F -v 'CRON_TZ=Asia/Shanghai' | grep -F -v '/home/web1/scripts/run-seo-news-cron.sh --count 3' | grep -F -v '/home/web1/scripts/run-seo-news-cron.sh --mode check' || true
+              crontab -l 2>/dev/null | grep -F -v 'CRON_TZ=Asia/Shanghai' | grep -F -v '/home/web1/scripts/run-seo-news-cron.sh' || true
               echo "$cron_tz"
               echo "$cron_entry_generate"
               echo "$cron_entry_check_740"

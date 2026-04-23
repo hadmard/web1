@@ -353,6 +353,20 @@ jobs:
             cd /home/web1
             sed -i 's/\r$//' /home/web1/scripts/run-seo-news-cron.sh
 
+            if [ -f /home/web1/.env.production ]; then
+              env_file="/home/web1/.env.production"
+            else
+              env_file="/home/web1/.env"
+            fi
+
+            if [ -f "$env_file" ]; then
+              if grep -q '^SEO_NEWS_AUTOGEN_ENABLED=' "$env_file"; then
+                sed -i 's/^SEO_NEWS_AUTOGEN_ENABLED=.*/SEO_NEWS_AUTOGEN_ENABLED=true/' "$env_file"
+              else
+                printf '\nSEO_NEWS_AUTOGEN_ENABLED=true\n' >> "$env_file"
+              fi
+            fi
+
             cron_tz="CRON_TZ=Asia/Shanghai"
             cron_entry_generate="30 7 * * * /bin/bash /home/web1/scripts/run-seo-news-cron.sh --count 3"
             cron_entry_check_740="40 7 * * * /bin/bash /home/web1/scripts/run-seo-news-cron.sh --mode check"
@@ -360,7 +374,7 @@ jobs:
 
             tmp_cron="$(mktemp)"
             {
-              crontab -l 2>/dev/null | grep -F -v 'CRON_TZ=Asia/Shanghai' | grep -F -v '/home/web1/scripts/run-seo-news-cron.sh --count 3' | grep -F -v '/home/web1/scripts/run-seo-news-cron.sh --mode check' || true
+              crontab -l 2>/dev/null | grep -F -v 'CRON_TZ=Asia/Shanghai' | grep -F -v '/home/web1/scripts/run-seo-news-cron.sh' || true
               echo "$cron_tz"
               echo "$cron_entry_generate"
               echo "$cron_entry_check_740"
@@ -371,6 +385,8 @@ jobs:
             rm -f "$tmp_cron"
 
             echo "::warning::SEO_CRON_USER=$(whoami)"
+            echo "::warning::SEO_CRON_ENV_FILE=$env_file"
+            echo "::warning::SEO_CRON_AUTOGEN=$(grep '^SEO_NEWS_AUTOGEN_ENABLED=' \"$env_file\" 2>/dev/null || true)"
             echo "::warning::SEO_CRON_SERVER_TIME=$(date '+%Y-%m-%d %H:%M:%S %Z %z')"
             echo "::warning::SEO_CRON_TIMEZONE_FILE=$(cat /etc/timezone 2>/dev/null || true)"
             echo "::warning::SEO_CRON_TIMEDATECTL=$(timedatectl show --property=Timezone --value 2>/dev/null || true)"
@@ -401,8 +417,30 @@ jobs:
               set +a
             fi
 
+            echo "::warning::SEO_MANUAL_COMMAND=/bin/bash /home/web1/scripts/run-seo-news-cron.sh --count 3 --mode manual"
+            echo "::warning::SEO_MANUAL_EFFECTIVE_AUTOGEN=${SEO_NEWS_AUTOGEN_ENABLED:-unset}"
             start_iso="$(date -Iseconds)"
+            set +e
             /bin/bash /home/web1/scripts/run-seo-news-cron.sh --count 3 --mode manual
+            manual_exit=$?
+            set -e
+
+            if [ "$manual_exit" -ne 0 ]; then
+              echo "::error::SEO_MANUAL_EXIT=$manual_exit"
+              if [ -f /home/web1/logs/seo-news-cron-status.json ]; then
+                while IFS= read -r line; do
+                  if [ -n "$line" ]; then
+                    echo "::warning::SEO_MANUAL_STATUS=$line"
+                  fi
+                done < /home/web1/logs/seo-news-cron-status.json
+              fi
+              tail -n 80 /home/web1/logs/seo-news-cron.log | while IFS= read -r line; do
+                if [ -n "$line" ]; then
+                  echo "::warning::SEO_MANUAL_LOG=$line"
+                fi
+              done
+              exit "$manual_exit"
+            fi
 
             node - "$start_iso" <<'NODE'
             const { PrismaClient } = require("@prisma/client");
