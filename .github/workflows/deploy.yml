@@ -483,11 +483,19 @@ jobs:
               });
 
               const ids = rows.map((row) => row.id);
-              const jobs = ids.length
-                ? await prisma.$queryRawUnsafe(
+              let jobs = [];
+              if (ids.length) {
+                try {
+                  jobs = await prisma.$queryRawUnsafe(
                     `SELECT article_id, status, source, pushed_at, last_error FROM baidu_push_jobs WHERE article_id IN (${ids.map((id) => `'${id}'`).join(",")}) ORDER BY article_id ASC`,
-                  )
-                : [];
+                  );
+                } catch (error) {
+                  const message = error instanceof Error ? error.message : String(error);
+                  if (!/baidu_push_jobs/i.test(message)) {
+                    throw error;
+                  }
+                }
+              }
 
               console.log(`::warning::SEO_MANUAL_BATCH_ID=${latest.generationBatchId}`);
               console.log(`::warning::SEO_MANUAL_SAVED_COUNT=${rows.length}`);
