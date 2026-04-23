@@ -7,6 +7,14 @@ function readArg(name: string) {
   return index >= 0 ? process.argv[index + 1] ?? "" : "";
 }
 
+function detectTriggerSource(batchId: string | null | undefined) {
+  if (!batchId) return "unknown";
+  if (batchId.includes("-manual-")) return "manual";
+  if (batchId.includes("-cron-")) return "cron";
+  if (batchId.includes("-dry_run-")) return "dry_run";
+  return "unknown";
+}
+
 async function main() {
   const sinceArg = readArg("since");
   if (!sinceArg) {
@@ -36,6 +44,7 @@ async function main() {
       console.log(
         JSON.stringify({
           generationBatchId: null,
+          triggerSource: "unknown",
           savedCount: 0,
           pendingCount: 0,
           items: [],
@@ -58,6 +67,7 @@ async function main() {
     console.log(
       JSON.stringify({
         generationBatchId: latest.generationBatchId,
+        triggerSource: detectTriggerSource(latest.generationBatchId),
         savedCount: rows.length,
         pendingCount: rows.filter((row) => row.status === "pending").length,
         items: rows.slice(0, 5).map((row) => row.title),

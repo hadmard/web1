@@ -8,6 +8,7 @@ STATUS_FILE="$LOG_DIR/seo-news-cron-status.json"
 LOCK_FILE="/tmp/seo-news-cron.lock"
 COUNT="3"
 MODE="cron"
+TRIGGER_SOURCE="cron"
 PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${PATH:-}"
 export PATH
 export TZ="${TZ:-Asia/Shanghai}"
@@ -28,6 +29,14 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+if [[ "$MODE" == "manual" ]]; then
+  TRIGGER_SOURCE="manual"
+elif [[ "$MODE" == "cron" ]]; then
+  TRIGGER_SOURCE="cron"
+else
+  TRIGGER_SOURCE="check"
+fi
 
 mkdir -p "$LOG_DIR"
 touch "$LOG_FILE"
@@ -51,10 +60,21 @@ write_status() {
   local message="$3"
   local batch_id="${4:-}"
   local saved_count="${5:-}"
+  local trigger_source="${6:-$TRIGGER_SOURCE}"
 
   cat >"$STATUS_FILE" <<EOF
-{"updatedAt":"$(date -Iseconds)","tz":"${TZ:-Asia/Shanghai}","status":"$status","stage":"$stage","message":"$message","generationBatchId":"$batch_id","savedCount":"$saved_count","mode":"$MODE"}
+{"updatedAt":"$(date -Iseconds)","tz":"${TZ:-Asia/Shanghai}","status":"$status","stage":"$stage","message":"$message","generationBatchId":"$batch_id","savedCount":"$saved_count","mode":"$MODE","triggerSource":"$trigger_source"}
 EOF
+}
+
+extract_trigger_source() {
+  local batch_id="${1:-}"
+  case "$batch_id" in
+    *-manual-*) echo "manual" ;;
+    *-cron-*) echo "cron" ;;
+    *-dry_run-*) echo "dry_run" ;;
+    *) echo "unknown" ;;
+  esac
 }
 
 load_env() {
@@ -77,7 +97,7 @@ load_env() {
   fi
 }
 
-log "START mode=$MODE project_dir=$PROJECT_DIR args=\"$*\""
+log "START mode=$MODE triggerSource=$TRIGGER_SOURCE project_dir=$PROJECT_DIR args=\"$*\""
 
 exec 9>"$LOCK_FILE"
 if ! flock -n 9; then
@@ -96,7 +116,7 @@ if [[ -z "$NODE_BIN" || -z "$NPM_BIN" || -z "$NPX_BIN" ]]; then
   exit 1
 fi
 
-COMMAND_STRING="$NPM_BIN run generate:dual-line-seo -- --count $COUNT --approved false --timezone Asia/Shanghai"
+COMMAND_STRING="$NPM_BIN run generate:dual-line-seo -- --count $COUNT --approved false --timezone Asia/Shanghai --trigger-source $TRIGGER_SOURCE"
 
 load_env
 
@@ -192,8 +212,9 @@ NODE
 
   batch_id="$(printf '%s' "$VERIFY_JSON" | sed -n 's/.*"generationBatchId":"\([^"]*\)".*/\1/p' | head -n 1)"
   saved_count="$(printf '%s' "$VERIFY_JSON" | sed -n 's/.*"savedCount":\([0-9][0-9]*\).*/\1/p' | head -n 1)"
+  trigger_source="$(extract_trigger_source "$batch_id")"
   log "CHECK_OK $VERIFY_JSON"
-  write_status "ok" "check" "today batch exists" "${batch_id:-}" "${saved_count:-}"
+  write_status "ok" "check" "today batch exists" "${batch_id:-}" "${saved_count:-}" "${trigger_source:-unknown}"
   exit 0
 fi
 
@@ -212,7 +233,7 @@ cat "$RUN_OUTPUT"
 if [[ "$EXIT_CODE" -ne 0 ]]; then
   log "FAIL seo news generation command exit_code=$EXIT_CODE"
   tail -n 80 "$RUN_OUTPUT" || true
-  write_status "error" "generate" "seo news generation command exit_code=$EXIT_CODE"
+  write_status "error" "generate" "seo news generation command exit_code=$EXIT_CODE" "" "" "$TRIGGER_SOURCE"
   rm -f "$RUN_OUTPUT"
   exit "$EXIT_CODE"
 fi
@@ -291,14 +312,14 @@ NODE
 
 if [[ -z "$VERIFY_JSON" ]]; then
   log "FAIL verify output missing"
-  write_status "error" "verify" "verify output missing"
+  write_status "error" "verify" "verify output missing" "" "" "$TRIGGER_SOURCE"
   rm -f "$RUN_OUTPUT"
   exit 1
 fi
 
 if [[ "$VERIFY_JSON" != *'"ok":true'* ]]; then
   log "FAIL verify step returned unexpected payload: $VERIFY_JSON"
-  write_status "error" "verify" "$VERIFY_JSON"
+  write_status "error" "verify" "$VERIFY_JSON" "" "" "$TRIGGER_SOURCE"
   rm -f "$RUN_OUTPUT"
   exit 1
 fi
@@ -309,6 +330,6 @@ pending_count="$(printf '%s' "$VERIFY_JSON" | sed -n 's/.*"pendingCount":\([0-9]
 
 log "VERIFY $VERIFY_JSON"
 log "SUCCESS generated_saved_count=${saved_count:-unknown} pending_count=${pending_count:-unknown}"
-write_status "ok" "generate" "generation succeeded" "${batch_id:-}" "${saved_count:-}"
+write_status "ok" "generate" "generation succeeded" "${batch_id:-}" "${saved_count:-}" "$TRIGGER_SOURCE"
 
 rm -f "$RUN_OUTPUT"

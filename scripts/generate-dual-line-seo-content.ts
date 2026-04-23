@@ -43,6 +43,7 @@ type GeneratedSeoArticle = {
   categoryHref: string;
   subHref: string;
   contentHash: string;
+  triggerSource: "manual" | "cron" | "dry_run";
 };
 
 function readArg(name: string) {
@@ -415,7 +416,11 @@ function buildBody(topic: SeoTopicCandidate, answerSummary: string) {
   );
 }
 
-function buildArticle(topic: SeoTopicCandidate, batchId: string): GeneratedSeoArticle {
+function buildArticle(
+  topic: SeoTopicCandidate,
+  batchId: string,
+  triggerSource: "manual" | "cron" | "dry_run",
+): GeneratedSeoArticle {
   const answerSummary = buildAnswerSummary(topic);
   const excerpt = buildExcerpt(topic, answerSummary);
   const faqPairs = buildFaqPairs(topic);
@@ -463,12 +468,24 @@ function buildArticle(topic: SeoTopicCandidate, batchId: string): GeneratedSeoAr
     categoryHref: topic.categoryHref,
     subHref: topic.subHref,
     contentHash: buildSeoContentHash(topic.title, content),
+    triggerSource,
   };
 }
 
 async function loadExistingArticles() {
   return prisma.article.findMany({
     where: {
+      NOT: {
+        AND: [
+          { status: "pending" },
+          {
+            OR: [
+              { generationBatchId: { contains: "-manual-" } },
+              { reviewNote: { contains: "testRun=true" } },
+            ],
+          },
+        ],
+      },
       OR: [
         { categoryHref: { startsWith: "/news" } },
         { subHref: { startsWith: "/news" } },
@@ -529,7 +546,7 @@ async function persistGeneratedArticles(articles: GeneratedSeoArticle[]) {
         manualKeywords: article.keywords,
         status: "pending",
         publishedAt: null,
-        reviewNote: `dual-line seo draft | batch=${article.generationBatchId} | line=${article.contentLine} | seed=${article.keywordSeed} | intent=${article.keywordIntent}`,
+        reviewNote: `dual-line seo draft | batch=${article.generationBatchId} | trigger=${article.triggerSource} | testRun=${article.triggerSource === "manual" ? "true" : "false"} | line=${article.contentLine} | seed=${article.keywordSeed} | intent=${article.keywordIntent}`,
       },
       select: {
         id: true,
@@ -553,6 +570,13 @@ export async function runDualLineSeoContentGenerator() {
   const dryRun = process.argv.includes("--dry-run") || process.argv.includes("--dryRun");
   const approved = boolArg("approved", SEO_APPROVED_DEFAULT);
   const timezone = readArg("timezone") || "Asia/Shanghai";
+  const triggerSourceArg = readArg("trigger-source") || readArg("triggerSource");
+  const triggerSource =
+    dryRun
+      ? "dry_run"
+      : triggerSourceArg === "manual" || triggerSourceArg === "cron"
+        ? triggerSourceArg
+        : "cron";
 
   if (approved) {
     throw new Error("Dual-line SEO generator does not support auto-approved publishing");
@@ -561,12 +585,12 @@ export async function runDualLineSeoContentGenerator() {
     throw new Error("SEO dual-line generation is temporarily disabled");
   }
 
-  const batchId = `dual-seo-${new Date().toISOString().slice(0, 10)}-${createHash("md5").update(String(Date.now())).digest("hex").slice(0, 6)}`;
+  const batchId = `dual-seo-${new Date().toISOString().slice(0, 10)}-${triggerSource}-${createHash("md5").update(String(Date.now())).digest("hex").slice(0, 6)}`;
   const [{ picked, candidates, stats }, existingArticles] = await Promise.all([pickSeoTopicsForGeneration(count), loadExistingArticles()]);
 
   const generated: GeneratedSeoArticle[] = [];
   for (const topic of picked) {
-    const article = buildArticle(topic, batchId);
+    const article = buildArticle(topic, batchId, triggerSource);
     const leadDupReason = findSeoLeadDuplicateReason(article.content, existingArticles, { similarityThreshold: 0.992 });
     if (leadDupReason) continue;
     article.slug = await generateUniqueArticleSlug(article.title);
@@ -578,6 +602,7 @@ export async function runDualLineSeoContentGenerator() {
       dryRun: true,
       approved,
       timezone,
+      triggerSource,
       generationBatchId: batchId,
       stats,
       candidatePreview: candidates.slice(0, 12).map((item) => ({
@@ -600,6 +625,7 @@ export async function runDualLineSeoContentGenerator() {
     dryRun: false,
     approved,
     timezone,
+    triggerSource,
     generationBatchId: batchId,
     stats,
     savedCount: saved.length,

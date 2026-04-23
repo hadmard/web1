@@ -61,6 +61,9 @@ type ExistingSeoReference = {
   keywordIntent: string | null;
   categoryHref: string | null;
   subHref: string | null;
+  status: string;
+  generationBatchId: string | null;
+  reviewNote: string | null;
 };
 
 const TITLE_NATURALNESS_BANNED_PATTERNS = [
@@ -372,6 +375,17 @@ function isBuyingArticle(article: ExistingSeoReference) {
 async function loadExistingSeoReferences() {
   return prisma.article.findMany({
     where: {
+      NOT: {
+        AND: [
+          { status: "pending" },
+          {
+            OR: [
+              { generationBatchId: { contains: "-manual-" } },
+              { reviewNote: { contains: "testRun=true" } },
+            ],
+          },
+        ],
+      },
       OR: [
         { categoryHref: { startsWith: "/news" } },
         { subHref: { startsWith: "/news" } },
@@ -391,6 +405,9 @@ async function loadExistingSeoReferences() {
       keywordIntent: true,
       categoryHref: true,
       subHref: true,
+      status: true,
+      generationBatchId: true,
+      reviewNote: true,
     },
   });
 }
