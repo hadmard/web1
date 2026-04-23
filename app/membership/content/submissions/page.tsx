@@ -280,7 +280,7 @@ export default function MemberContentSubmissionsPage() {
               className="h-11 rounded-2xl border border-[rgba(194,182,154,0.28)] bg-white/92 px-4 text-sm text-primary placeholder:text-muted focus:border-[rgba(180,154,107,0.45)] focus:outline-none focus:ring-2 focus:ring-[rgba(180,154,107,0.18)]"
               value={queryDraft}
               onChange={(event) => setQueryDraft(event.target.value)}
-              placeholder="搜索标题、摘要、正文、来源、作者、关键词"
+              placeholder="搜索标题、摘要、正文、来源、作者、标签、关键词、企业或品牌"
             />
             <button type="submit" className="rounded-2xl bg-accent px-4 py-2 text-sm font-medium text-white">
               搜索

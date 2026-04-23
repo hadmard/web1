@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { writeOperationLog } from "@/lib/operation-log";
+import { normalizeRichTextField } from "@/lib/brand-content";
 
 function isAdmin(role: string | null | undefined) {
   return role === "SUPER_ADMIN" || role === "ADMIN";
@@ -74,7 +75,7 @@ export async function PATCH(
         licenseCode: current.licenseCode,
         foundedAt: current.foundedAt,
         registeredCapital: current.registeredCapital,
-        intro: current.intro,
+        intro: normalizeRichTextField(current.intro),
         logoUrl: current.logoUrl,
         productSystem: current.productSystem,
         positioning: current.coreAdvantages,
@@ -94,7 +95,7 @@ export async function PATCH(
         licenseCode: current.licenseCode,
         foundedAt: current.foundedAt,
         registeredCapital: current.registeredCapital,
-        intro: current.intro,
+        intro: normalizeRichTextField(current.intro),
         logoUrl: current.logoUrl,
         productSystem: current.productSystem,
         positioning: current.coreAdvantages,

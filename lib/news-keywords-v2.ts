@@ -506,125 +506,146 @@ export async function syncArticleKeywords(options: {
         }),
       });
     }
+  });
 
-    for (const brand of result.pendingBrands) {
-      if (!isValidKeywordCandidate(brand.brandName)) continue;
-      const existing = await tx.pendingBrand.findUnique({ where: { brandName: brand.brandName } });
-      const existingArticleIds = parseJsonStringArray(existing?.articleIds);
-      const mergedArticleIds = Array.from(new Set([...existingArticleIds, options.articleId]));
-      const nextArticleCount = mergedArticleIds.length;
-      const nextOccurrenceCount = (existing?.occurrenceCount ?? 0) + brand.frequency;
-      const thresholdReached = brand.frequency >= 2 || nextArticleCount >= 2;
-      const shouldAutoApprove = AUTO_APPROVE_PENDING_BRANDS && thresholdReached;
-      const triggerReason = brand.frequency >= 2 ? "single-article>=2" : nextArticleCount >= 2 ? "cross-article>=2" : null;
-      const nextApprovedSource =
-        existing?.approvedSource === "manual-admin"
-          ? "manual-admin"
-          : shouldAutoApprove
-            ? "auto-threshold"
-            : existing?.approvedSource ?? null;
-      const nextStatus = shouldAutoApprove ? 1 : existing?.status ?? 0;
-
-      if (existing) {
-        await tx.pendingBrand.update({
-          where: { brandName: brand.brandName },
-          data: {
-            lastNewsId: options.articleId,
-            occurrenceCount: nextOccurrenceCount,
-            articleCount: nextArticleCount,
-            articleIds: JSON.stringify(mergedArticleIds),
-            lastOccurrence: new Date(),
-            sourceContext: brand.sourceContext,
-            ruleSource: brand.ruleSource,
-            triggerReason: shouldAutoApprove ? triggerReason : existing?.triggerReason,
-            confidence: brand.confidence,
-            status: nextStatus,
-            approvedSource: nextApprovedSource,
-            autoApprovedAt: shouldAutoApprove ? new Date() : existing.autoApprovedAt,
-          },
-        });
-      } else {
-        await tx.pendingBrand.create({
-          data: {
-            brandName: brand.brandName,
-            firstNewsId: options.articleId,
-            lastNewsId: options.articleId,
-            occurrenceCount: brand.frequency,
-            articleCount: 1,
-            articleIds: JSON.stringify([options.articleId]),
-            lastOccurrence: new Date(),
-            sourceContext: brand.sourceContext,
-            ruleSource: brand.ruleSource,
-            triggerReason,
-            confidence: brand.confidence,
-            status: nextStatus,
-            approvedSource: nextApprovedSource,
-            autoApprovedAt: shouldAutoApprove ? new Date() : null,
-          },
-        });
-      }
-
-      await tx.operationLog.create({
-        data: {
-          action: existing ? "news_pending_brand_seen" : "news_pending_brand_created",
-          targetType: "pending_brand",
-          targetId: existing?.id ?? null,
-          detail: JSON.stringify({
-            articleId: options.articleId,
-            brandName: brand.brandName,
-            frequency: brand.frequency,
-            occurrenceCount: nextOccurrenceCount,
-            articleCount: nextArticleCount,
-            thresholdReached,
-            autoApproveEnabled: AUTO_APPROVE_PENDING_BRANDS,
-            shouldAutoApprove,
-            ruleSource: brand.ruleSource,
-            triggerReason,
-            confidence: brand.confidence,
-          }),
-        },
-      });
-
-      if (shouldAutoApprove) {
-        await tx.industryWhitelist.upsert({
-          where: { word: brand.brandName },
-          update: {
-            category: "品牌",
-            weight: 1,
-            status: true,
-          },
-          create: {
-            word: brand.brandName,
-            category: "品牌",
-            weight: 1,
-            status: true,
-          },
-        });
-
-        if (!(existing?.status === 1 && existing?.approvedSource)) {
-          await tx.operationLog.create({
-            data: {
-              action: "news_pending_brand_auto_approved",
-              targetType: "pending_brand",
-              targetId: existing?.id ?? null,
-              detail: JSON.stringify({
-                articleId: options.articleId,
-                brandName: brand.brandName,
-                occurrenceCount: nextOccurrenceCount,
-                articleCount: nextArticleCount,
-                ruleSource: brand.ruleSource,
-                triggerReason,
-                confidence: brand.confidence,
-                whitelistWeight: 1,
-              }),
-            },
-          });
-        }
-      }
-    }
+  await syncPendingBrandsBestEffort({
+    articleId: options.articleId,
+    pendingBrands: result.pendingBrands,
   });
 
   return { autoKeywords, activeKeywords };
+}
+
+async function syncPendingBrandsBestEffort(options: {
+  articleId: string;
+  pendingBrands: KeywordExtractionResult["pendingBrands"];
+}) {
+  for (const brand of options.pendingBrands) {
+    if (!isValidKeywordCandidate(brand.brandName)) continue;
+
+    try {
+      await prisma.$transaction(async (tx) => {
+        const existing = await tx.pendingBrand.findUnique({ where: { brandName: brand.brandName } });
+        const existingArticleIds = parseJsonStringArray(existing?.articleIds);
+        const mergedArticleIds = Array.from(new Set([...existingArticleIds, options.articleId]));
+        const nextArticleCount = mergedArticleIds.length;
+        const nextOccurrenceCount = (existing?.occurrenceCount ?? 0) + brand.frequency;
+        const thresholdReached = brand.frequency >= 2 || nextArticleCount >= 2;
+        const shouldAutoApprove = AUTO_APPROVE_PENDING_BRANDS && thresholdReached;
+        const triggerReason = brand.frequency >= 2 ? "single-article>=2" : nextArticleCount >= 2 ? "cross-article>=2" : null;
+        const nextApprovedSource =
+          existing?.approvedSource === "manual-admin"
+            ? "manual-admin"
+            : shouldAutoApprove
+              ? "auto-threshold"
+              : existing?.approvedSource ?? null;
+        const nextStatus = shouldAutoApprove ? 1 : existing?.status ?? 0;
+
+        if (existing) {
+          await tx.pendingBrand.update({
+            where: { brandName: brand.brandName },
+            data: {
+              lastNewsId: options.articleId,
+              occurrenceCount: nextOccurrenceCount,
+              articleCount: nextArticleCount,
+              articleIds: JSON.stringify(mergedArticleIds),
+              lastOccurrence: new Date(),
+              sourceContext: brand.sourceContext,
+              ruleSource: brand.ruleSource,
+              triggerReason: shouldAutoApprove ? triggerReason : existing?.triggerReason,
+              confidence: brand.confidence,
+              status: nextStatus,
+              approvedSource: nextApprovedSource,
+              autoApprovedAt: shouldAutoApprove ? new Date() : existing.autoApprovedAt,
+            },
+          });
+        } else {
+          await tx.pendingBrand.create({
+            data: {
+              brandName: brand.brandName,
+              firstNewsId: options.articleId,
+              lastNewsId: options.articleId,
+              occurrenceCount: brand.frequency,
+              articleCount: 1,
+              articleIds: JSON.stringify([options.articleId]),
+              lastOccurrence: new Date(),
+              sourceContext: brand.sourceContext,
+              ruleSource: brand.ruleSource,
+              triggerReason,
+              confidence: brand.confidence,
+              status: nextStatus,
+              approvedSource: nextApprovedSource,
+              autoApprovedAt: shouldAutoApprove ? new Date() : null,
+            },
+          });
+        }
+
+        await tx.operationLog.create({
+          data: {
+            action: existing ? "news_pending_brand_seen" : "news_pending_brand_created",
+            targetType: "pending_brand",
+            targetId: existing?.id ?? null,
+            detail: JSON.stringify({
+              articleId: options.articleId,
+              brandName: brand.brandName,
+              frequency: brand.frequency,
+              occurrenceCount: nextOccurrenceCount,
+              articleCount: nextArticleCount,
+              thresholdReached,
+              autoApproveEnabled: AUTO_APPROVE_PENDING_BRANDS,
+              shouldAutoApprove,
+              ruleSource: brand.ruleSource,
+              triggerReason,
+              confidence: brand.confidence,
+            }),
+          },
+        });
+
+        if (shouldAutoApprove) {
+          await tx.industryWhitelist.upsert({
+            where: { word: brand.brandName },
+            update: {
+              category: "品牌",
+              weight: 1,
+              status: true,
+            },
+            create: {
+              word: brand.brandName,
+              category: "品牌",
+              weight: 1,
+              status: true,
+            },
+          });
+
+          if (!(existing?.status === 1 && existing?.approvedSource)) {
+            await tx.operationLog.create({
+              data: {
+                action: "news_pending_brand_auto_approved",
+                targetType: "pending_brand",
+                targetId: existing?.id ?? null,
+                detail: JSON.stringify({
+                  articleId: options.articleId,
+                  brandName: brand.brandName,
+                  occurrenceCount: nextOccurrenceCount,
+                  articleCount: nextArticleCount,
+                  ruleSource: brand.ruleSource,
+                  triggerReason,
+                  confidence: brand.confidence,
+                  whitelistWeight: 1,
+                }),
+              },
+            });
+          }
+        }
+      });
+    } catch (error) {
+      console.error("syncPendingBrandsBestEffort failed", {
+        articleId: options.articleId,
+        brandName: brand.brandName,
+        error,
+      });
+    }
+  }
 }
 
 type RelatedArticle = {

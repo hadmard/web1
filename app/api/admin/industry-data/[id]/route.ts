@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
+import { normalizeRichTextField } from "@/lib/brand-content";
 
 function isAdmin(session: { role: string | null } | null) {
   return session?.role === "SUPER_ADMIN" || session?.role === "ADMIN";
@@ -26,7 +27,7 @@ export async function PATCH(
   if (typeof body.title === "string") data.title = body.title.trim();
   if (body.source !== undefined) data.source = typeof body.source === "string" ? body.source.trim() || null : null;
   if (body.methodology !== undefined) data.methodology = typeof body.methodology === "string" ? body.methodology.trim() || null : null;
-  if (body.content !== undefined) data.content = typeof body.content === "string" ? body.content : null;
+  if (body.content !== undefined) data.content = normalizeRichTextField(body.content);
   if (body.year !== undefined) {
     const y = typeof body.year === "number" ? body.year : parseInt(String(body.year), 10);
     data.year = Number.isNaN(y) ? null : y;

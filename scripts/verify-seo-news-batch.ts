@@ -23,7 +23,7 @@ async function main() {
   try {
     const latest = await prisma.article.findFirst({
       where: {
-        source: "auto_seo_generator",
+        source: { in: ["auto_seo_generator", "auto_dual_line_seo_generator"] },
         createdAt: { gte: since },
       },
       orderBy: [{ createdAt: "desc" }],

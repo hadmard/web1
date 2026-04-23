@@ -8,7 +8,7 @@ import { canChangeReviewStatus, canDirectlyDeleteArticle, canDirectlyEditArticle
 import { isValidTermStructuredContent, normalizeTermContent } from "@/lib/term-structured";
 import { findDuplicateArticleByTitle, normalizeArticleTitle } from "@/lib/article-title";
 import { formatKeywordCsv, syncArticleKeywords } from "@/lib/news-keywords-v2";
-import { buildNewsPath } from "@/lib/share-config";
+import { buildBuyingPath, buildNewsPath } from "@/lib/share-config";
 import { pushApprovedNewsToBaidu } from "@/lib/baidu-submit";
 import { buildDirtyTextErrorMessage } from "@/lib/article-input-guard";
 import { parseProductRecommendations, stringifyProductRecommendations } from "@/lib/news-aftermarket";
@@ -55,6 +55,20 @@ function revalidateArticlePaths(article: {
     }
     if (segment) {
       revalidatePath(`/news/${encodeURIComponent(segment)}`);
+    }
+  }
+
+  const isBuying =
+    article.categoryHref?.startsWith("/brands/buying") || article.subHref?.startsWith("/brands/buying");
+  if (isBuying) {
+    revalidatePath("/brands");
+    revalidatePath("/brands/buying");
+    revalidatePath("/sitemap.xml");
+    if (article.id) {
+      revalidatePath(buildBuyingPath(article.id));
+    }
+    if (segment) {
+      revalidatePath(buildBuyingPath(segment));
     }
   }
 
@@ -182,6 +196,7 @@ export async function PATCH(
   if (typeof productRecommendations === "string") {
     data.productRecommendations = stringifyProductRecommendations(parseProductRecommendations(productRecommendations));
   }
+
   if (typeof faqJson === "string") data.faqJson = faqJson.trim() || null;
   if (typeof isPinned === "boolean") data.isPinned = isPinned;
   if (syncToMainSite !== undefined) data.syncToMainSite = syncToMainSite === true;

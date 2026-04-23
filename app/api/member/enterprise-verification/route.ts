@@ -2,6 +2,7 @@
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { writeOperationLog } from "@/lib/operation-log";
+import { normalizeRichTextField } from "@/lib/brand-content";
 import {
   getEnterpriseVerificationFormatError,
   normalizeEnterpriseAddress,
@@ -102,7 +103,7 @@ export async function POST(request: NextRequest) {
       foundedAt: trimOptional(body.foundedAt),
       registeredCapital: trimOptional(body.registeredCapital),
       website: trimOptional(body.website),
-      intro: trimOptional(body.intro),
+      intro: normalizeRichTextField(body.intro),
       businessScope: trimOptional(body.businessScope),
       productSystem: trimOptional(body.productSystem),
       coreAdvantages: trimOptional(body.coreAdvantages),

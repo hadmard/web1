@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
+import { normalizeRichTextField } from "@/lib/brand-content";
 
 function isAdmin(session: { role: string | null } | null) {
   return session?.role === "SUPER_ADMIN" || session?.role === "ADMIN";
@@ -43,7 +44,7 @@ export async function POST(request: NextRequest) {
         title: title.trim(),
         source: typeof source === "string" ? source.trim() || null : null,
         methodology: typeof methodology === "string" ? methodology.trim() || null : null,
-        content: typeof content === "string" ? content : null,
+        content: normalizeRichTextField(content),
         year: y != null && !Number.isNaN(y) ? y : null,
       },
     });

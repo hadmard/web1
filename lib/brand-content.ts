@@ -16,10 +16,56 @@
   "h4",
   "h5",
   "h6",
+  "figure",
+  "figcaption",
+  "table",
+  "thead",
+  "tbody",
+  "tr",
+  "td",
+  "th",
+  "pre",
+  "code",
+  "iframe",
+  "video",
 ]);
 
-const ALLOWED_TAGS = new Set(["p", "br", "strong", "em", "u", "blockquote", "ul", "ol", "li", "h2", "h3", "a", "img"]);
-const DROP_WITH_CONTENT_TAGS = ["script", "style", "iframe", "object", "embed", "svg", "math", "form", "noscript"];
+const ALLOWED_TAGS = new Set([
+  "p",
+  "br",
+  "strong",
+  "em",
+  "u",
+  "blockquote",
+  "ul",
+  "ol",
+  "li",
+  "h1",
+  "h2",
+  "h3",
+  "h4",
+  "h5",
+  "h6",
+  "a",
+  "img",
+  "div",
+  "section",
+  "article",
+  "figure",
+  "figcaption",
+  "table",
+  "thead",
+  "tbody",
+  "tr",
+  "td",
+  "th",
+  "pre",
+  "code",
+  "iframe",
+  "video",
+  "source",
+]);
+const DROP_WITH_CONTENT_TAGS = ["script", "style", "object", "embed", "svg", "math", "form", "noscript"];
 const SUSPICIOUS_TEXT_PATTERN = /[�]{2,}|(?:Ã|Â|â|ð|æ|å|ç){2,}|(?:\?{2,})/;
 
 function decodeNamedEntity(entity: string) {
@@ -113,10 +159,8 @@ function stripUnsafeContainers(input: string) {
 function normalizeUnsafeWrappers(input: string) {
   return input
     .replace(/<\/?(?:span|font)\b[^>]*>/gi, "")
-    .replace(/<(?:div|section|article|header|footer|aside)\b[^>]*>/gi, "<p>")
-    .replace(/<\/(?:div|section|article|header|footer|aside)>/gi, "</p>")
-    .replace(/<(?:h1|h4|h5|h6)\b[^>]*>/gi, "<h3>")
-    .replace(/<\/(?:h1|h4|h5|h6)>/gi, "</h3>")
+    .replace(/<(?:header|footer|aside)\b[^>]*>/gi, "<section>")
+    .replace(/<\/(?:header|footer|aside)>/gi, "</section>")
     .replace(/<b\b[^>]*>/gi, "<strong>")
     .replace(/<\/b>/gi, "</strong>")
     .replace(/<i\b[^>]*>/gi, "<em>")
@@ -128,6 +172,10 @@ function isSafeHref(value: string) {
 }
 
 function isSafeSrc(value: string) {
+  return /^(https?:|\/)/i.test(value);
+}
+
+function isSafeIframeSrc(value: string) {
   return /^(https?:|\/)/i.test(value);
 }
 
@@ -153,6 +201,24 @@ function clampImageDimension(value: string | null | undefined) {
   const dimension = Number.parseInt(matched[1], 10);
   if (!Number.isFinite(dimension) || dimension < 1 || dimension > 2400) return "";
   return `${dimension}px`;
+}
+
+function clampLength(value: string | null | undefined, max = 2400) {
+  if (!value) return "";
+  const matched = value.trim().match(/^(\d{1,4})(?:px)?$/i);
+  if (!matched) return "";
+  const dimension = Number.parseInt(matched[1], 10);
+  if (!Number.isFinite(dimension) || dimension < 1 || dimension > max) return "";
+  return `${dimension}px`;
+}
+
+function pickCssValue(source: string, prop: string) {
+  return source.match(new RegExp(`(?:^|;)\\s*${prop}\\s*:\\s*([^;]+)\\s*(?:;|$)`, "i"))?.[1]?.trim() ?? "";
+}
+
+function extractSafeTextAlign(styleText: string | null | undefined) {
+  const raw = pickCssValue(String(styleText ?? ""), "text-align").toLowerCase();
+  return ["left", "center", "right", "justify"].includes(raw) ? raw : "";
 }
 
 function extractSafeImageStyle(styleText: string | null | undefined) {
@@ -193,6 +259,46 @@ function extractSafeImageStyle(styleText: string | null | undefined) {
   return safeRules.join(";");
 }
 
+function extractSafeBlockStyle(styleText: string | null | undefined) {
+  const align = extractSafeTextAlign(styleText);
+  return align ? `text-align:${align}` : "";
+}
+
+function extractSafeTableStyle(styleText: string | null | undefined) {
+  const source = String(styleText ?? "");
+  const safeRules = ["width:100%", "max-width:100%"];
+  const borderCollapse = pickCssValue(source, "border-collapse").toLowerCase();
+  if (["collapse", "separate"].includes(borderCollapse)) {
+    safeRules.push(`border-collapse:${borderCollapse}`);
+  }
+  return safeRules.join(";");
+}
+
+function extractSafeCellStyle(styleText: string | null | undefined) {
+  const source = String(styleText ?? "");
+  const safeRules: string[] = [];
+  const align = extractSafeTextAlign(source);
+  if (align) safeRules.push(`text-align:${align}`);
+  const width = clampLength(pickCssValue(source, "width"), 1200);
+  if (width) safeRules.push(`width:${width}`);
+  return safeRules.join(";");
+}
+
+function extractSafePreStyle(styleText: string | null | undefined) {
+  const align = extractSafeTextAlign(styleText);
+  return align ? `max-width:100%;text-align:${align}` : "max-width:100%";
+}
+
+function extractSafeIframeStyle(styleText: string | null | undefined) {
+  const source = String(styleText ?? "");
+  const safeRules = ["width:100%", "max-width:100%"];
+  const width = clampLength(pickCssValue(source, "width"), 1600);
+  const height = clampLength(pickCssValue(source, "height"), 1200);
+  if (width) safeRules.push(`width:${width}`);
+  if (height) safeRules.push(`height:${height}`);
+  return safeRules.join(";");
+}
+
 function sanitizeTag(tagName: string, attrText: string) {
   const tag = tagName.toLowerCase();
   if (!ALLOWED_TAGS.has(tag)) return "";
@@ -219,6 +325,60 @@ function sanitizeTag(tagName: string, attrText: string) {
     }${width ? ` width="${width.replace(/px$/i, "")}"` : ""}${height ? ` height="${height.replace(/px$/i, "")}"` : ""}${
       style ? ` style="${escapeHtml(style)}"` : ""
     }>`;
+  }
+
+  if (tag === "iframe") {
+    const attrs = parseAttributes(attrText);
+    const src = attrs.get("src") ?? "";
+    if (!isSafeIframeSrc(src)) return "";
+    const title = attrs.get("title") ?? "Embedded content";
+    const width = clampLength(attrs.get("width"), 1600);
+    const height = clampLength(attrs.get("height"), 1200) || "480px";
+    const style = extractSafeIframeStyle(attrs.get("style"));
+    const loading = attrs.get("loading")?.toLowerCase() === "eager" ? "eager" : "lazy";
+    return `<iframe src="${escapeHtml(src)}" title="${escapeHtml(title)}" loading="${loading}" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen${width ? ` width="${width.replace(/px$/i, "")}"` : ""} height="${height.replace(/px$/i, "")}"${style ? ` style="${escapeHtml(style)}"` : ""}></iframe>`;
+  }
+
+  if (tag === "video") {
+    const attrs = parseAttributes(attrText);
+    const src = attrs.get("src") ?? "";
+    const poster = attrs.get("poster") ?? "";
+    const style = extractSafeIframeStyle(attrs.get("style"));
+    return `<video${isSafeSrc(src) ? ` src="${escapeHtml(src)}"` : ""}${isSafeSrc(poster) ? ` poster="${escapeHtml(poster)}"` : ""} preload="metadata" controls${style ? ` style="${escapeHtml(style)}"` : ""}></video>`;
+  }
+
+  if (tag === "source") {
+    const attrs = parseAttributes(attrText);
+    const src = attrs.get("src") ?? "";
+    if (!isSafeSrc(src)) return "";
+    const type = attrs.get("type");
+    return `<source src="${escapeHtml(src)}"${type ? ` type="${escapeHtml(type)}"` : ""}>`;
+  }
+
+  if (["p", "blockquote", "div", "section", "article", "figure", "figcaption", "h1", "h2", "h3", "h4", "h5", "h6"].includes(tag)) {
+    const attrs = parseAttributes(attrText);
+    const style = extractSafeBlockStyle(attrs.get("style"));
+    return `<${tag}${style ? ` style="${escapeHtml(style)}"` : ""}>`;
+  }
+
+  if (tag === "table") {
+    const attrs = parseAttributes(attrText);
+    const style = extractSafeTableStyle(attrs.get("style"));
+    return `<table${style ? ` style="${escapeHtml(style)}"` : ""}>`;
+  }
+
+  if (["td", "th"].includes(tag)) {
+    const attrs = parseAttributes(attrText);
+    const colspan = attrs.get("colspan")?.match(/^\d{1,2}$/)?.[0];
+    const rowspan = attrs.get("rowspan")?.match(/^\d{1,2}$/)?.[0];
+    const style = extractSafeCellStyle(attrs.get("style"));
+    return `<${tag}${colspan ? ` colspan="${colspan}"` : ""}${rowspan ? ` rowspan="${rowspan}"` : ""}${style ? ` style="${escapeHtml(style)}"` : ""}>`;
+  }
+
+  if (tag === "pre") {
+    const attrs = parseAttributes(attrText);
+    const style = extractSafePreStyle(attrs.get("style"));
+    return `<pre${style ? ` style="${escapeHtml(style)}"` : ""}>`;
   }
 
   return `<${tag}>`;
@@ -268,8 +428,8 @@ function removeEmptyBlocks(input: string) {
 
 function repairNestedParagraphs(input: string) {
   return input
-    .replace(/<p>\s*(<(?:p|h[23]|blockquote|ul|ol)[^>]*>)/gi, "$1")
-    .replace(/(<\/(?:p|h[23]|blockquote|ul|ol)>)\s*<\/p>/gi, "$1");
+    .replace(/<p>\s*(<(?:p|h[1-6]|blockquote|ul|ol|table|pre|div|section|article|figure)[^>]*>)/gi, "$1")
+    .replace(/(<\/(?:p|h[1-6]|blockquote|ul|ol|table|pre|div|section|article|figure)>)\s*<\/p>/gi, "$1");
 }
 
 export function sanitizeRichText(input: string | null | undefined) {
@@ -288,14 +448,14 @@ export function sanitizeRichText(input: string | null | undefined) {
   html = html.replace(/<([a-z0-9-]+)\b([^>]*)>/gi, (_match, tagName, attrs) => sanitizeTag(tagName, attrs));
   html = html.replace(/<\/([a-z0-9-]+)>/gi, (_match, tagName) => {
     const tag = tagName.toLowerCase();
-    return ALLOWED_TAGS.has(tag) && tag !== "img" ? `</${tag}>` : "";
+    return ALLOWED_TAGS.has(tag) && tag !== "img" && tag !== "source" ? `</${tag}>` : "";
   });
   html = html
     .replace(/<p>\s*(<img\b[^>]*>)\s*<\/p>/gi, "$1")
     .replace(/<p>\s*(<a\b[^>]*>\s*<img\b[^>]*>\s*<\/a>)\s*<\/p>/gi, "$1")
     .replace(/(?:<br>\s*){3,}/gi, "<br><br>")
-    .replace(/\s+(<\/(?:p|li|blockquote|h2|h3|ul|ol)>)/gi, "$1")
-    .replace(/(<(?:p|li|blockquote|h2|h3)>)[\s\n]+/gi, "$1");
+    .replace(/\s+(<\/(?:p|li|blockquote|h[1-6]|ul|ol|pre|code|table|thead|tbody|tr|td|th|figure|figcaption|section|article|div)>)/gi, "$1")
+    .replace(/(<(?:p|li|blockquote|h[1-6]|figcaption)>)[\s\n]+/gi, "$1");
   html = repairNestedParagraphs(removeEmptyBlocks(html)).trim();
   return html || textToParagraphs(raw);
 }
@@ -308,7 +468,7 @@ export function htmlToPlainText(input: string | null | undefined) {
     decodeHtmlEntities(
       safeHtml
         .replace(/<br\s*\/?>/gi, "\n")
-        .replace(/<\/(?:p|li|blockquote|h2|h3|ul|ol)>/gi, "\n")
+        .replace(/<\/(?:p|li|blockquote|h[1-6]|ul|ol|pre|code|table|thead|tbody|tr|td|th|figure|figcaption|section|article|div)>/gi, "\n")
         .replace(/<[^>]+>/g, " ")
     )
   ).replace(/\s*\n\s*/g, "\n");

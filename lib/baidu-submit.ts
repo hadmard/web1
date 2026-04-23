@@ -1,7 +1,7 @@
 import { randomUUID } from "crypto";
 import { prisma } from "./prisma";
 import { writeOperationLog } from "./operation-log";
-import { buildPublicNewsUrl } from "./share-config";
+import { buildPublicBuyingUrl, buildPublicNewsUrl } from "./share-config";
 
 const BAIDU_PUSH_ENDPOINT = "http://data.zz.baidu.com/urls";
 const DEFAULT_BAIDU_SITE = "cnzhengmu.com";
@@ -68,6 +68,10 @@ export type BaiduPushResult = {
 
 function isNewsHref(value: string | null | undefined) {
   return typeof value === "string" && value.startsWith("/news");
+}
+
+function isBuyingHref(value: string | null | undefined) {
+  return typeof value === "string" && value.startsWith("/brands/buying");
 }
 
 function isNumericLegacyNewsSlug(value: string | null | undefined) {
@@ -274,12 +278,13 @@ async function saveBaiduPushJob(
 export function resolvePushableNewsUrl(article: PushableNewsArticle): ResolvedPushTarget {
   const slug = article.slug?.trim() ?? "";
   const isNews = isNewsHref(article.categoryHref) || isNewsHref(article.subHref);
+  const isBuying = isBuyingHref(article.categoryHref) || isBuyingHref(article.subHref);
 
   if (article.status !== "approved") {
     return { ok: false, reason: "status_not_approved" };
   }
 
-  if (!isNews) {
+  if (!isNews && !isBuying) {
     return { ok: false, reason: "not_news_page" };
   }
 
@@ -295,7 +300,7 @@ export function resolvePushableNewsUrl(article: PushableNewsArticle): ResolvedPu
     return { ok: false, reason: "empty_content" };
   }
 
-  const url = buildPublicNewsUrl(slug);
+  const url = isBuying ? buildPublicBuyingUrl(slug) : buildPublicNewsUrl(slug);
   return { ok: true, url, canonical: url };
 }
 
@@ -494,7 +499,12 @@ export async function seedApprovedNewsBaiduQueue(limit = DEFAULT_QUEUE_SCAN_LIMI
   const articles = await prisma.article.findMany({
     where: {
       status: "approved",
-      OR: [{ categoryHref: { startsWith: "/news" } }, { subHref: { startsWith: "/news" } }],
+      OR: [
+        { categoryHref: { startsWith: "/news" } },
+        { subHref: { startsWith: "/news" } },
+        { categoryHref: { startsWith: "/brands/buying" } },
+        { subHref: { startsWith: "/brands/buying" } },
+      ],
     },
     orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }],
     take: limit,
@@ -564,7 +574,12 @@ export async function getPendingBaiduPushQueue(limit = 20): Promise<PendingQueue
         j."status" IN ('pending', 'failed')
         AND (j."next_retry_at" IS NULL OR j."next_retry_at" <= NOW())
         AND a."status" = 'approved'
-        AND (a."categoryHref" LIKE '/news%' OR a."subHref" LIKE '/news%')
+        AND (
+          a."categoryHref" LIKE '/news%'
+          OR a."subHref" LIKE '/news%'
+          OR a."categoryHref" LIKE '/brands/buying%'
+          OR a."subHref" LIKE '/brands/buying%'
+        )
     `,
   );
 

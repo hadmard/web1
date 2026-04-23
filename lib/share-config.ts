@@ -1,10 +1,14 @@
-import { PUBLIC_SITE_URL } from "@/lib/public-site-config";
+import { PUBLIC_SITE_URL } from "./public-site-config";
 
 const FALLBACK_SHARE_VERSION = "mobile-share-20260329-1";
 export const DEFAULT_DICTIONARY_SHARE_IMAGE = "/images/dictionary-share-default.png";
 
 export function buildNewsPath(segment: string) {
   return `/news/${encodeURIComponent(segment)}`;
+}
+
+export function buildBuyingPath(segment: string) {
+  return `/brands/buying/${encodeURIComponent(segment)}`;
 }
 
 export function getArticleSegment(article: { id: string; slug?: string | null }) {
@@ -18,6 +22,10 @@ export function buildDictionaryPath(segment: string) {
 
 export function buildPublicNewsUrl(segment: string) {
   return `${PUBLIC_SITE_URL}${buildNewsPath(segment)}`;
+}
+
+export function buildPublicBuyingUrl(segment: string) {
+  return `${PUBLIC_SITE_URL}${buildBuyingPath(segment)}`;
 }
 
 export function buildPublicDictionaryUrl(segment: string) {

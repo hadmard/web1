@@ -4,11 +4,57 @@ on:
   workflow_dispatch:
 
 jobs:
-  disabled:
+  setup:
     runs-on: ubuntu-latest
-    steps:
-      - name: SEO auto generation disabled
+    timeout-minutes: 20
+    defaults:
+      run:
         shell: bash
+
+    steps:
+      - name: Setup SSH
         run: |
-          echo "::error::SEO auto generation has been disabled. Cron installation is blocked until the article source isolation fix is accepted."
-          exit 1
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Install or update production SEO cron
+        run: |
+          ssh -o BatchMode=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} <<'EOF'
+            set -euo pipefail
+
+            cd /home/web1
+            sed -i 's/\r$//' /home/web1/scripts/run-seo-news-cron.sh
+
+            cron_tz="CRON_TZ=Asia/Shanghai"
+            cron_entry_generate="30 7 * * * /bin/bash /home/web1/scripts/run-seo-news-cron.sh --count 3"
+            cron_entry_check_740="40 7 * * * /bin/bash /home/web1/scripts/run-seo-news-cron.sh --mode check"
+            cron_entry_check_800="0 8 * * * /bin/bash /home/web1/scripts/run-seo-news-cron.sh --mode check"
+
+            echo "SEO_CRON_PROJECT_DIR=$(pwd)"
+            echo "SEO_CRON_USER=$(whoami)"
+            echo "SEO_CRON_TZ=$cron_tz"
+            echo "SEO_CRON_TARGET_GENERATE=$cron_entry_generate"
+            echo "SEO_CRON_TARGET_CHECK_740=$cron_entry_check_740"
+            echo "SEO_CRON_TARGET_CHECK_800=$cron_entry_check_800"
+            echo "SEO_CRON_BEFORE_BEGIN"
+            crontab -l 2>/dev/null || true
+            echo "SEO_CRON_BEFORE_END"
+
+            tmp_cron="$(mktemp)"
+            {
+              crontab -l 2>/dev/null | grep -F -v 'CRON_TZ=Asia/Shanghai' | grep -F -v '/home/web1/scripts/run-seo-news-cron.sh --count 3' | grep -F -v '/home/web1/scripts/run-seo-news-cron.sh --mode check' || true
+              echo "$cron_tz"
+              echo "$cron_entry_generate"
+              echo "$cron_entry_check_740"
+              echo "$cron_entry_check_800"
+            } > "$tmp_cron"
+
+            crontab "$tmp_cron"
+            rm -f "$tmp_cron"
+
+            echo "SEO_CRON_AFTER_BEGIN"
+            crontab -l
+            echo "SEO_CRON_AFTER_END"
+          EOF

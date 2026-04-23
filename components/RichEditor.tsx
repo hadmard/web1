@@ -10,6 +10,7 @@ import Link from "@tiptap/extension-link";
 import { Mark } from "@tiptap/core";
 import { NodeSelection, TextSelection } from "@tiptap/pm/state";
 import { MAX_UPLOAD_IMAGE_MB, uploadImageToServer, uploadRemoteImageToServer } from "@/lib/client-image";
+import { sanitizeRichText } from "@/lib/brand-content";
 
 type Props = {
   value: string;
@@ -54,39 +55,12 @@ function decodeHtmlEntities(input: string) {
 }
 
 function normalizeEditorContentInput(input: string) {
-  let raw = input.trim();
+  const raw = typeof input === "string" ? input.trim() : "";
   if (!raw) return "<p></p>";
 
   const looksEscapedHtml = /&lt;\/?(p|h[1-6]|br|ul|ol|li|blockquote|img|a|div|section|article)[^&]*&gt;/i.test(raw);
-  if (looksEscapedHtml) {
-    raw = decodeHtmlEntities(raw).trim();
-  }
-
-  raw = raw.replace(/\r\n/g, "\n");
-
-  const hasHtmlTag = /<\/?[a-z][^>]*>/i.test(raw);
-  if (!hasHtmlTag) {
-    return `<p>${escapeHtml(raw).replace(/\n{2,}/g, "</p><p>").replace(/\n/g, "<br>")}</p>`;
-  }
-
-  if (!raw.startsWith("<")) {
-    const firstTagIndex = raw.search(/<\/?[a-z][^>]*>/i);
-    if (firstTagIndex > 0) {
-      const leadingText = raw.slice(0, firstTagIndex).trim();
-      const trailingHtml = raw.slice(firstTagIndex).trim();
-      if (leadingText) {
-        const normalizedLeading = leadingText
-          .split(/\n{2,}/)
-          .map((block) => block.trim())
-          .filter(Boolean)
-          .map((block) => `<p>${escapeHtml(block).replace(/\n/g, "<br>")}</p>`)
-          .join("");
-        return `${normalizedLeading}${trailingHtml}`;
-      }
-    }
-  }
-
-  return raw;
+  const decoded = looksEscapedHtml ? decodeHtmlEntities(raw) : raw;
+  return sanitizeRichText(decoded) || "<p></p>";
 }
 
 function normalizePastedText(text: string) {
@@ -516,6 +490,8 @@ export function RichEditor({
   const [ratio, setRatio] = useState(1);
   const [selectedImagePos, setSelectedImagePos] = useState<number | null>(null);
   const selectedImagePosRef = useRef<number | null>(null);
+  const lastAppliedValueRef = useRef(normalizeEditorContentInput(value));
+  const lastEmittedValueRef = useRef(normalizeEditorContentInput(value));
 
   const DEFAULT_IMAGE_WIDTH = 600;
 
@@ -546,7 +522,9 @@ export function RichEditor({
     ],
     content: normalizeEditorContentInput(value),
     onUpdate: ({ editor }) => {
-      onChange(editor.getHTML());
+      const html = editor.getHTML();
+      lastEmittedValueRef.current = html;
+      onChange(html);
     },
     editorProps: {
       attributes: {
@@ -630,10 +608,16 @@ export function RichEditor({
   useEffect(() => {
     if (!editor) return;
     const nextValue = normalizeEditorContentInput(value);
+    if (nextValue === lastAppliedValueRef.current || nextValue === lastEmittedValueRef.current) {
+      lastAppliedValueRef.current = nextValue;
+      return;
+    }
+
     const current = editor.getHTML();
     if (nextValue !== current) {
       editor.commands.setContent(nextValue, { emitUpdate: false });
     }
+    lastAppliedValueRef.current = nextValue;
   }, [editor, value]);
 
   useEffect(() => {

@@ -345,6 +345,167 @@ jobs:
           });
           NODE
 
+      - name: Install or update production SEO cron
+        run: |
+          ssh -o BatchMode=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} <<'EOF'
+            set -euo pipefail
+
+            cd /home/web1
+            sed -i 's/\r$//' /home/web1/scripts/run-seo-news-cron.sh
+
+            cron_tz="CRON_TZ=Asia/Shanghai"
+            cron_entry_generate="30 7 * * * /bin/bash /home/web1/scripts/run-seo-news-cron.sh --count 3"
+            cron_entry_check_740="40 7 * * * /bin/bash /home/web1/scripts/run-seo-news-cron.sh --mode check"
+            cron_entry_check_800="0 8 * * * /bin/bash /home/web1/scripts/run-seo-news-cron.sh --mode check"
+
+            tmp_cron="$(mktemp)"
+            {
+              crontab -l 2>/dev/null | grep -F -v 'CRON_TZ=Asia/Shanghai' | grep -F -v '/home/web1/scripts/run-seo-news-cron.sh --count 3' | grep -F -v '/home/web1/scripts/run-seo-news-cron.sh --mode check' || true
+              echo "$cron_tz"
+              echo "$cron_entry_generate"
+              echo "$cron_entry_check_740"
+              echo "$cron_entry_check_800"
+            } > "$tmp_cron"
+
+            crontab "$tmp_cron"
+            rm -f "$tmp_cron"
+
+            echo "::warning::SEO_CRON_USER=$(whoami)"
+            echo "::warning::SEO_CRON_SERVER_TIME=$(date '+%Y-%m-%d %H:%M:%S %Z %z')"
+            echo "::warning::SEO_CRON_TIMEZONE_FILE=$(cat /etc/timezone 2>/dev/null || true)"
+            echo "::warning::SEO_CRON_TIMEDATECTL=$(timedatectl show --property=Timezone --value 2>/dev/null || true)"
+            echo "::warning::SEO_CRON_LOG_FILE=/home/web1/logs/seo-news-cron.log"
+            echo "::warning::SEO_CRON_STATUS_FILE=/home/web1/logs/seo-news-cron-status.json"
+            echo "::warning::SEO_CRON_INSTALLED_BEGIN"
+            crontab -l | while IFS= read -r line; do
+              if [ -n "$line" ]; then
+                echo "::warning::SEO_CRON_LINE=$line"
+              fi
+            done
+            echo "::warning::SEO_CRON_INSTALLED_END"
+          EOF
+
+      - name: Manual production SEO generation validation
+        run: |
+          ssh -o BatchMode=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} <<'EOF'
+            set -euo pipefail
+            cd /home/web1
+
+            if [ -f .env.production ]; then
+              set -a
+              . ./.env.production
+              set +a
+            elif [ -f .env ]; then
+              set -a
+              . ./.env
+              set +a
+            fi
+
+            start_iso="$(date -Iseconds)"
+            /bin/bash /home/web1/scripts/run-seo-news-cron.sh --count 3 --mode manual
+
+            node - "$start_iso" <<'NODE'
+            const { PrismaClient } = require("@prisma/client");
+
+            const prisma = new PrismaClient();
+            const since = new Date(process.argv[2]);
+
+            (async () => {
+              const latest = await prisma.article.findFirst({
+                where: {
+                  source: "auto_dual_line_seo_generator",
+                  createdAt: { gte: since },
+                },
+                orderBy: [{ createdAt: "desc" }],
+                select: {
+                  generationBatchId: true,
+                },
+              });
+
+              if (!latest?.generationBatchId) {
+                throw new Error(`no_batch_found_since_${since.toISOString()}`);
+              }
+
+              const rows = await prisma.article.findMany({
+                where: {
+                  generationBatchId: latest.generationBatchId,
+                },
+                orderBy: [{ createdAt: "asc" }],
+                select: {
+                  id: true,
+                  title: true,
+                  status: true,
+                  contentLine: true,
+                  categoryLabel: true,
+                  subCategoryLabel: true,
+                  categoryHref: true,
+                  subHref: true,
+                  publishedAt: true,
+                },
+              });
+
+              const ids = rows.map((row) => row.id);
+              const jobs = ids.length
+                ? await prisma.$queryRawUnsafe(
+                    `SELECT article_id, status, source, pushed_at, last_error FROM baidu_push_jobs WHERE article_id IN (${ids.map((id) => `'${id}'`).join(",")}) ORDER BY article_id ASC`,
+                  )
+                : [];
+
+              console.log(`::warning::SEO_MANUAL_BATCH_ID=${latest.generationBatchId}`);
+              console.log(`::warning::SEO_MANUAL_SAVED_COUNT=${rows.length}`);
+              console.log(`::warning::SEO_MANUAL_PENDING_COUNT=${rows.filter((row) => row.status === "pending").length}`);
+              for (const row of rows) {
+                console.log(
+                  `::warning::SEO_MANUAL_ITEM=${JSON.stringify({
+                    title: row.title,
+                    status: row.status,
+                    contentLine: row.contentLine,
+                    categoryLabel: row.categoryLabel,
+                    subCategoryLabel: row.subCategoryLabel,
+                    categoryHref: row.categoryHref,
+                    subHref: row.subHref,
+                    publishedAt: row.publishedAt,
+                  })}`,
+                );
+              }
+              console.log(`::warning::SEO_MANUAL_BAIDU_JOBS=${JSON.stringify(jobs)}`);
+            })()
+              .catch((error) => {
+                console.error(`::error::SEO_MANUAL_VERIFY_FAILED=${error instanceof Error ? error.stack || error.message : String(error)}`);
+                process.exit(1);
+              })
+              .finally(async () => {
+                await prisma.$disconnect();
+              });
+            NODE
+          EOF
+
+      - name: Simulate production SEO timer check
+        run: |
+          ssh -o BatchMode=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} <<'EOF'
+            set -euo pipefail
+            cd /home/web1
+
+            /bin/bash /home/web1/scripts/run-seo-news-cron.sh --mode check
+
+            echo "::warning::SEO_CHECK_STATUS_BEGIN"
+            if [ -f /home/web1/logs/seo-news-cron-status.json ]; then
+              while IFS= read -r line; do
+                if [ -n "$line" ]; then
+                  echo "::warning::SEO_CHECK_STATUS=$line"
+                fi
+              done < /home/web1/logs/seo-news-cron-status.json
+            fi
+            echo "::warning::SEO_CHECK_STATUS_END"
+            echo "::warning::SEO_CHECK_LOG_TAIL_BEGIN"
+            tail -n 80 /home/web1/logs/seo-news-cron.log | while IFS= read -r line; do
+              if [ -n "$line" ]; then
+                echo "::warning::SEO_CHECK_LOG=$line"
+              fi
+            done
+            echo "::warning::SEO_CHECK_LOG_TAIL_END"
+          EOF
+
       - name: Roll back production assets on failure
         if: failure()
         run: |

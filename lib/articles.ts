@@ -39,3 +39,24 @@ export async function getLatestPublishedArticles(limit = 6) {
     },
   });
 }
+
+export async function getPublishedBuyingArticles(limit = 12) {
+  return prisma.article.findMany({
+    where: {
+      status: "approved",
+      publishedAt: { not: null },
+      OR: [{ categoryHref: { startsWith: "/brands/buying" } }, { subHref: { startsWith: "/brands/buying" } }],
+    },
+    orderBy: articleOrderByPinnedLatest,
+    take: Math.max(1, Math.min(limit, 24)),
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      excerpt: true,
+      coverImage: true,
+      publishedAt: true,
+      updatedAt: true,
+    },
+  });
+}

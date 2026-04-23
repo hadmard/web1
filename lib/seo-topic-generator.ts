@@ -1,42 +1,46 @@
 import { prisma } from "./prisma";
 import {
+  SEO_BATCH_CANDIDATE_MAX,
+  SEO_BATCH_CANDIDATE_MIN,
   SEO_DISALLOWED_TOPIC_PATTERNS,
-  SEO_INTENT_TEMPLATES,
-  SEO_KEYWORD_SEEDS,
-  SEO_REQUIRED_INTENT_TERMS,
-  type SeoKeywordSeed,
+  SEO_ENTITY_TERMS,
+  SEO_LINE_SEEDS,
+  type SeoContentLine,
+  type SeoLineSeedConfig,
 } from "./seo-keyword-seeds";
-import { findSeoDuplicateReason, getTitleSimilarity, isDuplicateSeoIntent } from "./seo-dedup";
+import {
+  findSeoDuplicateReason,
+  getSuffixDupRiskScore,
+  getTitlePatternDiversityScore,
+  getTitlePatternKey,
+  getTitleSimilarity,
+  isDuplicateSeoIntent,
+  titleSuffixDiversityCheck,
+} from "./seo-dedup";
 import { slugify } from "./slug";
-
-export type ExistingSeoReference = {
-  id: string;
-  title: string;
-  slug: string;
-  content: string;
-  sourceUrl: string | null;
-};
-
-export type TitleStyle = "question" | "contrast" | "scene" | "avoidance" | "cognition";
-export type BodySkeleton =
-  | "budget_breakdown"
-  | "pricing_compare"
-  | "decision_guide"
-  | "scenario_solution"
-  | "industry_cognition";
 
 export type SeoTopicCandidate = {
   title: string;
   slug: string;
   keywordSeed: string;
   keywordIntent: string;
-  titleStyle: TitleStyle;
-  titleFrame: string;
-  bodySkeleton: BodySkeleton;
-  userIntentLine: string;
-  audience: "c_end" | "b_end";
-  group: SeoKeywordSeed["group"];
-  score: number;
+  contentLine: SeoContentLine;
+  sectionLabel: string;
+  categoryLabel: string;
+  subCategoryLabel: string;
+  categoryHref: string;
+  subHref: string;
+  themeLabel: string;
+  entityLabel: string;
+  patternKey: string;
+  intentScore: number;
+  businessScore: number;
+  extractabilityScore: number;
+  entityScore: number;
+  dupRiskScore: number;
+  titlePatternDiversityScore: number;
+  suffixDupRiskScore: number;
+  totalScore: number;
   dedupReason: string | null;
 };
 
@@ -44,758 +48,612 @@ export type SeoTopicSelectionStats = {
   rawCandidateCount: number;
   filteredCandidateCount: number;
   finalPickedCount: number;
-  historyWindowDays: number;
   filterReasonCounts: Record<string, number>;
 };
 
-type SiteEntityFrequency = {
-  keyword: string;
-  count: number;
-};
-
-type TitleBuild = {
-  title: string;
-  titleStyle: TitleStyle;
-  titleFrame: string;
-};
-
-type RecentHistoryReference = {
+type ExistingSeoReference = {
   id: string;
   title: string;
-  titleFrame: string | null;
+  slug: string;
+  content: string;
+  sourceUrl: string | null;
+  keywordSeed: string | null;
+  keywordIntent: string | null;
+  categoryHref: string | null;
+  subHref: string | null;
 };
 
-const HISTORY_WINDOW_DAYS = 45;
-const HISTORY_TITLE_SIMILARITY_THRESHOLD = 0.45;
-const TITLE_STYLE_ORDER: TitleStyle[] = ["question", "contrast", "scene", "avoidance", "cognition"];
-const SKELETON_ORDER: BodySkeleton[] = [
-  "budget_breakdown",
-  "pricing_compare",
-  "decision_guide",
-  "scenario_solution",
-  "industry_cognition",
-];
+const TITLE_NATURALNESS_BANNED_PATTERNS = [
+  /怎么做怎么做/,
+  /为什么越来越[？?]$/,
+  /^[^？?]{0,8}[？?]先看关键判断点$/,
+  /报价预算分配/,
+  /线上获客[？?]先看/,
+  /[？?]很多团队都忽略了$/,
+  /[？?]很多人第一步就做反了$/,
+] as const;
 
-const TITLE_PRESETS: Array<{
-  seed: string;
-  intent: string;
-  title: string;
-  titleStyle: TitleStyle;
-  titleFrame: string;
-}> = [
-  {
-    seed: "整木定制多少钱一平",
-    intent: "多少钱",
-    title: "整木定制多少钱一平？不同方案的价格差在哪",
-    titleStyle: "question",
-    titleFrame: "price_per_meter_gap",
-  },
-  {
-    seed: "整木定制价格",
-    intent: "报价",
-    title: "为什么整木定制价格差这么多？核心成本在这里",
-    titleStyle: "contrast",
-    titleFrame: "pricing_gap_reason",
-  },
-  {
-    seed: "整木定制预算",
-    intent: "预算",
-    title: "整木定制预算一般多少？100㎡真实花费拆解",
-    titleStyle: "scene",
-    titleFrame: "budget_real_cost",
-  },
-  {
-    seed: "整木定制报价",
-    intent: "报价",
-    title: "整木定制报价怎么看？低价方案为什么容易越做越贵",
-    titleStyle: "avoidance",
-    titleFrame: "quote_low_price_trap",
-  },
-  {
-    seed: "整木定制10万够不够",
-    intent: "预算",
-    title: "整木定制10万够吗？哪些地方最容易超预算",
-    titleStyle: "scene",
-    titleFrame: "ten_wan_budget_gap",
-  },
-  {
-    seed: "整木定制100平多少钱",
-    intent: "多少钱",
-    title: "整木定制100平多少钱？先看预算会花在哪些地方",
-    titleStyle: "scene",
-    titleFrame: "hundred_meter_cost_split",
-  },
-  {
-    seed: "整木定制怎么选",
-    intent: "怎么选",
-    title: "整木定制怎么选？先看设计、报价和交付是否匹配",
-    titleStyle: "question",
-    titleFrame: "selection_match_delivery",
-  },
-  {
-    seed: "整木定制选品牌",
-    intent: "怎么判断",
-    title: "整木定制选品牌怎么判断？别只看门店装修和宣传",
-    titleStyle: "question",
-    titleFrame: "brand_judgement_showroom_bias",
-  },
-  {
-    seed: "整木定制选门店",
-    intent: "怎么选",
-    title: "整木定制选门店怎么判断？同城案例比展厅更重要",
-    titleStyle: "question",
-    titleFrame: "store_case_over_showroom",
-  },
-  {
-    seed: "整木定制选工厂",
-    intent: "怎么判断",
-    title: "整木定制选工厂怎么判断？交付能力比低价更关键",
-    titleStyle: "question",
-    titleFrame: "factory_delivery_over_low_price",
-  },
-  {
-    seed: "整木定制选实木还是多层板",
-    intent: "怎么选",
-    title: "整木定制选实木还是多层板？预算和稳定性要一起看",
-    titleStyle: "contrast",
-    titleFrame: "material_solid_vs_multi",
-  },
-  {
-    seed: "整木定制怎么不踩坑",
-    intent: "避坑",
-    title: "整木定制怎么不踩坑？先避开最容易加项的环节",
-    titleStyle: "avoidance",
-    titleFrame: "avoid_extra_items",
-  },
-  {
-    seed: "整木定制有没有必要",
-    intent: "有没有必要",
-    title: "整木定制有没有必要？先看哪些家庭更适合做",
-    titleStyle: "cognition",
-    titleFrame: "need_or_not_family_fit",
-  },
-  {
-    seed: "整木定制值不值",
-    intent: "值不值",
-    title: "整木定制值不值？预算、入住体验和维护成本一起看",
-    titleStyle: "cognition",
-    titleFrame: "value_judgement_total_cost",
-  },
-  {
-    seed: "整木定制和全屋定制区别",
-    intent: "区别",
-    title: "整木定制和全屋定制区别在哪？别把预算逻辑算混了",
-    titleStyle: "contrast",
-    titleFrame: "custom_vs_whole_house_difference",
-  },
-  {
-    seed: "整木定制靠谱吗",
-    intent: "靠不靠谱",
-    title: "整木定制靠谱吗？关键看报价边界和交付流程",
-    titleStyle: "cognition",
-    titleFrame: "reliable_or_not_delivery_logic",
-  },
-  {
-    seed: "整木定制工期",
-    intent: "工期多久",
-    title: "整木定制工期一般多久？哪些环节最容易拖进度",
-    titleStyle: "question",
-    titleFrame: "timeline_delay_points",
-  },
-  {
-    seed: "整木工厂怎么接单",
-    intent: "怎么接单",
-    title: "整木工厂怎么接单？先把网站里的高意向问题讲清楚",
-    titleStyle: "question",
-    titleFrame: "factory_order_high_intent_content",
-  },
-  {
-    seed: "整木工厂获客",
-    intent: "获客",
-    title: "整木工厂获客为什么总没效果？问题常出在内容入口",
-    titleStyle: "contrast",
-    titleFrame: "factory_leads_content_entry",
-  },
-  {
-    seed: "整木工厂客户来源",
-    intent: "询盘",
-    title: "整木工厂客户来源怎么打？先把询盘路径理顺",
-    titleStyle: "question",
-    titleFrame: "factory_inquiry_path",
-  },
-  {
-    seed: "整木工厂订单哪里来",
-    intent: "为什么没有客户",
-    title: "整木工厂订单为什么越来越难接？高意向内容没铺开",
-    titleStyle: "contrast",
-    titleFrame: "factory_order_decline_content_gap",
-  },
-  {
-    seed: "整木工厂如何提高询盘质量",
-    intent: "询盘",
-    title: "整木工厂如何提高询盘质量？别把流量当成有效客户",
-    titleStyle: "avoidance",
-    titleFrame: "factory_inquiry_quality_vs_traffic",
-  },
-  {
-    seed: "整木门店怎么获客",
-    intent: "怎么获客",
-    title: "整木门店怎么获客？同城案例和预算内容要先做起来",
-    titleStyle: "question",
-    titleFrame: "store_local_case_budget_content",
-  },
-  {
-    seed: "整木门店怎么成交",
-    intent: "成交",
-    title: "整木门店怎么成交？客户卡点往往不在价格本身",
-    titleStyle: "contrast",
-    titleFrame: "store_close_customer_block",
-  },
-  {
-    seed: "整木门店转化率低怎么办",
-    intent: "成交",
-    title: "整木门店转化率低怎么办？先补齐报价前的信任内容",
-    titleStyle: "avoidance",
-    titleFrame: "store_conversion_trust_before_quote",
-  },
-  {
-    seed: "整木门店线上获客",
-    intent: "怎么做",
-    title: "整木门店线上获客怎么做？先让网站回答客户最关心的问题",
-    titleStyle: "question",
-    titleFrame: "store_online_site_answers",
-  },
-];
-
-function unique<T>(items: T[]) {
-  return Array.from(new Set(items));
-}
+const GENERIC_TITLE_TAILS = [
+  "先看关键判断点",
+  "先看真正影响决策的几个点",
+  "先看几个关键点",
+  "一文看懂",
+  "全面解析",
+] as const;
 
 function incrementCounter(target: Record<string, number>, key: string) {
   target[key] = (target[key] ?? 0) + 1;
 }
 
-function normalizePattern(pattern: string) {
-  return pattern.replace(/\s+/g, "").trim();
+function normalizeMainSeed(seed: string) {
+  return seed
+    .replace(
+      /多少钱一平|多少钱|总价怎么算|费用|报价差在哪|预算怎么做|预算分配|为什么会超预算|怎么选|怎么判断|怎么看靠不靠谱|怎么看值不值|应该看哪些点|区别在哪|哪个好|避坑|注意事项|哪些地方最容易踩坑|增项一般出在哪里|工期一般多久|设计到安装多久|怎么验收|怎么签合同|为什么越来越重要|为什么开始重视|为什么不能只靠老办法|为什么没效果|为什么越来越难|为什么客户不回复|为什么客户不下单|为什么询盘不精准|背后反映了什么变化|问题可能不在流量|未必只是客户不精准|应该怎么布局|哪些模块必须有|哪些页面最该先补|怎么提高转化|怎么减少反复沟通|怎么让客户更容易看懂|怎么让搜索更容易理解|怎么做搜索内容布局|产品页怎么写|如何用AI做推广|如何用AI做内容|如何用AI写官网|如何用AI做案例展示|哪些环节适合用AI|哪些环节不能只靠AI|用AI做推广要注意什么|用AI做内容最容易踩什么坑/g,
+      "",
+    )
+    .replace(/AI内容推广|AI官网布局|AI内容协作|AI整理案例/g, "AI")
+    .trim();
 }
 
-function buildSeedHash(seed: SeoKeywordSeed, pattern: string) {
-  const input = `${seed.group}:${seed.phrase}:${pattern}`;
-  return Array.from(input).reduce((sum, char) => sum + char.charCodeAt(0), 0);
+function getThemeRoot(seed: string) {
+  if (seed.includes("整木门店")) return "整木门店";
+  if (seed.includes("整木工厂")) return "整木工厂";
+  if (seed.includes("整木行业")) return "整木行业";
+  if (seed.includes("整木定制")) return "整木定制";
+  if (seed.includes("高定木作")) return "高定木作";
+  if (seed.includes("定制家具")) return "定制家具";
+  if (seed.includes("AI")) return "AI";
+  return normalizeMainSeed(seed).slice(0, 8);
 }
 
-function extractEntitiesFromTitle(title: string) {
-  return unique(
-    title
-      .split(/[，。、”“‘’？！（）():\s\-]+/)
-      .map((item) => item.trim())
-      .filter((item) => item.length >= 2 && /[\u4e00-\u9fa5]/.test(item)),
-  );
+function getTopicCluster(candidate: Pick<SeoTopicCandidate, "contentLine" | "entityLabel" | "keywordIntent" | "keywordSeed">) {
+  const seed = `${candidate.entityLabel}${candidate.keywordIntent}${candidate.keywordSeed}`;
+  if (candidate.contentLine === "buying") {
+    if (/报价|价格|预算|总价|费用|增项/.test(seed)) return "buying-price";
+    if (/板材|木皮|五金|工艺|收口|环保/.test(seed)) return "buying-material";
+    if (/合同|验收|工期|安装|交付/.test(seed)) return "buying-delivery";
+    if (/工厂|门店|品牌/.test(seed)) return "buying-choice";
+    return "buying-other";
+  }
+  if (candidate.contentLine === "trend") {
+    if (/AI/.test(seed)) return "trend-ai";
+    if (/获客|流量|询盘/.test(seed)) return "trend-lead";
+    if (/官网|案例|交付/.test(seed)) return "trend-display";
+    return "trend-other";
+  }
+  if (/AI/.test(seed)) return "tech-ai";
+  if (/官网|模块/.test(seed)) return "tech-website";
+  if (/案例/.test(seed)) return "tech-case";
+  if (/产品|搜索/.test(seed)) return "tech-product-search";
+  return "tech-other";
 }
 
-function buildSiteEntityFrequencies(titles: string[]) {
-  const counts = new Map<string, number>();
-  for (const title of titles) {
-    for (const entity of extractEntitiesFromTitle(title)) {
-      counts.set(entity, (counts.get(entity) ?? 0) + 1);
+function isIncompleteQuestion(title: string) {
+  return /为什么越来越[？?]$/.test(title) || /如何用AI[？?]$/.test(title);
+}
+
+export function titleNaturalnessCheck(title: string) {
+  const normalized = title.trim();
+  if (!normalized) return { ok: false as const, reason: "empty_title" };
+  if (TITLE_NATURALNESS_BANNED_PATTERNS.some((pattern) => pattern.test(normalized))) {
+    return { ok: false as const, reason: "title_naturalness_banned_pattern" };
+  }
+  if (isIncompleteQuestion(normalized)) {
+    return { ok: false as const, reason: "title_incomplete_question" };
+  }
+  if ((normalized.match(/怎么/g) || []).length >= 2) {
+    return { ok: false as const, reason: "title_repeated_intent_word" };
+  }
+  if ((normalized.match(/[？?]/g) || []).length > 1) {
+    return { ok: false as const, reason: "title_multiple_questions" };
+  }
+  if (normalized.length < 14 || normalized.length > 34) {
+    return { ok: false as const, reason: "title_length_unbalanced" };
+  }
+
+  const parts = normalized.split(/[？?]/);
+  if (parts.length >= 2) {
+    const head = parts[0]?.trim() || "";
+    const tail = parts.slice(1).join("？").trim();
+    if (head.length < 8) return { ok: false as const, reason: "title_question_head_too_short" };
+    if (!tail) return { ok: false as const, reason: "title_missing_tail" };
+    if (GENERIC_TITLE_TAILS.includes(tail as (typeof GENERIC_TITLE_TAILS)[number])) {
+      return { ok: false as const, reason: "title_tail_too_generic" };
+    }
+    if (/先看关键判断点|先看几个关键点/.test(tail)) {
+      return { ok: false as const, reason: "title_too_internal" };
     }
   }
 
-  return Array.from(counts.entries())
-    .filter(([, count]) => count >= 2)
-    .sort((a, b) => b[1] - a[1] || b[0].length - a[0].length)
-    .slice(0, 24)
-    .map(([keyword, count]) => ({ keyword, count })) satisfies SiteEntityFrequency[];
+  if (/报价预算|获客为什么越来越|内容怎么布局怎么/.test(normalized)) {
+    return { ok: false as const, reason: "title_collocation_awkward" };
+  }
+
+  return { ok: true as const, reason: null };
 }
 
-function resolveAudience(seed: SeoKeywordSeed) {
-  return seed.intent;
+export function mainSeedBatchDiversityCheck(candidate: SeoTopicCandidate, accepted: SeoTopicCandidate[]) {
+  const root = normalizeMainSeed(candidate.keywordSeed);
+  const themeRoot = getThemeRoot(candidate.keywordSeed);
+  const cluster = getTopicCluster(candidate);
+
+  if (accepted.filter((item) => normalizeMainSeed(item.keywordSeed) === root).length >= 1) {
+    return { ok: false as const, reason: "duplicate_main_seed_root" };
+  }
+
+  if (accepted.filter((item) => getTopicCluster(item) === cluster).length >= 1) {
+    return { ok: false as const, reason: "duplicate_topic_cluster" };
+  }
+
+  if (candidate.contentLine === "buying" && accepted.filter((item) => item.contentLine === "buying" && getThemeRoot(item.keywordSeed) === themeRoot).length >= 1) {
+    return { ok: false as const, reason: "duplicate_buying_theme_root" };
+  }
+
+  if (accepted.filter((item) => item.contentLine === candidate.contentLine && getThemeRoot(item.keywordSeed) === themeRoot).length >= 2) {
+    return { ok: false as const, reason: "duplicate_theme_root" };
+  }
+
+  return { ok: true as const, reason: null };
 }
 
-function hasRequiredIntent(text: string) {
-  return SEO_REQUIRED_INTENT_TERMS.some((term) => text.includes(term));
+function buildBuyingTitle(theme: string, entity: string, intent: string) {
+  if (/多少钱|费用|总价怎么算|报价差在哪/.test(intent)) {
+    return `${theme}${entity}${intent}？先把影响总价的项目拆开`;
+  }
+  if (/预算怎么做|预算分配|为什么会超预算|哪些钱不能省/.test(intent)) {
+    return `${theme}${intent}？先把最容易失控的几项看清`;
+  }
+  if (/怎么选|适合什么人|不适合什么人|应该先比较什么/.test(intent)) {
+    return `${theme}${entity}${intent}？先看预算、空间和交付边界`;
+  }
+  if (/怎么判断|怎么看/.test(intent)) {
+    return `${theme}${entity}${intent}？别只看展厅和单价`;
+  }
+  if (/区别在哪|哪个好/.test(intent)) {
+    return `${theme}和${entity}${intent}？先看预算和使用场景`;
+  }
+  if (/避坑|注意事项|踩坑|增项/.test(intent)) {
+    return `${theme}${entity}${intent}？很多问题都出在前期没问清`;
+  }
+  if (/工期|安装|验收|合同/.test(intent)) {
+    return `${theme}${intent}？关键要把交付边界写清楚`;
+  }
+  return `${theme}${entity}${intent}？关键不只看单价`;
 }
 
-function getPresetTitle(seed: SeoKeywordSeed, pattern: string) {
-  return TITLE_PRESETS.find((item) => item.seed === seed.phrase && item.intent === pattern) ?? null;
-}
-
-function chooseTitleStyle(seed: SeoKeywordSeed, pattern: string): TitleStyle {
-  const normalized = normalizePattern(pattern);
-  const hash = buildSeedHash(seed, normalized);
-
-  if (normalized.includes("报价") || normalized.includes("为什么") || normalized.includes("区别")) {
-    return "contrast";
-  }
-  if (normalized.includes("避坑") || normalized.includes("注意事项") || normalized.includes("靠不靠谱")) {
-    return "avoidance";
-  }
-  if (normalized.includes("有没有必要") || normalized.includes("值不值")) {
-    return "cognition";
-  }
-  if (normalized.includes("多少钱") || normalized.includes("预算") || normalized.includes("工期多久")) {
-    return hash % 2 === 0 ? "scene" : "question";
-  }
-  if (normalized.includes("获客") || normalized.includes("成交") || normalized.includes("询盘")) {
-    return hash % 2 === 0 ? "contrast" : "question";
-  }
-  if (seed.group === "avoidance") return "avoidance";
-  if (seed.group === "decision") return "cognition";
-  if (seed.group === "scene" || seed.group === "budget") return "scene";
-
-  return TITLE_STYLE_ORDER[hash % TITLE_STYLE_ORDER.length] ?? "question";
-}
-
-function buildQuestionTitle(seed: SeoKeywordSeed) {
-  switch (seed.group) {
-    case "price":
-      return { title: `${seed.phrase}？不同方案的价格差在哪`, titleFrame: "price_question_gap" };
-    case "budget":
-      return { title: `${seed.phrase}一般多少？先把预算边界算清楚`, titleFrame: "budget_question_boundary" };
-    case "timeline":
-      return { title: `${seed.phrase}一般多久？哪些环节最容易拖进度`, titleFrame: "timeline_question_delay" };
-    case "selection":
-      return { title: `${seed.phrase}？先看设计、报价和交付是否匹配`, titleFrame: "selection_question_match" };
-    case "material":
-      return { title: `${seed.phrase}怎么判断？别只听销售讲材料名词`, titleFrame: "material_question_judge" };
-    case "factory":
-      return { title: `${seed.phrase}？先把高意向问题讲清楚`, titleFrame: "factory_question_high_intent" };
-    case "store":
-      return { title: `${seed.phrase}？先把客户最关心的预算讲明白`, titleFrame: "store_question_budget" };
-    default:
-      return { title: `${seed.phrase}？先把关键判断标准看明白`, titleFrame: "generic_question_standard" };
-  }
-}
-
-function buildContrastTitle(seed: SeoKeywordSeed) {
-  if (seed.group === "price" || seed.group === "budget") {
-    return { title: `为什么${seed.phrase.replace(/多少钱一平|多少钱/g, "整木定制价格")}差这么多？核心成本在这里`, titleFrame: "pricing_gap_reason" };
-  }
-  if (seed.group === "selection" || seed.group === "material") {
-    return { title: `${seed.phrase}为什么总选错？真正该比的不是展厅大小`, titleFrame: "selection_compare_wrong_focus" };
-  }
-  if (seed.group === "factory") {
-    return { title: `${seed.phrase}为什么总没效果？问题常出在内容入口`, titleFrame: "factory_compare_content_entry" };
-  }
-  if (seed.group === "store") {
-    return { title: `${seed.phrase}为什么总卡住？客户顾虑往往不在价格`, titleFrame: "store_compare_customer_concern" };
-  }
-  return { title: `为什么${seed.phrase}差异会这么大？先看真正影响结果的变量`, titleFrame: "generic_compare_variables" };
-}
-
-function buildSceneTitle(seed: SeoKeywordSeed) {
-  if (seed.group === "price") return { title: `${seed.phrase}？100㎡和别墅方案花费差多少`, titleFrame: "price_scene_house_type" };
-  if (seed.group === "budget") return { title: `${seed.phrase}？10万、20万分别能做到什么程度`, titleFrame: "budget_scene_tier" };
-  if (seed.group === "timeline") return { title: `${seed.phrase}？装修排期怎么留才不被动`, titleFrame: "timeline_scene_schedule" };
-  if (seed.group === "scene") return { title: `${seed.phrase}多少钱？先按空间和功能拆预算`, titleFrame: "scene_solution_space_budget" };
-  if (seed.group === "store") return { title: `${seed.phrase}？同城案例怎么讲才更容易留资`, titleFrame: "store_scene_local_case" };
-  return { title: `${seed.phrase}？不同户型和方案的差别一次讲清`, titleFrame: "generic_scene_compare" };
-}
-
-function buildAvoidanceTitle(seed: SeoKeywordSeed) {
-  if (seed.group === "budget" || seed.group === "price") {
-    return { title: `${seed.phrase}怎么看？哪些地方最容易超预算`, titleFrame: "budget_avoid_overrun" };
-  }
-  if (seed.group === "selection" || seed.group === "material") {
-    return { title: `${seed.phrase}最容易踩哪些坑？先避开这几种判断误区`, titleFrame: "selection_avoid_pitfall" };
-  }
-  if (seed.group === "factory") {
-    return { title: `${seed.phrase}最容易踩哪些坑？别把流量当成有效询盘`, titleFrame: "factory_avoid_traffic_trap" };
-  }
-  if (seed.group === "store") {
-    return { title: `${seed.phrase}要避开什么问题？很多团队输在报价前`, titleFrame: "store_avoid_before_quote" };
-  }
-  return { title: `${seed.phrase}要注意什么？先避开最常见的决策误区`, titleFrame: "generic_avoid_notice" };
-}
-
-function buildCognitionTitle(seed: SeoKeywordSeed) {
-  if (seed.group === "price" || seed.group === "budget") {
-    return { title: `为什么${seed.phrase.replace(/多少钱一平|多少钱/g, "整木定制没有统一价格")}？先看报价逻辑`, titleFrame: "cognition_price_no_standard" };
-  }
-  if (seed.group === "decision") {
-    return { title: `${seed.phrase}到底值不值？先看谁更适合做整木`, titleFrame: "decision_cognition_fit" };
-  }
-  if (seed.group === "factory") {
-    if (seed.phrase.includes("怎么办")) {
-      return { title: `${seed.phrase}？先把高意向内容入口补齐`, titleFrame: "factory_cognition_fix_entry" };
+function buildTrendTitle(theme: string, entity: string, intent: string) {
+  if (/AI/.test(intent) || /AI/.test(entity)) {
+    if (/官网/.test(entity) || /内容/.test(entity)) {
+      return `${theme}为什么要用AI做内容布局？先看哪些环节真的能提效`;
     }
-    return { title: `为什么${seed.phrase.replace(/怎么接单|获客|客户来源|订单哪里来/g, "整木工厂网站没带来客户")}？`, titleFrame: "factory_cognition_site_no_customer" };
-  }
-  if (seed.group === "store") {
-    if (seed.phrase.includes("怎么办")) {
-      return { title: `${seed.phrase}？先补齐报价前的信任内容`, titleFrame: "store_cognition_fix_trust" };
+    if (/获客/.test(intent)) {
+      return `AI会不会改变${theme}的线上获客方式？关键看内容和展示怎么配合`;
     }
-    return { title: `为什么${seed.phrase.replace(/怎么成交|怎么获客|线上获客/g, "整木门店内容做了还是没成交")}？`, titleFrame: "store_cognition_content_no_close" };
+    return `${theme}为什么开始重视AI推广？很多变化都指向内容效率`;
   }
-  return { title: `为什么${seed.phrase}总让人拿不准？先把决策逻辑理顺`, titleFrame: "generic_cognition_logic" };
+  if (/报价后流失/.test(entity) && /客户不回复/.test(intent)) {
+    return `${theme}报价后客户为什么不回复？问题往往不只在流量`;
+  }
+  if (/线上获客/.test(entity) && /客户不回复/.test(intent)) {
+    return `${theme}线上获客有流量却没咨询？很多问题出在前端展示`;
+  }
+  if (/询盘/.test(intent + entity)) {
+    return `${theme}为什么总觉得询盘不精准？很多问题出在内容筛选不够早`;
+  }
+  if (/客户不下单/.test(intent)) {
+    return `${theme}咨询不少却难成交？问题往往不只在流量`;
+  }
+  if (/官网|案例|交付/.test(entity)) {
+    return `${theme}为什么越来越重视${entity}？客户判断方式已经变了`;
+  }
+  if (/搜索流量|线上获客/.test(entity)) {
+    return `${theme}${entity}为什么越来越重要？高意向客户越来越先在线上做判断`;
+  }
+  return `${theme}${entity}${intent}？背后反映的是获客方式在变化`;
 }
 
-function buildTitleFromStyle(seed: SeoKeywordSeed, style: TitleStyle): TitleBuild {
-  if (style === "question") {
-    const built = buildQuestionTitle(seed);
-    return { title: built.title, titleStyle: style, titleFrame: built.titleFrame };
+function buildTechTitle(theme: string, entity: string, intent: string) {
+  if (/AI/.test(intent) || /AI/.test(theme) || /AI/.test(entity)) {
+    if (/案例/.test(entity)) {
+      return `${theme}如何用AI整理案例，才更容易被客户和搜索看懂`;
+    }
+    if (/官网/.test(entity)) {
+      return `${theme}如何用AI做官网内容，才能提高咨询转化`;
+    }
+    if (/产品/.test(entity)) {
+      return `${theme}如何用AI写产品页，才能提高内容产出效率`;
+    }
+    if (/问答/.test(entity)) {
+      return `${theme}如何用AI写客户问答内容，减少重复沟通`;
+    }
+    if (/短视频/.test(entity)) {
+      return `${theme}如何用AI写短视频脚本，先把案例和工艺资料喂对`;
+    }
+    if (/搜索/.test(entity)) {
+      return `${theme}如何用AI做搜索内容布局，先把页面分层搭清楚`;
+    }
+    return `${theme}${entity}${intent}，关键是先分清哪些环节适合交给AI`;
   }
-  if (style === "contrast") {
-    const built = buildContrastTitle(seed);
-    return { title: built.title, titleStyle: style, titleFrame: built.titleFrame };
+  if (/模块/.test(intent)) {
+    return `${theme}${entity}${intent}？先补高意向客户最关心的信息`;
   }
-  if (style === "scene") {
-    const built = buildSceneTitle(seed);
-    return { title: built.title, titleStyle: style, titleFrame: built.titleFrame };
+  if (/页面/.test(intent)) {
+    return `${theme}${entity}${intent}？先做能减少反复沟通的页面`;
   }
-  if (style === "avoidance") {
-    const built = buildAvoidanceTitle(seed);
-    return { title: built.title, titleStyle: style, titleFrame: built.titleFrame };
+  if (/搜索/.test(intent) || /产品页怎么写/.test(intent)) {
+    return `${theme}${entity}${intent}，更容易被搜索理解`;
   }
-  const built = buildCognitionTitle(seed);
-  return { title: built.title, titleStyle: style, titleFrame: built.titleFrame };
+  if (/转化|沟通|看懂/.test(intent)) {
+    return `${theme}${entity}${intent}，才能减少反复沟通`;
+  }
+  return `${theme}${entity}${intent}，先把客户最关心的问题写明白`;
 }
 
-function chooseTopicTitle(seed: SeoKeywordSeed, pattern: string): TitleBuild {
-  const preset = getPresetTitle(seed, pattern);
-  if (preset) {
-    return {
-      title: preset.title,
-      titleStyle: preset.titleStyle,
-      titleFrame: preset.titleFrame,
-    };
-  }
-
-  const titleStyle = chooseTitleStyle(seed, pattern);
-  return buildTitleFromStyle(seed, titleStyle);
+function createTitle(theme: string, entity: string, intent: string, line: SeoContentLine) {
+  if (line === "buying") return buildBuyingTitle(theme, entity, intent);
+  if (line === "trend") return buildTrendTitle(theme, entity, intent);
+  return buildTechTitle(theme, entity, intent);
 }
 
-function scoreTopic(
-  seed: SeoKeywordSeed,
-  pattern: string,
-  title: string,
-  siteEntities: SiteEntityFrequency[],
-  titleStyle: TitleStyle,
+function humanizePhraseSeed(phrase: string, line: SeoContentLine) {
+  if (line === "buying") {
+    if (/报价单怎么看|总价怎么算|为什么差这么大|超预算/.test(phrase)) {
+      return `${phrase}？先把影响价格的几项拆开`;
+    }
+    if (/板材|木皮|五金|收口|环保/.test(phrase)) {
+      return `${phrase}？别只看单个材料名词`;
+    }
+    if (/合同|验收|工期/.test(phrase)) {
+      return `${phrase}？关键要把交付边界问清楚`;
+    }
+    return `${phrase}？先看预算、工艺和交付能不能对上`;
+  }
+
+  if (line === "trend") {
+    if (/AI/.test(phrase)) {
+      if (/获客方式/.test(phrase)) {
+        return `${phrase}？关键看内容效率和展示效率`;
+      }
+      return `${phrase}？很多团队开始补的不是工具，而是内容结构`;
+    }
+    if (/报价后|询盘质量|成交率低/.test(phrase)) {
+      return `${phrase}？问题往往不只在流量`;
+    }
+    return `${phrase}？客户判断方式已经变了`;
+  }
+
+  if (/AI/.test(phrase)) {
+    if (/官网/.test(phrase)) return `${phrase}，才能提高咨询转化`;
+    if (/案例/.test(phrase)) return `${phrase}，才更容易被客户和搜索理解`;
+    if (/问答/.test(phrase)) return `${phrase}，减少重复沟通`;
+    if (/搜索/.test(phrase)) return `${phrase}，先把页面结构搭清楚`;
+    return `${phrase}，关键是先分清哪些环节适合交给AI`;
+  }
+  if (/模块/.test(phrase)) return `${phrase}？先补高意向客户最关心的信息`;
+  if (/产品页/.test(phrase)) return `${phrase}，更容易被搜索理解`;
+  return `${phrase}，才能提高咨询效率`;
+}
+
+function buildKeywordSeed(theme: string, entity: string, intent: string) {
+  return `${theme}${entity}${intent}`.replace(/\s+/g, "");
+}
+
+function calculateIntentScore(title: string, intent: string) {
+  let score = 66;
+  if (title.includes("？")) score += 8;
+  if (/多少钱|预算|怎么|为什么|AI/.test(intent)) score += 12;
+  if (title.length >= 18 && title.length <= 30) score += 8;
+  return Math.min(100, score);
+}
+
+function calculateBusinessScore(line: SeoContentLine, entity: string, intent: string) {
+  let score = line === "buying" ? 78 : 72;
+  if (/工厂|门店|官网|案例|产品页|询盘|交付|AI/.test(entity)) score += 10;
+  if (/转化|询盘|预算|价格|AI/.test(intent)) score += 8;
+  return Math.min(100, score);
+}
+
+function calculateExtractabilityScore(title: string, intent: string) {
+  let score = 68;
+  if (title.includes("？")) score += 8;
+  if (/为什么|怎么|AI/.test(intent)) score += 10;
+  return Math.min(100, score);
+}
+
+function calculateEntityScore(title: string) {
+  const hitCount = SEO_ENTITY_TERMS.filter((term) => title.includes(term)).length;
+  return Math.min(100, 58 + hitCount * 10);
+}
+
+function isBuyingArticle(article: ExistingSeoReference) {
+  return (article.categoryHref || "").startsWith("/brands/buying") || (article.subHref || "").startsWith("/brands/buying");
+}
+
+async function loadExistingSeoReferences() {
+  return prisma.article.findMany({
+    where: {
+      OR: [
+        { categoryHref: { startsWith: "/news" } },
+        { subHref: { startsWith: "/news" } },
+        { categoryHref: { startsWith: "/brands/buying" } },
+        { subHref: { startsWith: "/brands/buying" } },
+      ],
+    },
+    orderBy: [{ updatedAt: "desc" }],
+    take: 1200,
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      content: true,
+      sourceUrl: true,
+      keywordSeed: true,
+      keywordIntent: true,
+      categoryHref: true,
+      subHref: true,
+    },
+  });
+}
+
+function buildCandidatesForLine(lineConfig: SeoLineSeedConfig) {
+  const candidates: SeoTopicCandidate[] = [];
+
+  for (const theme of lineConfig.themes) {
+    for (const entity of lineConfig.entities) {
+      for (const intent of lineConfig.intents) {
+        for (const pattern of intent.patterns) {
+          const title = createTitle(theme.label, entity.label, pattern, lineConfig.line);
+          const keywordSeed = buildKeywordSeed(theme.label, entity.label, pattern);
+
+          candidates.push({
+            title,
+            slug: slugify(title),
+            keywordSeed,
+            keywordIntent: pattern,
+            contentLine: lineConfig.line,
+            sectionLabel: lineConfig.sectionLabel,
+            categoryLabel: lineConfig.categoryLabel,
+            subCategoryLabel: lineConfig.subCategoryLabel,
+            categoryHref: lineConfig.categoryHref,
+            subHref: lineConfig.subHref,
+            themeLabel: theme.label,
+            entityLabel: entity.label,
+            patternKey: getTitlePatternKey(title),
+            intentScore: calculateIntentScore(title, pattern),
+            businessScore: calculateBusinessScore(lineConfig.line, entity.label, pattern),
+            extractabilityScore: calculateExtractabilityScore(title, pattern),
+            entityScore: calculateEntityScore(title),
+            dupRiskScore: 0,
+            titlePatternDiversityScore: 100,
+            suffixDupRiskScore: 0,
+            totalScore: 0,
+            dedupReason: null,
+          });
+        }
+      }
+    }
+  }
+
+  for (const phrase of lineConfig.phraseSeeds) {
+    const title = humanizePhraseSeed(phrase, lineConfig.line);
+    candidates.push({
+      title,
+      slug: slugify(title),
+      keywordSeed: phrase,
+      keywordIntent: "seed_phrase",
+      contentLine: lineConfig.line,
+      sectionLabel: lineConfig.sectionLabel,
+      categoryLabel: lineConfig.categoryLabel,
+      subCategoryLabel: lineConfig.subCategoryLabel,
+      categoryHref: lineConfig.categoryHref,
+      subHref: lineConfig.subHref,
+      themeLabel: lineConfig.themes.find((item) => phrase.includes(item.label))?.label ?? lineConfig.themes[0]?.label ?? phrase,
+      entityLabel: lineConfig.entities.find((item) => phrase.includes(item.label))?.label ?? lineConfig.entities[0]?.label ?? phrase,
+      patternKey: getTitlePatternKey(title),
+      intentScore: 84,
+      businessScore: 82,
+      extractabilityScore: 80,
+      entityScore: calculateEntityScore(title),
+      dupRiskScore: 0,
+      titlePatternDiversityScore: 100,
+      suffixDupRiskScore: 0,
+      totalScore: 0,
+      dedupReason: null,
+    });
+  }
+
+  return candidates;
+}
+
+function filterCandidate(
+  candidate: SeoTopicCandidate,
+  existingArticles: ExistingSeoReference[],
+  accepted: SeoTopicCandidate[],
+  filterReasonCounts: Record<string, number>,
 ) {
-  let score = 60;
-  if (seed.intent === "b_end") score += 6;
-  if (hasRequiredIntent(`${seed.phrase} ${pattern} ${title}`)) score += 15;
-  if (title.includes("为什么") || title.includes("区别") || title.includes("超预算")) score += 8;
-  if (title.includes("预算") || title.includes("报价") || title.includes("询盘") || title.includes("成交")) score += 8;
-  if (titleStyle === "scene" || titleStyle === "contrast") score += 4;
-  score += Math.min(12, siteEntities.find((item) => title.includes(item.keyword))?.count ?? 0);
-  score -= Math.max(0, title.length - 30);
-  return score;
+  if (SEO_DISALLOWED_TOPIC_PATTERNS.some((pattern) => pattern.test(candidate.title))) {
+    incrementCounter(filterReasonCounts, "disallowed_pattern");
+    return false;
+  }
+
+  const titleDiversity = titleSuffixDiversityCheck(candidate.title, accepted.map((item) => item.title));
+  if (!titleDiversity.ok) {
+    incrementCounter(filterReasonCounts, titleDiversity.reason);
+    return false;
+  }
+
+  const naturalness = titleNaturalnessCheck(candidate.title);
+  if (!naturalness.ok) {
+    incrementCounter(filterReasonCounts, naturalness.reason);
+    return false;
+  }
+
+  const mainSeedDiversity = mainSeedBatchDiversityCheck(candidate, accepted);
+  if (!mainSeedDiversity.ok) {
+    incrementCounter(filterReasonCounts, mainSeedDiversity.reason);
+    return false;
+  }
+
+  if (accepted.some((item) => isDuplicateSeoIntent(candidate, item))) {
+    incrementCounter(filterReasonCounts, "duplicate_seed_intent");
+    return false;
+  }
+
+  if (accepted.some((item) => getTitleSimilarity(item.title, candidate.title) >= 0.88)) {
+    incrementCounter(filterReasonCounts, "similar_batch_title");
+    return false;
+  }
+
+  const dedupReason = findSeoDuplicateReason(candidate, existingArticles);
+  if (dedupReason) {
+    candidate.dedupReason = dedupReason;
+    incrementCounter(filterReasonCounts, dedupReason.split(":")[0] ?? "dedup_reason");
+    return false;
+  }
+
+  return true;
 }
 
-function isSeedTemplateCompatible(seed: SeoKeywordSeed, templateKey: string) {
-  if (seed.intent === "b_end") return ["factory", "store"].includes(templateKey);
-  if (["price", "budget", "timeline"].includes(seed.group)) return ["price"].includes(templateKey);
-  if (["selection", "material", "design"].includes(seed.group)) return ["selection", "material"].includes(templateKey);
-  if (["avoidance", "decision", "scene"].includes(seed.group)) return ["decision", "selection"].includes(templateKey);
-  return false;
+function scoreCandidate(candidate: SeoTopicCandidate, acceptedTitles: string[]) {
+  const suffixDupRiskScore = getSuffixDupRiskScore(candidate.title, acceptedTitles);
+  const titlePatternDiversityScore = getTitlePatternDiversityScore(candidate.title, acceptedTitles);
+  const dupRiskScore = Math.min(100, suffixDupRiskScore + Math.max(0, 60 - titlePatternDiversityScore));
+  const totalScore =
+    candidate.intentScore * 0.28 +
+    candidate.businessScore * 0.24 +
+    candidate.extractabilityScore * 0.2 +
+    candidate.entityScore * 0.16 +
+    titlePatternDiversityScore * 0.12 -
+    dupRiskScore * 0.18;
+
+  return {
+    suffixDupRiskScore,
+    titlePatternDiversityScore,
+    dupRiskScore,
+    totalScore: Number(totalScore.toFixed(2)),
+  };
 }
 
 function buildSelectionPlan(count: number) {
-  return {
-    targetCount: Math.max(2, Math.min(3, count)),
-    minCount: 2,
-    preferredCCount: count >= 3 ? 2 : 1,
-  };
+  if (count <= 3) return ["buying", "buying", "trend"] as SeoContentLine[];
+  if (count === 4) return ["buying", "buying", "trend", "tech"] as SeoContentLine[];
+  return ["buying", "buying", "buying", "trend", "tech"] as SeoContentLine[];
 }
 
-function buildSkeletonOptions(seed: SeoKeywordSeed, titleStyle: TitleStyle, pattern: string): BodySkeleton[] {
-  const normalized = normalizePattern(pattern);
+function pickByPlan(candidates: SeoTopicCandidate[], count: number) {
+  const plan = buildSelectionPlan(count);
+  const picked: SeoTopicCandidate[] = [];
 
-  if (seed.intent === "b_end") {
-    if (normalized.includes("询盘") || normalized.includes("获客")) {
-      return ["decision_guide", "industry_cognition", "pricing_compare"];
-    }
-    if (normalized.includes("成交")) {
-      return ["decision_guide", "scenario_solution", "industry_cognition"];
-    }
-    return ["industry_cognition", "decision_guide", "pricing_compare"];
+  for (const line of plan) {
+    const next = candidates
+      .filter((item) => item.contentLine === line)
+      .find((item) => {
+        if (picked.some((pickedItem) => pickedItem.keywordSeed === item.keywordSeed)) return false;
+        if (picked.some((pickedItem) => getTitleSimilarity(pickedItem.title, item.title) >= 0.84)) return false;
+        if (!titleNaturalnessCheck(item.title).ok) return false;
+        if (!mainSeedBatchDiversityCheck(item, picked).ok) return false;
+        return titleSuffixDiversityCheck(item.title, picked.map((pickedItem) => pickedItem.title)).ok;
+      });
+
+    if (next) picked.push(next);
   }
 
-  if (titleStyle === "scene") {
-    return ["scenario_solution", "budget_breakdown", "decision_guide"];
+  for (const candidate of candidates) {
+    if (picked.length >= count) break;
+    if (picked.some((item) => item.keywordSeed === candidate.keywordSeed)) continue;
+    if (picked.some((item) => getTitleSimilarity(item.title, candidate.title) >= 0.84)) continue;
+    if (!titleNaturalnessCheck(candidate.title).ok) continue;
+    if (!mainSeedBatchDiversityCheck(candidate, picked).ok) continue;
+    if (!titleSuffixDiversityCheck(candidate.title, picked.map((item) => item.title)).ok) continue;
+    picked.push(candidate);
   }
-  if (titleStyle === "contrast") {
-    return ["pricing_compare", "industry_cognition", "budget_breakdown"];
-  }
-  if (titleStyle === "avoidance") {
-    return ["budget_breakdown", "decision_guide", "pricing_compare"];
-  }
-  if (titleStyle === "cognition") {
-    return ["industry_cognition", "decision_guide", "scenario_solution"];
-  }
-  if (seed.group === "budget" || seed.group === "price") {
-    return ["budget_breakdown", "pricing_compare", "scenario_solution"];
-  }
-  return ["decision_guide", "scenario_solution", "industry_cognition"];
+
+  return picked.slice(0, count);
 }
 
-function chooseBodySkeleton(
-  seed: SeoKeywordSeed,
-  titleStyle: TitleStyle,
-  pattern: string,
-  picked: Pick<SeoTopicCandidate, "bodySkeleton">[],
-) {
-  const preferred = buildSkeletonOptions(seed, titleStyle, pattern);
-  const counts = new Map<BodySkeleton, number>();
-  for (const item of picked) {
-    counts.set(item.bodySkeleton, (counts.get(item.bodySkeleton) ?? 0) + 1);
-  }
-  const previous = picked[picked.length - 1]?.bodySkeleton ?? null;
-
-  const candidates = unique([...preferred, ...SKELETON_ORDER]);
-  const ranked = candidates.sort((left, right) => {
-    const leftCount = counts.get(left) ?? 0;
-    const rightCount = counts.get(right) ?? 0;
-    if (leftCount !== rightCount) return leftCount - rightCount;
-    return candidates.indexOf(left) - candidates.indexOf(right);
-  });
-
-  const withoutPrevious = ranked.find((item) => item !== previous);
-  return withoutPrevious ?? ranked[0] ?? preferred[0] ?? "decision_guide";
-}
-
-function isBatchTitleTooSimilar(
-  candidate: Pick<SeoTopicCandidate, "title" | "titleFrame">,
-  picked: Pick<SeoTopicCandidate, "title" | "titleFrame">[],
-) {
-  return picked.some((item) => item.titleFrame === candidate.titleFrame || getTitleSimilarity(item.title, candidate.title) > 0.4);
-}
-
-function findHistoryDuplicateReason(
-  candidate: Pick<SeoTopicCandidate, "title" | "titleFrame">,
-  recentHistory: RecentHistoryReference[],
-) {
-  if (recentHistory.some((item) => item.titleFrame && item.titleFrame === candidate.titleFrame)) {
-    return "duplicate_history_frame";
-  }
-  if (recentHistory.some((item) => getTitleSimilarity(item.title, candidate.title) > HISTORY_TITLE_SIMILARITY_THRESHOLD)) {
-    return "similar_history_title";
-  }
-  return null;
-}
-
-export async function loadSeoTopicContext() {
-  const historyStartAt = new Date();
-  historyStartAt.setDate(historyStartAt.getDate() - HISTORY_WINDOW_DAYS);
-
-  const [existingArticles, recentHistory] = await Promise.all([
-    prisma.article.findMany({
-      where: {
-        OR: [{ categoryHref: { startsWith: "/news" } }, { subHref: { startsWith: "/news" } }],
-      },
-      orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }],
-      take: 500,
-      select: {
-        id: true,
-        title: true,
-        slug: true,
-        content: true,
-        sourceUrl: true,
-      },
-    }),
-    prisma.article.findMany({
-      where: {
-        sourceType: "ai_generated",
-        createdAt: { gte: historyStartAt },
-        status: { in: ["pending", "approved"] },
-      },
-      orderBy: [{ createdAt: "desc" }],
-      take: 120,
-      select: {
-        id: true,
-        title: true,
-        reviewNote: true,
-      },
-    }),
-  ]);
-
-  const siteEntities = buildSiteEntityFrequencies(existingArticles.map((item) => item.title));
-
-  return {
-    existingArticles,
-    siteEntities,
-    recentHistory: recentHistory.map((item) => ({
-      id: item.id,
-      title: item.title,
-      titleFrame: item.reviewNote?.match(/titleFrame=([a-z_]+)/)?.[1] ?? null,
-    })),
-    historyWindowDays: HISTORY_WINDOW_DAYS,
-  };
-}
-
-export async function generateSeoTopicCandidates(limit = 30) {
-  const { existingArticles, siteEntities, recentHistory, historyWindowDays } = await loadSeoTopicContext();
-  const rawCandidates: SeoTopicCandidate[] = [];
+export async function generateSeoTopicCandidates(limit = SEO_BATCH_CANDIDATE_MAX) {
+  const existingArticles = await loadExistingSeoReferences();
+  const rawCandidates = [
+    ...buildCandidatesForLine(SEO_LINE_SEEDS.buying),
+    ...buildCandidatesForLine(SEO_LINE_SEEDS.trend),
+    ...buildCandidatesForLine(SEO_LINE_SEEDS.tech),
+  ];
   const filteredCandidates: SeoTopicCandidate[] = [];
   const filterReasonCounts: Record<string, number> = {};
 
-  for (const seed of SEO_KEYWORD_SEEDS) {
-    for (const template of SEO_INTENT_TEMPLATES) {
-      if (!isSeedTemplateCompatible(seed, template.key)) {
-        incrementCounter(filterReasonCounts, "incompatible_template");
-        continue;
-      }
+  for (const candidate of rawCandidates) {
+    if (!filterCandidate(candidate, existingArticles, filteredCandidates, filterReasonCounts)) continue;
 
-      for (const pattern of template.patterns) {
-        const built = chooseTopicTitle(seed, pattern);
-        const bodySkeleton = chooseBodySkeleton(seed, built.titleStyle, pattern, filteredCandidates);
-        const candidate: SeoTopicCandidate = {
-          title: built.title,
-          slug: slugify(built.title),
-          keywordSeed: seed.phrase,
-          keywordIntent: pattern,
-          titleStyle: built.titleStyle,
-          titleFrame: built.titleFrame,
-          bodySkeleton,
-          userIntentLine: `${seed.phrase} ${pattern}`.trim(),
-          audience: resolveAudience(seed),
-          group: seed.group,
-          score: scoreTopic(seed, pattern, built.title, siteEntities, built.titleStyle),
-          dedupReason: null,
-        };
-
-        rawCandidates.push(candidate);
-
-        const combinedText = `${seed.phrase} ${pattern} ${candidate.title}`;
-        if (!hasRequiredIntent(combinedText)) {
-          incrementCounter(filterReasonCounts, "missing_required_intent");
-          continue;
-        }
-
-        if (SEO_DISALLOWED_TOPIC_PATTERNS.some((rule) => rule.test(candidate.title))) {
-          incrementCounter(filterReasonCounts, "disallowed_pattern");
-          continue;
-        }
-
-        if (filteredCandidates.some((item) => isDuplicateSeoIntent(candidate, item))) {
-          incrementCounter(filterReasonCounts, "duplicate_seed_intent");
-          continue;
-        }
-
-        if (isBatchTitleTooSimilar(candidate, filteredCandidates)) {
-          incrementCounter(filterReasonCounts, "similar_batch_title");
-          continue;
-        }
-
-        const historyReason = findHistoryDuplicateReason(candidate, recentHistory);
-        if (historyReason) {
-          incrementCounter(filterReasonCounts, historyReason);
-          continue;
-        }
-
-        const dedupReason = findSeoDuplicateReason(candidate, existingArticles, { similarityThreshold: 0.9 });
-        if (dedupReason) {
-          candidate.dedupReason = dedupReason;
-          incrementCounter(filterReasonCounts, dedupReason.startsWith("similar_title") ? "similar_title" : "duplicate_title_or_slug");
-          continue;
-        }
-
-        filteredCandidates.push(candidate);
-      }
-    }
+    const score = scoreCandidate(candidate, filteredCandidates.map((item) => item.title));
+    filteredCandidates.push({
+      ...candidate,
+      suffixDupRiskScore: score.suffixDupRiskScore,
+      titlePatternDiversityScore: score.titlePatternDiversityScore,
+      dupRiskScore: score.dupRiskScore,
+      totalScore: score.totalScore,
+    });
   }
 
   const sorted = filteredCandidates
-    .sort((a, b) => b.score - a.score || a.title.length - b.title.length)
-    .slice(0, limit);
+    .sort((a, b) => b.totalScore - a.totalScore || a.title.length - b.title.length)
+    .slice(0, Math.max(SEO_BATCH_CANDIDATE_MIN, Math.min(limit, SEO_BATCH_CANDIDATE_MAX)));
 
   return {
     candidates: sorted,
     rawCandidateCount: rawCandidates.length,
     filteredCandidateCount: filteredCandidates.length,
     filterReasonCounts,
-    historyWindowDays,
   };
-}
-
-function selectTopicsFromPool(
-  candidates: SeoTopicCandidate[],
-  count: number,
-  options: { allowSameGroup?: boolean; ensureBEnd?: boolean } = {},
-) {
-  const picked: SeoTopicCandidate[] = [];
-  const plan = buildSelectionPlan(count);
-  const cCandidates = candidates.filter((item) => item.audience === "c_end");
-  const bCandidates = candidates.filter((item) => item.audience === "b_end");
-
-  const canPick = (candidate: SeoTopicCandidate) => {
-    if (picked.some((item) => item.keywordSeed === candidate.keywordSeed && item.keywordIntent === candidate.keywordIntent)) {
-      return false;
-    }
-    if (!options.allowSameGroup && picked.some((item) => item.group === candidate.group)) {
-      return false;
-    }
-    if (picked.length > 0 && picked[picked.length - 1]?.titleStyle === candidate.titleStyle) {
-      return false;
-    }
-    if (picked.length > 0 && picked[picked.length - 1]?.bodySkeleton === candidate.bodySkeleton) {
-      return false;
-    }
-    if (isBatchTitleTooSimilar(candidate, picked)) {
-      return false;
-    }
-    return true;
-  };
-
-  for (const candidate of cCandidates) {
-    if (picked.filter((item) => item.audience === "c_end").length >= plan.preferredCCount) break;
-    if (!canPick(candidate)) continue;
-    picked.push(candidate);
-  }
-
-  if (options.ensureBEnd !== false) {
-    const bPick = bCandidates.find((candidate) => canPick(candidate));
-    if (bPick) picked.push(bPick);
-  }
-
-  for (const candidate of candidates) {
-    if (picked.length >= plan.targetCount) break;
-    if (!canPick(candidate)) continue;
-    picked.push(candidate);
-  }
-
-  if (picked.length < plan.minCount) {
-    for (const candidate of candidates) {
-      if (picked.length >= plan.minCount) break;
-      if (picked.some((item) => item.keywordSeed === candidate.keywordSeed && item.keywordIntent === candidate.keywordIntent)) {
-        continue;
-      }
-      if (picked.length > 0 && picked[picked.length - 1]?.bodySkeleton === candidate.bodySkeleton) {
-        continue;
-      }
-      if (isBatchTitleTooSimilar(candidate, picked)) {
-        continue;
-      }
-      picked.push(candidate);
-    }
-  }
-
-  return picked.slice(0, plan.targetCount);
 }
 
 export async function pickSeoTopicsForGeneration(count = 3) {
-  const { candidates, rawCandidateCount, filteredCandidateCount, filterReasonCounts, historyWindowDays } =
-    await generateSeoTopicCandidates(30);
+  const { candidates, rawCandidateCount, filteredCandidateCount, filterReasonCounts } = await generateSeoTopicCandidates();
 
-  let picked = selectTopicsFromPool(candidates, count, { allowSameGroup: false, ensureBEnd: true });
-  let selectionMode: "strict" | "relaxed" = "strict";
+  const existingReferences = await loadExistingSeoReferences();
+  const buyingExistingCount = existingReferences.filter(isBuyingArticle).length;
 
-  if (picked.length < 2) {
-    picked = selectTopicsFromPool(candidates, count, { allowSameGroup: true, ensureBEnd: true });
-    selectionMode = "relaxed";
+  const boosted = candidates
+    .map((candidate) => ({
+      ...candidate,
+      totalScore:
+        candidate.totalScore +
+        (candidate.contentLine === "buying" ? 4 : 0) +
+        (/AI/.test(candidate.title) ? 2 : 0) +
+        (candidate.contentLine !== "buying" && buyingExistingCount < 30 ? -2 : 0),
+    }))
+    .sort((a, b) => b.totalScore - a.totalScore);
+
+  let picked = pickByPlan(boosted, count);
+  if (count >= 4) {
+    const trendAiCandidate = boosted.find(
+      (item) => item.contentLine === "trend" && /AI/.test(item.title) && titleNaturalnessCheck(item.title).ok,
+    );
+    if (trendAiCandidate && !picked.some((item) => item.contentLine === "trend" && /AI/.test(item.title))) {
+      const trendIndex = picked.findIndex((item) => item.contentLine === "trend");
+      if (trendIndex >= 0) picked[trendIndex] = trendAiCandidate;
+    }
+
+    const techAiCandidate = boosted.find(
+      (item) => item.contentLine === "tech" && /AI/.test(item.title) && titleNaturalnessCheck(item.title).ok,
+    );
+    if (techAiCandidate && !picked.some((item) => item.contentLine === "tech" && /AI/.test(item.title))) {
+      const techIndex = picked.findIndex((item) => item.contentLine === "tech");
+      if (techIndex >= 0) picked[techIndex] = techAiCandidate;
+    }
+  } else if (count >= 3 && !picked.some((item) => /AI/.test(item.title))) {
+    const aiCandidate = boosted.find((item) => /AI/.test(item.title) && titleNaturalnessCheck(item.title).ok);
+    if (aiCandidate) {
+      const replacementIndex = picked.findIndex((item) => item.contentLine === aiCandidate.contentLine);
+      if (replacementIndex >= 0) picked[replacementIndex] = aiCandidate;
+    }
   }
 
   const stats: SeoTopicSelectionStats = {
     rawCandidateCount,
     filteredCandidateCount,
     finalPickedCount: picked.length,
-    historyWindowDays,
-    filterReasonCounts: {
-      ...filterReasonCounts,
-      selection_mode_relaxed: selectionMode === "relaxed" ? 1 : 0,
-    },
+    filterReasonCounts,
   };
 
-  return { candidates, picked, stats, selectionMode };
+  return { candidates: boosted, picked, stats };
 }

@@ -14,7 +14,7 @@ type DirtyTextHit = {
 
 const ESCAPED_UNICODE_RE = /(?:\\u|\\\\u)[0-9a-fA-F]{4}/;
 const REPEATED_QUESTION_MARK_RE = /(?:\?{3,}|？{3,})/;
-const REPLACEMENT_CHARACTER_RE = /\uFFFD|�/;
+const REPLACEMENT_CHARACTER_RE = /\uFFFD|�|锟/g;
 
 function normalizeForInspection(value: string) {
   return stripHtml(value).replace(/\s+/g, " ").trim();

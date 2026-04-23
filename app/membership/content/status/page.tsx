@@ -139,13 +139,13 @@ export default function MembershipContentStatusPage() {
           className="rounded-[28px] border border-border bg-surface-elevated p-6 shadow-[0_16px_40px_rgba(15,23,42,0.06)]"
         >
           <h2 className="text-lg font-semibold text-primary">搜索我的内容</h2>
-          <p className="mt-2 text-sm text-muted">支持按标题、摘要、正文、作者、来源和关键词查找，方便快速定位某一篇稿件。</p>
+          <p className="mt-2 text-sm text-muted">支持按标题、摘要、正文、作者、来源、标签、关键词、企业或品牌名查找，方便快速定位稿件。</p>
           <div className="mt-5 flex flex-col gap-3 md:flex-row">
             <input
               className="h-12 min-w-0 flex-1 rounded-[22px] border border-border bg-surface px-4 text-sm text-primary placeholder:text-muted focus:border-accent/40 focus:outline-none focus:ring-2 focus:ring-accent/15"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="输入标题、作者、来源或关键词"
+              placeholder="输入标题、作者、来源、标签、关键词、企业或品牌"
             />
             <div className="flex gap-2">
               <button type="submit" className="rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white transition hover:opacity-90">

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { applyArticlePatch } from "@/lib/article-change";
+import { normalizeRichTextField } from "@/lib/brand-content";
 import { canChangeReviewStatus } from "@/lib/content-permissions";
 import { writeOperationLog } from "@/lib/operation-log";
 import { findDuplicateArticleByTitle } from "@/lib/article-title";
@@ -38,6 +39,11 @@ export async function PATCH(
   if (status === "approved") {
     const patchData = applyArticlePatch(req.article, req);
     if (Object.keys(patchData).length > 0) {
+      const isDictionary =
+        req.article.categoryHref?.startsWith("/dictionary") || req.article.subHref?.startsWith("/dictionary");
+      if (!isDictionary && typeof patchData.content === "string") {
+        patchData.content = normalizeRichTextField(patchData.content) ?? "";
+      }
       if (typeof patchData.title === "string") {
         const existingTitle = await findDuplicateArticleByTitle(patchData.title, req.articleId);
         if (existingTitle) {

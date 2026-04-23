@@ -1,4 +1,4 @@
-﻿import { INDUSTRY_TAG_RULES } from "@/lib/industry-tag-lexicon";
+﻿import { INDUSTRY_TAG_RULES } from "./industry-tag-lexicon";
 
 export function stripHtml(input: string): string {
   return input
@@ -263,3 +263,4 @@ export function buildGeoExcerpt(title: string, input: string, max = 120): string
 
   return summary.length <= max ? summary : previewText(summary, max);
 }
+

@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCategories } from "@/lib/categories";
 import { annualBoards, engineerSuppliers, specialAwards, getTop10ByYear } from "@/lib/huadianbang";
 import { absoluteUrl } from "@/lib/seo";
-import { buildNewsPath } from "@/lib/share-config";
+import { buildBuyingPath, buildNewsPath } from "@/lib/share-config";
 
 const now = new Date();
 
@@ -76,7 +76,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           status: "approved",
           OR: [{ categoryHref: { startsWith: "/brands" } }, { subHref: { startsWith: "/brands" } }],
         },
-        select: { slug: true, updatedAt: true },
+        select: { slug: true, updatedAt: true, categoryHref: true, subHref: true },
       }),
       prisma.article.findMany({
         where: {
@@ -84,7 +84,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           publishedAt: { not: null },
           OR: [{ categoryHref: { startsWith: "/news" } }, { subHref: { startsWith: "/news" } }],
         },
-        select: { id: true, updatedAt: true, publishedAt: true },
+        select: { id: true, slug: true, updatedAt: true, publishedAt: true },
       }),
       prisma.tag.findMany({ select: { type: true, slug: true, updatedAt: true } }),
       prisma.enterprise.findMany({
@@ -106,11 +106,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     );
 
     const brandUrls = brandArticles.map((article) =>
-      createEntry(`/brands/${article.slug}`, article.updatedAt, "monthly", 0.8)
+      createEntry(
+        (article.categoryHref?.startsWith("/brands/buying") || article.subHref?.startsWith("/brands/buying"))
+          ? buildBuyingPath(article.slug)
+          : `/brands/${article.slug}`,
+        article.updatedAt,
+        "monthly",
+        0.8
+      )
     );
 
     const articleUrls = newsArticles.map((article) =>
-      createEntry(buildNewsPath(article.id), article.publishedAt ?? article.updatedAt, "weekly", 0.8)
+      createEntry(buildNewsPath(article.slug || article.id), article.publishedAt ?? article.updatedAt, "weekly", 0.8)
     );
 
     const tagUrls = tags.map((tag) =>

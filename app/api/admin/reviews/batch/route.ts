@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { writeOperationLog } from "@/lib/operation-log";
+import { pushApprovedNewsToBaidu } from "@/lib/baidu-submit";
 
 type Target = "article" | "gallery" | "feedback";
 type ReviewStatus = "approved" | "rejected" | "pending" | "draft";
@@ -46,6 +48,43 @@ export async function POST(request: NextRequest) {
       },
     });
     count = result.count;
+
+    if (status === "approved" && count > 0) {
+      const approvedArticles = await prisma.article.findMany({
+        where: { id: { in: uniqueIds }, status: "approved" },
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          content: true,
+          status: true,
+          categoryHref: true,
+          subHref: true,
+        },
+      });
+
+      await Promise.allSettled(
+        approvedArticles.map((article) =>
+          pushApprovedNewsToBaidu(article, {
+            actorId: session.sub,
+            actorEmail: session.email,
+            source: "admin_article_batch_review",
+          }),
+        ),
+      );
+
+      if (
+        approvedArticles.some(
+          (article) =>
+            (article.categoryHref ?? "").startsWith("/news") ||
+            (article.subHref ?? "").startsWith("/news") ||
+            (article.categoryHref ?? "").startsWith("/brands/buying") ||
+            (article.subHref ?? "").startsWith("/brands/buying"),
+        )
+      ) {
+        revalidatePath("/sitemap.xml");
+      }
+    }
   } else if (target === "gallery") {
     const result = await prisma.galleryImage.updateMany({
       where: { id: { in: uniqueIds } },

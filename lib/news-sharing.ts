@@ -46,18 +46,7 @@ export async function findNewsArticleBySegment(segment: string) {
   });
 
   if (exactMatch) return exactMatch;
-
-  return prisma.article.findFirst({
-    where: {
-      ...baseWhere,
-      AND: [
-        {
-          OR: candidates.flatMap((candidate) => [{ slug: { contains: candidate } }, { title: { contains: candidate } }]),
-        },
-      ],
-    },
-    orderBy: articleOrderByPinnedLatest,
-  });
+  return null;
 }
 
 export function extractFirstContentImage(html: string | null | undefined) {

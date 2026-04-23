@@ -2,6 +2,7 @@ const { readFileSync, mkdirSync, writeFileSync } = require("node:fs") as typeof 
 const { resolve, dirname } = require("node:path") as typeof import("node:path");
 const { PrismaClient } = require("@prisma/client") as typeof import("@prisma/client");
 const bcrypt = require("bcryptjs") as typeof import("bcryptjs");
+const { normalizeRichTextField } = require("../lib/brand-content") as typeof import("../lib/brand-content");
 
 type TemplateKey = "brand_showcase" | "professional_service" | "simple_elegant";
 
@@ -323,7 +324,7 @@ function buildFallbackPassword(row: LegacyCompanyRow) {
 }
 
 function buildIntro(row: LegacyCompanyRow) {
-  return joinParts([asNullableString(row.content), asNullableString(row.business_scope)]);
+  return normalizeRichTextField(joinParts([asNullableString(row.content), asNullableString(row.business_scope)]));
 }
 
 function buildContactInfo(row: LegacyCompanyRow) {

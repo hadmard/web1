@@ -14,6 +14,6 @@ function rewriteUploadedImageSources(html: string): string {
 
 export function RichContent({ html, className }: RichContentProps) {
   const safe = rewriteUploadedImageSources(sanitizeRichText(html || ""));
-  const mergedClassName = ["rich-editor-content", className].filter(Boolean).join(" ");
+  const mergedClassName = ["rich-content-shell", "rich-editor-content", className].filter(Boolean).join(" ");
   return <div className={mergedClassName} dangerouslySetInnerHTML={{ __html: safe }} />;
 }

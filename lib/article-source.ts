@@ -13,7 +13,7 @@ export function resolveArticleSourceType(input: {
   authorMemberId?: string | null;
 }): ArticleSourceType {
   if (isArticleSourceType(input.sourceType)) return input.sourceType;
-  if ((input.source || "").trim() === "auto_seo_generator") return "ai_generated";
+  if (["auto_seo_generator", "auto_dual_line_seo_generator"].includes((input.source || "").trim())) return "ai_generated";
   if (!input.authorMemberId && ((input.sourceUrl || "").trim() || (input.source || "").trim())) return "imported";
   return "manual";
 }

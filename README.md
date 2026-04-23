@@ -147,11 +147,14 @@ ADMIN_NAME="admin"
 NEXT_PUBLIC_MEMBER_CONTACT_EMAIL="member@your-domain.com"
 NEXT_PUBLIC_BUSINESS_CONTACT_EMAIL="service@your-domain.com"
 NEXT_PUBLIC_CONTACT_PHONE="400-123-4567"
+BAIDU_PUSH_SITE="cnzhengmu.com"
+BAIDU_PUSH_TOKEN="your-baidu-push-token"
 ```
 
 可选项：
 
 - `GEMINI_API_KEY`：当前 `.env.example` 中保留了可选 AI Key 注释，但它不是本项目启动的硬性前提
+- `SEO_NEWS_AUTOGEN_ENABLED="true"`：仅当该值显式为 `true` 时，生产服务器的 SEO 自动生成 cron 才会实际写入 `pending` 草稿；未设置或非 `true` 时，cron 即使触发也会记录 `SKIP` 并跳过
 
 ## 9. 常用命令
 

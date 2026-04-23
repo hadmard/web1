@@ -358,14 +358,19 @@ model Article {
   generationBatchId   String?       @map("generation_batch_id")
   keywordSeed         String?       @map("keyword_seed")
   keywordIntent       String?       @map("keyword_intent")
+  contentLine         String?       @map("content_line")
   sourceUrl           String?
   contentHash         String?       @map("content_hash")
   displayAuthor       String?
   excerpt             String?
+  answerSummary       String?       @map("answer_summary")
   content             String
   coverImage          String?
   subHref             String?
   categoryHref        String?
+  sectionLabel        String?       @map("section_label")
+  categoryLabel       String?       @map("category_label")
+  subCategoryLabel    String?       @map("sub_category_label")
   publishedAt         DateTime?
   status              String        @default("draft") // draft | pending | approved | rejected
   reviewNote          String?
@@ -379,6 +384,10 @@ model Article {
   conceptSummary      String?
   applicableScenarios String?
   faqJson             String?
+  faqPairsJson        String?       @map("faq_pairs_json")
+  keyFactsJson        String?       @map("key_facts_json")
+  entityTerms         String?       @map("entity_terms")
+  claimCheckHints     String?       @map("claim_check_hints")
   versionLabel        String?
   relatedTermSlugs    String?
   relatedStandardIds  String?
@@ -408,6 +417,7 @@ model Article {
   @@index([generationBatchId])
   @@index([keywordSeed])
   @@index([keywordIntent])
+  @@index([contentLine])
   @@index([authorMemberId])
   @@index([ownedEnterpriseId])
   @@map("articles")

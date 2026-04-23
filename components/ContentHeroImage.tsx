@@ -23,6 +23,7 @@ export function ContentHeroImage({
 }: ContentHeroImageProps) {
   const [hasError, setHasError] = useState(false);
   const finalSrc = resolveUploadedImageUrl(src?.trim() || fallbackSrc?.trim() || "");
+  const isRemoteSrc = /^https?:\/\//i.test(finalSrc);
 
   if (!finalSrc || hasError) {
     return null;
@@ -45,14 +46,25 @@ export function ContentHeroImage({
       ) : null}
 
       <div className={`${adaptiveOnMobile ? "hidden sm:block" : ""} showcase-frame relative overflow-hidden rounded-2xl border border-border ${containerClassName}`}>
-        <Image
-          src={finalSrc}
-          alt={alt}
-          fill
-          sizes="(max-width: 768px) 100vw, 1200px"
-          className={`showcase-image absolute inset-0 h-full w-full object-cover ${imageClassName ?? ""}`}
-          onError={() => setHasError(true)}
-        />
+        {isRemoteSrc ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={finalSrc}
+            alt={alt}
+            className={`showcase-image absolute inset-0 h-full w-full object-cover ${imageClassName ?? ""}`}
+            loading="lazy"
+            onError={() => setHasError(true)}
+          />
+        ) : (
+          <Image
+            src={finalSrc}
+            alt={alt}
+            fill
+            sizes="(max-width: 768px) 100vw, 1200px"
+            className={`showcase-image absolute inset-0 h-full w-full object-cover ${imageClassName ?? ""}`}
+            onError={() => setHasError(true)}
+          />
+        )}
       </div>
     </>
   );
