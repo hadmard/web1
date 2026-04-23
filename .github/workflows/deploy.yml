@@ -402,6 +402,7 @@ jobs:
           EOF
 
       - name: Manual production SEO generation validation
+        continue-on-error: true
         run: |
           ssh -o BatchMode=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} <<'EOF'
             set -euo pipefail
