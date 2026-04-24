@@ -49,18 +49,35 @@ jobs:
     needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      DEPLOY_HOST: ${{ secrets.SERVER_HOST }}
+      DEPLOY_USER: ${{ secrets.SERVER_USER }}
+      DEPLOY_PORT: ${{ secrets.SERVER_PORT || '22' }}
+      DEPLOY_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY || secrets.SERVER_SSH_KEY }}
 
     steps:
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          if [ -z "${DEPLOY_PRIVATE_KEY}" ]; then
+            echo "::error::[deploy] missing SSH private key secret; expected SSH_PRIVATE_KEY or SERVER_SSH_KEY"
+            exit 1
+          fi
+          if [ -z "${DEPLOY_HOST}" ]; then
+            echo "::error::[deploy] missing SERVER_HOST secret"
+            exit 1
+          fi
+          if [ -z "${DEPLOY_USER}" ]; then
+            echo "::error::[deploy] missing SERVER_USER secret"
+            exit 1
+          fi
+          printf '%s\n' "${DEPLOY_PRIVATE_KEY}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
+          ssh-keyscan -p "${DEPLOY_PORT}" -H "${DEPLOY_HOST}" >> ~/.ssh/known_hosts
 
       - name: Inspect live production target
         run: |
-          diag=$(ssh -o BatchMode=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "bash -s" <<'EOF'
+          diag=$(ssh -o BatchMode=yes -p "${DEPLOY_PORT}" ${DEPLOY_USER}@${DEPLOY_HOST} "bash -s" <<'EOF'
             set -e
 
             host_name=$(hostname 2>/dev/null || true)
@@ -113,7 +130,7 @@ jobs:
 
       - name: Deploy to Server
         run: |
-          ssh -o BatchMode=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+          ssh -o BatchMode=yes -p "${DEPLOY_PORT}" ${DEPLOY_USER}@${DEPLOY_HOST} << 'EOF'
             set -euo pipefail
             cd /home/web1
             stage="bootstrap"
@@ -347,7 +364,7 @@ jobs:
 
       - name: Install or update production SEO cron
         run: |
-          ssh -o BatchMode=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} <<'EOF'
+          ssh -o BatchMode=yes -p "${DEPLOY_PORT}" ${DEPLOY_USER}@${DEPLOY_HOST} <<'EOF'
             set -euo pipefail
 
             cd /home/web1
@@ -405,7 +422,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         continue-on-error: true
         run: |
-          ssh -o BatchMode=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} <<'EOF'
+          ssh -o BatchMode=yes -p "${DEPLOY_PORT}" ${DEPLOY_USER}@${DEPLOY_HOST} <<'EOF'
             set -euo pipefail
             cd /home/web1
 
@@ -511,7 +528,7 @@ jobs:
       - name: Simulate production SEO timer check
         if: github.event_name == 'workflow_dispatch'
         run: |
-          ssh -o BatchMode=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} <<'EOF'
+          ssh -o BatchMode=yes -p "${DEPLOY_PORT}" ${DEPLOY_USER}@${DEPLOY_HOST} <<'EOF'
             set -euo pipefail
             cd /home/web1
 
@@ -538,7 +555,7 @@ jobs:
       - name: Mark today's SEO test drafts to exclude them from dedup
         if: github.event_name == 'push' && contains(github.event.head_commit.message, '[seo-test-cleanup]')
         run: |
-          ssh -o BatchMode=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} <<'EOF'
+          ssh -o BatchMode=yes -p "${DEPLOY_PORT}" ${DEPLOY_USER}@${DEPLOY_HOST} <<'EOF'
             set -euo pipefail
             cd /home/web1
             target_date="$(TZ=Asia/Shanghai date +%F)"
@@ -553,7 +570,7 @@ jobs:
       - name: Roll back production assets on failure
         if: failure()
         run: |
-          ssh -o BatchMode=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+          ssh -o BatchMode=yes -p "${DEPLOY_PORT}" ${DEPLOY_USER}@${DEPLOY_HOST} << 'EOF'
             set -euo pipefail
             cd /home/web1
             BACKUP_MARKER_FILE="/tmp/web1-next-backup-path"
@@ -581,7 +598,7 @@ jobs:
       - name: Remove backup after successful health check
         if: success()
         run: |
-          ssh -o BatchMode=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+          ssh -o BatchMode=yes -p "${DEPLOY_PORT}" ${DEPLOY_USER}@${DEPLOY_HOST} << 'EOF'
             set -euo pipefail
             BACKUP_MARKER_FILE="/tmp/web1-next-backup-path"
 
@@ -602,7 +619,7 @@ jobs:
         run: |
           echo "sync local: start"
           echo "sync local: before ssh"
-          ssh -o BatchMode=yes ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} <<'EOF'
+          ssh -o BatchMode=yes -p "${DEPLOY_PORT}" ${DEPLOY_USER}@${DEPLOY_HOST} <<'EOF'
           cd /home/web1
           echo "sync remote: entered"
           whoami
