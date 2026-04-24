@@ -1,7 +1,9 @@
-﻿import { articleOrderByPinnedLatest, articleOrderByPinnedPopular } from "@/lib/articles";
-import { getBrandDirectoryList } from "@/lib/brand-directory";
+import { unstable_cache } from "next/cache";
+import { articleOrderByPinnedLatest, articleOrderByPinnedPopular } from "@/lib/articles";
+import { getHomepageBrandDirectoryList } from "@/lib/brand-directory";
 import { ENGINEER_CATEGORY_LABELS, getLatestHuadianYear, getTop10ByYear } from "@/lib/huadianbang";
 import { prisma } from "@/lib/prisma";
+import { DEFAULT_SITE_VISUAL_SETTINGS, type SiteVisualSettings } from "@/lib/site-visual-config";
 import { getSiteVisualSettings } from "@/lib/site-visual-settings";
 
 const REGION_ORDER = ["华东", "华中", "华南", "西南", "西北", "华北", "东北"] as const;
@@ -13,11 +15,6 @@ function isReadableLabel(text: string | null | undefined): boolean {
   if (t.includes("?")) return false;
   if (/^[BTSDW]-\d{14}$/.test(t)) return false;
   return true;
-}
-
-function sanitizeHomepageArticleTitle(text: string | null | undefined, fallback: string, index: number) {
-  if (isReadableLabel(text)) return text!.trim();
-  return `${fallback}${index + 1}`;
 }
 
 function pickReadableHomepageArticles<T extends { title: string | null | undefined }>(items: T[], limit: number) {
@@ -55,53 +52,51 @@ export type HomepageBrandItem = {
   headline: string;
   locationLabel: string;
   logoUrl: string | null;
+  slug: string;
   detailHref: string;
   contactLabel: string;
+  region?: string;
 };
 
-export async function getHomepageData() {
-  const [
-    visualSettings,
-    latestNews,
-    hotNews,
-    latestBrands,
-    latestTerms,
-    latestStandards,
-    latestAwards,
-  ] = await Promise.all([
-    getSiteVisualSettings(),
-    prisma.article.findMany({
-      where: { status: "approved", OR: [{ categoryHref: { startsWith: "/news" } }, { subHref: { startsWith: "/news" } }] },
-      orderBy: articleOrderByPinnedLatest,
-      take: 20,
-      select: { id: true, title: true, slug: true },
-    }),
-    prisma.article.findMany({
-      where: { status: "approved", OR: [{ categoryHref: { startsWith: "/news" } }, { subHref: { startsWith: "/news" } }] },
-      orderBy: articleOrderByPinnedPopular,
-      take: 20,
-      select: { id: true, title: true, slug: true },
-    }),
-    getBrandDirectoryList(8),
-    prisma.article.findMany({
-      where: { status: "approved", OR: [{ categoryHref: { startsWith: "/dictionary" } }, { subHref: { startsWith: "/dictionary" } }] },
-      orderBy: articleOrderByPinnedLatest,
-      take: 8,
-      select: { id: true, title: true, slug: true },
-    }),
-    prisma.article.findMany({
-      where: { status: "approved", OR: [{ categoryHref: { startsWith: "/standards" } }, { subHref: { startsWith: "/standards" } }] },
-      orderBy: articleOrderByPinnedLatest,
-      take: 8,
-      select: { id: true, title: true, slug: true, versionLabel: true },
-    }),
-    prisma.award.findMany({
-      orderBy: [{ year: "desc" }, { updatedAt: "desc" }],
-      take: 8,
-      select: { id: true, title: true, slug: true, year: true },
-    }),
-  ]);
+type HomepageArticleItem = {
+  id: string;
+  title: string | null;
+  slug: string;
+};
 
+type HomepageStandardItem = {
+  id: string;
+  title: string | null;
+  slug: string;
+  versionLabel: string | null;
+};
+
+type HomepageAwardItem = {
+  id: string;
+  title: string | null;
+  slug: string;
+  year: number | null;
+};
+
+type HomepageBrandSourceItem = Omit<HomepageBrandItem, "detailHref">;
+
+function buildHomepageData({
+  visualSettings,
+  latestNews,
+  hotNews,
+  latestBrands,
+  latestTerms,
+  latestStandards,
+  latestAwards,
+}: {
+  visualSettings: SiteVisualSettings;
+  latestNews: HomepageArticleItem[];
+  hotNews: HomepageArticleItem[];
+  latestBrands: HomepageBrandSourceItem[];
+  latestTerms: HomepageArticleItem[];
+  latestStandards: HomepageStandardItem[];
+  latestAwards: HomepageAwardItem[];
+}) {
   const regionMap = new Map<string, number>();
   REGION_ORDER.forEach((region) => regionMap.set(region, 0));
   latestBrands.forEach((enterprise) => {
@@ -140,7 +135,7 @@ export async function getHomepageData() {
       items: [
         { label: "品牌百科", href: "/dictionary/brand-baike" },
         { label: "高定生活", href: "/dictionary/high-end-life" },
-        ...safeTerms.map((item) => ({ label: item.title, href: `/dictionary/${item.slug}` })),
+        ...safeTerms.map((item) => ({ label: item.title!.trim(), href: `/dictionary/${item.slug}` })),
       ],
     },
     {
@@ -150,7 +145,7 @@ export async function getHomepageData() {
       href: "/standards/all",
       image: visualSettings.backgrounds.homeStructureStandards,
       items: safeStandards.map((item) => ({
-        label: `${item.versionLabel ? `${item.versionLabel} 路 ` : ""}${item.title}`,
+        label: `${item.versionLabel ? `${item.versionLabel} 路 ` : ""}${item.title!.trim()}`,
         href: `/standards/${item.slug || item.id}`,
       })),
     },
@@ -161,7 +156,7 @@ export async function getHomepageData() {
       href: "/awards",
       image: visualSettings.backgrounds.homeStructureAwards,
       items: safeAwards.map((item) => ({
-        label: `${item.year ? `${item.year} 路 ` : ""}${item.title}`,
+        label: `${item.year ? `${item.year} 路 ` : ""}${item.title!.trim()}`,
         href: `/awards/${item.slug || item.id}`,
       })),
     },
@@ -173,8 +168,10 @@ export async function getHomepageData() {
     headline: item.headline,
     locationLabel: item.locationLabel,
     logoUrl: item.logoUrl,
+    slug: item.slug,
     detailHref: `/brands/${item.slug}`,
     contactLabel: item.contactLabel,
+    region: item.region,
   }));
 
   return {
@@ -189,4 +186,84 @@ export async function getHomepageData() {
     huadianTop10: getTop10ByYear(huadianYear),
     huadianPartner: Object.values(ENGINEER_CATEGORY_LABELS).slice(0, 3),
   };
+}
+
+function createHomepageFallbackData() {
+  return buildHomepageData({
+    visualSettings: DEFAULT_SITE_VISUAL_SETTINGS,
+    latestNews: [],
+    hotNews: [],
+    latestBrands: [],
+    latestTerms: [],
+    latestStandards: [],
+    latestAwards: [],
+  });
+}
+
+async function getHomepageDataUncached() {
+  const [visualSettings, latestNews, hotNews, latestBrands, latestTerms, latestStandards, latestAwards] = await Promise.all([
+    getSiteVisualSettings(),
+    prisma.article.findMany({
+      where: { status: "approved", OR: [{ categoryHref: { startsWith: "/news" } }, { subHref: { startsWith: "/news" } }] },
+      orderBy: articleOrderByPinnedLatest,
+      take: 20,
+      select: { id: true, title: true, slug: true },
+    }),
+    prisma.article.findMany({
+      where: { status: "approved", OR: [{ categoryHref: { startsWith: "/news" } }, { subHref: { startsWith: "/news" } }] },
+      orderBy: articleOrderByPinnedPopular,
+      take: 20,
+      select: { id: true, title: true, slug: true },
+    }),
+    getHomepageBrandDirectoryList(8),
+    prisma.article.findMany({
+      where: { status: "approved", OR: [{ categoryHref: { startsWith: "/dictionary" } }, { subHref: { startsWith: "/dictionary" } }] },
+      orderBy: articleOrderByPinnedLatest,
+      take: 8,
+      select: { id: true, title: true, slug: true },
+    }),
+    prisma.article.findMany({
+      where: { status: "approved", OR: [{ categoryHref: { startsWith: "/standards" } }, { subHref: { startsWith: "/standards" } }] },
+      orderBy: articleOrderByPinnedLatest,
+      take: 8,
+      select: { id: true, title: true, slug: true, versionLabel: true },
+    }),
+    prisma.award.findMany({
+      orderBy: [{ year: "desc" }, { updatedAt: "desc" }],
+      take: 8,
+      select: { id: true, title: true, slug: true, year: true },
+    }),
+  ]);
+
+  return buildHomepageData({
+    visualSettings,
+    latestNews,
+    hotNews,
+    latestBrands,
+    latestTerms,
+    latestStandards,
+    latestAwards,
+  });
+}
+
+const getCachedHomepageData = unstable_cache(getHomepageDataUncached, ["homepage-data"], {
+  revalidate: 300,
+  tags: ["homepage-data"],
+});
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, fallback: T): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((resolve) => {
+      setTimeout(() => resolve(fallback), timeoutMs);
+    }),
+  ]);
+}
+
+export async function getHomepageData() {
+  try {
+    return await withTimeout(getCachedHomepageData(), 8000, createHomepageFallbackData());
+  } catch {
+    return createHomepageFallbackData();
+  }
 }

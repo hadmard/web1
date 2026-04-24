@@ -287,6 +287,66 @@ export async function getBrandDirectoryList(limit = 10) {
   return dedupeBrandRecords(rows).slice(0, limit).map(normalizeBrand);
 }
 
+export async function getHomepageBrandDirectoryList(limit = 8) {
+  const rows = await prisma.brand.findMany({
+    where: { isBrandVisible: true },
+    orderBy: [{ isRecommend: "desc" }, { sortOrder: "desc" }, { rankingWeight: "desc" }, { updatedAt: "desc" }],
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      logoUrl: true,
+      tagline: true,
+      region: true,
+      area: true,
+      positioning: true,
+      isRecommend: true,
+      isBrandVisible: true,
+      sortOrder: true,
+      rankingWeight: true,
+      updatedAt: true,
+      createdAt: true,
+      enterprise: {
+        select: {
+          id: true,
+          companyName: true,
+          companyShortName: true,
+          logoUrl: true,
+          region: true,
+          area: true,
+          positioning: true,
+          contactPhone: true,
+          contactInfo: true,
+          website: true,
+        },
+      },
+    },
+  });
+
+  return dedupeBrandRecords(rows as BrandRecord[]).slice(0, limit).map((record) => {
+    const enterpriseName =
+      cleanDisplayField(record.enterprise?.companyShortName || record.enterprise?.companyName || record.name) || record.name;
+    const region = cleanDisplayField(record.enterprise?.region || record.region) || "全国";
+    const area = cleanDisplayField(record.enterprise?.area || record.area);
+    const contactPhone = cleanDisplayField(record.enterprise?.contactPhone);
+    const contactInfo = cleanDisplayField(record.enterprise?.contactInfo);
+    const website = cleanDisplayField(record.enterprise?.website);
+
+    return {
+      id: record.id,
+      slug: record.slug,
+      enterpriseName,
+      headline:
+        cleanDisplayField(record.enterprise?.positioning || record.tagline || record.positioning) ||
+        "品牌资料正在整理中，当前可先查看企业详情、联系方式和服务能力。",
+      locationLabel: [region, area].filter(Boolean).join(" / "),
+      logoUrl: record.enterprise?.logoUrl || record.logoUrl || null,
+      contactLabel: buildContactLabel(contactPhone, website, contactInfo),
+      region,
+    };
+  });
+}
+
 export async function getBrandDirectory(filters: BrandDirectoryFilters = {}) {
   const pageSize = Math.max(1, filters.pageSize ?? 18);
   const page = Math.max(1, filters.page ?? 1);
