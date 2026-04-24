@@ -10,6 +10,11 @@ const legacyNewsSectionAliasRedirects = [
 const legacyNewsStaticSections = ["baoguang", "hangye", "jingpei", "qiye", "shichang", "top10"];
 const legacyAcademySections = ["jingying", "lingxiu", "zhuanjia"];
 const legacyTopicSections = ["kannanxun", "shanghaijianbohui"];
+const buyingInternalLinkFallbackRedirects = [
+  "/brands/buying/zheng-mu-ding-zhi-duo-shao-qian-yi-ping",
+  "/brands/buying/zheng-mu-ding-zhi-yu-suan-zen-me-kong-zhi",
+  "/brands/buying/zheng-mu-ding-zhi-zen-me-xuan-pin-pai",
+];
 const sampleLegacyArticleRedirects = [
   { source: "/news/qiye/129759.html", destination: "/news/ju-shi-jiang-cheng-zhi-ling-zheng-zhuang-zhong-guo-fan-jia-ju-chuang-xin-lun-tan" },
   { source: "/companynews/10665932-182579728.html", destination: "/news/si-lu-qi-dian-she-ji-xin-zhang-2025-xi-an-dang-dai-she-ji-zhou-sheng-da-qi-mu" },
@@ -27,6 +32,11 @@ const nextConfig = {
   reactStrictMode: true,
   async redirects() {
     return [
+      ...buyingInternalLinkFallbackRedirects.map((source) => ({
+        source,
+        destination: "/brands/buying",
+        permanent: false,
+      })),
       ...sampleLegacyArticleRedirects.map(({ source, destination }) => ({
         source,
         destination,

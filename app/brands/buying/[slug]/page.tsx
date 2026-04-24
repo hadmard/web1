@@ -55,6 +55,7 @@ async function findBuyingArticleBySegment(segment: string) {
       coverImage: true,
       source: true,
       sourceUrl: true,
+      sourceType: true,
       displayAuthor: true,
       tagSlugs: true,
       publishedAt: true,
@@ -102,7 +103,11 @@ export default async function BuyingArticleDetailPage({ params }: Props) {
   const displayTitle = decodeEscapedUnicode(article.title);
   const displayExcerpt = decodeEscapedUnicode(article.excerpt ?? "");
   const displayAuthor = decodeEscapedUnicode(article.displayAuthor ?? "");
-  const displaySource = decodeEscapedUnicode(article.source ?? "");
+  const shouldShowSource =
+    article.sourceType !== "ai_generated" &&
+    article.source !== "auto_dual_line_seo_generator" &&
+    article.source !== "auto_seo_generator";
+  const displaySource = shouldShowSource ? decodeEscapedUnicode(article.source ?? "") : "";
   const displayContent = decodeEscapedUnicode(article.content);
 
   return (

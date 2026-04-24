@@ -113,19 +113,19 @@ export const SEO_CORE_INTERNAL_LINKS: Record<SeoContentLine, SeoInternalLinkTarg
   buying: [
     {
       title: "整木定制多少钱一平",
-      href: "/brands/buying/zheng-mu-ding-zhi-duo-shao-qian-yi-ping",
+      href: "/brands/buying",
       keyword: "整木定制多少钱一平",
       prompt: "如果你想先看整木定制价格区间，可以接着读",
     },
     {
       title: "整木定制预算怎么控制",
-      href: "/brands/buying/zheng-mu-ding-zhi-yu-suan-zen-me-kong-zhi",
+      href: "/brands/buying",
       keyword: "整木定制预算怎么控制",
       prompt: "如果你更关心预算拆分和增项控制，可以再看",
     },
     {
       title: "整木定制怎么选品牌",
-      href: "/brands/buying/zheng-mu-ding-zhi-zen-me-xuan-pin-pai",
+      href: "/brands/buying",
       keyword: "整木定制怎么选品牌",
       prompt: "如果你还在比较门店和工厂，也可以参考",
     },
