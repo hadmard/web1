@@ -1,4 +1,4 @@
-import { prisma } from "../lib/prisma";
+﻿import { prisma } from "../lib/prisma";
 import { buildCanonicalNewsHref, isResolvableInternalPath, validateInternalLinks } from "../lib/article-links";
 import { isValidKeywordCandidate } from "../lib/news-keywords-v2";
 
@@ -161,3 +161,4 @@ void main()
   .finally(async () => {
     await prisma.$disconnect();
   });
+

@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+﻿import { prisma } from "@/lib/prisma";
 import { isValidKeywordCandidate } from "@/lib/news-keywords-v2";
 import { findNewsArticleBySegment } from "@/lib/news-sharing";
 import { buildNewsPath, getArticleSegment } from "@/lib/share-config";
@@ -22,7 +22,7 @@ const STATIC_INTERNAL_PATHS = new Set([
   "/news/tech",
   "/news/events",
   "/dictionary",
-  "/dictionary/zhengmu",
+  "/dictionary",
   "/brands",
   "/brands/all",
   "/brands/buying",
@@ -44,7 +44,7 @@ export function extractInternalHrefs(html: string) {
 
 export function buildSeoStaticInternalLinks(contentLine: "buying" | "trend" | "tech") {
   const shared: ArticleLinkTarget[] = [
-    { title: "整木词库", href: "/dictionary/zhengmu", anchorText: "整木词库页" },
+    { title: "整木词库", href: "/dictionary", anchorText: "整木词库页" },
     { title: "整木选购", href: "/brands/buying", anchorText: "整木选购专题" },
     { title: "整木标准", href: "/standards", anchorText: "整木标准栏目" },
   ];
@@ -228,3 +228,4 @@ export async function validateInternalLinks(input: { html?: string | null; keywo
     broken,
   };
 }
+
