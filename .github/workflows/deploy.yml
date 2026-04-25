@@ -50,9 +50,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      DEPLOY_HOST: ${{ secrets.SERVER_HOST }}
-      DEPLOY_USER: ${{ secrets.SERVER_USER }}
-      DEPLOY_PORT: ${{ secrets.SERVER_PORT || '22' }}
+      DEPLOY_HOST: "123.60.14.103"
+      DEPLOY_USER: "root"
+      DEPLOY_PORT: "22"
       DEPLOY_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY || secrets.SERVER_SSH_KEY }}
 
     steps:
