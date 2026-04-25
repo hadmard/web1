@@ -67,7 +67,7 @@ export default async function TagSlugPage({ params }: Props) {
           {articles.map((a) => (
             <li key={a.id}>
               <Link
-                href={buildNewsPath(a.id)}
+                href={buildNewsPath(a.slug || a.id)}
                 className="text-primary font-medium transition-colors hover:text-accent"
               >
                 {a.title}

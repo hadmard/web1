@@ -201,7 +201,7 @@ export default async function SearchPage({ searchParams }: Props) {
             <ul className="space-y-3">
               {news.map((item) => (
                 <li key={item.id} className="rounded-xl border border-border bg-surface-elevated p-3">
-                  <Link href={buildNewsPath(item.id)} className="font-medium text-primary hover:text-accent">
+                  <Link href={buildNewsPath(item.slug || item.id)} className="font-medium text-primary hover:text-accent">
                     {decodeEscapedUnicode(item.title)}
                   </Link>
                   <p className="mt-1 text-sm text-muted">{excerpt(decodeEscapedUnicode(item.excerpt ?? ""))}</p>

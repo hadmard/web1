@@ -1,6 +1,6 @@
 import { notFound, permanentRedirect } from "next/navigation";
 import { findNewsArticleBySegment, normalizeNewsSegment } from "@/lib/news-sharing";
-import { buildNewsPath } from "@/lib/share-config";
+import { buildNewsPath, getArticleSegment } from "@/lib/share-config";
 import { LEGACY_SITE_URL } from "@/lib/public-site-config";
 
 type Props = {
@@ -29,7 +29,7 @@ export default async function LegacyInfoPage({ params }: Props) {
   const lookupValue = mappedTitle ?? legacySlug;
   const article = await findNewsArticleBySegment(lookupValue);
   if (article && article.status === "approved") {
-    permanentRedirect(buildNewsPath(article.id));
+    permanentRedirect(buildNewsPath(getArticleSegment(article)));
   }
 
   if (mappedTitle) {

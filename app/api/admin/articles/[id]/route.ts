@@ -12,6 +12,7 @@ import { buildBuyingPath, buildNewsPath } from "@/lib/share-config";
 import { pushApprovedNewsToBaidu } from "@/lib/baidu-submit";
 import { buildDirtyTextErrorMessage } from "@/lib/article-input-guard";
 import { parseProductRecommendations, stringifyProductRecommendations } from "@/lib/news-aftermarket";
+import { validateInternalLinks } from "@/lib/article-links";
 
 function isAdmin(session: { role: string | null } | null) {
   return session?.role === "SUPER_ADMIN" || session?.role === "ADMIN";
@@ -51,7 +52,7 @@ function revalidateArticlePaths(article: {
       revalidatePath(article.subHref);
     }
     if (article.id) {
-      revalidatePath(buildNewsPath(article.id));
+      revalidatePath(buildNewsPath(article.slug || article.id));
     }
     if (segment) {
       revalidatePath(`/news/${encodeURIComponent(segment)}`);
@@ -109,6 +110,8 @@ export async function PATCH(
       authorMemberId: true,
       status: true,
       publishedAt: true,
+      content: true,
+      manualKeywords: true,
       categoryHref: true,
       subHref: true,
       ownedEnterpriseId: true,
@@ -259,6 +262,29 @@ export async function PATCH(
   ]);
   if (dirtyTextError) {
     return NextResponse.json({ error: dirtyTextError }, { status: 400 });
+  }
+  const nextStatus =
+    typeof data.status === "string"
+      ? data.status
+      : target.status;
+  const nextContent = typeof data.content === "string" ? (data.content as string) : target.content;
+  const nextManualKeywords =
+    typeof data.manualKeywords === "string"
+      ? (data.manualKeywords as string)
+      : data.manualKeywords === null
+        ? ""
+        : target.manualKeywords;
+  if (nextStatus === "approved" && nextContent) {
+    const linkValidation = await validateInternalLinks({
+      html: nextContent,
+      keywordCsv: nextManualKeywords,
+    });
+    if (!linkValidation.ok) {
+      return NextResponse.json(
+        { error: `站内链接校验未通过：${linkValidation.broken.map((item) => item.href).join("、")}` },
+        { status: 400 },
+      );
+    }
   }
 
   if (Object.keys(data).length === 0) {

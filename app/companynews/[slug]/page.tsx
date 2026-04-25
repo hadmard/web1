@@ -1,6 +1,6 @@
 import { notFound, permanentRedirect } from "next/navigation";
 import { findNewsArticleBySegment, normalizeNewsSegment } from "@/lib/news-sharing";
-import { buildNewsPath } from "@/lib/share-config";
+import { buildNewsPath, getArticleSegment } from "@/lib/share-config";
 import { prisma } from "@/lib/prisma";
 import { articleOrderByPinnedLatest } from "@/lib/articles";
 import { LEGACY_SITE_URL } from "@/lib/public-site-config";
@@ -56,5 +56,5 @@ export default async function LegacyCompanyNewsPage({ params }: Props) {
     permanentRedirect(buildLegacyCompanyNewsFallbackPath(legacySlug));
   }
 
-  permanentRedirect(buildNewsPath(article.id));
+  permanentRedirect(buildNewsPath(getArticleSegment(article)));
 }

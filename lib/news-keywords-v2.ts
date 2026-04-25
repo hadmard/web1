@@ -163,7 +163,7 @@ function splitSentences(input: string) {
 function normalizeKeywordList(input: string | null | undefined) {
   return unique(
     (input || "")
-      .split(/[\uFF0C,\n]+/)
+      .split(/[\uFF0C,\u3001,\n]+/)
       .map((item) => item.trim())
       .filter((item) => isValidKeywordCandidate(item)), 
   ).slice(0, 5);

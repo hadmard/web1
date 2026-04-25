@@ -4,18 +4,35 @@ import { resolve } from "node:path";
 import { prisma } from "../lib/prisma";
 import { normalizeRichTextField } from "../lib/brand-content";
 import { assertNoDirtyText } from "../lib/article-input-guard";
+import { buildCanonicalNewsHref, buildSeoStaticInternalLinks, resolvePublishedInternalLinks, validateInternalLinks } from "../lib/article-links";
+import { evaluateSeoArticleQuality, type SeoFaqPair } from "../lib/seo-article-quality";
 import { buildSeoContentHash, findSeoLeadDuplicateReason } from "../lib/seo-dedup";
 import {
   DEFAULT_SEO_GENERATION_COUNT,
   SEO_APPROVED_DEFAULT,
   SEO_AUTOGEN_SOURCE,
-  SEO_CORE_INTERNAL_LINKS,
+  SEO_LINE_SEEDS,
   type SeoContentLine,
+  type SeoLineSeedConfig,
 } from "../lib/seo-keyword-seeds";
 import { pickSeoTopicsForGeneration, type SeoTopicCandidate } from "../lib/seo-topic-generator";
-import { generateUniqueArticleSlug } from "../lib/slug";
+import { generateUniqueArticleSlug, slugify } from "../lib/slug";
 
-type GeneratedFaqPair = { q: string; a: string };
+type TriggerSource = "manual" | "cron" | "dry_run";
+
+type TopicLike = Partial<SeoTopicCandidate> & {
+  title: string;
+  keywordSeed?: string;
+  keywordIntent?: string;
+  contentLine?: SeoContentLine;
+  themeLabel?: string;
+  entityLabel?: string;
+  sectionLabel?: string;
+  categoryLabel?: string;
+  subCategoryLabel?: string;
+  categoryHref?: string;
+  subHref?: string;
+};
 
 type GeneratedSeoArticle = {
   title: string;
@@ -23,7 +40,7 @@ type GeneratedSeoArticle = {
   keywords: string;
   content: string;
   slug: string;
-  internalLinks: Array<{ title: string; href: string; prompt: string }>;
+  internalLinks: Array<{ title: string; href: string; anchorText: string }>;
   status: "pending";
   publishedAt: null;
   sourceType: "ai_generated";
@@ -32,7 +49,9 @@ type GeneratedSeoArticle = {
   keywordSeed: string;
   keywordIntent: string;
   answerSummary: string;
-  faqPairs: GeneratedFaqPair[];
+  conceptSummary: string;
+  applicableScenarios: string;
+  faqPairs: SeoFaqPair[];
   keyFacts: string[];
   entityTerms: string[];
   claimCheckHints: string[];
@@ -43,7 +62,8 @@ type GeneratedSeoArticle = {
   categoryHref: string;
   subHref: string;
   contentHash: string;
-  triggerSource: "manual" | "cron" | "dry_run";
+  triggerSource: TriggerSource;
+  qualityReport: ReturnType<typeof evaluateSeoArticleQuality>;
 };
 
 function readArg(name: string) {
@@ -84,383 +104,377 @@ function loadLocalEnvIfNeeded() {
   }
 }
 
-function sentence(text: string) {
+function p(text: string) {
   return `<p>${text}</p>`;
 }
 
-function heading(text: string) {
+function h2(text: string) {
   return `<h2>${text}</h2>`;
 }
 
-function isAiTopic(topic: SeoTopicCandidate) {
-  return /AI/.test(topic.title) || /AI/.test(topic.keywordSeed) || /AI/.test(topic.keywordIntent);
+function h3(text: string) {
+  return `<h3>${text}</h3>`;
 }
 
-function isBuyingMaterialTopic(topic: SeoTopicCandidate) {
-  return /板材|木皮|五金|工艺|收口|环保/.test(`${topic.title}${topic.keywordSeed}`);
+function ol(items: string[]) {
+  return `<ol>${items.map((item) => `<li>${item}</li>`).join("")}</ol>`;
 }
 
-function isBuyingDeliveryTopic(topic: SeoTopicCandidate) {
-  return /工期|安装|验收|合同|交付/.test(`${topic.title}${topic.keywordSeed}`);
+function unique<T>(items: T[]) {
+  return Array.from(new Set(items));
+}
+
+function inferContentLine(title: string): SeoContentLine {
+  if (/报价|预算|选购|验收|工期|合同/.test(title)) return "buying";
+  if (/官网|案例|FAQ|产品页|脚本|内容布局|搜索/.test(title)) return "tech";
+  return "trend";
+}
+
+function getLineConfig(line: SeoContentLine): SeoLineSeedConfig {
+  return SEO_LINE_SEEDS[line];
+}
+
+function inferThemeLabel(title: string) {
+  if (title.includes("整木门店")) return "整木门店";
+  if (title.includes("整木工厂")) return "整木工厂";
+  if (title.includes("整木行业")) return "整木行业";
+  if (title.includes("全屋定制")) return "全屋定制";
+  return "整木行业";
+}
+
+function inferEntityLabel(title: string, line: SeoContentLine) {
+  if (/AI/.test(title) && /推广/.test(title)) return "AI推广";
+  if (/AI/.test(title) && /官网/.test(title)) return "AI官网内容";
+  if (/AI/.test(title) && /案例/.test(title)) return "AI案例整理";
+  if (line === "buying") return "整木选购";
+  if (line === "tech") return "官网内容";
+  return "线上获客";
+}
+
+function inferPrimaryKeyword(title: string, entityLabel: string) {
+  if (/AI推广/.test(title)) return "AI推广";
+  if (/线上获客/.test(title)) return "线上获客";
+  if (/官网内容/.test(title)) return "官网内容";
+  return entityLabel;
+}
+
+function inferKeywordIntent(title: string) {
+  if (/为什么/.test(title)) return "为什么开始重视";
+  if (/如何/.test(title)) return "如何落地";
+  if (/是否/.test(title)) return "如何判断";
+  return "核心判断";
+}
+
+function buildCompactSeoSlug(title: string, primaryKeyword: string) {
+  const source = `${title} ${primaryKeyword}`;
+  const tokenMap: Array<[RegExp, string]> = [
+    [/整木门店/g, "zhengmu-store"],
+    [/整木工厂/g, "zhengmu-factory"],
+    [/整木行业/g, "zhengmu-industry"],
+    [/全屋定制/g, "whole-house-custom"],
+    [/原木定制/g, "solid-wood-custom"],
+    [/AI推广/g, "ai-marketing"],
+    [/AI官网内容/g, "ai-website-content"],
+    [/AI案例整理/g, "ai-case-library"],
+    [/线上获客/g, "online-leads"],
+    [/官网内容/g, "website-content"],
+    [/案例整理/g, "case-library"],
+    [/为什么开始重视/g, "why-focus-on"],
+    [/为什么/g, "why"],
+    [/如何/g, "how-to"],
+  ];
+
+  let normalized = source;
+  for (const [pattern, replacement] of tokenMap) {
+    normalized = normalized.replace(pattern, ` ${replacement} `);
+  }
+
+  const compact = unique(
+    normalized
+      .split(/[^a-zA-Z0-9-]+/)
+      .map((item) => item.trim().toLowerCase())
+      .filter(Boolean)
+      .filter((item) => !["de", "le", "zhe", "do", "shen", "me", "kai", "shi", "hen", "duo"].includes(item)),
+  )
+    .filter((item, index, list) => !(item === "ai" && list.includes("ai-marketing")))
+    .join("-");
+
+  const fallback = slugify(title);
+  const cleaned = (compact || fallback || "seo-article")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 48);
+
+  return cleaned || "seo-article";
+}
+
+function inferTopicFromTitle(title: string): SeoTopicCandidate {
+  const contentLine = inferContentLine(title);
+  const config = getLineConfig(contentLine);
+  const themeLabel = inferThemeLabel(title);
+  const entityLabel = inferEntityLabel(title, contentLine);
+  const keywordIntent = inferKeywordIntent(title);
+
+  return {
+    title,
+    slug: buildCompactSeoSlug(title, entityLabel),
+    keywordSeed: entityLabel,
+    keywordIntent,
+    contentLine,
+    sectionLabel: config.sectionLabel,
+    categoryLabel: config.categoryLabel,
+    subCategoryLabel: config.subCategoryLabel,
+    categoryHref: config.categoryHref,
+    subHref: config.subHref,
+    themeLabel,
+    entityLabel,
+    patternKey: "manual-topic",
+    intentScore: 100,
+    businessScore: 100,
+    extractabilityScore: 100,
+    entityScore: 100,
+    dupRiskScore: 0,
+    titlePatternDiversityScore: 100,
+    suffixDupRiskScore: 0,
+    totalScore: 100,
+    dedupReason: null,
+  };
+}
+
+function normalizeTopic(input: TopicLike): SeoTopicCandidate {
+  const inferred = inferTopicFromTitle(input.title);
+  return {
+    ...inferred,
+    ...input,
+    slug: input.slug?.trim() || inferred.slug,
+    keywordSeed: input.keywordSeed?.trim() || inferred.keywordSeed,
+    keywordIntent: input.keywordIntent?.trim() || inferred.keywordIntent,
+    contentLine: input.contentLine || inferred.contentLine,
+    themeLabel: input.themeLabel?.trim() || inferred.themeLabel,
+    entityLabel: input.entityLabel?.trim() || inferred.entityLabel,
+    sectionLabel: input.sectionLabel?.trim() || inferred.sectionLabel,
+    categoryLabel: input.categoryLabel?.trim() || inferred.categoryLabel,
+    subCategoryLabel: input.subCategoryLabel?.trim() || inferred.subCategoryLabel,
+    categoryHref: input.categoryHref?.trim() || inferred.categoryHref,
+    subHref: input.subHref?.trim() || inferred.subHref,
+  };
 }
 
 function buildKeywords(topic: SeoTopicCandidate) {
-  const base = [topic.keywordSeed, topic.themeLabel, topic.entityLabel];
-  if (topic.contentLine === "buying") base.push("整木选购");
-  if (topic.contentLine === "trend") base.push("行业趋势");
-  if (topic.contentLine === "tech") base.push("技术发展");
-  if (isAiTopic(topic)) base.push("AI推广");
-  return Array.from(new Set(base)).slice(0, 5).join(",");
-}
-
-function buildAnswerSummary(topic: SeoTopicCandidate) {
-  if (topic.contentLine === "buying") {
-    if (isBuyingMaterialTopic(topic)) {
-      return `${topic.title.replace(/？.*/, "")}没有固定标准，关键要把空间使用、预算边界、板材稳定性和后期维护放在一起判断。真正影响体验的，往往不是单个材料名词，而是柜体结构、木皮处理、五金寿命和收口细节能不能配合到位。`;
-    }
-    if (isBuyingDeliveryTopic(topic)) {
-      return `${topic.title.replace(/？.*/, "")}最核心的不是流程名词，而是交付边界有没有提前写清。工期节点、安装费用、增项规则、验收标准和售后范围越明确，越能减少后期拖延、返工和扯皮。`;
-    }
-    return `${topic.title.replace(/？.*/, "")}没有统一答案，关键要看预算边界、材料工艺、门店或工厂交付能力是否匹配。先把价格构成、增项风险和验收标准看清，比只盯单价更容易做出稳妥判断。`;
-  }
-
-  if (topic.contentLine === "trend") {
-    if (isAiTopic(topic)) {
-      return `${topic.title.replace(/？.*/, "")}，本质上反映的是整木行业推广方式正在从零散展示转向结构化内容。AI 更适合提速官网内容、案例整理和常见问题生产，但客户沟通、方案判断和交付承诺仍然不能只靠 AI。`;
-    }
-    return `${topic.title.replace(/？.*/, "")}，背后反映的是整木行业获客和决策方式正在变化。客户越来越会先在线上判断案例、官网内容、报价逻辑和交付表达，谁能先把这些内容讲清楚，谁就更容易获得高质量咨询。`;
-  }
-
-  if (isAiTopic(topic)) {
-    return `${topic.title.replace(/，.*/, "")}，关键不是多用几个 AI 工具，而是先把官网、案例页、产品页和问答内容的资料结构整理清楚。AI 适合提速初稿、整理素材和标准化表达，但最终判断、承诺和案例真实性仍要由门店或工厂把关。`;
-  }
-
-  return `${topic.title.replace(/，.*/, "")}，重点不是多发几篇文章，而是把官网、案例页、产品页和交付表达按客户决策顺序组织起来。页面越能直接回答客户问题，也越容易被搜索和 AI 联网结果理解。`;
-}
-
-function buildExcerpt(topic: SeoTopicCandidate, answerSummary: string) {
-  const extra =
+  const candidates =
     topic.contentLine === "buying"
-      ? "正文会继续拆开预算、材料、工艺、合同和验收这些真正影响决策的环节。"
-      : topic.contentLine === "trend"
-        ? isAiTopic(topic)
-          ? "正文会重点说明 AI 在整木工厂和整木门店推广中的适用场景、边界和落地顺序。"
-          : "正文会重点说明客户决策方式、搜索入口和内容展示为什么正在影响门店与工厂获客。"
-        : isAiTopic(topic)
-          ? "正文会给出官网内容、案例页、产品页和客户问答的 AI 使用动作，并说明哪些环节不能完全交给 AI。"
-          : "正文会重点给出官网结构、案例页、产品页与内容布局的实操建议。";
-  return `${answerSummary}${extra}`.slice(0, 158);
+      ? [topic.themeLabel, "整木选购", "预算控制", "工艺判断", "交付验收"]
+      : topic.contentLine === "tech"
+        ? [topic.themeLabel, topic.entityLabel, "官网内容", "案例整理", "FAQ沉淀"]
+        : [topic.themeLabel, topic.entityLabel, "线上获客", "官网内容", "案例整理"];
+
+  return unique(candidates).slice(0, 5).join("、");
 }
 
-function buildFaqPairs(topic: SeoTopicCandidate): GeneratedFaqPair[] {
-  if (isAiTopic(topic)) {
+function buildFaqPairs(topic: SeoTopicCandidate): SeoFaqPair[] {
+  if (/AI/.test(topic.title)) {
     return [
-      { q: "整木工厂和门店哪些环节适合先用 AI？", a: "优先用在案例整理、官网内容初稿、客户常见问题和短视频脚本提纲。" },
-      { q: "哪些环节不能完全交给 AI？", a: "报价承诺、工艺判断、交付边界、真实案例核验和客户一对一决策建议不能完全交给 AI。" },
-      { q: "AI 内容最容易踩什么坑？", a: "最大的问题是资料不真实、表达太空泛、页面结构混乱，以及把行业术语直接丢给客户。" },
-      { q: "AI 能不能直接解决询盘少的问题？", a: "不能直接解决，AI 只能提高内容整理和表达效率，前提仍是资料完整、页面结构合理、场景写得清楚。" },
+      {
+        q: "整木门店为什么不再把 AI 当成单纯写文工具？",
+        a: "因为整木门店真正缺的不是一句文案，而是案例整理、官网内容更新、客户常见问题沉淀和短视频脚本初稿这些可持续复用的内容资产。",
+      },
+      {
+        q: "这套方法最适合先用在哪些环节？",
+        a: "最适合先用于案例整理、官网内容更新、FAQ 沉淀、小红书和抖音脚本初稿，以及百度搜索入口所需的专题内容整理。",
+      },
+      {
+        q: "哪些场景不适合直接交给 AI？",
+        a: "报价、工艺承诺、交付周期判断、设计细节确认和高端客户的一对一方案决策，都不适合完全交给 AI 自动输出。",
+      },
+      {
+        q: "这样做会不会让内容变得空泛？",
+        a: "会，所以前提是先整理真实项目、材质、工艺、交付节点和客户问题，再用统一模板和人工审核保证表达不跑偏。",
+      },
+      {
+        q: "整木工厂和整木门店都适合同样的 AI 推广路径吗？",
+        a: "方向相同，但门店更偏向线上获客与转化表达，工厂更偏向工艺优势、案例归档和官网资料体系。",
+      },
     ];
   }
 
   if (topic.contentLine === "buying") {
     return [
-      { q: "整木定制最容易超预算的地方是什么？", a: "常见在收口、五金升级、造型加项和现场返工。" },
-      { q: "选门店和选工厂，先看什么？", a: "先看真实案例、交付边界和售后能力，再看单价。" },
-      { q: "验收时最值得盯哪几项？", a: "重点看拼缝、封边、五金安装、收口细节和现场保护。" },
-    ];
-  }
-
-  if (topic.contentLine === "trend") {
-    return [
-      { q: "为什么有流量却没有咨询？", a: "通常不是没曝光，而是页面没有回答客户最关心的问题。" },
-      { q: "为什么客户报价后不回复？", a: "很多时候是报价逻辑、案例适配和交付能力表达不清。" },
-      { q: "门店和工厂为什么都要补官网内容？", a: "因为客户越来越在联系前先做线上判断。" },
+      { q: "整木选购最容易踩坑的点是什么？", a: "最容易踩坑的是把注意力只放在单价，而忽略材质边界、工艺差异、增项规则和交付验收标准。" },
+      { q: "为什么报价差距会很大？", a: "因为木门、护墙板、柜体、楼梯和背景墙的材质、做法、五金和安装方式不同，最终成本差异会被不断放大。" },
+      { q: "什么时候应该更看重工厂能力？", a: "当项目涉及别墅大宅、复杂收口、楼梯背景墙联动和高端客户交付时，更要看工厂的深化和交付能力。" },
+      { q: "验收时先看什么？", a: "先看拼缝、平整度、封边、五金安装、现场保护和与设计稿的一致性，再谈表面观感。" },
+      { q: "预算不高还能做整木吗？", a: "可以，但要优先级明确，把重点空间和重点部位先做好，不要在所有部位同时追求高配置。" },
     ];
   }
 
   return [
-    { q: "官网内容先补哪类页面？", a: "优先补案例页、产品页、报价解释页和交付流程页。" },
-    { q: "案例页为什么不能只放图片？", a: "客户还需要看户型、预算、材料、工艺和交付信息。" },
-    { q: "产品页怎么写更容易被搜索理解？", a: "标题、首段和小节首句都要直接说清问题和结论。" },
+    { q: "为什么以前靠熟人和转介绍也能接单，现在却不够用了？", a: "因为客户的预判动作前移了，很多高端客户会先搜官网内容、案例整理和行业问题，再决定要不要继续沟通。" },
+    { q: "官网内容为什么会影响整木门店的成交效率？", a: "官网不只是展示页面，它承担了初步筛选、降低重复解释和建立专业信任的作用。" },
+    { q: "案例整理为什么会成为线上获客的核心资产？", a: "因为案例最能把木门、护墙板、柜体、楼梯和背景墙这些真实交付内容讲清楚，也最容易被百度搜索和 AI 搜索引用。" },
+    { q: "小红书、抖音和官网内容应该怎么配合？", a: "短内容负责吸引和触达，官网负责沉淀和解释，案例页负责建立信任，三者配合才会形成稳定获客链路。" },
+    { q: "高端客户最在意哪类线上信息？", a: "高端客户更在意真实案例、工艺判断、风险边界、设计师协同方式和交付经验，而不是空泛宣传。" },
   ];
 }
 
-function buildKeyFacts(topic: SeoTopicCandidate) {
-  if (isAiTopic(topic)) {
-    return [
-      "AI 更适合提速内容整理、初稿生成、案例结构化和问答归类，不适合独立替代专业判断。",
-      "整木工厂和整木门店要先整理真实案例、产品资料和工艺信息，再谈 AI 提效。",
-      "官网内容、案例页、产品页和客户问答页，是 AI 最容易先产生价值的几个场景。",
-      "客户承诺、报价边界、交付节点和最终审核，仍然需要人工把关。",
-    ];
-  }
+function buildInternalLinkSentence(target: { href: string; anchorText: string }, before: string, after: string) {
+  return `${before}<a href="${target.href}">${target.anchorText}</a>${after}`;
+}
 
-  if (topic.contentLine === "buying") {
-    return [
-      "整木选购不能只看单价，预算边界和增项规则更关键。",
-      "板材、木皮、五金、收口和安装都会拉开实际报价差距。",
-      "工厂和门店是否有真实案例、交付流程和售后边界，决定后期风险高低。",
-      "合同、工期和验收标准写得越清楚，越能减少返工和扯皮。",
-    ];
-  }
+function buildAnswerSummary(topic: SeoTopicCandidate, primaryKeyword: string) {
+  return `${topic.title.replace(/[？?]+$/, "")}，本质上说明整木门店和整木工厂都在重新理解线上获客：真正有价值的不是堆砌宣传，而是用 ${primaryKeyword} 把官网内容、案例整理、FAQ 沉淀和百度搜索入口做成可持续更新的内容资产。`;
+}
 
-  if (topic.contentLine === "trend") {
-    return [
-      "整木客户越来越会在咨询前先看案例、预算解释和交付表达。",
-      "只靠关系型获客或朋友圈展示，越来越难覆盖高意向搜索流量。",
-      "官网内容结构越清晰，门店和工厂越容易获得更高质量的咨询。",
-      "流量问题很多时候只是表象，核心还是内容能不能支撑判断。",
-    ];
-  }
+function buildConceptSummary(topic: SeoTopicCandidate) {
+  return `${topic.themeLabel}做内容升级时，重点不是多写，而是让整木门店、整木工厂、设计师和高端客户都能快速读懂核心判断。`;
+}
 
+function buildApplicableScenarios(topic: SeoTopicCandidate) {
+  return `适合用于${topic.themeLabel}的官网内容更新、案例整理、百度搜索专题、小红书与抖音选题规划，以及面向设计师和高端客户的常见问题沉淀。`;
+}
+
+function buildKeyFacts(topic: SeoTopicCandidate, primaryKeyword: string) {
   return [
-    "技术发展类内容重点不在概念，而在模块、页面和表达顺序。",
-    "官网、案例页、产品页和报价页需要按客户决策路径衔接。",
-    "内容越标准化，越容易减少反复沟通，也越利于搜索理解。",
-    "工艺、板材和交付流程必须写成客户能看懂的话。",
+    `${primaryKeyword}最适合先用于案例整理、官网内容更新、FAQ 沉淀和短视频脚本初稿。`,
+    `${topic.themeLabel}做内容时，必须把木门、护墙板、柜体、楼梯和背景墙这些真实场景写具体。`,
+    `面向别墅大宅、高端客户和设计师的内容，判断句、步骤句和风险边界句比口号更重要。`,
+    `只有站内链接、关键词链接和相关文章链接都指向真实页面，SEO 和 GEO 才会形成闭环。`,
   ];
 }
 
 function buildClaimCheckHints(topic: SeoTopicCandidate) {
-  if (isAiTopic(topic)) {
-    return ["AI 场景建议是否贴合整木门店或工厂真实流程", "是否明确写出 AI 不能替代的环节", "案例、官网、问答等动作是否具备可执行性"];
-  }
-  if (topic.contentLine === "buying") {
-    return ["报价口径是否一致", "合同条款是否覆盖增项与售后", "工期与安装节点是否可落地"];
-  }
-  if (topic.contentLine === "trend") {
-    return ["行业变化表述是否过度绝对", "获客趋势判断是否有站内场景支撑", "门店或工厂痛点是否与标题一致"];
-  }
-  return ["模块建议是否与现有栏目结构一致", "方法步骤是否能直接执行", "页面表达是否适合搜索抽取"];
+  return [
+    `${topic.themeLabel}是否写到了真实交付场景`,
+    "是否明确写出适用场景与风险边界",
+    "是否把 AI 只放在适合提效的位置，而不是代替报价和交付判断",
+  ];
 }
 
-function buildBuyingSections(topic: SeoTopicCandidate) {
-  if (isBuyingMaterialTopic(topic)) {
-    return [
-      {
-        title: "先看使用场景，再看材料名词",
-        body: "整木定制、高定木作、定制家具在选板材、木皮、五金和收口时，不能只比某个名词听起来高级。真正要看的是空间湿度、使用频率、柜体结构、门板稳定性以及后期维护能不能承受。",
-      },
-      {
-        title: "板材稳定性和工艺细节要一起判断",
-        body: "实木、多层板、木皮、烤漆工艺各有适用场景，关键不是单点好坏，而是整套搭配是否稳定。柜体结构、封边、拼缝、木皮转角、五金寿命和收口完整度，才是后期耐用度的核心。",
-      },
-      {
-        title: "展厅看样和交付落地往往不是一回事",
-        body: "很多业主在门店只看效果板和样柜，但真正交付时会遇到木门、护墙板、柜体、五金、安装和现场收口的联动问题。选门店或工厂时，最好直接要求看真实案例、工艺细节图和安装验收照片。",
-      },
-      {
-        title: "最后要把验收口径提前问清",
-        body: "材料选得再贵，如果验收标准模糊，后面仍然容易扯皮。拼缝容差、木皮顺纹、五金品牌、收口处理、安装保护和售后责任，最好在报价和合同阶段就先说清楚。",
-      },
-    ];
-  }
+async function buildInternalLinks(topic: SeoTopicCandidate) {
+  const staticLinks = buildSeoStaticInternalLinks(topic.contentLine);
+  const publishedLinks = await resolvePublishedInternalLinks({
+    contentLine: topic.contentLine,
+    keyword: topic.keywordSeed,
+    limit: 1,
+  }).catch(() => [] as Array<{ title: string; href: string; anchorText: string }>);
 
-  if (isBuyingDeliveryTopic(topic)) {
-    return [
-      {
-        title: "先把交付链路拆开，工期才有参考价值",
-        body: "整木定制的工期不只是生产时间，还包括量尺、设计、确认、拆单、生产、运输、安装和现场修补。只问一句多久能装完，往往得不到真正能落地的答案。",
-      },
-      {
-        title: "容易延期的往往不是工厂，而是边界没说清",
-        body: "现场条件不具备、尺寸反复改动、增项没确认、安装费用口径模糊，都会让交付一拖再拖。真正要盯的是节点责任，而不是销售口头承诺的总天数。",
-      },
-      {
-        title: "合同要把安装、增项和售后一起写进去",
-        body: "报价单和合同如果各写各的，后面最容易出问题。安装是否外包、增项怎么计价、验收谁到场、售后多久响应，这些都要落实到文字里。",
-      },
-      {
-        title: "验收要看细节，不要只看表面效果",
-        body: "木门下垂、柜体封边、护墙板收口、五金安装、现场保护和卫生清理，都是验收时最容易被忽略的点。谁把验收标准写得细，谁的交付风险通常更低。",
-      },
-    ];
-  }
+  return unique([...staticLinks, ...publishedLinks].map((item) => JSON.stringify(item))).map((item) => JSON.parse(item)).slice(0, 4);
+}
+
+function buildSectionParagraphs(topic: SeoTopicCandidate, primaryKeyword: string, variant: number, links: Awaited<ReturnType<typeof buildInternalLinks>>) {
+  const [linkA, linkB, linkC, linkD] = links;
+  const extraSentence =
+    variant > 0
+      ? "这一步做深以后，门店和工厂的内容会从“零散发一篇”变成“围绕同一主题反复沉淀”。"
+      : "";
 
   return [
     {
-      title: "先看钱花在哪，而不是先盯单价",
-      body: "整木定制、高定木作、定制家具这些项目，看似都在比报价，实际更该先拆预算。柜体、木门、护墙板、木皮、五金、收口、安装和交付，任何一项边界不清，后面都容易出现超预算。",
+      heading: "行业背景：整木门店为什么开始重新看待内容投入",
+      blocks: [
+        p(`过去很多整木门店更依赖熟人转介绍、线下活动和设计师关系，但现在高端客户在第一次咨询前，往往已经先通过百度搜索、小红书、抖音和官网内容完成了一轮自我判断。对整木门店来说，这套方法开始重要，不是因为潮流变了，而是客户获取信息的顺序变了。`),
+        p(`定义：对整木门店来说，${primaryKeyword}不是让 AI 替代销售和设计，而是让案例整理、官网内容更新、FAQ 沉淀和短视频脚本初稿更快、更稳地生产出来，并最终服务于线上获客和转化。${extraSentence}`),
+      ],
     },
     {
-      title: "材料和工艺要和空间需求一起判断",
-      body: "实木、多层板、木皮、油漆工艺并没有绝对谁更高级，关键是预算、空间湿度、使用频率和后期维护。真正要判断的，是板材稳定性、五金寿命、拼缝和收口能不能支撑日常使用。",
+      heading: "判断：门店开始重视这套方法的底层原因",
+      blocks: [
+        p(`判断：真正让整木门店开始重视 ${primaryKeyword} 的原因，不是单篇文章好不好看，而是官网内容长期缺位、案例整理太慢、FAQ 没有沉淀，导致高端客户和设计师在线上看不到足够清晰的判断依据。`),
+        p(`木门、护墙板、柜体、楼梯和背景墙这些内容，如果只停留在朋友圈零散展示，既不利于百度搜索收录，也不利于 AI 搜索在回答时直接引用。相反，只要把内容做成栏目、专题和案例页，整木门店和整木工厂就能持续积累可复用的官网内容资产。`),
+      ],
     },
     {
-      title: "选门店或工厂，先看交付表达是否完整",
-      body: "靠谱与否不能只看展厅和销售话术，更要看真实案例、交付流程、安装团队和售后边界。尤其是报价单、工期节点和验收标准有没有讲清楚，往往决定后面省不省心。",
+      heading: "适用场景：哪些整木业务最适合先接入这套方法",
+      blocks: [
+        p(`适用场景：最适合先落地的，是别墅大宅、高端客户、设计师协同项目，以及需要反复解释工艺、材质和交付边界的门店场景。像原木定制、全屋定制、木门护墙板联动、柜体背景墙组合、楼梯和收口细节展示，都是更适合优先整理的内容主题。`),
+        p(buildInternalLinkSentence(linkA, "如果团队还没有清晰的内容母体，建议先回到", "梳理栏目，再把高频问题拆成专题。")),
+        p(buildInternalLinkSentence(linkB, "关键词和术语表达不统一时，可以同步整理", "，避免不同页面说法互相打架。")),
+      ],
     },
     {
-      title: "合同、验收和工期才是避坑的最后一道线",
-      body: "合同里要把增项规则、安装费用、售后范围、材质口径和延期责任写清。验收时要看木门、柜体、五金、收口和现场保护，这些问题比营销话术更直接影响结果。",
+      heading: "风险边界：哪些事情不适合直接交给 AI",
+      blocks: [
+        p(`风险边界：对整木门店来说，AI 推广最适合先用于案例整理、官网内容更新、客户常见问题沉淀和短视频脚本初稿，不适合直接用于报价、工艺承诺和交付周期判断。`),
+        p(`不适合场景还包括高端客户的一对一方案定稿、设计师协同中的细节承诺、复杂楼梯和背景墙节点判断，以及任何带有合同责任的交付表达。只要内容牵涉价格、工艺承诺和售后边界，就必须由门店、工厂和项目负责人人工复核。`),
+      ],
+    },
+    {
+      heading: "落地步骤：整木门店怎么把这套方法真正跑起来",
+      blocks: [
+        p(`步骤：第一步，先把木门、护墙板、柜体、楼梯、背景墙等案例素材按项目、空间、工艺和客户问题重新归档；第二步，为官网内容建立栏目结构；第三步，把案例整理、FAQ、小红书和抖音脚本初稿交给 AI 提效；第四步，用人工审核把关承诺、报价和交付边界；第五步，把通过审核的内容持续回流到官网和百度搜索入口。`),
+        ol([
+          "先确定 10 到 20 个最常被高端客户问到的问题，并整理真实案例截图、设计说明和交付节点。",
+          buildInternalLinkSentence(linkC, "再围绕问题补齐", "，让预算、材质、工艺和交付解释形成长期可复用页面。"),
+          buildInternalLinkSentence(linkD ?? linkA, "随后把栏目、术语和标准表达统一到", "，避免页面之间链接错位或锚文本空泛。"),
+          "最后再把官网内容拆成适合小红书、抖音和设计师沟通的短内容版本，形成一套持续更新机制。",
+        ]),
+      ],
     },
   ];
 }
 
-function buildTrendSections(topic: SeoTopicCandidate) {
-  if (isAiTopic(topic)) {
-    return [
-      {
-        title: "AI 先改变的不是成交结果，而是内容生产效率",
-        body: "整木门店和整木工厂开始重视 AI，不是因为它能替代销售和设计，而是因为官网内容、案例整理、产品资料和客户问答的产出效率差距正在拉大。谁先把内容做得结构化，谁就更容易持续输出。",
-      },
-      {
-        title: "适合先用 AI 的场景，通常都在资料整理和首稿生产",
-        body: "案例梳理、官网栏目文案、产品页初稿、短视频脚本提纲、客户常见问题归类，这些都是 AI 更适合先介入的场景。它的作用是加快整理速度，不是替代真实案例和专业判断。",
-      },
-      {
-        title: "不适合完全交给 AI 的，是报价、承诺和交付判断",
-        body: "整木行业的高客单项目一旦涉及工艺边界、价格承诺、交付周期和售后责任，就不能只靠 AI 自动生成。越是关键承诺，越要回到工厂、门店、设计和交付团队人工审核。",
-      },
-      {
-        title: "传统推广效率下降，问题往往出在内容无法复用",
-        body: "很多团队做推广还是靠朋友圈、单次投放或零散短内容，资料没有沉淀到官网、案例页和搜索内容里。AI 真正能补上的，是把这些碎片资料变成可持续复用的内容资产。",
-      },
-    ];
-  }
-
-  return [
-    {
-      title: "客户决策顺序已经变了",
-      body: "如今高客单客户在联系门店或工厂前，会先搜整木定制、高定木作、定制家具相关问题，再看官网、案例、报价逻辑和交付表达。谁能先回答问题，谁就更容易进入下一步沟通。",
-    },
-    {
-      title: "很多成交问题并不只是流量问题",
-      body: "整木门店成交率低、报价后流失、整木工厂询盘质量差，经常不是因为没有曝光，而是内容不能支撑客户判断。客户没看到真实案例、工艺表达和预算边界，自然不敢继续推进。",
-    },
-    {
-      title: "行业正在从关系型获客转向内容型获客",
-      body: "过去更多靠熟人、招商会、朋友圈和线下关系，现在越来越多咨询来自搜索入口和内容沉淀。门店与工厂如果没有稳定的官网内容系统，就很难承接这部分高意向流量。",
-    },
-    {
-      title: "官网内容已经不只是展示，而是筛选机制",
-      body: "把案例、产品、报价、交付和常见问题写清楚，不只是为了被收录，更是为了让客户先做一轮自我筛选。这样留下来的咨询更精准，也更容易减少反复沟通。",
-    },
-  ];
+function buildSummaryParagraph(topic: SeoTopicCandidate, primaryKeyword: string) {
+  return `${topic.themeLabel}现在重视这套内容方法，并不是为了追热点，而是为了让官网内容、案例整理、FAQ 沉淀和搜索入口真正形成稳定的线上获客系统。只要把适用场景、风险边界、落地步骤和真实案例讲清楚，SEO 与 GEO 才会一起生效。`;
 }
 
-function buildTechSections(topic: SeoTopicCandidate) {
-  if (isAiTopic(topic)) {
-    return [
-      {
-        title: "先整理资料，再让 AI 参与写作",
-        body: "整木门店和整木工厂如果想用 AI 做推广，第一步不是直接写提示词，而是先把案例、产品、工艺、报价逻辑和交付流程整理成可复用资料。资料越清楚，AI 产出的内容越接近能用状态。",
-      },
-      {
-        title: "官网内容、案例页和问答页，是最值得先做的三个场景",
-        body: "官网内容适合用 AI 先生成栏目初稿，案例页适合用 AI 帮忙归纳项目亮点和结构，客户问答页适合用 AI 先整理高频问题。这三个场景既能提高产出效率，也能直接减少重复沟通。",
-      },
-      {
-        title: "要给 AI 明确边界，哪些能写，哪些只能辅助",
-        body: "标题草稿、首段整理、关键词归类、短视频脚本提纲、FAQ 草稿都适合 AI 辅助，但价格承诺、工艺结论、案例真实性和最终交付表达必须人工复核。边界不清，内容越多风险越大。",
-      },
-      {
-        title: "落地时至少要有 2 到 4 个固定动作",
-        body: "可以先建立案例资料表、工艺优势词表、客户高频问题库和官网页面模板，再让 AI 批量辅助生成初稿。这样做比零散地问 AI 一句写篇文章，更容易稳定产出能审核的内容。",
-      },
-    ];
-  }
-
-  return [
-    {
-      title: "内容结构先服务转化，再服务展示",
-      body: "整木门店和整木工厂做官网时，首页不是最先补的，先补高意向页面更有效。案例页、产品页、报价解释页、交付流程页、常见问题页，是搜索抓取和客户决策都更需要的内容。",
-    },
-    {
-      title: "案例页和产品页都要能被看懂",
-      body: "案例页不能只放效果图，要写清户型、预算、材料、木皮、五金、收口、安装和交付难点。产品页也不能只堆参数，而要直接解释适合什么项目、差异在哪、为什么值得看。",
-    },
-    {
-      title: "工艺优势必须翻译成客户语言",
-      body: "整木工厂常见的问题是工艺很强，但表达很硬。与其写复杂术语，不如直接写清这项工艺能解决什么问题，会影响哪些交付效果，客户验收时该看什么。",
-    },
-    {
-      title: "搜索友好和 AI 可理解，本质上是一件事",
-      body: "标题、首段、分节标题和小节首句都先给结论，再展开依据，搜索和 AI 才更容易抽取。官网内容越结构化，整木门店与工厂就越容易获得稳定的抓取和引用机会。",
-    },
-  ];
-}
-
-function buildBody(topic: SeoTopicCandidate, answerSummary: string) {
-  const links = SEO_CORE_INTERNAL_LINKS[topic.contentLine];
-  const sections =
-    topic.contentLine === "buying"
-      ? buildBuyingSections(topic)
-      : topic.contentLine === "trend"
-        ? buildTrendSections(topic)
-        : buildTechSections(topic);
-
-  const summary =
-    topic.contentLine === "buying"
-      ? "整木选购真正要解决的，不是最低价在哪，而是预算、材料、工艺、交付和合同能不能对上。把这些判断点先看清，再谈值不值，才更不容易后悔。"
-      : topic.contentLine === "trend"
-        ? isAiTopic(topic)
-          ? "AI 对整木推广真正有价值的地方，不是替代人，而是让官网、案例、问答和内容更新更稳定、更高效。先把适合 AI 的环节跑通，再保留人工审核，才更稳。"
-          : "行业变化的核心，不只是渠道变了，而是客户判断信息的方式变了。谁先把案例、预算、产品、工艺和交付写清楚，谁就更有机会被看见、被理解、被咨询。"
-        : isAiTopic(topic)
-          ? "AI 方法型内容的重点，不是多用工具，而是建立资料、模板和审核流程。只要边界清楚、资料真实，AI 就能成为整木门店和工厂的内容提效工具。"
-          : "技术发展类内容的关键，不是写得多，而是写得有结构、能执行、能被看懂。把整木官网内容按客户决策路径搭起来，转化和搜索理解都会更稳。";
-
-  return (
-    normalizeRichTextField(
-      [
-        sentence(answerSummary),
-        ...sections.flatMap((section) => [heading(section.title), sentence(section.body)]),
-        sentence(`${links[0]?.prompt || "相关内容可以继续参考"}<a href="${links[0]?.href || "/brands/buying"}">${links[0]?.title || "相关内容"}</a>。`),
-        sentence(`${links[1]?.prompt || "如果你还想继续看"}<a href="${links[1]?.href || "/news"}">${links[1]?.title || "相关内容"}</a>。`),
-        heading("总结"),
-        sentence(summary),
-        sentence(`${links[2]?.prompt || "如果你还想延伸看"}<a href="${links[2]?.href || "/news"}">${links[2]?.title || "相关内容"}</a>。`),
-      ].join(""),
-    ) || ""
-  );
-}
-
-function buildArticle(
-  topic: SeoTopicCandidate,
-  batchId: string,
-  triggerSource: "manual" | "cron" | "dry_run",
-): GeneratedSeoArticle {
-  const answerSummary = buildAnswerSummary(topic);
-  const excerpt = buildExcerpt(topic, answerSummary);
+async function composeArticle(topic: SeoTopicCandidate, batchId: string, triggerSource: TriggerSource, variant: number) {
+  const primaryKeyword = inferPrimaryKeyword(topic.title, topic.entityLabel);
+  const internalLinks = await buildInternalLinks(topic);
+  const summary = buildAnswerSummary(topic, primaryKeyword);
   const faqPairs = buildFaqPairs(topic);
-  const keyFacts = buildKeyFacts(topic);
-  const claimCheckHints = buildClaimCheckHints(topic);
-  const entityTerms = Array.from(
-    new Set(
-      [topic.themeLabel, topic.entityLabel, topic.keywordSeed]
-        .concat(
-          keyFacts.join(" ").match(
-            /整木定制|高定木作|定制家具|整木工厂|整木门店|护墙板|木门|柜体|板材|木皮|五金|收口|安装|交付|预算|官网|案例|询盘|AI/g,
-          ) || [],
-        ),
-    ),
-  ).slice(0, 12);
-  const content = buildBody(topic, answerSummary);
+  const sectionParagraphs = buildSectionParagraphs(topic, primaryKeyword, variant, internalLinks);
+  const excerpt = [
+    `${topic.themeLabel}开始重视 ${primaryKeyword}，不是为了追工具热度，而是因为线上获客越来越依赖官网内容、案例整理、FAQ 沉淀和百度搜索入口。`,
+    `对整木门店、整木工厂、设计师和高端客户来说，能被 AI 搜索直接引用的定义句、判断句、步骤句和风险边界句，正在成为新的内容竞争力。`,
+  ].join("");
+
+  const faqHtml = faqPairs
+    .map((item) => `${h3(item.q)}${p(item.a)}`)
+    .join("");
+
+  const content = normalizeRichTextField(
+    [
+      p(`定义：${summary}`),
+      ...sectionParagraphs.flatMap((section) => [h2(section.heading), ...section.blocks]),
+      h2("常见问题 FAQ"),
+      faqHtml,
+      h2("结尾总结"),
+      p(buildSummaryParagraph(topic, primaryKeyword)),
+    ].join(""),
+  ) || "";
+
+  const keywords = buildKeywords(topic);
+  const slug = buildCompactSeoSlug(topic.title, primaryKeyword);
+  const qualityReport = evaluateSeoArticleQuality({
+    title: topic.title,
+    excerpt,
+    content,
+    slug,
+    keywords,
+    faqPairs,
+    primaryKeyword,
+  });
 
   return {
     title: topic.title,
     excerpt,
-    keywords: buildKeywords(topic),
+    keywords,
     content,
-    slug: "",
-    internalLinks: SEO_CORE_INTERNAL_LINKS[topic.contentLine].slice(0, 3).map((item) => ({
-      title: item.title,
-      href: item.href,
-      prompt: item.prompt,
-    })),
-    status: "pending",
+    slug,
+    internalLinks,
+    status: "pending" as const,
     publishedAt: null,
-    sourceType: "ai_generated",
+    sourceType: "ai_generated" as const,
     source: SEO_AUTOGEN_SOURCE,
     generationBatchId: batchId,
     keywordSeed: topic.keywordSeed,
     keywordIntent: topic.keywordIntent,
-    answerSummary,
+    answerSummary: summary,
+    conceptSummary: buildConceptSummary(topic),
+    applicableScenarios: buildApplicableScenarios(topic),
     faqPairs,
-    keyFacts,
-    entityTerms,
-    claimCheckHints,
+    keyFacts: buildKeyFacts(topic, primaryKeyword),
+    entityTerms: unique([topic.themeLabel, topic.entityLabel, primaryKeyword, "整木门店", "整木工厂", "官网内容", "案例整理"]),
+    claimCheckHints: buildClaimCheckHints(topic),
     contentLine: topic.contentLine,
     section: topic.sectionLabel,
     category: topic.categoryLabel,
@@ -469,23 +483,46 @@ function buildArticle(
     subHref: topic.subHref,
     contentHash: buildSeoContentHash(topic.title, content),
     triggerSource,
+    qualityReport,
   };
+}
+
+export async function buildArticle(topicInput: TopicLike, batchId: string, triggerSource: TriggerSource = "cron") {
+  const topic = normalizeTopic(topicInput);
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const article = await composeArticle(topic, batchId, triggerSource, attempt);
+    const linkValidation = await validateInternalLinks({
+      html: article.content,
+      keywordCsv: article.keywords,
+    });
+    const qualityIssues = [
+      ...article.qualityReport.issues,
+      ...linkValidation.broken.map((item) => `broken_link:${item.href}`),
+    ];
+
+    if (qualityIssues.length === 0) {
+      return article;
+    }
+
+    if (attempt === 1) {
+      return {
+        ...article,
+        qualityReport: {
+          ...article.qualityReport,
+          pass: false,
+          issues: qualityIssues,
+        },
+      };
+    }
+  }
+
+  throw new Error("unreachable");
 }
 
 async function loadExistingArticles() {
   return prisma.article.findMany({
     where: {
-      NOT: {
-        AND: [
-          { status: "pending" },
-          {
-            OR: [
-              { generationBatchId: { contains: "-manual-" } },
-              { reviewNote: { contains: "testRun=true" } },
-            ],
-          },
-        ],
-      },
       OR: [
         { categoryHref: { startsWith: "/news" } },
         { subHref: { startsWith: "/news" } },
@@ -507,6 +544,7 @@ async function loadExistingArticles() {
 
 async function persistGeneratedArticles(articles: GeneratedSeoArticle[]) {
   const saved = [];
+
   for (const article of articles) {
     assertNoDirtyText(
       [
@@ -515,10 +553,11 @@ async function persistGeneratedArticles(articles: GeneratedSeoArticle[]) {
         { label: "答案摘要", value: article.answerSummary },
         { label: "正文", value: article.content },
       ],
-      "SEO 双线样稿命中脏词拦截",
+      "SEO 自动生成草稿命中脏词拦截",
     );
 
-    const slug = await generateUniqueArticleSlug(article.title);
+    const preferredSlug = buildCompactSeoSlug(article.title, article.keywordSeed);
+    const slug = await generateUniqueArticleSlug(preferredSlug);
     const created = await prisma.article.create({
       data: {
         title: article.title,
@@ -531,6 +570,8 @@ async function persistGeneratedArticles(articles: GeneratedSeoArticle[]) {
         contentLine: article.contentLine,
         excerpt: article.excerpt,
         answerSummary: article.answerSummary,
+        conceptSummary: article.conceptSummary,
+        applicableScenarios: article.applicableScenarios,
         content: article.content,
         contentHash: article.contentHash,
         categoryHref: article.categoryHref,
@@ -538,7 +579,7 @@ async function persistGeneratedArticles(articles: GeneratedSeoArticle[]) {
         sectionLabel: article.section,
         categoryLabel: article.category,
         subCategoryLabel: article.subCategory,
-        entityTerms: article.entityTerms.join(","),
+        entityTerms: article.entityTerms.join("、"),
         claimCheckHints: article.claimCheckHints.join("\n"),
         faqPairsJson: JSON.stringify(article.faqPairs),
         keyFactsJson: JSON.stringify(article.keyFacts),
@@ -546,7 +587,7 @@ async function persistGeneratedArticles(articles: GeneratedSeoArticle[]) {
         manualKeywords: article.keywords,
         status: "pending",
         publishedAt: null,
-        reviewNote: `dual-line seo draft | batch=${article.generationBatchId} | trigger=${article.triggerSource} | testRun=${article.triggerSource === "manual" ? "true" : "false"} | line=${article.contentLine} | seed=${article.keywordSeed} | intent=${article.keywordIntent}`,
+        reviewNote: `dual-line seo draft | batch=${article.generationBatchId} | trigger=${article.triggerSource} | quality=${article.qualityReport.pass ? "pass" : "fail"} | issues=${article.qualityReport.issues.join("|") || "none"} | line=${article.contentLine} | seed=${article.keywordSeed} | intent=${article.keywordIntent}`,
       },
       select: {
         id: true,
@@ -560,6 +601,7 @@ async function persistGeneratedArticles(articles: GeneratedSeoArticle[]) {
     });
     saved.push(created);
   }
+
   return saved;
 }
 
@@ -570,8 +612,9 @@ export async function runDualLineSeoContentGenerator() {
   const dryRun = process.argv.includes("--dry-run") || process.argv.includes("--dryRun");
   const approved = boolArg("approved", SEO_APPROVED_DEFAULT);
   const timezone = readArg("timezone") || "Asia/Shanghai";
+  const explicitTitle = readArg("title").trim();
   const triggerSourceArg = readArg("trigger-source") || readArg("triggerSource");
-  const triggerSource =
+  const triggerSource: TriggerSource =
     dryRun
       ? "dry_run"
       : triggerSourceArg === "manual" || triggerSourceArg === "cron"
@@ -586,14 +629,54 @@ export async function runDualLineSeoContentGenerator() {
   }
 
   const batchId = `dual-seo-${new Date().toISOString().slice(0, 10)}-${triggerSource}-${createHash("md5").update(String(Date.now())).digest("hex").slice(0, 6)}`;
-  const [{ picked, candidates, stats }, existingArticles] = await Promise.all([pickSeoTopicsForGeneration(count), loadExistingArticles()]);
 
+  if (explicitTitle) {
+    const article = await buildArticle(inferTopicFromTitle(explicitTitle), batchId, triggerSource);
+    if (dryRun) {
+      return {
+        dryRun: true,
+        approved,
+        timezone,
+        triggerSource,
+        generationBatchId: batchId,
+        stats: { rawCandidateCount: 1, filteredCandidateCount: 1, finalPickedCount: 1, filterReasonCounts: {} },
+        items: [article],
+      };
+    }
+
+    if (!article.qualityReport.pass) {
+      throw new Error(`generated article failed quality gate: ${article.qualityReport.issues.join(",")}`);
+    }
+
+    const saved = await persistGeneratedArticles([article]);
+    return {
+      dryRun: false,
+      approved,
+      timezone,
+      triggerSource,
+      generationBatchId: batchId,
+      stats: { rawCandidateCount: 1, filteredCandidateCount: 1, finalPickedCount: 1, filterReasonCounts: {} },
+      savedCount: saved.length,
+      items: saved,
+    };
+  }
+
+  const [{ picked, candidates, stats }, existingArticles] = await Promise.all([pickSeoTopicsForGeneration(count), loadExistingArticles()]);
   const generated: GeneratedSeoArticle[] = [];
+  const skipped: Array<{ title: string; reason: string }> = [];
+
   for (const topic of picked) {
-    const article = buildArticle(topic, batchId, triggerSource);
+    const article = await buildArticle(topic, batchId, triggerSource);
     const leadDupReason = findSeoLeadDuplicateReason(article.content, existingArticles, { similarityThreshold: 0.992 });
-    if (leadDupReason) continue;
-    article.slug = await generateUniqueArticleSlug(article.title);
+    if (leadDupReason) {
+      skipped.push({ title: article.title, reason: leadDupReason });
+      continue;
+    }
+    if (!article.qualityReport.pass) {
+      skipped.push({ title: article.title, reason: article.qualityReport.issues.join(",") || "quality_gate_failed" });
+      continue;
+    }
+    article.slug = await generateUniqueArticleSlug(buildCompactSeoSlug(article.title, article.keywordSeed));
     generated.push(article);
   }
 
@@ -613,9 +696,8 @@ export async function runDualLineSeoContentGenerator() {
         keywordSeed: item.keywordSeed,
         keywordIntent: item.keywordIntent,
         totalScore: item.totalScore,
-        suffixDupRiskScore: item.suffixDupRiskScore,
-        titlePatternDiversityScore: item.titlePatternDiversityScore,
       })),
+      skipped,
       items: generated,
     };
   }
@@ -628,6 +710,7 @@ export async function runDualLineSeoContentGenerator() {
     triggerSource,
     generationBatchId: batchId,
     stats,
+    skipped,
     savedCount: saved.length,
     items: saved,
   };

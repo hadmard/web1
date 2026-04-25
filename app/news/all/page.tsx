@@ -2,7 +2,7 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { articleOrderByPinnedLatest, articleOrderByPinnedOldest } from "@/lib/articles";
-import { buildNewsPath } from "@/lib/share-config";
+import { buildNewsPath, getArticleSegment } from "@/lib/share-config";
 import { decodeEscapedUnicode } from "@/lib/text";
 import { NEWS_AFTERMARKET_SUBCATEGORY } from "@/lib/news-aftermarket";
 
@@ -414,7 +414,7 @@ export default async function NewsAllPage({ searchParams }: Props) {
             {items.map((x) => (
               <li key={x.id} className="rounded-[16px] border border-border bg-surface-elevated p-3 sm:rounded-[20px] sm:p-5">
                 <Link
-                  href={buildNewsPath(x.id)}
+                  href={buildNewsPath(getArticleSegment(x))}
                   className="line-clamp-2 text-[15px] font-medium leading-6 text-primary hover:text-accent sm:text-lg sm:leading-8"
                 >
                   {decodeEscapedUnicode(x.title)}

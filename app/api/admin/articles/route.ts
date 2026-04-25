@@ -17,6 +17,7 @@ import { pushApprovedNewsToBaidu } from "@/lib/baidu-submit";
 import { isArticleSourceType } from "@/lib/article-source";
 import { buildDirtyTextErrorMessage } from "@/lib/article-input-guard";
 import { parseProductRecommendations, stringifyProductRecommendations } from "@/lib/news-aftermarket";
+import { validateInternalLinks } from "@/lib/article-links";
 
 export const dynamic = "force-dynamic";
 
@@ -249,6 +250,10 @@ export async function POST(request: NextRequest) {
     if (dirtyTextError) {
       return NextResponse.json({ error: dirtyTextError }, { status: 400 });
     }
+    const linkValidation = await validateInternalLinks({
+      html: normalizedContent,
+      keywordCsv: typeof manualKeywords === "string" ? manualKeywords.trim() : null,
+    });
     const customSlug = typeof slug === "string" ? slug.trim() : "";
     const slugTrim = await generateUniqueArticleSlug(customSlug || normalizedTitle);
 
@@ -260,6 +265,12 @@ export async function POST(request: NextRequest) {
           role: session.role,
           canPublishWithoutReview: session.canPublishWithoutReview === true,
         });
+    if (safeStatus === "approved" && !linkValidation.ok) {
+      return NextResponse.json(
+        { error: `站内链接校验未通过：${linkValidation.broken.map((item) => item.href).join("、")}` },
+        { status: 400 },
+      );
+    }
 
     const resolvedPublishedAt =
       publishedAt === true || publishedAt === "true"

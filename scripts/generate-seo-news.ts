@@ -1,4 +1,4 @@
-export { runDualLineSeoContentGenerator } from "./generate-dual-line-seo-content";
+export { buildArticle, runDualLineSeoContentGenerator } from "./generate-dual-line-seo-content";
 
 import { prisma } from "../lib/prisma";
 import { runDualLineSeoContentGenerator } from "./generate-dual-line-seo-content";

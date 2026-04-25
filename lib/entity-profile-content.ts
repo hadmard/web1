@@ -1,4 +1,4 @@
-import { buildNewsPath } from "@/lib/share-config";
+import { buildNewsPath, getArticleSegment } from "@/lib/share-config";
 import { htmlToPlainText, toSummaryText } from "@/lib/brand-content";
 
 export type EntityArticleLikeItem = {
@@ -40,7 +40,7 @@ export function mapEntityArticlesToListItems(items: EntityArticleLikeItem[]) {
     title: item.title,
     excerpt: toSummaryText(item.excerpt || item.title, 78) || item.title,
     meta: formatDate(item.publishedAt || item.createdAt),
-    href: buildNewsPath(item.id),
+    href: buildNewsPath(getArticleSegment(item)),
     badge: resolveArticleBadge(item),
   }));
 }

@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { previewText } from "@/lib/text";
-import { buildNewsPath } from "@/lib/share-config";
+import { buildNewsPath, getArticleSegment } from "@/lib/share-config";
 import { buildPageMetadata } from "@/lib/seo";
 import { getArticlesByKeyword, isValidKeywordCandidate } from "@/lib/news-keywords-v2";
 
@@ -57,7 +57,7 @@ export default async function KeywordPage({ params }: Props) {
           <ul className="divide-y divide-border">
             {result.items.map((item) => (
               <li key={item.id} className="py-4 first:pt-0 last:pb-0">
-                <Link href={buildNewsPath(item.id)} className="block rounded-2xl px-3 py-3 transition hover:bg-[#fafafa]">
+                <Link href={buildNewsPath(getArticleSegment(item))} className="block rounded-2xl px-3 py-3 transition hover:bg-[#fafafa]">
                   <p className="text-base font-medium leading-7 text-primary">{item.title}</p>
                   {item.excerpt ? (
                     <p className="mt-2 line-clamp-2 text-sm leading-7 text-muted">

@@ -374,7 +374,7 @@ export default async function EnterprisePage({ params, searchParams }: Props) {
     title: article.title,
     excerpt: toSummaryText(article.excerpt || article.title, 78) || article.title,
     dateLabel: formatDate(article.publishedAt || article.createdAt),
-    href: buildNewsPath(article.id),
+      href: buildNewsPath(article.slug || article.id),
     badge: "企业动态",
     imageUrl: ownGallery[index]?.imageUrl || ownGallery[0]?.imageUrl || DEFAULT_NEWS_IMAGES[index % DEFAULT_NEWS_IMAGES.length],
   }));
@@ -384,7 +384,7 @@ export default async function EnterprisePage({ params, searchParams }: Props) {
     title: article.title,
     excerpt: toSummaryText(article.excerpt || article.title, 78) || article.title,
     dateLabel: formatDate(article.publishedAt || article.createdAt),
-    href: buildNewsPath(article.id),
+      href: buildNewsPath(article.slug || article.id),
     badge: "行业资讯",
     imageUrl: platformGallery[index]?.imageUrl || platformGallery[0]?.imageUrl || DEFAULT_NEWS_IMAGES[index % DEFAULT_NEWS_IMAGES.length],
   }));

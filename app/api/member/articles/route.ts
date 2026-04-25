@@ -22,6 +22,7 @@ import {
   getEffectiveMemberAccessForMember,
 } from "@/lib/member-access-resolver";
 import { buildDirtyTextErrorMessage } from "@/lib/article-input-guard";
+import { validateInternalLinks } from "@/lib/article-links";
 
 const MEMBER_CONTENT_STATUSES = new Set(["draft", "pending", "approved", "rejected"]);
 
@@ -193,6 +194,16 @@ export async function POST(request: NextRequest) {
   ]);
   if (dirtyTextError) {
     return NextResponse.json({ error: dirtyTextError }, { status: 400 });
+  }
+  const linkValidation = await validateInternalLinks({
+    html: normalizedContent,
+    keywordCsv: typeof manualKeywords === "string" ? manualKeywords.trim() : null,
+  });
+  if (submissionStatus === "approved" && !linkValidation.ok) {
+    return NextResponse.json(
+      { error: `站内链接校验未通过：${linkValidation.broken.map((item) => item.href).join("、")}` },
+      { status: 400 },
+    );
   }
   const customSlug = typeof slug === "string" ? slug.trim() : "";
   const slugTrim = await generateUniqueArticleSlug(customSlug || title);

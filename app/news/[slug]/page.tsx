@@ -162,11 +162,30 @@ function parseKeywordList(keywordSource?: string | null) {
   return Array.from(
     new Set(
       `${keywordSource || ""}`
-        .split(",")
+        .split(/[,\n，、]+/)
         .map((item) => item.trim())
         .filter((item) => isValidKeywordCandidate(item)),
     ),
   ).slice(0, 5);
+}
+
+function parseFaqPairs(input?: string | null) {
+  if (!input) return [] as Array<{ q: string; a: string }>;
+
+  try {
+    const parsed = JSON.parse(input);
+    if (!Array.isArray(parsed)) return [];
+
+    return parsed
+      .map((item) => ({
+        q: typeof item?.q === "string" ? decodeEscapedUnicode(item.q).trim() : "",
+        a: typeof item?.a === "string" ? decodeEscapedUnicode(item.a).trim() : "",
+      }))
+      .filter((item) => item.q && item.a)
+      .slice(0, 6);
+  } catch {
+    return [];
+  }
 }
 
 function stripNewsLeadingOverviewHeading(html?: string | null) {
@@ -350,6 +369,7 @@ export default async function ArticlePage({ params, searchParams }: Props) {
   const articleShareImage = resolveArticleShareImage(article);
   const articleSection = resolveNewsSectionLabel(article.subHref, article.categoryHref);
   const keywords = parseKeywordList(article.manualKeywords ?? article.keywords);
+  const faqPairs = parseFaqPairs(article.faqPairsJson ?? article.faqJson);
   const recommendedArticles = await getRecommendedNews(article.id, 4);
   const sourceSummary = buildArticleSourceSummary(article);
   const aftermarketConfig = await getNewsAftermarketConfig();
@@ -395,12 +415,29 @@ export default async function ArticlePage({ params, searchParams }: Props) {
     ],
   };
 
+  const faqSchema =
+    faqPairs.length > 0
+      ? {
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: faqPairs.map((item) => ({
+            "@type": "Question",
+            name: item.q,
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: item.a,
+            },
+          })),
+        }
+      : null;
+
   return (
     <article id="news-reading-article" className="mx-auto max-w-6xl px-4 pb-6 pt-2 sm:px-6 sm:py-12">
       <NewsUrlSync canonicalPath={buildNewsPath(articleSegment)} />
       <NewsViewTracker slug={article.slug} />
       <JsonLd data={articleSchema} />
       <JsonLd data={breadcrumbSchema} />
+      {faqSchema ? <JsonLd data={faqSchema} /> : null}
 
       <div className="mx-auto max-w-[860px]">
         <nav className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-2 px-1 text-[15px] text-primary/52 sm:mb-6 sm:px-0 sm:text-[15px] sm:text-primary/52" aria-label="面包屑">
@@ -492,6 +529,20 @@ export default async function ArticlePage({ params, searchParams }: Props) {
           <section className="mt-10 rounded-[24px] border border-border bg-surface-elevated px-5 py-6 sm:px-7">
             <h2 className="mb-2 text-lg font-semibold text-primary">适用场景</h2>
             <p className="leading-7 text-muted">{displayApplicableScenarios}</p>
+          </section>
+        ) : null}
+
+        {faqPairs.length > 0 ? (
+          <section className="mt-10 rounded-[24px] border border-border bg-surface-elevated px-5 py-6 sm:px-7">
+            <h2 className="mb-4 text-lg font-semibold text-primary">常见问题 FAQ</h2>
+            <div className="space-y-4">
+              {faqPairs.map((item) => (
+                <div key={item.q} className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white/80 px-4 py-4 sm:px-5">
+                  <h3 className="text-base font-medium leading-7 text-primary">{item.q}</h3>
+                  <p className="mt-2 text-sm leading-7 text-muted">{item.a}</p>
+                </div>
+              ))}
+            </div>
           </section>
         ) : null}
 
