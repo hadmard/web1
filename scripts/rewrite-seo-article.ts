@@ -45,7 +45,6 @@ function compactContentToRange(html: string, minLength = 1000, maxLength = 1400)
     /(<h2>[^<]*风险边界[^<]*<\/h2><p>[\s\S]*?<\/p>)<p>[\s\S]*?<\/p>/i,
     /(<h2>[^<]*判断[^<]*<\/h2><p>[\s\S]*?<\/p>)<p>[\s\S]*?<\/p>/i,
     /(<h2>[^<]*行业背景[^<]*<\/h2><p>[\s\S]*?<\/p>)<p>[\s\S]*?<\/p>/i,
-    /(<h2>[^<]*结尾总结[^<]*<\/h2>)<p>[\s\S]*?<\/p>/i,
   ];
 
   for (const pattern of removablePatterns) {

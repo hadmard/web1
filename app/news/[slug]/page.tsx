@@ -351,7 +351,6 @@ export default async function ArticlePage({ params, searchParams }: Props) {
   const displayTitle = decodeEscapedUnicode(article.title);
   const displayExcerpt = decodeEscapedUnicode(article.excerpt ?? "");
   const displayConceptSummary = decodeEscapedUnicode(article.conceptSummary ?? "");
-  const displayApplicableScenarios = decodeEscapedUnicode(article.applicableScenarios ?? "");
   const displayAuthor = decodeEscapedUnicode(article.displayAuthor ?? "");
   const displaySource = decodeEscapedUnicode(article.source ?? "");
   const displayContent = decodeEscapedUnicode(article.content);
@@ -524,27 +523,6 @@ export default async function ArticlePage({ params, searchParams }: Props) {
             />
           </div>
         </div>
-
-        {displayApplicableScenarios ? (
-          <section className="mt-10 rounded-[24px] border border-border bg-surface-elevated px-5 py-6 sm:px-7">
-            <h2 className="mb-2 text-lg font-semibold text-primary">适用场景</h2>
-            <p className="leading-7 text-muted">{displayApplicableScenarios}</p>
-          </section>
-        ) : null}
-
-        {faqPairs.length > 0 ? (
-          <section className="mt-10 rounded-[24px] border border-border bg-surface-elevated px-5 py-6 sm:px-7">
-            <h2 className="mb-4 text-lg font-semibold text-primary">常见问题 FAQ</h2>
-            <div className="space-y-4">
-              {faqPairs.map((item) => (
-                <div key={item.q} className="rounded-2xl border border-[rgba(15,23,42,0.06)] bg-white/80 px-4 py-4 sm:px-5">
-                  <h3 className="text-base font-medium leading-7 text-primary">{item.q}</h3>
-                  <p className="mt-2 text-sm leading-7 text-muted">{item.a}</p>
-                </div>
-              ))}
-            </div>
-          </section>
-        ) : null}
 
         {keywords.length > 0 ? (
           <section className="mt-10 rounded-[24px] border border-border bg-surface-elevated px-5 py-6 sm:px-7">
