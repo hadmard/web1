@@ -29,6 +29,7 @@
     "check:article-links": "ts-node --transpile-only -r tsconfig-paths/register -P scripts/tsconfig.scripts.json scripts/check-article-links.ts",
     "fix:article-links": "ts-node --transpile-only -r tsconfig-paths/register -P scripts/tsconfig.scripts.json scripts/fix-article-links.ts",
     "rewrite:seo-article": "ts-node --transpile-only -r tsconfig-paths/register -P scripts/tsconfig.scripts.json scripts/rewrite-seo-article.ts",
+    "rewrite:seo-batch": "ts-node --transpile-only -r tsconfig-paths/register -P scripts/tsconfig.scripts.json scripts/rewrite-seo-batch.ts",
     "audit:seo-article-quality": "ts-node --transpile-only -r tsconfig-paths/register -P scripts/tsconfig.scripts.json scripts/audit-seo-article-quality.ts",
     "import:news": "ts-node --transpile-only scripts/import-news-feed.ts",
     "migrate:legacy-news-batch": "ts-node --transpile-only -P scripts/tsconfig.scripts.json scripts/migrate-legacy-news-batch.ts",

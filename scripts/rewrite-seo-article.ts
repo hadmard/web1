@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+﻿import { createHash } from "node:crypto";
 import { prisma } from "../lib/prisma";
 import { stripHtml } from "../lib/text";
 import { buildArticle } from "./generate-seo-news";
@@ -25,12 +25,11 @@ function countPlainText(value: string) {
 }
 
 function pickPrimaryKeyword(keywordCsv: string) {
-  return (
-    keywordCsv
-      .split(/[,\n，、]+/)
-      .map((item) => item.trim())
-      .filter(Boolean)[1] || "AI推广"
-  );
+  const values = keywordCsv
+    .split(/[,,\n，、]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+  return values[0] || "AI推广";
 }
 
 function compactContentToRange(html: string, minLength = 1000, maxLength = 1400) {
@@ -181,3 +180,4 @@ void main()
   .finally(async () => {
     await prisma.$disconnect();
   });
+

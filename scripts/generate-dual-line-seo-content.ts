@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+﻿import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { prisma } from "../lib/prisma";
@@ -261,14 +261,19 @@ function normalizeTopic(input: TopicLike): SeoTopicCandidate {
 }
 
 function buildKeywords(topic: SeoTopicCandidate) {
-  const candidates =
+  const defaults =
     topic.contentLine === "buying"
-      ? [topic.themeLabel, "整木选购", "预算控制", "工艺判断", "交付验收"]
+      ? [topic.themeLabel, "整木选购", "预算控制", "工艺判断", "交付验收", "整木定制"]
       : topic.contentLine === "tech"
-        ? [topic.themeLabel, topic.entityLabel, "官网内容", "案例整理", "FAQ沉淀"]
-        : [topic.themeLabel, topic.entityLabel, "线上获客", "官网内容", "案例整理"];
+        ? [topic.themeLabel, topic.entityLabel, "官网内容", "案例整理", "FAQ沉淀", "AI推广"]
+        : [topic.themeLabel, topic.entityLabel, "线上获客", "官网内容", "案例整理", "行业趋势"];
 
-  return unique(candidates).slice(0, 5).join("、");
+  const keywords = unique(defaults.filter(Boolean)).slice(0, 5);
+  while (keywords.length < 5) {
+    keywords.push(`SEO主题${keywords.length + 1}`);
+  }
+
+  return keywords.join("、");
 }
 
 function buildFaqPairs(topic: SeoTopicCandidate): SeoFaqPair[] {
@@ -731,3 +736,4 @@ if (require.main === module) {
       await prisma.$disconnect();
     });
 }
+

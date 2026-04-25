@@ -1,4 +1,4 @@
-import { prisma } from "../lib/prisma";
+﻿import { prisma } from "../lib/prisma";
 import { validateInternalLinks } from "../lib/article-links";
 import { evaluateSeoArticleQuality, type SeoFaqPair } from "../lib/seo-article-quality";
 
@@ -19,6 +19,13 @@ function parseFaqPairs(input?: string | null) {
   }
 }
 
+function pickPrimaryKeyword(title: string, keywordCsv: string | null | undefined) {
+  const values = `${keywordCsv || ""}`
+    .split(/[,,\n，、]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+  return values.find((item) => title.includes(item)) || values[0] || "AI推广";
+}
 async function main() {
   const rows = await prisma.article.findMany({
     where: {
@@ -54,7 +61,7 @@ async function main() {
       slug: row.slug,
       keywords: row.manualKeywords || "",
       faqPairs,
-      primaryKeyword: "AI推广",
+      primaryKeyword: pickPrimaryKeyword(row.title, row.manualKeywords),
     });
     const linkValidation = await validateInternalLinks({
       html: row.content,
@@ -114,3 +121,4 @@ void main()
   .finally(async () => {
     await prisma.$disconnect();
   });
+
