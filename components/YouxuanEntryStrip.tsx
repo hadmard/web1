@@ -12,7 +12,7 @@ export function YouxuanEntryStrip() {
         aria-label="进入整木优选商城"
       >
         <p className="youxuan-entry-kicker">{YOUXUAN_NAME}</p>
-        <p className="youxuan-entry-title">行业书籍与木作护理入口可见，但不打断首页内容浏览。</p>
+        <p className="youxuan-entry-title">行业书籍与高端木作护理优选</p>
       </Link>
     </div>
   );
