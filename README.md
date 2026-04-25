@@ -282,3 +282,12 @@ npm run dev
 - 会员角色与权限说明
 - 内容模型与栏目映射说明
 - 部署与环境差异说明
+## SEO cron 快速修复
+
+生产服务器执行：
+
+```bash
+APP_DIR=/home/web1 bash scripts/fix-seo-cron.sh
+```
+
+注意：请使用和 `deploy.yml` 安装 cron 相同的服务器用户执行，避免 `root`/user crontab 不一致。
