@@ -176,14 +176,12 @@ export default async function BrandsPage() {
 
         {brands.length > 0 ? (
           <section className="mt-14 sm:mt-20">
-            <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-              <div className="max-w-xl">
-                <h2 className="font-serif text-[1.7rem] text-primary sm:text-[2.1rem]">品牌速览</h2>
-                <p className="mt-3 hidden text-sm leading-7 text-muted sm:block">
-                  保留少量品牌介绍与基础资料，帮助用户快速进入整木品牌栏目。
-                </p>
-              </div>
-              <Link href={BRAND_COLUMN_HREF} className="inline-flex items-center text-sm text-primary transition hover:text-accent">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="font-serif text-[1.7rem] text-primary sm:text-[2.1rem]">品牌速览</h2>
+              <Link
+                href={BRAND_COLUMN_HREF}
+                className="inline-flex w-fit items-center whitespace-nowrap text-sm text-primary transition hover:text-accent"
+              >
                 查看全部整木品牌 →
               </Link>
             </div>
