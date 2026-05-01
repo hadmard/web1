@@ -9,11 +9,11 @@ export const revalidate = 0;
 
 const PAGE_TITLE = "整木定制选购指南";
 const PAGE_DESCRIPTION =
-  "整合内容管理中已经发布的整木选购内容，围绕预算、材料、工艺、品牌筛选与落地细节，帮助用户更高效地完成选购判断。";
+  "整合已发布的整木选购内容，围绕预算、材料、工艺、品牌筛选与落地细节，帮助用户更高效地完成选购判断。";
 
 export async function generateMetadata(): Promise<Metadata> {
   return buildPageMetadata({
-    title: "整木定制怎么选？预算、品牌、避坑全指南｜整木网",
+    title: "整木定制怎么选？预算、品牌、避坑全指南 | 整木网",
     description: PAGE_DESCRIPTION,
     path: "/brands/buying",
     type: "website",
@@ -32,10 +32,6 @@ export default async function BuyingPage() {
         <h1 className="mt-4 font-serif text-3xl leading-tight text-primary sm:text-[2.9rem] sm:leading-[1.08]">
           {PAGE_TITLE}
         </h1>
-        <p className="mt-4 max-w-3xl text-sm leading-8 text-muted sm:text-base">{PAGE_DESCRIPTION}</p>
-        <p className="mt-4 max-w-3xl text-sm leading-7 text-muted">
-          当前栏目只展示内容管理里已经发布到“整木选购”的前台内容，不再单独承接选购问答数据。
-        </p>
       </section>
 
       {articles.length === 0 ? (
@@ -70,9 +66,9 @@ export default async function BuyingPage() {
                     {new Date(featuredArticle.publishedAt ?? featuredArticle.updatedAt).toLocaleDateString("zh-CN")}
                   </p>
                   <p className="mt-4 max-w-3xl text-[15px] leading-8 text-primary/78 sm:text-base">
-                    {featuredArticle.excerpt?.trim() || "查看这篇整木选购内容的详细解析。"}
+                    {featuredArticle.excerpt?.trim() || "查看这篇整木选购内容的详细解读。"}
                   </p>
-                  <p className="mt-5 text-sm text-primary/68 transition group-hover:text-accent">查看详情 →</p>
+                  <p className="mt-5 text-sm text-primary/68 transition group-hover:text-accent">查看详情 -&gt;</p>
                 </article>
               </Link>
             </section>
@@ -86,9 +82,6 @@ export default async function BuyingPage() {
                   <h2 className="mt-3 font-serif text-3xl leading-tight text-primary sm:text-[2.2rem]">
                     已发布的整木选购内容
                   </h2>
-                  <p className="mt-3 max-w-3xl text-sm leading-7 text-muted sm:text-base">
-                    这里展示内容管理中已发布到“整木选购”的内容，前台与后台发布路径保持一致。
-                  </p>
                 </div>
               </div>
 
@@ -118,9 +111,9 @@ export default async function BuyingPage() {
                         {article.title}
                       </h3>
                       <p className="mt-4 line-clamp-3 text-[15px] leading-8 text-primary/78 sm:text-base">
-                        {article.excerpt?.trim() || "查看这篇整木选购内容的详细解析。"}
+                        {article.excerpt?.trim() || "查看这篇整木选购内容的详细解读。"}
                       </p>
-                      <p className="mt-5 text-sm text-primary/68 transition group-hover:text-accent">查看详情 →</p>
+                      <p className="mt-5 text-sm text-primary/68 transition group-hover:text-accent">查看详情 -&gt;</p>
                     </article>
                   </Link>
                 ))}

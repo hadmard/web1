@@ -15,9 +15,6 @@ export default function AdminBuyingFaqsPage() {
     <div className="rounded-[28px] border border-[rgba(181,157,121,0.16)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(247,242,235,0.92))] p-6 shadow-[0_18px_48px_rgba(15,23,42,0.06)]">
       <p className="text-xs uppercase tracking-[0.3em] text-[#9d7e4d]">Buying Content</p>
       <h1 className="mt-3 font-serif text-3xl text-primary">整木选购问答已停用</h1>
-      <p className="mt-3 max-w-3xl text-sm leading-7 text-muted">
-        整木选购栏目现已统一改为承接“内容管理”中已发布的文章内容，不再单独维护选购问答。
-      </p>
       <div className="mt-5">
         <Link
           href="/membership/admin/content?mode=manage&tab=buying"
