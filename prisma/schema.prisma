@@ -403,6 +403,7 @@ model Article {
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
   tags                ArticleTag[]
+  viewDedupRecords    ArticleViewDedup[]
   changeRequests      ArticleChangeRequest[]
   keywordItems        NewsKeyword[]
   baiduPushJob        BaiduPushJob?
@@ -421,6 +422,24 @@ model Article {
   @@index([authorMemberId])
   @@index([ownedEnterpriseId])
   @@map("articles")
+}
+
+model ArticleViewDedup {
+  id              String   @id @default(cuid())
+  articleId       String
+  article         Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  articleSlug     String   @map("article_slug")
+  fingerprintHash String   @map("fingerprint_hash")
+  ipHash          String?  @map("ip_hash")
+  uaHash          String?  @map("ua_hash")
+  windowStartsAt  DateTime @map("window_starts_at")
+  expiresAt       DateTime @map("expires_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([articleId, expiresAt])
+  @@index([expiresAt])
+  @@unique([articleId, fingerprintHash, windowStartsAt])
+  @@map("article_view_dedup")
 }
 
 model BaiduPushJob {
