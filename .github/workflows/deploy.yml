@@ -173,7 +173,7 @@ jobs:
             echo "[deploy] fetching latest main"
             git fetch origin main
             git reset --hard origin/main
-            git clean -fd -e .next
+            git clean -fd -e .next -e logs/
 
             stage="install"
             NODE_MAJOR=$(node -v | sed 's/v//' | cut -d. -f1)
