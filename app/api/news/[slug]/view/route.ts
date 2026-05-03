@@ -2,6 +2,10 @@ import { createHash, createHmac } from "node:crypto";
 import { cookies } from "next/headers";
 import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
+import {
+  getSuspiciousWindowHours,
+  shouldSkipArticleViewCountForSuspicion,
+} from "@/lib/article-view-suspicion";
 import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/auth";
 
@@ -53,6 +57,11 @@ function normalizeUserAgent(request: NextRequest) {
   return userAgent.slice(0, 500) || "unknown";
 }
 
+function normalizeReferer(request: NextRequest) {
+  const referer = (request.headers.get("referer") || "").trim();
+  return referer.slice(0, 500);
+}
+
 function getViewDedupSalt() {
   return (
     process.env.VIEW_DEDUP_SALT?.trim() ||
@@ -94,19 +103,50 @@ async function isAdminRequest() {
   return payload?.role === "SUPER_ADMIN" || payload?.role === "ADMIN";
 }
 
+async function getSuspiciousTrafficStats(articleId: string, uaHash: string, ipHash: string) {
+  const since = new Date(Date.now() - getSuspiciousWindowHours() * 60 * 60 * 1000);
+  const rows = await prisma.articleViewDedup.findMany({
+    where: {
+      articleId,
+      uaHash,
+      createdAt: {
+        gte: since,
+      },
+    },
+    select: {
+      ipHash: true,
+    },
+  });
+
+  const distinctIpHashes = new Set<string>();
+  let ipTotalCount = 0;
+
+  for (const row of rows) {
+    if (row.ipHash) distinctIpHashes.add(row.ipHash);
+    if (row.ipHash === ipHash) ipTotalCount += 1;
+  }
+
+  return {
+    uaDistinctIpCount: distinctIpHashes.size,
+    uaTotalCount: rows.length,
+    ipTotalCount,
+  };
+}
+
 export async function POST(request: NextRequest, context: Context) {
   try {
     const { slug } = await context.params;
     const normalizedSlug = normalizeSegment(slug);
-    if (!normalizedSlug) return NextResponse.json({ ok: true });
+    if (!normalizedSlug) return NextResponse.json({ ok: true, counted: false, reason: "not-found" });
 
     if (await isAdminRequest()) {
-      return NextResponse.json({ ok: true, skipped: "admin" });
+      return NextResponse.json({ ok: true, counted: false, reason: "admin" });
     }
 
     const userAgent = normalizeUserAgent(request);
+    const referer = normalizeReferer(request);
     if (BOT_UA_PATTERN.test(userAgent)) {
-      return NextResponse.json({ ok: true, skipped: "bot" });
+      return NextResponse.json({ ok: true, counted: false, reason: "bot" });
     }
 
     const now = Date.now();
@@ -115,7 +155,7 @@ export async function POST(request: NextRequest, context: Context) {
     if (cookieValue) {
       const viewedAt = Number(cookieValue);
       if (Number.isFinite(viewedAt) && now - viewedAt < VIEW_WINDOW_MS) {
-        return NextResponse.json({ ok: true, skipped: "cookie-window" });
+        return NextResponse.json({ ok: true, counted: false, reason: "duplicate" });
       }
     }
 
@@ -133,13 +173,13 @@ export async function POST(request: NextRequest, context: Context) {
       },
     });
     if (!article) {
-      return NextResponse.json({ ok: true, skipped: "not-found" });
+      return NextResponse.json({ ok: true, counted: false, reason: "not-found" });
     }
 
     const dedupSalt = getViewDedupSalt();
     if (!dedupSalt) {
       console.error("[news-view] missing VIEW_DEDUP_SALT and fallback auth secret");
-      return NextResponse.json({ ok: true, skipped: "missing-dedup-salt" });
+      return NextResponse.json({ ok: true, counted: false, reason: "missing-dedup-salt" });
     }
 
     const clientIp = getClientIp(request);
@@ -150,6 +190,28 @@ export async function POST(request: NextRequest, context: Context) {
     const expiresAt = new Date(windowStartsAt.getTime() + VIEW_WINDOW_MS);
 
     await cleanupExpiredDedupRecords(now);
+
+    const suspiciousStats = await getSuspiciousTrafficStats(article.id, uaHash, ipHash);
+    const suspiciousDecision = shouldSkipArticleViewCountForSuspicion({
+      articleSlug: article.slug,
+      userAgent,
+      referer,
+      stats: suspiciousStats,
+    });
+    if (suspiciousDecision.suspicious) {
+      console.warn("[news-view] suspicious_traffic_skipped", {
+        articleSlug: article.slug,
+        reason: suspiciousDecision.reason,
+        uaHash: uaHash.slice(0, 16),
+        ipHash: ipHash.slice(0, 16),
+        uaDistinctIpCount: suspiciousStats.uaDistinctIpCount,
+        uaTotalCount: suspiciousStats.uaTotalCount,
+        ipTotalCount: suspiciousStats.ipTotalCount,
+      });
+      const suspiciousResponse = NextResponse.json({ ok: true, counted: false, reason: "suspicious_traffic" });
+      suspiciousResponse.cookies.set(cookieName, String(now), buildCookieOptions(request));
+      return suspiciousResponse;
+    }
 
     try {
       await prisma.$transaction(async (tx) => {
@@ -172,7 +234,7 @@ export async function POST(request: NextRequest, context: Context) {
       });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-        const deduped = NextResponse.json({ ok: true, skipped: "db-window" });
+        const deduped = NextResponse.json({ ok: true, counted: false, reason: "duplicate" });
         deduped.cookies.set(cookieName, String(now), buildCookieOptions(request));
         return deduped;
       }
@@ -180,10 +242,10 @@ export async function POST(request: NextRequest, context: Context) {
       throw error;
     }
 
-    const response = NextResponse.json({ ok: true });
+    const response = NextResponse.json({ ok: true, counted: true });
     response.cookies.set(cookieName, String(now), buildCookieOptions(request));
     return response;
   } catch {
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, counted: false, reason: "error" });
   }
 }
