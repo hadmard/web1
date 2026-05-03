@@ -23,6 +23,7 @@ import {
 } from "@/lib/member-access-resolver";
 import { buildDirtyTextErrorMessage } from "@/lib/article-input-guard";
 import { validateInternalLinks } from "@/lib/article-links";
+import { revalidateBuyingArticlePaths } from "@/lib/buying-summary";
 
 const MEMBER_CONTENT_STATUSES = new Set(["draft", "pending", "approved", "rejected"]);
 
@@ -265,6 +266,17 @@ export async function POST(request: NextRequest) {
     targetId: article.id,
     detail: JSON.stringify({ status: article.status, memberType: session.memberType }),
   });
+
+  const isBuying =
+    article.status === "approved" &&
+    (article.categoryHref?.startsWith("/brands/buying") || article.subHref?.startsWith("/brands/buying"));
+  if (isBuying) {
+    try {
+      await revalidateBuyingArticlePaths(article);
+    } catch (error) {
+      console.error("member article create buying revalidate failed:", error);
+    }
+  }
 
   return NextResponse.json(article);
 }

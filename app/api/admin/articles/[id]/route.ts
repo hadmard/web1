@@ -8,11 +8,12 @@ import { canChangeReviewStatus, canDirectlyDeleteArticle, canDirectlyEditArticle
 import { isValidTermStructuredContent, normalizeTermContent } from "@/lib/term-structured";
 import { findDuplicateArticleByTitle, normalizeArticleTitle } from "@/lib/article-title";
 import { formatKeywordCsv, syncArticleKeywords } from "@/lib/news-keywords-v2";
-import { buildBuyingPath, buildNewsPath } from "@/lib/share-config";
+import { buildNewsPath } from "@/lib/share-config";
 import { pushApprovedNewsToBaidu } from "@/lib/baidu-submit";
 import { buildDirtyTextErrorMessage } from "@/lib/article-input-guard";
 import { parseProductRecommendations, stringifyProductRecommendations } from "@/lib/news-aftermarket";
 import { validateInternalLinks } from "@/lib/article-links";
+import { revalidateBuyingArticlePaths } from "@/lib/buying-summary";
 
 function isAdmin(session: { role: string | null } | null) {
   return session?.role === "SUPER_ADMIN" || session?.role === "ADMIN";
@@ -22,7 +23,7 @@ function isDictionaryPath(input: string | null | undefined) {
   return typeof input === "string" && input.startsWith("/dictionary");
 }
 
-function revalidateArticlePaths(article: {
+async function revalidateArticlePaths(article: {
   id?: string | null;
   slug?: string | null;
   title?: string | null;
@@ -62,14 +63,10 @@ function revalidateArticlePaths(article: {
   const isBuying =
     article.categoryHref?.startsWith("/brands/buying") || article.subHref?.startsWith("/brands/buying");
   if (isBuying) {
-    revalidatePath("/brands");
-    revalidatePath("/brands/buying");
-    revalidatePath("/sitemap.xml");
-    if (article.id) {
-      revalidatePath(buildBuyingPath(article.id));
-    }
-    if (segment) {
-      revalidatePath(buildBuyingPath(segment));
+    try {
+      await revalidateBuyingArticlePaths(article);
+    } catch (error) {
+      console.error("admin article buying revalidate failed:", error);
     }
   }
 
@@ -358,7 +355,7 @@ export async function PATCH(
       manualKeywords: article.manualKeywords,
     });
   }
-  revalidateArticlePaths(article);
+  await revalidateArticlePaths(article);
   if (typeof data.status === "string") {
     await writeOperationLog({
       actorId: session.sub,

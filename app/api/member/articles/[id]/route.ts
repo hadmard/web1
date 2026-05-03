@@ -5,6 +5,7 @@ import { normalizeRichTextField } from "@/lib/brand-content";
 import { isValidTermStructuredContent, normalizeTermContent } from "@/lib/term-structured";
 import { findDuplicateArticleByTitle, normalizeArticleTitle } from "@/lib/article-title";
 import { buildDirtyTextErrorMessage } from "@/lib/article-input-guard";
+import { revalidateBuyingArticlePaths } from "@/lib/buying-summary";
 
 export const dynamic = "force-dynamic";
 
@@ -87,6 +88,16 @@ export async function PATCH(
   }
 
   const updated = await prisma.article.update({ where: { id }, data });
+  const isBuying =
+    updated.status === "approved" &&
+    (updated.categoryHref?.startsWith("/brands/buying") || updated.subHref?.startsWith("/brands/buying"));
+  if (isBuying) {
+    try {
+      await revalidateBuyingArticlePaths(updated);
+    } catch (error) {
+      console.error("member article update buying revalidate failed:", error);
+    }
+  }
   return NextResponse.json(updated);
 }
 

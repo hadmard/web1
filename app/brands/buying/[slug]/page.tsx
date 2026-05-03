@@ -7,6 +7,15 @@ import { composeIntentTitle } from "@/lib/compose-intent-title";
 import { RichContent } from "@/components/RichContent";
 import { decodeEscapedUnicode, previewText } from "@/lib/text";
 import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
+import {
+  BUYING_SUMMARY_TITLE,
+  findBuyingSummaryArticle,
+  getBuyingSummaryRelatedArticles,
+  hasBuyingArticleLink,
+  hasBuyingSummaryLink,
+  isBuyingSummaryArticle,
+} from "@/lib/buying-summary";
+import { buildBuyingPath } from "@/lib/share-config";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -109,9 +118,42 @@ export default async function BuyingArticleDetailPage({ params }: Props) {
     article.source !== "auto_seo_generator";
   const displaySource = shouldShowSource ? decodeEscapedUnicode(article.source ?? "") : "";
   const displayContent = decodeEscapedUnicode(article.content);
+  const isSummaryPage = isBuyingSummaryArticle(article);
+  const summaryArticle = isSummaryPage ? article : await findBuyingSummaryArticle();
+  const summaryPath = summaryArticle ? buildBuyingPath(summaryArticle.slug) : null;
+  const relatedBuyingArticles = isSummaryPage
+    ? (await getBuyingSummaryRelatedArticles(article.id, 50)).filter(
+        (item) => !hasBuyingArticleLink(displayContent, item.slug)
+      )
+    : [];
+  const shouldShowSummaryList = isSummaryPage && relatedBuyingArticles.length > 0;
+  const shouldShowSummaryBackLink =
+    !isSummaryPage &&
+    summaryArticle &&
+    !hasBuyingSummaryLink(displayContent, summaryArticle.slug);
 
   return (
     <article className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-12">
+      <style>{`
+        .buying-article-content a,
+        .buying-article-content a:link,
+        .buying-article-content a:visited,
+        .buying-article-content a:active {
+          color: #ab8a5e !important;
+          -webkit-text-fill-color: #ab8a5e !important;
+          font-weight: 500;
+          text-decoration: underline;
+          text-decoration-color: rgba(171, 138, 94, 0.42);
+          text-underline-offset: 4px;
+          transition: color 0.2s ease;
+        }
+
+        .buying-article-content a:hover {
+          color: #8b6d45 !important;
+          -webkit-text-fill-color: #8b6d45 !important;
+        }
+      `}</style>
+
       <nav className="mb-6 flex flex-wrap items-center gap-x-2 gap-y-2 text-sm text-muted" aria-label="面包屑">
         <Link href="/" className="hover:text-accent">首页</Link>
         <span>/</span>
@@ -148,7 +190,40 @@ export default async function BuyingArticleDetailPage({ params }: Props) {
       ) : null}
 
       <section className="mt-8 rounded-[28px] border border-[rgba(15,23,42,0.06)] bg-[rgba(255,255,255,0.94)] px-6 py-7 shadow-[0_22px_44px_-38px_rgba(15,23,42,0.12)] sm:px-8 sm:py-9">
-        <RichContent html={displayContent} className="prose prose-neutral max-w-none" />
+        <RichContent
+          html={displayContent}
+          className="buying-article-content prose prose-neutral max-w-none"
+        />
+
+        {shouldShowSummaryList ? (
+          <div className="mt-8 border-t border-[rgba(15,23,42,0.08)] pt-6">
+            <h2 className="text-lg font-semibold text-primary sm:text-xl">更多整木选购常见问题</h2>
+            <ul className="mt-4 space-y-3 text-sm leading-7 text-primary sm:text-[15px]">
+              {relatedBuyingArticles.map((item) => (
+                <li key={item.id}>
+                  <a
+                    href={buildBuyingPath(item.slug)}
+                    className="font-medium text-[#ab8a5e] underline decoration-[rgba(171,138,94,0.42)] underline-offset-4 transition-colors hover:text-[#8b6d45]"
+                  >
+                    {decodeEscapedUnicode(item.title)}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        {shouldShowSummaryBackLink && summaryPath ? (
+          <div className="mt-8 border-t border-[rgba(15,23,42,0.08)] pt-6 text-sm leading-7 text-muted sm:text-[15px]">
+            更多整木定制选购问题，可以查看：
+            <a
+              href={summaryPath}
+              className="ml-1 font-medium text-[#ab8a5e] underline decoration-[rgba(171,138,94,0.42)] underline-offset-4 transition-colors hover:text-[#8b6d45]"
+            >
+              {BUYING_SUMMARY_TITLE}
+            </a>
+          </div>
+        ) : null}
       </section>
     </article>
   );
