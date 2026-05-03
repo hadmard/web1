@@ -15,9 +15,8 @@ import { buildPageMetadata, getSiteUrl } from "@/lib/seo";
 import { composeIntentTitle } from "@/lib/compose-intent-title";
 import { buildPublicDictionaryUrl, DEFAULT_DICTIONARY_SHARE_IMAGE } from "@/lib/share-config";
 import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
+import { parseDictionaryContentWithHeadings } from "@/lib/dictionary-content";
 import {
-  addHeadingAnchors,
-  extractHeadingAnchors,
   parseDocumentMetadata,
   splitCommaLikeList,
 } from "@/lib/document-metadata";
@@ -220,8 +219,7 @@ export default async function TermPage({ params }: Props) {
 
   if (article) {
     const metadata = parseDocumentMetadata(article.faqJson);
-    const anchoredHtml = addHeadingAnchors(article.content ?? "");
-    const headings = extractHeadingAnchors(anchoredHtml);
+    const { htmlWithHeadingIds, headings } = parseDictionaryContentWithHeadings(article.content ?? "");
     const tagSlugs = splitCommaLikeList(article.tagSlugs);
     const relatedItems = await prisma.article.findMany({
       where: {
@@ -293,7 +291,7 @@ export default async function TermPage({ params }: Props) {
             </section>
 
             <section className="rounded-3xl border border-border bg-surface-elevated p-6">
-              <RichContent html={anchoredHtml} className="prose prose-neutral dark:prose-invert max-w-none" />
+              <RichContent html={htmlWithHeadingIds} className="prose prose-neutral dark:prose-invert max-w-none" />
               <ArticleShareActions
                 title={article.title}
                 shareUrl={shareUrl}

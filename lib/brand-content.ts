@@ -264,6 +264,11 @@ function extractSafeBlockStyle(styleText: string | null | undefined) {
   return align ? `text-align:${align}` : "";
 }
 
+function extractSafeElementId(value: string | null | undefined) {
+  const normalized = String(value ?? "").trim();
+  return /^[a-z][a-z0-9_-]*$/i.test(normalized) ? normalized : "";
+}
+
 function extractSafeTableStyle(styleText: string | null | undefined) {
   const source = String(styleText ?? "");
   const safeRules = ["width:100%", "max-width:100%"];
@@ -358,7 +363,8 @@ function sanitizeTag(tagName: string, attrText: string) {
   if (["p", "blockquote", "div", "section", "article", "figure", "figcaption", "h1", "h2", "h3", "h4", "h5", "h6"].includes(tag)) {
     const attrs = parseAttributes(attrText);
     const style = extractSafeBlockStyle(attrs.get("style"));
-    return `<${tag}${style ? ` style="${escapeHtml(style)}"` : ""}>`;
+    const id = ["h1", "h2", "h3", "h4", "h5", "h6"].includes(tag) ? extractSafeElementId(attrs.get("id")) : "";
+    return `<${tag}${id ? ` id="${escapeHtml(id)}"` : ""}${style ? ` style="${escapeHtml(style)}"` : ""}>`;
   }
 
   if (tag === "table") {
