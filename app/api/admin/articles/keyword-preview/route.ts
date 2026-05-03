@@ -22,12 +22,22 @@ export async function POST(request: NextRequest) {
 
   try {
     const result = await extractNewsKeywords({ title, content });
-    const keywords = result.keywords.map((item) => item.keyword).slice(0, 5);
+    const recommendedKeywords = result.keywords.slice(0, 5).map((item) => ({
+      keyword: item.keyword,
+      score: item.score,
+      source: item.source,
+      existing: false,
+      canUseAsArticleTag: true,
+    }));
+    const keywords = recommendedKeywords.map((item) => item.keyword);
 
     return NextResponse.json({
       keywords,
+      recommendedKeywords,
       keywordCsv: formatKeywordCsv(keywords),
-      pendingBrands: result.pendingBrands.map((item) => item.brandName),
+      candidateBrands: [],
+      brandSuggestions: [],
+      pendingBrands: [],
     });
   } catch (error) {
     console.error("POST /api/admin/articles/keyword-preview", error);

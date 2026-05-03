@@ -10,7 +10,6 @@ import {
   NEWS_STOPWORDS,
 } from "@/lib/news-keyword-config-v2";
 
-const AUTO_APPROVE_PENDING_BRANDS = process.env.NEWS_AUTO_APPROVE_PENDING_BRANDS !== "false";
 const KEYWORD_MARKETING_TERMS_CN = [
   "\u90fd",
   "\u4e86",
@@ -86,6 +85,72 @@ const KEYWORD_INDUSTRY_SIGNALS = [
 ];
 const KEYWORD_MULTI_DIGITS = /\d{2,}/;
 const KEYWORD_SPLIT_PATTERN_CN = /[\uFF0C\u3002\uFF1A\uFF1B\uFF01\uFF1F\u3001\s()\uFF08\uFF09\u3010\u3011\u300a\u300b\u201c\u201d"'\/\|-]+/;
+const KEYWORD_BLOCKED_PREFIXES = [
+  "因为",
+  "所以",
+  "但是",
+  "如果",
+  "如何",
+  "怎么",
+  "为什么",
+  "哪些",
+  "这些",
+  "那些",
+  "一个",
+  "一种",
+  "很多",
+  "最后",
+  "真正",
+  "不要",
+  "千万",
+  "应该",
+  "可以",
+  "需要",
+  "不是",
+  "成为",
+  "关系",
+  "不该",
+  "重新",
+  "提醒",
+  "交付",
+  "欢迎",
+  "选择",
+  "采用",
+  "体系",
+  "实地考察",
+  "做",
+  "让",
+  "把",
+  "给",
+  "从",
+  "在",
+  "对",
+  "用",
+  "选购",
+  "考察",
+];
+const KEYWORD_BLOCKED_EXACT = [
+  "内容",
+  "栏目",
+  "文章",
+  "官网",
+  "资料",
+  "搜索",
+  "抓取",
+  "优化",
+  "投毒",
+  "收录",
+  "页面",
+  "链接",
+  "发布",
+  "审核",
+  "后台",
+  "入口",
+];
+const KEYWORD_BLOCKED_CONTAINS = ["实地考察", "体系选购", "选购", "整体空间", "第一步", "连接老客户"];
+const KEYWORD_ALLOWED_LONG_TERMS = ["戴夫人全屋定制", "世家屋原木定制", "Rubio Monocoat"];
+const KEYWORD_BRAND_CONTEXT_TERMS = ["品牌", "企业", "公司", "厂家", "工厂", "进口", "代理", "产品", "清洁剂", "保养油", "木蜡油", "地板护理"];
+const KEYWORD_ALLOWED_MULTIWORD_LATIN = /^[A-Za-z0-9]+(?:\s+[A-Za-z0-9]+){1,2}$/;
 
 type WhitelistEntry = {
   word: string;
@@ -133,6 +198,11 @@ type ArticleKeywordInput = {
   city?: string | null;
 };
 
+type KeywordValidationContext = {
+  title?: string;
+  content?: string;
+};
+
 function normalizeText(input: string) {
   return stripHtml(input || "")
     .replace(/&nbsp;/gi, " ")
@@ -143,6 +213,10 @@ function normalizeText(input: string) {
 
 function normalizeCompact(input: string) {
   return normalizeText(input).replace(/\s+/g, "");
+}
+
+function normalizedKeywordLength(input: string) {
+  return normalizeText(input).replace(/\s+/g, "").length;
 }
 
 function escapeRegExp(input: string) {
@@ -165,12 +239,15 @@ function normalizeKeywordList(input: string | null | undefined) {
     (input || "")
       .split(/[\uFF0C,\u3001,\n]+/)
       .map((item) => item.trim())
-      .filter((item) => isValidKeywordCandidate(item)), 
+      .filter((item) => validateArticleKeyword(item)),
   ).slice(0, 5);
 }
 
 function clampKeywordLength(input: string) {
-  return input.length >= 2 && input.length <= 10;
+  const compactLength = normalizedKeywordLength(input);
+  if (compactLength < 2) return false;
+  if (compactLength <= 12) return true;
+  return KEYWORD_ALLOWED_LONG_TERMS.includes(input);
 }
 
 function isNoiseKeyword(input: string) {
@@ -194,17 +271,46 @@ function hasIndustrySignal(input: string) {
   );
 }
 
-export function isValidKeywordCandidate(text: string) {
+function hasBlockedKeywordPrefix(input: string) {
+  return KEYWORD_BLOCKED_PREFIXES.some((prefix) => input.startsWith(prefix));
+}
+
+function looksLikeEntityKeyword(input: string) {
+  return (
+    /^[A-Za-z][A-Za-z0-9]*(?:\s+[A-Za-z0-9]+){0,2}$/.test(input) ||
+    NEWS_BRAND_SUFFIXES.some((suffix) => input.endsWith(suffix)) ||
+    /^[\u4e00-\u9fa5]{2,8}$/.test(input)
+  );
+}
+
+function hasOperationalNoise(input: string) {
+  return KEYWORD_BLOCKED_EXACT.some((term) => input.includes(term));
+}
+
+function hasBlockedKeywordContains(input: string) {
+  return KEYWORD_BLOCKED_CONTAINS.some((term) => input.includes(term));
+}
+
+export function validateArticleKeyword(text: string, _context?: KeywordValidationContext) {
   const input = normalizeText(text);
   if (!input || !clampKeywordLength(input)) return false;
   if (isNoiseKeyword(input)) return false;
+  if (KEYWORD_BLOCKED_EXACT.includes(input)) return false;
+  if (hasBlockedKeywordPrefix(input)) return false;
+  if (hasBlockedKeywordContains(input)) return false;
+  if (hasOperationalNoise(input) && !hasIndustrySignal(input) && !/^[A-Za-z][A-Za-z0-9]*(?:\s+[A-Za-z0-9]+){0,2}$/.test(input)) return false;
   if (KEYWORD_PUNCTUATION_CN.test(input)) return false;
   if (KEYWORD_MULTI_DIGITS.test(input)) return false;
   if (countMatchedTerms(input, KEYWORD_MARKETING_TERMS_CN) >= 2) return false;
-  if (/[A-Za-z0-9]+\s+[A-Za-z0-9]+/.test(input)) return false;
-  if (KEYWORD_SENTENCE_LIKE_PATTERNS.some((pattern) => pattern.test(input)) && !hasIndustrySignal(input)) return false;
-  return /^[A-Za-z0-9\u4e00-\u9fa5]+$/.test(input);
+  if (/\s/.test(input) && !KEYWORD_ALLOWED_MULTIWORD_LATIN.test(input)) return false;
+  if (!/^[A-Za-z0-9\u4e00-\u9fa5\s]+$/.test(input)) return false;
+  if (KEYWORD_SENTENCE_LIKE_PATTERNS.some((pattern) => pattern.test(input)) && !hasIndustrySignal(input) && !looksLikeEntityKeyword(input)) {
+    return false;
+  }
+  return true;
 }
+
+export const isValidKeywordCandidate = validateArticleKeyword;
 
 function safeParseJsonArray(input: string | null | undefined) {
   if (!input) return [] as string[];
@@ -310,13 +416,12 @@ function collectWhitelistMatches(bodyText: string, title: string, entries: White
   return matches;
 }
 
-function isValidBrandCandidate(input: string, whitelistLookup: Map<string, WhitelistEntry>) {
-  if (!isValidKeywordCandidate(input)) return false;
-  if (/^[A-Za-z]+$/.test(input)) return false;
+function isValidEntityKeywordCandidate(input: string, _whitelistLookup: Map<string, WhitelistEntry>) {
+  if (!validateArticleKeyword(input)) return false;
   if (NEWS_BRAND_FORBIDDEN_CONTAINS.some((item) => input.includes(item))) return false;
   if (["上海","南浔","湖州","南通","杭州","广州","深圳","北京","苏州","南京","成都","重庆","宁波","无锡","东莞","佛山"].includes(input)) return false;
   if (["协会","品牌","企业","集团","公司","行业","负责人"].includes(input)) return false;
-  return !whitelistLookup.has(normalizeCompact(input));
+  return true;
 }
 
 function collectNerCandidates(text: string, title: string, whitelistLookup: Map<string, WhitelistEntry>) {
@@ -328,7 +433,7 @@ function collectNerCandidates(text: string, title: string, whitelistLookup: Map<
 
   const pushCandidate = (rawKeyword: string, context: string, ruleSource: string, inTitle = false) => {
     const keyword = rawKeyword.trim().replace(/[，。！？!?]+$/g, "");
-    if (!isValidBrandCandidate(keyword, whitelistLookup)) return;
+    if (!isValidEntityKeywordCandidate(keyword, whitelistLookup)) return;
 
     const prev = found.get(keyword);
     const frequency = (prev?.frequency ?? 0) + 1;
@@ -388,6 +493,25 @@ function collectNerCandidates(text: string, title: string, whitelistLookup: Map<
     if (/^[\u4e00-\u9fa5]{2,6}$/.test(token) && titleText.includes(token) && /亮相|参展|发布|签约|升级/.test(sourceText)) {
       pushCandidate(token, sentence, "title", true);
     }
+
+    if (/^[A-Za-z][A-Za-z0-9]{1,23}$/.test(token)) {
+      const loweredToken = token.toLowerCase();
+      const bodyFrequency = sourceText.toLowerCase().split(loweredToken).length - 1;
+      const hasBrandContext = KEYWORD_BRAND_CONTEXT_TERMS.some((term) => sentence.includes(term));
+      const inTitle = titleText.toLowerCase().includes(loweredToken);
+      if (bodyFrequency >= 2 || inTitle || hasBrandContext) {
+        pushCandidate(token, sentence, hasBrandContext ? "brand-context" : "latin-token", inTitle);
+      }
+    }
+  }
+
+  const latinPhraseRegex = /\b([A-Za-z][A-Za-z0-9]+(?:\s+[A-Za-z0-9]+){1,2})\b/g;
+  let latinPhraseMatch: RegExpExecArray | null;
+  while ((latinPhraseMatch = latinPhraseRegex.exec(`${titleText} ${sourceText}`)) !== null) {
+    const keyword = latinPhraseMatch[1]?.trim();
+    if (!keyword || !validateArticleKeyword(keyword)) continue;
+    const sentence = sentences.find((item) => item.includes(keyword)) ?? keyword;
+    pushCandidate(keyword, sentence, "latin-phrase", titleText.toLowerCase().includes(keyword.toLowerCase()));
   }
 
   return found;
@@ -411,7 +535,7 @@ function buildFallbackKeywords(title: string, entries: WhitelistEntry[]) {
     titleText
       .split(KEYWORD_SPLIT_PATTERN_CN)
       .map((item) => item.trim())
-      .filter((item) => isValidKeywordCandidate(item) && hasIndustrySignal(item)), 
+      .filter((item) => validateArticleKeyword(item) && hasIndustrySignal(item)),
   )
     .slice(0, 3)
     .map((keyword) => ({ keyword, score: 1, weight: 1, source: "title" as const }));
@@ -444,34 +568,10 @@ export async function extractNewsKeywords(input: ArticleKeywordInput): Promise<K
     }));
 
   const finalKeywords = ranked.length > 0 ? ranked : buildFallbackKeywords(title, entries);
-  const autoApprovedBrands = Array.from(nerMatches.values())
-    .filter((item) => {
-      const bodyFrequency = content ? content.split(item.keyword).length - 1 : 0;
-      return isValidKeywordCandidate(item.keyword) && bodyFrequency > 0;
-    })
-    .map((item) => ({
-      brandName: item.keyword,
-      sourceContext: item.contexts[0] ?? item.keyword,
-      frequency: item.frequency,
-      ruleSource: item.ruleSource || (item.inTitle ? "title" : "context"),
-      triggerReason: null,
-      confidence: Number(Math.min(0.95, 0.45 + item.frequency * 0.15 + (item.inTitle ? 0.05 : 0) + (item.inLead ? 0.05 : 0)).toFixed(2)),
-    }));
-
   return {
     keywords: finalKeywords.slice(0, Math.max(3, Math.min(5, finalKeywords.length))),
-    pendingBrands: autoApprovedBrands,
+    pendingBrands: [],
   };
-}
-
-function parseJsonStringArray(input: string | null | undefined) {
-  if (!input) return [] as string[];
-  try {
-    const parsed = JSON.parse(input);
-    return Array.isArray(parsed) ? parsed.map((item) => String(item).trim()).filter(Boolean) : [];
-  } catch {
-    return [];
-  }
 }
 
 export async function syncArticleKeywords(options: {
@@ -508,144 +608,7 @@ export async function syncArticleKeywords(options: {
     }
   });
 
-  await syncPendingBrandsBestEffort({
-    articleId: options.articleId,
-    pendingBrands: result.pendingBrands,
-  });
-
   return { autoKeywords, activeKeywords };
-}
-
-async function syncPendingBrandsBestEffort(options: {
-  articleId: string;
-  pendingBrands: KeywordExtractionResult["pendingBrands"];
-}) {
-  for (const brand of options.pendingBrands) {
-    if (!isValidKeywordCandidate(brand.brandName)) continue;
-
-    try {
-      await prisma.$transaction(async (tx) => {
-        const existing = await tx.pendingBrand.findUnique({ where: { brandName: brand.brandName } });
-        const existingArticleIds = parseJsonStringArray(existing?.articleIds);
-        const mergedArticleIds = Array.from(new Set([...existingArticleIds, options.articleId]));
-        const nextArticleCount = mergedArticleIds.length;
-        const nextOccurrenceCount = (existing?.occurrenceCount ?? 0) + brand.frequency;
-        const thresholdReached = brand.frequency >= 2 || nextArticleCount >= 2;
-        const shouldAutoApprove = AUTO_APPROVE_PENDING_BRANDS && thresholdReached;
-        const triggerReason = brand.frequency >= 2 ? "single-article>=2" : nextArticleCount >= 2 ? "cross-article>=2" : null;
-        const nextApprovedSource =
-          existing?.approvedSource === "manual-admin"
-            ? "manual-admin"
-            : shouldAutoApprove
-              ? "auto-threshold"
-              : existing?.approvedSource ?? null;
-        const nextStatus = shouldAutoApprove ? 1 : existing?.status ?? 0;
-
-        if (existing) {
-          await tx.pendingBrand.update({
-            where: { brandName: brand.brandName },
-            data: {
-              lastNewsId: options.articleId,
-              occurrenceCount: nextOccurrenceCount,
-              articleCount: nextArticleCount,
-              articleIds: JSON.stringify(mergedArticleIds),
-              lastOccurrence: new Date(),
-              sourceContext: brand.sourceContext,
-              ruleSource: brand.ruleSource,
-              triggerReason: shouldAutoApprove ? triggerReason : existing?.triggerReason,
-              confidence: brand.confidence,
-              status: nextStatus,
-              approvedSource: nextApprovedSource,
-              autoApprovedAt: shouldAutoApprove ? new Date() : existing.autoApprovedAt,
-            },
-          });
-        } else {
-          await tx.pendingBrand.create({
-            data: {
-              brandName: brand.brandName,
-              firstNewsId: options.articleId,
-              lastNewsId: options.articleId,
-              occurrenceCount: brand.frequency,
-              articleCount: 1,
-              articleIds: JSON.stringify([options.articleId]),
-              lastOccurrence: new Date(),
-              sourceContext: brand.sourceContext,
-              ruleSource: brand.ruleSource,
-              triggerReason,
-              confidence: brand.confidence,
-              status: nextStatus,
-              approvedSource: nextApprovedSource,
-              autoApprovedAt: shouldAutoApprove ? new Date() : null,
-            },
-          });
-        }
-
-        await tx.operationLog.create({
-          data: {
-            action: existing ? "news_pending_brand_seen" : "news_pending_brand_created",
-            targetType: "pending_brand",
-            targetId: existing?.id ?? null,
-            detail: JSON.stringify({
-              articleId: options.articleId,
-              brandName: brand.brandName,
-              frequency: brand.frequency,
-              occurrenceCount: nextOccurrenceCount,
-              articleCount: nextArticleCount,
-              thresholdReached,
-              autoApproveEnabled: AUTO_APPROVE_PENDING_BRANDS,
-              shouldAutoApprove,
-              ruleSource: brand.ruleSource,
-              triggerReason,
-              confidence: brand.confidence,
-            }),
-          },
-        });
-
-        if (shouldAutoApprove) {
-          await tx.industryWhitelist.upsert({
-            where: { word: brand.brandName },
-            update: {
-              category: "品牌",
-              weight: 1,
-              status: true,
-            },
-            create: {
-              word: brand.brandName,
-              category: "品牌",
-              weight: 1,
-              status: true,
-            },
-          });
-
-          if (!(existing?.status === 1 && existing?.approvedSource)) {
-            await tx.operationLog.create({
-              data: {
-                action: "news_pending_brand_auto_approved",
-                targetType: "pending_brand",
-                targetId: existing?.id ?? null,
-                detail: JSON.stringify({
-                  articleId: options.articleId,
-                  brandName: brand.brandName,
-                  occurrenceCount: nextOccurrenceCount,
-                  articleCount: nextArticleCount,
-                  ruleSource: brand.ruleSource,
-                  triggerReason,
-                  confidence: brand.confidence,
-                  whitelistWeight: 1,
-                }),
-              },
-            });
-          }
-        }
-      });
-    } catch (error) {
-      console.error("syncPendingBrandsBestEffort failed", {
-        articleId: options.articleId,
-        brandName: brand.brandName,
-        error,
-      });
-    }
-  }
 }
 
 type RelatedArticle = {
@@ -658,6 +621,9 @@ type RelatedArticle = {
   updatedAt: Date;
   keywords: string | null;
   manualKeywords: string | null;
+  sourceType?: string | null;
+  contentLine?: string | null;
+  keywordIntent?: string | null;
 };
 
 function parseRecommendIds(input: string | null | undefined) {
@@ -674,6 +640,37 @@ function getArticleKeywordList(article: Pick<RelatedArticle, "keywords" | "manua
   return normalizeKeywordList(article.manualKeywords || article.keywords);
 }
 
+function getSearchIntentSignals(title: string) {
+  const normalized = normalizeText(title);
+  return unique(
+    [
+      /询盘|获客|接单|成交|转化/.test(normalized) ? "lead" : "",
+      /官网|网站|内容|案例|FAQ|小红书|抖音/.test(normalized) ? "content" : "",
+      /AI|智能/.test(normalized) ? "ai" : "",
+      /预算|报价|价格|多少钱|费用/.test(normalized) ? "budget" : "",
+      /工期|交付|验收|合同|售后/.test(normalized) ? "delivery" : "",
+      /木门|护墙板|柜体|楼梯|背景墙|原木|全屋/.test(normalized) ? "product" : "",
+    ].filter(Boolean),
+  );
+}
+
+function diversifyRecommendations<T extends RelatedArticle & { recommendScore: number }>(items: T[], limit: number) {
+  const result: T[] = [];
+  let aiCount = 0;
+
+  for (const item of items) {
+    const isAi = item.sourceType === "ai_generated";
+    if (isAi && aiCount >= Math.max(2, Math.ceil(limit / 2))) continue;
+    result.push(item);
+    if (isAi) aiCount += 1;
+    if (result.length >= limit) break;
+  }
+
+  if (result.length >= limit) return result;
+  const used = new Set(result.map((item) => item.id));
+  return [...result, ...items.filter((item) => !used.has(item.id))].slice(0, limit);
+}
+
 export async function getRecommendedNews(articleId: string, limit = 8) {
   try {
     const current = await prisma.article.findUnique({
@@ -685,6 +682,9 @@ export async function getRecommendedNews(articleId: string, limit = 8) {
         keywords: true,
         manualKeywords: true,
         recommendIds: true,
+        sourceType: true,
+        contentLine: true,
+        keywordIntent: true,
       },
     });
 
@@ -708,6 +708,9 @@ export async function getRecommendedNews(articleId: string, limit = 8) {
           updatedAt: true,
           keywords: true,
           manualKeywords: true,
+          sourceType: true,
+          contentLine: true,
+          keywordIntent: true,
         },
       });
     }
@@ -734,6 +737,9 @@ export async function getRecommendedNews(articleId: string, limit = 8) {
         updatedAt: true,
         keywords: true,
         manualKeywords: true,
+        sourceType: true,
+        contentLine: true,
+        keywordIntent: true,
       },
     });
 
@@ -742,10 +748,19 @@ export async function getRecommendedNews(articleId: string, limit = 8) {
         const candidateKeywords = getArticleKeywordList(candidate);
         const overlap = coreKeywords.filter((keyword) => candidateKeywords.includes(keyword));
         const overlapCount = overlap.length;
+        const currentSignals = getSearchIntentSignals(current.title);
+        const candidateSignals = getSearchIntentSignals(candidate.title);
+        const intentOverlap = currentSignals.filter((item) => candidateSignals.includes(item)).length;
 
         let score = overlapCount >= 3 ? 5 : overlapCount === 2 ? 3 : overlapCount === 1 ? 1 : 0;
         score += coreKeywords.filter((keyword) => candidate.title.includes(keyword)).length * 0.5;
         score += overlap.reduce((sum, keyword) => sum + (getKeywordWeightFromLookup(keyword, lookup) === 3 ? 1 : 0), 0);
+        score += current.contentLine && candidate.contentLine === current.contentLine ? 2 : 0;
+        score += current.keywordIntent && candidate.keywordIntent === current.keywordIntent ? 1.5 : 0;
+        score += current.subHref && candidate.subHref === current.subHref ? 0.8 : 0;
+        score += intentOverlap * 0.9;
+        if (candidate.sourceType === "ai_generated" && current.sourceType === "ai_generated") score -= 0.8;
+        if (/很多|为什么.*很多|怎么做.*很多/.test(candidate.title)) score -= 1.2;
 
         return { ...candidate, recommendScore: score };
       })
@@ -756,14 +771,14 @@ export async function getRecommendedNews(articleId: string, limit = 8) {
         return b.recommendScore - a.recommendScore || timeB - timeA;
       });
 
-    if (scored.length >= 6) return scored.slice(0, limit);
+    if (scored.length >= 6) return diversifyRecommendations(scored, limit);
 
     const usedIds = new Set(scored.map((item) => item.id));
     const sameSection = candidates.filter((item) => item.subHref && item.subHref === current.subHref && !usedIds.has(item.id));
     const latest = candidates.filter((item) => !usedIds.has(item.id));
-    return [...scored, ...sameSection, ...latest]
+    return diversifyRecommendations([...scored, ...sameSection, ...latest]
       .filter((item, index, list) => list.findIndex((row) => row.id === item.id) === index)
-      .slice(0, limit);
+      .map((item) => ({ ...item, recommendScore: "recommendScore" in item ? Number(item.recommendScore) : 0 })), limit);
   } catch {
     return [];
   }
