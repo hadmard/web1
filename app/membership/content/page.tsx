@@ -425,6 +425,7 @@ export default function MemberContentPage() {
   const [uploadingGalleryImage, setUploadingGalleryImage] = useState(false);
   const [verificationForm, setVerificationForm] = useState<VerificationFormState>(EMPTY_VERIFICATION_FORM);
   const [verificationMessage, setVerificationMessage] = useState("");
+  const [verificationFormExpanded, setVerificationFormExpanded] = useState(true);
   const [savingVerification, setSavingVerification] = useState(false);
   const [uploadingVerificationAsset, setUploadingVerificationAsset] = useState(false);
   const [enterpriseProfileSummary, setEnterpriseProfileSummary] = useState<EnterpriseProfileSummary>(null);
@@ -570,6 +571,10 @@ export default function MemberContentPage() {
     if (data?.latestVerification?.status === "rejected") return "重新提交认证";
     return "去提交认证";
   }, [data?.enterprise?.id, data?.latestVerification?.status]);
+  const shouldExpandVerificationFormByDefault = useMemo(() => {
+    const status = data?.latestVerification?.status;
+    return !status || status === "rejected";
+  }, [data?.latestVerification?.status]);
   const siteSnapshot = useMemo(() => JSON.stringify(siteSettings), [siteSettings]);
   const hasUnsavedSiteChanges = siteSnapshot !== siteSavedSnapshot;
   const missingMemberPhone = !phone.trim();
@@ -611,6 +616,10 @@ export default function MemberContentPage() {
       ),
     [galleryItems]
   );
+
+  useEffect(() => {
+    setVerificationFormExpanded(shouldExpandVerificationFormByDefault);
+  }, [shouldExpandVerificationFormByDefault]);
 
   async function reloadGallery() {
     const response = await fetch("/api/member/gallery?limit=12", {
@@ -811,6 +820,7 @@ export default function MemberContentPage() {
         return;
       }
       setVerificationMessage(data?.latestVerification ? "认证资料修改已提交，等待重新审核。" : "认证资料已提交，等待审核。");
+      setVerificationFormExpanded(false);
     } catch {
       setVerificationMessage("网络异常，请稍后重试");
     } finally {
@@ -1012,7 +1022,6 @@ export default function MemberContentPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-lg font-semibold text-primary">企业认证与企业主页</h2>
-            <p className="mt-1 text-sm text-muted">认证状态、企业主页和资料入口都放在这里，不用单独切到别页确认。</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Link href={verificationActionHref} className="rounded-full border border-border bg-surface px-4 py-2 text-sm text-primary transition hover:bg-white">
@@ -1024,32 +1033,35 @@ export default function MemberContentPage() {
           </div>
         </div>
 
-        <div className="mt-5 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-          <article className="rounded-[20px] border border-border bg-white/90 p-4 sm:rounded-[24px] sm:p-5">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-sm text-muted">当前认证状态</p>
-                <p className="mt-2 text-2xl font-semibold text-primary">{verification}</p>
-              </div>
-              <span className="rounded-full border border-border bg-surface px-3 py-1 text-xs text-muted">
+        <div className="mt-5">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <article className="rounded-[20px] border border-border bg-white/90 p-4 sm:rounded-[24px]">
+              <p className="text-sm text-muted">当前认证状态</p>
+              <p className="mt-2 text-2xl font-semibold text-primary">{verification}</p>
+              <p className="mt-3 text-xs text-muted">
                 {data.latestVerification ? `更新于 ${formatRecordDate(data.latestVerification.updatedAt)}` : "尚未提交"}
-              </span>
-            </div>
-            <div className="mt-4 space-y-2 text-sm leading-6 text-muted">
-              <p>企业名称：{data.latestVerification?.companyName || data.enterprise?.companyShortName || data.enterprise?.companyName || "未填写"}</p>
-              <p>企业主页：{data.enterprise?.id ? "已生成，可直接查看前台企业页" : "认证通过后自动生成"}</p>
-              <p>审核说明：{data.latestVerification?.reviewNote?.trim() || "暂无补充说明"}</p>
-            </div>
-          </article>
+              </p>
+            </article>
+            <article className="rounded-[20px] border border-border bg-white/90 p-4 sm:rounded-[24px]">
+              <p className="text-sm text-muted">企业名称</p>
+              <p className="mt-2 text-base font-semibold text-primary">
+                {data.latestVerification?.companyName || data.enterprise?.companyShortName || data.enterprise?.companyName || "未填写"}
+              </p>
+              <p className="mt-3 text-xs text-muted">认证通过后会同步到企业主体资料中。</p>
+            </article>
+            <article className="rounded-[20px] border border-border bg-white/90 p-4 sm:rounded-[24px]">
+              <p className="text-sm text-muted">企业主页</p>
+              <p className="mt-2 text-base font-semibold text-primary">{data.enterprise?.id ? "已生成" : "待生成"}</p>
+              <p className="mt-3 text-xs text-muted">
+                {data.enterprise?.id ? "可以直接查看前台企业页。" : "认证通过后会自动生成。"}
+              </p>
+            </article>
+            <article className="rounded-[20px] border border-border bg-white/90 p-4 sm:rounded-[24px]">
+              <p className="text-sm text-muted">审核说明</p>
+              <p className="mt-2 text-sm leading-6 text-primary">{data.latestVerification?.reviewNote?.trim() || "暂无补充说明"}</p>
+            </article>
+          </div>
 
-          <article className="rounded-[20px] border border-[rgba(180,154,107,0.18)] bg-[linear-gradient(180deg,rgba(255,252,247,0.98),rgba(248,242,233,0.9))] p-4 sm:rounded-[24px] sm:p-5">
-            <p className="text-sm font-medium text-primary">建议管理顺序</p>
-            <div className="mt-3 space-y-2 text-sm leading-6 text-muted">
-              <p>1. 先在“企业资料”里把品牌信息、Logo 和基础介绍补齐。</p>
-              <p>2. 再提交企业认证，认证通过后企业主页会自动具备更完整展示能力。</p>
-              <p>3. 完成后回到本页，继续配置主页首屏、联系信息和内容发布。</p>
-            </div>
-          </article>
         </div>
       </section>
 
@@ -1057,18 +1069,27 @@ export default function MemberContentPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-lg font-semibold text-primary">企业认证资料</h2>
-            <p className="mt-1 text-sm text-muted">认证表单直接放在工作台里，提交、修改、补资料都不需要再跳出去。</p>
           </div>
-          {data.enterprise?.id ? (
-            <Link href={`/enterprise/${data.enterprise.id}`} className="rounded-full border border-border bg-surface px-4 py-2 text-sm text-primary transition hover:bg-white">
-              查看企业主页
-            </Link>
-          ) : null}
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setVerificationFormExpanded((prev) => !prev)}
+              className="rounded-full border border-border bg-surface px-4 py-2 text-sm text-primary transition hover:bg-white"
+            >
+              {verificationFormExpanded ? "收起认证资料" : "展开认证资料"}
+            </button>
+            {data.enterprise?.id ? (
+              <Link href={`/enterprise/${data.enterprise.id}`} className="rounded-full border border-border bg-surface px-4 py-2 text-sm text-primary transition hover:bg-white">
+                查看企业主页
+              </Link>
+            ) : null}
+          </div>
         </div>
 
         {verificationMessage ? <p className="mt-4 text-sm text-emerald-700">{verificationMessage}</p> : null}
 
-        <form onSubmit={handleVerificationSubmit} className="mt-5 space-y-5">
+        {verificationFormExpanded ? (
+          <form onSubmit={handleVerificationSubmit} className="mt-5 space-y-5">
           <section className="rounded-[20px] border border-border bg-white/92 p-4 sm:rounded-[24px] sm:p-5">
             <div className="mb-4">
               <h3 className="text-base font-medium text-primary">企业基础信息</h3>
@@ -1167,14 +1188,22 @@ export default function MemberContentPage() {
               {savingVerification ? "提交中..." : "提交认证资料"}
             </button>
           </div>
-        </form>
+          </form>
+        ) : (
+          <div className="mt-5 rounded-[20px] border border-dashed border-border bg-white/80 px-4 py-5 text-sm leading-6 text-muted sm:rounded-[24px] sm:px-5">
+            {data.latestVerification?.status === "approved"
+              ? "企业认证资料已审核通过。如需更新企业主体资料，可展开后重新提交审核。"
+              : data.latestVerification?.status === "pending"
+                ? "企业认证资料已提交，正在审核中。如需核对已填信息，可展开查看当前表单内容。"
+                : "认证资料表单已收起。需要补充、修改或重新提交时，可点击上方“展开认证资料”。"}
+          </div>
+        )}
       </section>
 
       <section id="recent-submissions" className="rounded-[24px] border border-border bg-surface-elevated p-4 shadow-[0_14px_30px_rgba(15,23,42,0.06)] sm:rounded-[28px] sm:p-6 sm:shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-lg font-semibold text-primary">已发内容与审核记录</h2>
-            <p className="mt-1 text-sm text-muted">把最新内容、审核状态和继续编辑入口放在一处，方便日常跟进。</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Link href="/membership/content/submissions" className="rounded-full border border-border bg-surface px-4 py-2 text-sm text-primary transition hover:bg-white">
