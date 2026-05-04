@@ -488,8 +488,7 @@ export default function MemberContentPage() {
           <div className="mt-4 grid gap-4 sm:mt-5 lg:grid-cols-[minmax(0,1fr)_300px]">
             <div className="space-y-4">
               <Field label="企业名称" value={siteSettings.heroTitle} onChange={(value) => setSiteSettings((prev) => ({ ...prev, heroTitle: value }))} />
-              <div className="grid gap-4 md:grid-cols-2">
-                <InfoCard title="品牌定位" text="当这里未填写品牌标签时，会作为首图主标题下方的兜底副标题。请到企业资料里填写。" actionHref="/membership/profile" actionLabel="去填写" />
+              <div className="grid gap-4">
                 <InfoCard title="关于品牌" text="企业页这里只展示正文介绍，不再单独生成品牌摘要卡片。" actionHref="/membership/profile" actionLabel="去填写" />
               </div>
               <Field
