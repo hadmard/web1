@@ -68,6 +68,12 @@ type DashboardData = {
   } | null;
 };
 
+type EnterpriseProfileSummary = {
+  intro?: string | null;
+  positioning?: string | null;
+  logoUrl?: string | null;
+} | null;
+
 type SiteSettings = {
   template: "brand_showcase" | "professional_service" | "simple_elegant";
   heroTitle: string;
@@ -388,6 +394,15 @@ function parseAttachments(raw: string | null | undefined) {
   }
 }
 
+function hasMeaningfulContent(value: string | null | undefined) {
+  const normalized = (value || "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/\s+/g, "")
+    .trim();
+  return normalized.length > 0;
+}
+
 function getGalleryCategoryLabel(value: string | null | undefined) {
   if (!value) return "未分类";
   return GALLERY_CATEGORY_LABEL_MAP[value] ?? "未分类";
@@ -409,6 +424,7 @@ export default function MemberContentPage() {
   const [verificationMessage, setVerificationMessage] = useState("");
   const [savingVerification, setSavingVerification] = useState(false);
   const [uploadingVerificationAsset, setUploadingVerificationAsset] = useState(false);
+  const [enterpriseProfileSummary, setEnterpriseProfileSummary] = useState<EnterpriseProfileSummary>(null);
 
   const [siteSettings, setSiteSettings] = useState<SiteSettings>(EMPTY_SETTINGS);
   const [siteSavedSnapshot, setSiteSavedSnapshot] = useState("");
@@ -443,7 +459,7 @@ export default function MemberContentPage() {
         setAuthed(true);
         setData(dashboardBody);
 
-        const [siteRes, recoveryRes, recentRes, galleryRes] = await Promise.all([
+        const [siteRes, recoveryRes, recentRes, galleryRes, profileRes] = await Promise.all([
           fetch("/api/member/site-settings", {
             credentials: "include",
             cache: "no-store",
@@ -457,6 +473,10 @@ export default function MemberContentPage() {
             cache: "no-store",
           }),
           fetch("/api/member/gallery?limit=12", {
+            credentials: "include",
+            cache: "no-store",
+          }),
+          fetch("/api/member/profile", {
             credentials: "include",
             cache: "no-store",
           }),
@@ -483,6 +503,11 @@ export default function MemberContentPage() {
         const galleryBody = await galleryRes.json().catch(() => ({}));
         if (galleryRes.ok) {
           setGalleryItems(Array.isArray(galleryBody.items) ? galleryBody.items : []);
+        }
+
+        const profileBody = await profileRes.json().catch(() => ({}));
+        if (profileRes.ok) {
+          setEnterpriseProfileSummary(profileBody.enterprise ?? null);
         }
 
         if (dashboardBody.latestVerification) {
@@ -542,6 +567,15 @@ export default function MemberContentPage() {
   }, [data?.enterprise?.id, data?.latestVerification?.status]);
   const siteSnapshot = useMemo(() => JSON.stringify(siteSettings), [siteSettings]);
   const hasUnsavedSiteChanges = siteSnapshot !== siteSavedSnapshot;
+  const aboutBrandFilled = useMemo(() => hasMeaningfulContent(enterpriseProfileSummary?.intro), [enterpriseProfileSummary?.intro]);
+  const enterpriseProfileStatusText = useMemo(() => {
+    if (aboutBrandFilled) return "关于品牌已填写，可前往更新正文内容。";
+    return "关于品牌还没有填写，请先补充一段品牌介绍文字。";
+  }, [aboutBrandFilled]);
+  const enterpriseProfileActionLabel = useMemo(
+    () => (aboutBrandFilled ? "去更新关于品牌" : "去填写关于品牌"),
+    [aboutBrandFilled]
+  );
   const verificationAttachmentPreview = useMemo(() => verificationForm.attachments.slice(0, 6), [verificationForm.attachments]);
   const submissionSummary = useMemo(
     () =>
@@ -1303,23 +1337,47 @@ export default function MemberContentPage() {
             </div>
           </div>
 
-          <div className="mt-4 grid gap-4 sm:mt-5 lg:grid-cols-[minmax(0,1fr)_300px]">
+          <div className="mt-4 grid gap-4 sm:mt-5 lg:grid-cols-[minmax(0,1.15fr)_340px]">
             <div className="space-y-4">
-              <Field label="企业名称" value={siteSettings.heroTitle} onChange={(value) => setSiteSettings((prev) => ({ ...prev, heroTitle: value }))} />
-              <div className="grid gap-4">
-                <InfoCard title="关于品牌" text="企业页这里只展示正文介绍，不再单独生成品牌摘要卡片。" actionHref="/membership/profile" actionLabel="去填写" />
+              <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_240px]">
+                <div className="rounded-[20px] border border-border bg-white/92 p-4 sm:rounded-[24px] sm:p-5">
+                  <Field label="企业名称" value={siteSettings.heroTitle} onChange={(value) => setSiteSettings((prev) => ({ ...prev, heroTitle: value }))} />
+                  <div className="mt-4">
+                    <Field
+                      label="品牌标签"
+                      helper="只填写 1 条，展示在企业页首图主标题下方。建议 4-12 个字。"
+                      value={siteSettings.homepageTags[0] || ""}
+                      onChange={(value) =>
+                        setSiteSettings((prev) => ({
+                          ...prev,
+                          homepageTags: value.trim() ? [value.trim()] : [],
+                        }))
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div className="rounded-[20px] border border-[rgba(180,154,107,0.18)] bg-[linear-gradient(180deg,rgba(255,252,247,0.98),rgba(248,242,233,0.9))] p-4 sm:rounded-[24px] sm:p-5">
+                  <p className="text-sm font-medium text-primary">品牌资料</p>
+                  <p className="mt-2 text-sm leading-6 text-muted">{enterpriseProfileStatusText}</p>
+                  <div className="mt-4 flex flex-wrap gap-2 text-xs text-muted">
+                    <span
+                      className={`rounded-full border px-3 py-1 ${
+                        aboutBrandFilled
+                          ? "border-[rgba(112,164,132,0.28)] bg-[rgba(240,249,243,0.92)] text-[#3f6d52]"
+                          : "border-[rgba(180,154,107,0.22)] bg-white/80 text-muted"
+                      }`}
+                    >
+                      关于品牌 · {aboutBrandFilled ? "已填写" : "待补充"}
+                    </span>
+                  </div>
+                  <div className="mt-4">
+                    <Link href="/membership/profile" className="apple-inline-link">
+                      {enterpriseProfileActionLabel}
+                    </Link>
+                  </div>
+                </div>
               </div>
-              <Field
-                label="品牌标签"
-                helper="只填写 1 条，展示在企业页首图主标题下方。建议 4-12 个字。"
-                value={siteSettings.homepageTags[0] || ""}
-                onChange={(value) =>
-                  setSiteSettings((prev) => ({
-                    ...prev,
-                    homepageTags: value.trim() ? [value.trim()] : [],
-                  }))
-                }
-              />
             </div>
 
             <div className="rounded-[20px] border border-border bg-white/90 p-4 sm:rounded-[24px] sm:p-5">
@@ -1610,7 +1668,7 @@ function InfoCard({
   return (
     <div className="rounded-[20px] border border-[rgba(180,154,107,0.18)] bg-[linear-gradient(180deg,rgba(255,252,247,0.98),rgba(248,242,233,0.9))] p-4 text-sm leading-6 text-muted sm:rounded-[24px] sm:p-5 sm:leading-7">
       <p className="font-medium text-primary">{title}</p>
-      <p className="mt-2">{text}</p>
+      {text ? <p className="mt-2">{text}</p> : null}
       <div className="mt-3">
         <Link href={actionHref} className="apple-inline-link">
           {actionLabel}
