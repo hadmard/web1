@@ -17,7 +17,7 @@ export function AboutBrandExpandable({ html, plainText = "", fallbackText }: Abo
   const shouldShowToggle = previewText.length > 48 || hasRichContent;
 
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className="max-w-4xl">
       <div id={contentId}>
         {!expanded ? (
           <p className="line-clamp-2 text-[15px] leading-7 text-[#3d3025] sm:text-[16px] sm:leading-8">

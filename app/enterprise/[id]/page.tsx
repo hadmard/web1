@@ -414,8 +414,7 @@ export default async function EnterprisePage({ params, searchParams }: Props) {
         </section>
 
         <div className="mt-10 space-y-10 sm:mt-20 sm:space-y-16">
-          <section className="rounded-[28px] border border-[rgba(180,154,107,0.16)] bg-[linear-gradient(180deg,rgba(255,255,255,0.95),rgba(247,241,233,0.9))] p-4 shadow-[0_16px_32px_rgba(35,26,18,0.05)] sm:rounded-[36px] sm:p-8 lg:p-10">
-            <div className="rounded-[24px] border border-[rgba(140,111,78,0.1)] bg-white/82 p-5 shadow-[0_16px_34px_rgba(35,26,18,0.04)] sm:rounded-[30px] sm:p-7 lg:p-8">
+          <section className="rounded-[30px] border border-[rgba(180,154,107,0.16)] bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(247,241,233,0.9))] p-5 shadow-[0_16px_32px_rgba(35,26,18,0.05)] sm:rounded-[36px] sm:p-8 lg:p-10">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-5">
                 {logoUrl ? (
                   <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-[20px] border border-[rgba(140,111,78,0.12)] bg-white p-3 shadow-[0_10px_24px_rgba(35,26,18,0.06)] sm:h-20 sm:w-20">
@@ -429,15 +428,14 @@ export default async function EnterprisePage({ params, searchParams }: Props) {
                   </div>
                 ) : null}
                 <div className="max-w-4xl">
-                <p className="text-[11px] uppercase tracking-[0.28em] text-[#9f7a46]">Brand Story</p>
-                <h2 className="mt-2.5 font-serif text-[1.9rem] text-[#241c15] sm:mt-3 sm:text-4xl">关于品牌</h2>
+                  <p className="text-[11px] uppercase tracking-[0.28em] text-[#9f7a46]">Brand Story</p>
+                  <h2 className="mt-2.5 font-serif text-[1.9rem] text-[#241c15] sm:mt-3 sm:text-4xl">关于品牌</h2>
                 </div>
               </div>
 
-              <div className="mt-5 rounded-[22px] border border-[rgba(140,111,78,0.08)] bg-[rgba(255,252,247,0.86)] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] sm:mt-7 sm:rounded-[26px] sm:p-7">
+              <div className="mt-6 border-t border-[rgba(140,111,78,0.1)] pt-6 sm:mt-7 sm:pt-7">
                 <AboutBrandExpandable html={ent.intro} plainText={introPlain} fallbackText={aboutFallback} />
               </div>
-            </div>
           </section>
 
           <Section id="gallery-section" title="精选案例" description="移动端左右滑动即可快速浏览案例，不必连续下拉。">
