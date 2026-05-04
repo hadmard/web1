@@ -217,14 +217,22 @@ export default function MembershipProfilePage() {
               <p className="text-xs uppercase tracking-[0.24em] text-muted">Brand Profile Studio</p>
               <h1 className="mt-2 font-serif text-2xl font-semibold text-primary sm:mt-3 sm:text-3xl">企业资料管理</h1>
               <p className="mt-2 text-sm text-muted">当前身份：{memberTypeLabel(memberType)}</p>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted sm:leading-7">
-                前台品牌页、品牌总览和企业详情页会优先读取这里的实时字段。“关于品牌”、Logo、地区、联系方式和品牌定位，改这里就是改前台展示结果。
-              </p>
             </div>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
-              <MiniStat label="已填写字段" value={`${completionCount}/15`} />
-              <MiniStat label="高级资料" value={isAdvanced ? "已开通" : "未开通"} />
-              <MiniStat label="当前状态" value={saving ? "保存中" : message ? "已更新" : "待编辑"} />
+            <div className="flex flex-col gap-3 sm:items-end">
+              {previewHref ? (
+                <Link
+                  href={previewHref}
+                  target="_blank"
+                  className="inline-flex items-center justify-center rounded-full border border-[rgba(180,154,107,0.22)] bg-white/85 px-4 py-2 text-sm text-primary transition hover:border-[rgba(180,154,107,0.34)] hover:bg-white"
+                >
+                  查看前台详情页
+                </Link>
+              ) : null}
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
+                <MiniStat label="已填写字段" value={`${completionCount}/15`} />
+                <MiniStat label="高级资料" value={isAdvanced ? "已开通" : "未开通"} />
+                <MiniStat label="当前状态" value={saving ? "保存中" : message ? "已更新" : "待编辑"} />
+              </div>
             </div>
           </div>
         </div>
@@ -250,32 +258,22 @@ export default function MembershipProfilePage() {
       ) : (
         <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-6">
             <section className="rounded-[24px] border border-border bg-surface-elevated p-4 shadow-[0_14px_30px_rgba(15,23,42,0.06)] sm:rounded-[28px] sm:p-6 sm:shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                  <h2 className="text-lg font-semibold text-primary">前台核心字段</h2>
-                  <p className="mt-2 text-sm text-muted">这里的内容直接影响品牌卡片、品牌总览和企业详情页首屏展示。</p>
+              <div className="grid gap-5 xl:grid-cols-[minmax(0,1.3fr),minmax(320px,0.9fr)]">
+                <div className="grid gap-4 md:grid-cols-2">
+                  {BASE_FIELDS.map((field) => (
+                    <label key={field.key} className="block">
+                      <span className="text-sm font-medium text-primary">{field.label}</span>
+                      <input
+                        className="mt-2 h-12 w-full rounded-[22px] border border-border bg-surface px-4 text-sm text-primary placeholder:text-muted focus:border-accent/40 focus:outline-none focus:ring-2 focus:ring-accent/15"
+                        value={form[field.key]}
+                        placeholder={field.placeholder}
+                        onChange={(event) => setForm((prev) => ({ ...prev, [field.key]: event.target.value }))}
+                      />
+                    </label>
+                  ))}
                 </div>
-                {previewHref ? (
-                  <Link href={previewHref} target="_blank" className="apple-inline-link">
-                    查看前台详情页
-                  </Link>
-                ) : null}
-              </div>
 
-              <div className="mt-4 rounded-[20px] border border-[rgba(180,154,107,0.18)] bg-[linear-gradient(180deg,rgba(255,252,247,0.98),rgba(248,242,233,0.9))] p-4 text-sm leading-6 text-[rgba(96,78,47,0.92)] sm:mt-5 sm:rounded-[24px] sm:leading-7">
-                前台优先读取规则：Logo、地区、摘要、联系方式优先取企业实时字段；品牌快照只作为兜底，不再覆盖你刚保存的结果。
-              </div>
-
-              <div className="mt-5 grid gap-5">
-                <label className="block">
-                  <span className="text-sm font-medium text-primary">关于品牌</span>
-                  <p className="mt-1 text-xs leading-6 text-muted">这里对应前台“关于品牌”正文。支持直接输入清爽正文，也支持粘贴旧站内容。系统会自动清洗危险标签、内联样式和多余嵌套。</p>
-                  <div className="mt-3">
-                    <RichEditor value={form.intro} onChange={(value) => setForm((prev) => ({ ...prev, intro: value }))} minHeight={260} placeholder="建议用 2-4 段讲清品牌故事、代表产品、服务对象和合作能力。" />
-                  </div>
-                </label>
-
-                <div className="grid gap-4 md:grid-cols-[1fr,0.82fr]">
+                <div className="rounded-[20px] border border-border bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(249,245,239,0.95))] p-4 sm:rounded-[24px] sm:p-5">
                   <label className="block">
                     <span className="text-sm font-medium text-primary">企业 Logo</span>
                     <input
@@ -296,8 +294,7 @@ export default function MembershipProfilePage() {
                       ) : null}
                     </div>
                   </label>
-
-                  <div className="rounded-[20px] border border-border bg-surface p-4 sm:rounded-[24px]">
+                  <div className="mt-4 rounded-[20px] border border-border bg-surface p-4 sm:rounded-[24px]">
                     <p className="text-xs uppercase tracking-[0.16em] text-muted">Logo 预览</p>
                     <div className="mt-4 flex h-28 items-center justify-center rounded-[20px] border border-dashed border-border bg-white">
                       {form.logoUrl ? (
@@ -309,20 +306,15 @@ export default function MembershipProfilePage() {
                     </div>
                   </div>
                 </div>
+              </div>
 
-                <div className="grid gap-4 md:grid-cols-2">
-                  {BASE_FIELDS.map((field) => (
-                    <label key={field.key} className="block">
-                      <span className="text-sm font-medium text-primary">{field.label}</span>
-                      <input
-                        className="mt-2 h-12 w-full rounded-[22px] border border-border bg-surface px-4 text-sm text-primary placeholder:text-muted focus:border-accent/40 focus:outline-none focus:ring-2 focus:ring-accent/15"
-                        value={form[field.key]}
-                        placeholder={field.placeholder}
-                        onChange={(event) => setForm((prev) => ({ ...prev, [field.key]: event.target.value }))}
-                      />
-                    </label>
-                  ))}
-                </div>
+              <div className="mt-6 border-t border-border/70 pt-6">
+                <label className="block">
+                  <span className="text-sm font-medium text-primary">关于品牌</span>
+                  <div className="mt-3">
+                    <RichEditor value={form.intro} onChange={(value) => setForm((prev) => ({ ...prev, intro: value }))} minHeight={260} placeholder="建议用 2-4 段讲清品牌故事、代表产品、服务对象和合作能力。" />
+                  </div>
+                </label>
               </div>
             </section>
 
