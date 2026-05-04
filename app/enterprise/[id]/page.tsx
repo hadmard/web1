@@ -417,7 +417,7 @@ export default async function EnterprisePage({ params, searchParams }: Props) {
           <section className="rounded-[30px] border border-[rgba(180,154,107,0.16)] bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(247,241,233,0.9))] p-5 shadow-[0_16px_32px_rgba(35,26,18,0.05)] sm:rounded-[36px] sm:p-8 lg:p-10">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-5">
                 {logoUrl ? (
-                  <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-[20px] border border-[rgba(140,111,78,0.12)] bg-white p-3 shadow-[0_10px_24px_rgba(35,26,18,0.06)] sm:h-20 sm:w-20">
+                  <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-[20px] border border-[rgba(140,111,78,0.12)] bg-white p-1.5 shadow-[0_10px_24px_rgba(35,26,18,0.06)] sm:h-20 sm:w-20 sm:p-2">
                     <Image
                       src={logoUrl}
                       alt={`${name} Logo`}
