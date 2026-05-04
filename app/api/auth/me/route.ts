@@ -19,6 +19,7 @@ export async function GET() {
     name: session.name,
     displayName: session.displayName,
     email: session.email,
+    phone: session.phone,
     role: session.role,
     memberType: session.memberType,
     rankingWeight: session.rankingWeight,

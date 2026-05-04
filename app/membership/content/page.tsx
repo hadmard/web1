@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { MAX_UPLOAD_IMAGE_MB, uploadImageToServer } from "@/lib/client-image";
 import { CONTENT_TAB_DEFS, resolveTabKeyFromHref } from "@/lib/content-taxonomy";
+import { PUBLIC_CONTACT_PHONE } from "@/lib/public-site-config";
 import { buildNewsPath } from "@/lib/share-config";
 import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
 import {
@@ -18,6 +19,7 @@ type DashboardData = {
   member: {
     type: string;
     label: string;
+    phone?: string | null;
     rankingWeight: number;
     canManageMembers: boolean;
   };
@@ -130,6 +132,7 @@ type SiteSettings = {
 type RecoveryResponse = {
   account?: string;
   recoveryEmail?: string;
+  phone?: string;
   error?: string;
 };
 
@@ -433,6 +436,7 @@ export default function MemberContentPage() {
   const [uploadingHeroImage, setUploadingHeroImage] = useState(false);
 
   const [account, setAccount] = useState("");
+  const [phone, setPhone] = useState("");
   const [recoveryEmail, setRecoveryEmail] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -492,6 +496,7 @@ export default function MemberContentPage() {
         const recoveryBody = (await recoveryRes.json().catch(() => ({}))) as RecoveryResponse;
         if (recoveryRes.ok) {
           setAccount(typeof recoveryBody.account === "string" ? recoveryBody.account : "");
+          setPhone(typeof recoveryBody.phone === "string" ? recoveryBody.phone : "");
           setRecoveryEmail(typeof recoveryBody.recoveryEmail === "string" ? recoveryBody.recoveryEmail : "");
         }
 
@@ -567,6 +572,7 @@ export default function MemberContentPage() {
   }, [data?.enterprise?.id, data?.latestVerification?.status]);
   const siteSnapshot = useMemo(() => JSON.stringify(siteSettings), [siteSettings]);
   const hasUnsavedSiteChanges = siteSnapshot !== siteSavedSnapshot;
+  const missingMemberPhone = !phone.trim();
   const aboutBrandFilled = useMemo(() => hasMeaningfulContent(enterpriseProfileSummary?.intro), [enterpriseProfileSummary?.intro]);
   const enterpriseProfileStatusText = useMemo(() => {
     if (aboutBrandFilled) return "关于品牌已填写，可前往更新正文内容。";
@@ -673,7 +679,7 @@ export default function MemberContentPage() {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ recoveryEmail }),
+        body: JSON.stringify({ recoveryEmail, phone }),
       });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -681,7 +687,8 @@ export default function MemberContentPage() {
         return;
       }
       setRecoveryEmail(typeof body.recoveryEmail === "string" ? body.recoveryEmail : "");
-      setSecurityMessage(body.recoveryEmail ? "找回邮箱已保存" : "找回邮箱已清空");
+      setPhone(typeof body.phone === "string" ? body.phone : "");
+      setSecurityMessage("找回邮箱和注册手机号已保存");
     } catch {
       setSecurityError("网络异常，请稍后重试");
     } finally {
@@ -928,6 +935,43 @@ export default function MemberContentPage() {
             </div>
           </div>
         </div>
+      </section>
+
+      <section className="rounded-[24px] border border-border bg-surface-elevated p-4 shadow-[0_14px_30px_rgba(15,23,42,0.06)] sm:rounded-[28px] sm:p-6 sm:shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-primary">
+              当前身份：{data.member.label}
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-muted">
+              {data.member.type === "personal"
+                ? "你可以发布少量资讯、参与词库贡献和标准共建。完成企业认证后，可升级为企业基础会员，获得企业主页配置、图库上传和更多企业展示能力。"
+                : data.member.type === "enterprise_basic"
+                  ? "你可以维护企业资料、配置企业主页、上传图库并发布企业资讯。升级为企业VIP会员后，可获得 SEO 设置、推荐位、子账号和更高内容额度。"
+                  : "你已拥有企业主页、内容发布、图库上传、SEO 设置、推荐内容、子账号和高级展示能力。"}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            {data.member.type === "personal" ? (
+              <Link href="/membership/content/verification" className="rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white transition hover:brightness-105">
+                去企业认证
+              </Link>
+            ) : null}
+            {data.member.type === "enterprise_basic" ? (
+              <a
+                href={`tel:${PUBLIC_CONTACT_PHONE}`}
+                className="rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white transition hover:brightness-105"
+              >
+                联系管理员升级VIP
+              </a>
+            ) : null}
+          </div>
+        </div>
+        {missingMemberPhone ? (
+          <div className="mt-4 rounded-[20px] border border-[rgba(180,154,107,0.22)] bg-[rgba(255,249,238,0.92)] px-4 py-4 text-sm leading-6 text-muted">
+            当前账号还没有补充注册手机号。建议在下方“账号安全”里补充手机号，用于账号找回、认证审核和平台联系。
+          </div>
+        ) : null}
       </section>
 
       <section id="publish-center" className="rounded-[24px] border border-border bg-surface-elevated p-4 shadow-[0_14px_30px_rgba(15,23,42,0.06)] sm:rounded-[28px] sm:p-6 sm:shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
@@ -1232,69 +1276,75 @@ export default function MemberContentPage() {
           <StatusSummaryCard label="已退回" value={gallerySummary.rejected} />
         </div>
 
-        <form onSubmit={handleGallerySubmit} className="mt-5 rounded-[20px] border border-border bg-white/92 p-4 sm:rounded-[24px] sm:p-5">
-          <div className="mb-4">
-            <h3 className="text-base font-medium text-primary">快速上传图库</h3>
-            <p className="mt-1 text-sm text-muted">适合快速补案例图、工艺图、空间图，上传后会进入审核流程。</p>
-          </div>
-
-          <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
-            <div className="rounded-[18px] border border-border bg-surface p-4">
-              <p className="text-sm font-medium text-primary">图库图片</p>
-              <label className="mt-3 inline-flex cursor-pointer items-center rounded-full border border-border bg-white px-4 py-2 text-sm text-primary transition hover:bg-surface">
-                <input type="file" accept="image/*" className="hidden" onChange={handleGalleryImageUpload} />
-                {uploadingGalleryImage ? "上传中..." : `上传图片（最大 ${MAX_UPLOAD_IMAGE_MB}MB）`}
-              </label>
-              {galleryForm.imageUrl ? (
-                <div className="mt-4 overflow-hidden rounded-2xl border border-border bg-white">
-                  <Image src={resolveUploadedImageUrl(galleryForm.imageUrl)} alt="图库预览" width={320} height={240} className="h-auto w-full object-cover" />
-                </div>
-              ) : (
-                <p className="mt-4 text-xs leading-6 text-muted">建议上传横图，方便前台列表和详情页展示。</p>
-              )}
+        {data.features.canUploadGallery ? (
+          <form onSubmit={handleGallerySubmit} className="mt-5 rounded-[20px] border border-border bg-white/92 p-4 sm:rounded-[24px] sm:p-5">
+            <div className="mb-4">
+              <h3 className="text-base font-medium text-primary">快速上传图库</h3>
+              <p className="mt-1 text-sm text-muted">适合快速补案例图、工艺图、空间图，上传后会进入审核流程。</p>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <Field label="标题" value={galleryForm.title} onChange={(value) => setGalleryForm((prev) => ({ ...prev, title: value }))} />
-              <Field label="替代文本" value={galleryForm.alt} onChange={(value) => setGalleryForm((prev) => ({ ...prev, alt: value }))} />
-              <label className="block">
-                <span className="text-sm text-primary">图片分类</span>
-                <select
-                  className="mt-1 w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm text-primary"
-                  value={galleryForm.category}
-                  onChange={(event) => setGalleryForm((prev) => ({ ...prev, category: event.target.value }))}
-                >
-                  <option value="">请选择分类</option>
-                  {Object.entries(GALLERY_CATEGORY_LABEL_MAP).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <Field label="标签" value={galleryForm.tagSlugs} helper="多个标签可用逗号分隔。" onChange={(value) => setGalleryForm((prev) => ({ ...prev, tagSlugs: value }))} />
-              <label className="md:col-span-2 flex items-center gap-3 rounded-2xl border border-border bg-surface px-4 py-3 text-sm text-primary">
-                <input
-                  type="checkbox"
-                  checked={galleryForm.syncToMainSite}
-                  onChange={(event) => setGalleryForm((prev) => ({ ...prev, syncToMainSite: event.target.checked }))}
-                />
-                上传后同步到前台主站
-              </label>
-            </div>
-          </div>
+            <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
+              <div className="rounded-[18px] border border-border bg-surface p-4">
+                <p className="text-sm font-medium text-primary">图库图片</p>
+                <label className="mt-3 inline-flex cursor-pointer items-center rounded-full border border-border bg-white px-4 py-2 text-sm text-primary transition hover:bg-surface">
+                  <input type="file" accept="image/*" className="hidden" onChange={handleGalleryImageUpload} />
+                  {uploadingGalleryImage ? "上传中..." : `上传图片（最大 ${MAX_UPLOAD_IMAGE_MB}MB）`}
+                </label>
+                {galleryForm.imageUrl ? (
+                  <div className="mt-4 overflow-hidden rounded-2xl border border-border bg-white">
+                    <Image src={resolveUploadedImageUrl(galleryForm.imageUrl)} alt="图库预览" width={320} height={240} className="h-auto w-full object-cover" />
+                  </div>
+                ) : (
+                  <p className="mt-4 text-xs leading-6 text-muted">建议上传横图，方便前台列表和详情页展示。</p>
+                )}
+              </div>
 
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm leading-6 text-muted">{galleryMessage || "上传后可在下方图库概览查看最新状态。"}</p>
-            <button
-              type="submit"
-              disabled={savingGallery || uploadingGalleryImage}
-              className="w-full rounded-full bg-accent px-5 py-3 text-sm font-medium text-white shadow-[0_16px_36px_rgba(180,154,107,0.28)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto sm:py-2.5"
-            >
-              {savingGallery ? "保存中..." : "加入图库"}
-            </button>
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field label="标题" value={galleryForm.title} onChange={(value) => setGalleryForm((prev) => ({ ...prev, title: value }))} />
+                <Field label="替代文本" value={galleryForm.alt} onChange={(value) => setGalleryForm((prev) => ({ ...prev, alt: value }))} />
+                <label className="block">
+                  <span className="text-sm text-primary">图片分类</span>
+                  <select
+                    className="mt-1 w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm text-primary"
+                    value={galleryForm.category}
+                    onChange={(event) => setGalleryForm((prev) => ({ ...prev, category: event.target.value }))}
+                  >
+                    <option value="">请选择分类</option>
+                    {Object.entries(GALLERY_CATEGORY_LABEL_MAP).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <Field label="标签" value={galleryForm.tagSlugs} helper="多个标签可用逗号分隔。" onChange={(value) => setGalleryForm((prev) => ({ ...prev, tagSlugs: value }))} />
+                <label className="md:col-span-2 flex items-center gap-3 rounded-2xl border border-border bg-surface px-4 py-3 text-sm text-primary">
+                  <input
+                    type="checkbox"
+                    checked={galleryForm.syncToMainSite}
+                    onChange={(event) => setGalleryForm((prev) => ({ ...prev, syncToMainSite: event.target.checked }))}
+                  />
+                  上传后同步到前台主站
+                </label>
+              </div>
+            </div>
+
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm leading-6 text-muted">{galleryMessage || "上传后可在下方图库概览查看最新状态。"}</p>
+              <button
+                type="submit"
+                disabled={savingGallery || uploadingGalleryImage}
+                className="w-full rounded-full bg-accent px-5 py-3 text-sm font-medium text-white shadow-[0_16px_36px_rgba(180,154,107,0.28)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto sm:py-2.5"
+              >
+                {savingGallery ? "保存中..." : "加入图库"}
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className="mt-5 rounded-[20px] border border-[rgba(180,154,107,0.18)] bg-[linear-gradient(180deg,rgba(255,252,247,0.98),rgba(248,242,233,0.9))] p-4 text-sm leading-6 text-muted sm:rounded-[24px] sm:p-5">
+            当前身份暂未开通企业图库上传。完成企业认证并升级为企业基础会员后，可获得图库上传与企业主页展示能力。
           </div>
-        </form>
+        )}
 
         <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {galleryItems.length > 0 ? (
@@ -1505,10 +1555,20 @@ export default function MemberContentPage() {
 
         <div className="mt-5 grid gap-4 sm:gap-6 xl:grid-cols-[1fr_1.1fr]">
           <form onSubmit={handleRecoveryEmailSubmit} className="rounded-[20px] border border-border bg-white/90 p-4 sm:rounded-[24px] sm:p-5">
-            <h3 className="text-base font-medium text-primary">找回邮箱</h3>
-            <p className="mt-2 text-sm text-muted">忘记密码时，系统会把重置链接发到这里。</p>
+            <h3 className="text-base font-medium text-primary">账号联系信息</h3>
+            <p className="mt-2 text-sm text-muted">注册手机号用于账号找回、认证审核和平台联系，不会在前台公开展示。</p>
             <label className="mt-4 block">
-              <span className="text-sm text-primary">邮箱地址</span>
+              <span className="text-sm text-primary">注册手机号</span>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="请输入 11 位中国大陆手机号"
+                className="mt-1 w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm text-primary"
+              />
+            </label>
+            <label className="mt-4 block">
+              <span className="text-sm text-primary">找回邮箱</span>
               <input
                 type="email"
                 value={recoveryEmail}
@@ -1523,7 +1583,7 @@ export default function MemberContentPage() {
                 disabled={loadingRecovery}
                 className="w-full rounded-full bg-accent px-5 py-3 text-sm font-medium text-white shadow-[0_16px_36px_rgba(180,154,107,0.28)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto sm:py-2.5"
               >
-                {loadingRecovery ? "保存中..." : "保存找回邮箱"}
+                {loadingRecovery ? "保存中..." : "保存联系信息"}
               </button>
             </div>
           </form>

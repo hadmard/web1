@@ -87,6 +87,7 @@ export async function GET() {
     member: {
       type: session.memberType,
       label: membershipRule.label,
+      phone: session.phone,
       rankingWeight: session.rankingWeight,
       canManageMembers: session.canManageMembers,
     },

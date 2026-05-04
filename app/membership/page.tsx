@@ -56,27 +56,27 @@ export default async function MembershipPage() {
           <article className="glass-panel p-5">
             <h2 className="font-serif text-lg font-semibold text-primary">企业基础会员</h2>
             <ul className="mt-3 space-y-2 text-sm text-muted">
-              <li>企业基础展示页（介绍、Logo、区域、联系方式）</li>
-              <li>可提交资讯与图库内容（默认待审核）</li>
-              <li>适合首次入驻企业</li>
+              <li>支持企业资料编辑、企业主页配置与前台企业页展示</li>
+              <li>支持企业资讯发布、图库上传、词库贡献与标准共建（默认待审核）</li>
+              <li>适合已完成企业认证的入驻企业</li>
             </ul>
           </article>
 
           <article className="glass-panel p-5">
             <h2 className="font-serif text-lg font-semibold text-primary">个人会员</h2>
             <ul className="mt-3 space-y-2 text-sm text-muted">
-              <li>查看完整行业数据与标准内容</li>
-              <li>下载报告与标准文件（按系统开关）</li>
-              <li>可提交标准建议与草案反馈</li>
+              <li>注册后默认成为个人会员，可登录会员后台并提交企业认证</li>
+              <li>支持少量资讯发布、词库贡献、标准反馈与标准共建（默认待审核）</li>
+              <li>适合作为行业参与者、内容贡献者和潜在企业用户的起点账号</li>
             </ul>
           </article>
 
           <article className="glass-panel p-5">
-            <h2 className="font-serif text-lg font-semibold text-primary">企业高级会员</h2>
+            <h2 className="font-serif text-lg font-semibold text-primary">企业VIP会员</h2>
             <ul className="mt-3 space-y-2 text-sm text-muted">
-              <li>增强企业展示：产品体系、工艺等级、认证与获奖</li>
-              <li>可参与标准共建与结构化关联</li>
-              <li>品牌展示与推荐权重更高</li>
+              <li>包含企业基础会员全部能力，并拥有更高资讯与图库额度</li>
+              <li>支持 SEO 设置、推荐内容、子账号和更完整的企业展示能力</li>
+              <li>适合需要品牌运营、推荐位和商业化扩展能力的企业</li>
             </ul>
           </article>
         </div>
@@ -87,10 +87,10 @@ export default async function MembershipPage() {
           <article className="glass-panel p-5">
             <h2 className="font-serif text-lg font-semibold text-primary">简要权益</h2>
             <ul className="mt-3 space-y-2 text-sm text-muted">
-              <li>会员可上传资讯与图库素材，进入审核流程</li>
-              <li>会员可提交企业认证资料，审核后自动生成企业详情页</li>
-              <li>可在个人中心管理资料、查看审核状态</li>
-              <li>满足条件可参与标准共建与行业内容协作</li>
+              <li>新注册用户默认成为个人会员，可继续提交企业认证</li>
+              <li>企业认证通过后，个人会员会自动升级为企业基础会员</li>
+              <li>企业VIP会员需由管理员手动升级或后续付费升级开通</li>
+              <li>不同会员等级可按权限参与资讯发布、词库贡献、标准共建与企业展示</li>
             </ul>
           </article>
 

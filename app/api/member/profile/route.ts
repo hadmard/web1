@@ -19,6 +19,7 @@ export async function GET() {
       select: {
         id: true,
         email: true,
+        phone: true,
         name: true,
         memberType: true,
         rankingWeight: true,

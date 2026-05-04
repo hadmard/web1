@@ -225,6 +225,7 @@ function PublishCenterPageInner() {
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [role, setRole] = useState<string | null>(null);
   const [memberType, setMemberType] = useState<MemberType>("personal");
+  const [memberPhone, setMemberPhone] = useState("");
   const [membershipRule, setMembershipRule] = useState<MembershipRule | null>(null);
   const [memberAccess, setMemberAccess] = useState<MemberAccess>(getDefaultMemberAccess());
   const [items, setItems] = useState<Row[]>([]);
@@ -358,6 +359,7 @@ function PublishCenterPageInner() {
     setRole(me.role ?? null);
     const t = (me.memberType ?? "personal") as MemberType;
     setMemberType(t);
+    setMemberPhone(typeof me.phone === "string" ? me.phone : "");
     setMembershipRule(me.membershipRule ?? null);
     setMemberAccess(me.memberAccess ?? getDefaultMemberAccess());
 
@@ -602,15 +604,19 @@ function PublishCenterPageInner() {
     setPreview(nextUrl);
   }, []);
 
-  function queuePreviewScroll(target: "publish" | "edit") {
-    setPendingPreviewScroll(target);
-  }
-
-  useEffect(() => {
-    setCoverImage("");
-    replacePreviewUrl("publish", "");
+  const resetPublishFormState = useCallback((nextSubHref?: string) => {
+    setTitle("");
     setSource("");
+    setSourceUrl("");
     setDisplayAuthor("");
+    setExcerpt("");
+    setContent("");
+    setBrandStructured(createDefaultBrandStructuredData());
+    setStandardStructured(createDefaultStandardStructuredData());
+    setDataStructured(createDefaultDataStructuredData());
+    setAwardStructured(createDefaultAwardStructuredData());
+    setSubHref(nextSubHref ?? "");
+    setCoverImage("");
     setConceptSummary("");
     setApplicableScenarios("");
     setVersionLabel("");
@@ -618,11 +624,42 @@ function PublishCenterPageInner() {
     setRelatedStandardIds("");
     setRelatedBrandIds("");
     setTagSlugs("");
+    setIsPinned(false);
     setSlug("");
+    setDocumentMeta(createEmptyDocumentMetadata());
+    replacePreviewUrl("publish", "");
     autoSlugRef.current = "";
     autoSeoRef.current = { seoTitle: "", seoKeywords: "", seoDescription: "" };
-    setDocumentMeta(createEmptyDocumentMetadata());
-  }, [safeTab, replacePreviewUrl, subHref]);
+  }, [replacePreviewUrl]);
+
+  const resetEditFormState = useCallback(() => {
+    setEditingId(null);
+    setEditSlug("");
+    setEditTitle("");
+    setEditExcerpt("");
+    setEditContent("");
+    setEditSubHref("");
+    setEditBrandStructured(createDefaultBrandStructuredData());
+    setEditStandardStructured(createDefaultStandardStructuredData());
+    setEditDataStructured(createDefaultDataStructuredData());
+    setEditAwardStructured(createDefaultAwardStructuredData());
+    setEditCoverImage("");
+    setEditReason("");
+    setEditDocumentMeta(createEmptyDocumentMetadata());
+    replacePreviewUrl("edit", "");
+    autoOpenedEditIdRef.current = "";
+    autoEditSlugRef.current = "";
+    autoEditSeoRef.current = { seoTitle: "", seoKeywords: "", seoDescription: "" };
+  }, [replacePreviewUrl]);
+
+  function queuePreviewScroll(target: "publish" | "edit") {
+    setPendingPreviewScroll(target);
+  }
+
+  useEffect(() => {
+    resetPublishFormState(subOptions.find((item) => item.enabled)?.href ?? "");
+    resetEditFormState();
+  }, [resetEditFormState, resetPublishFormState, safeTab, subOptions]);
 
   useEffect(() => {
     if (safeTab === "brands") resetBrandStructured();
@@ -1129,6 +1166,40 @@ function PublishCenterPageInner() {
             <p className="mt-2 text-sm text-muted">个体授权可以把基础会员额度单独提升到高于默认值。</p>
           </article>
         </div>
+      </section>
+
+      <section className="mb-6 rounded-[28px] border border-border bg-surface-elevated p-5 shadow-[0_18px_46px_rgba(15,23,42,0.08)]">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-sm font-medium text-primary">
+              当前身份：{memberType === "enterprise_advanced" ? "企业VIP会员" : memberType === "enterprise_basic" ? "企业基础会员" : "个人会员"}
+            </p>
+            <p className="mt-2 text-sm leading-6 text-muted">
+              {memberType === "personal"
+                ? "你可以发布少量资讯、参与词库贡献和标准共建。完成企业认证后，可升级为企业基础会员，获得企业主页配置、图库上传和更多企业展示能力。"
+                : memberType === "enterprise_basic"
+                  ? "你可以维护企业资料、配置企业主页、上传图库并发布企业资讯。升级为企业VIP会员后，可获得 SEO 设置、推荐位、子账号和更高内容额度。"
+                  : "你已拥有企业主页、内容发布、图库上传、SEO 设置、推荐内容、子账号和高级展示能力。"}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            {memberType === "personal" ? (
+              <Link href="/membership/content/verification" className="apple-inline-link">
+                去企业认证
+              </Link>
+            ) : null}
+            {memberType === "enterprise_basic" ? (
+              <a href={`tel:${PUBLIC_CONTACT_PHONE}`} className="apple-inline-link">
+                联系管理员升级VIP
+              </a>
+            ) : null}
+          </div>
+        </div>
+        {!memberPhone ? (
+          <div className="mt-4 rounded-2xl border border-[rgba(180,154,107,0.18)] bg-[rgba(255,249,238,0.92)] px-4 py-3 text-sm leading-6 text-muted">
+            当前账号还没有补充注册手机号。建议先到 <Link href="/membership/content#account-security" className="apple-inline-link">账号安全</Link> 补充手机号，用于账号找回、认证审核和平台联系。
+          </div>
+        ) : null}
       </section>
 
       {memberType === "enterprise_basic" ? (

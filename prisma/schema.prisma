@@ -91,6 +91,7 @@ model Member {
   name                String?
   email               String             @unique
   recoveryEmail       String?
+  phone               String?
   role                String?
   membershipLevel     String?
   memberType          String             @default("personal") // enterprise_basic | personal | enterprise_advanced
@@ -131,6 +132,7 @@ model Member {
   @@index([memberType])
   @@index([memberTypeExpiresAt])
   @@index([recoveryEmail])
+  @@index([phone])
   @@index([passwordResetTokenHash])
   @@map("members")
 }

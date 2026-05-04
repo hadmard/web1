@@ -4,10 +4,13 @@ import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
+const MAINLAND_MOBILE_PATTERN = /^1[3-9]\d{9}$/;
+
 export default function RegisterPage() {
   const router = useRouter();
   const [name, setName] = useState("");
   const [account, setAccount] = useState("");
+  const [phone, setPhone] = useState("");
   const [recoveryEmail, setRecoveryEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -25,6 +28,17 @@ export default function RegisterPage() {
       return;
     }
 
+    const normalizedPhone = phone.replace(/\s+/g, "").trim();
+    if (!normalizedPhone) {
+      setError("手机号必填");
+      return;
+    }
+
+    if (!MAINLAND_MOBILE_PATTERN.test(normalizedPhone)) {
+      setError("手机号格式不正确，请填写 11 位中国大陆手机号");
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await fetch("/api/auth/register", {
@@ -34,6 +48,7 @@ export default function RegisterPage() {
         body: JSON.stringify({
           name: name.trim(),
           account: account.trim(),
+          phone: normalizedPhone,
           recoveryEmail: recoveryEmail.trim(),
           password,
         }),
@@ -63,12 +78,12 @@ export default function RegisterPage() {
             会员注册
           </h1>
           <p className="mt-4 max-w-xl text-sm leading-7 text-[#6c5a46] sm:text-[15px]">
-            先创建普通会员账号，后续可提交企业认证并升级为企业会员，继续完善品牌与内容发布能力。
+            先创建个人会员账号，后续可提交企业认证并升级为企业基础会员，继续完善品牌与内容发布能力。
           </p>
 
           <div className="mt-6 space-y-3">
             <BenefitRow title="先注册再认证" description="注册完成后即可进入会员后台，继续提交企业认证资料。" />
-            <BenefitRow title="账号可长期使用" description="后续找回邮箱、账号安全和资料配置都在同一体系内管理。" />
+            <BenefitRow title="账号可长期使用" description="后续找回邮箱、注册手机号、账号安全和资料配置都在同一体系内管理。" />
             <BenefitRow title="适配手机端" description="移动端也能完成注册、认证和日常内容维护。" />
           </div>
         </section>
@@ -77,6 +92,7 @@ export default function RegisterPage() {
           <div className="mb-6 space-y-2">
             <h2 className="font-serif text-2xl text-[#2f241a]">创建会员账号</h2>
             <p className="text-sm leading-6 text-[#7a6650]">建议填写常用邮箱，后续可用于找回密码和安全验证。</p>
+            <p className="text-sm leading-6 text-[#7a6650]">手机号用于账号找回、认证审核和平台联系，不会在前台公开展示。</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -96,6 +112,16 @@ export default function RegisterPage() {
               required
               autoComplete="username"
               placeholder="至少 4 位，仅支持小写字母/数字/._-"
+            />
+
+            <FormField
+              id="phone"
+              label="手机号"
+              value={phone}
+              onChange={setPhone}
+              required
+              autoComplete="tel"
+              placeholder="请输入 11 位中国大陆手机号"
             />
 
             <FormField

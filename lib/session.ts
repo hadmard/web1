@@ -10,6 +10,7 @@ export type Session = {
   name: string | null;
   displayName: string;
   email: string;
+  phone: string | null;
   role: string | null;
   memberType: MemberType;
   rankingWeight: number;
@@ -36,6 +37,7 @@ export async function getSession(): Promise<Session | null> {
     | {
         id: string;
         email: string;
+        phone: string | null;
         name: string | null;
         enterprise?: {
           companyShortName: string | null;
@@ -63,6 +65,7 @@ export async function getSession(): Promise<Session | null> {
       select: {
         id: true,
         email: true,
+        phone: true,
         name: true,
         enterprise: {
           select: {
@@ -91,6 +94,7 @@ export async function getSession(): Promise<Session | null> {
       select: {
         id: true,
         email: true,
+        phone: true,
         name: true,
         enterprise: {
           select: {
@@ -145,6 +149,7 @@ export async function getSession(): Promise<Session | null> {
     name: dbMember.name ?? null,
     displayName,
     email: payload.email,
+    phone: dbMember.phone ?? null,
     role: resolvedRole,
     memberType: asMemberType(effective.memberType),
     rankingWeight: effective.rankingWeight,

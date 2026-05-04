@@ -1,5 +1,6 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import { isValidMemberPhone, normalizeMemberPhone } from "@/lib/member-phone";
 import { normalizeRecoveryEmail } from "@/lib/password-recovery";
 import { prisma } from "@/lib/prisma";
 import { signToken } from "@/lib/auth";
@@ -17,14 +18,16 @@ export async function POST(request: NextRequest) {
     const accountRaw = typeof body?.account === "string" ? body.account : "";
     const password = typeof body?.password === "string" ? body.password : "";
     const nameRaw = typeof body?.name === "string" ? body.name : "";
+    const phoneRaw = typeof body?.phone === "string" ? body.phone : "";
     const recoveryEmailRaw = typeof body?.recoveryEmail === "string" ? body.recoveryEmail : "";
 
     const account = normalizeAccount(accountRaw);
     const name = nameRaw.trim();
+    const phone = normalizeMemberPhone(phoneRaw);
     const recoveryEmail = recoveryEmailRaw.trim() ? normalizeRecoveryEmail(recoveryEmailRaw) : null;
 
-    if (!account || !password) {
-      return NextResponse.json({ error: "账号与密码必填" }, { status: 400 });
+    if (!account || !password || !phone) {
+      return NextResponse.json({ error: "账号、手机号与密码必填" }, { status: 400 });
     }
 
     if (account.length < 4) {
@@ -37,6 +40,10 @@ export async function POST(request: NextRequest) {
 
     if (password.length < 6) {
       return NextResponse.json({ error: "密码至少 6 位" }, { status: 400 });
+    }
+
+    if (!isValidMemberPhone(phone)) {
+      return NextResponse.json({ error: "手机号格式不正确，请填写 11 位中国大陆手机号" }, { status: 400 });
     }
 
     if (recoveryEmailRaw.trim() && !recoveryEmail) {
@@ -56,6 +63,7 @@ export async function POST(request: NextRequest) {
       data: {
         email: account,
         name: name || null,
+        phone,
         recoveryEmail,
         role: "MEMBER",
         membershipLevel: "member",

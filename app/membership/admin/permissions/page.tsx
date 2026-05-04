@@ -98,7 +98,7 @@ function formatRole(role: string | null) {
 }
 
 function formatMemberType(memberType: string) {
-  if (memberType === "enterprise_advanced") return "企业高级会员";
+  if (memberType === "enterprise_advanced") return "企业VIP会员";
   if (memberType === "enterprise_basic") return "企业基础会员";
   return "个人会员";
 }
@@ -335,7 +335,7 @@ export default function AdminPermissionsPage() {
                   ) : member.role === "ADMIN" ? (
                     <p>这是子管理员账号，默认可免审发布，并可审核会员发布或修改的一切内容，但不能改系统设置或权限分配。</p>
                   ) : (
-                    <p>这是普通会员账号，只能投稿、跟进审核和提交修改申请，本页不提供额外后台授权。</p>
+                    <p>这是个人会员账号，可参与内容投稿、词库贡献、标准反馈与标准共建，本页不提供额外后台授权。</p>
                   )}
                 </div>
               </div>

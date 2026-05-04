@@ -68,7 +68,7 @@ const COMPATIBILITY_FIELDS: Array<{ key: keyof FormState; label: string; placeho
 ];
 
 function memberTypeLabel(memberType: MemberType | null) {
-  if (memberType === "enterprise_advanced") return "企业 VIP 会员";
+  if (memberType === "enterprise_advanced") return "企业VIP会员";
   if (memberType === "enterprise_basic") return "企业基础会员";
   return "个人会员";
 }
