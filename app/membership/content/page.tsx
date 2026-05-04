@@ -1,8 +1,18 @@
 ﻿"use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { MAX_UPLOAD_IMAGE_MB, uploadImageToServer } from "@/lib/client-image";
+import { CONTENT_TAB_DEFS, resolveTabKeyFromHref } from "@/lib/content-taxonomy";
+import { buildNewsPath } from "@/lib/share-config";
+import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
+import {
+  getEnterpriseVerificationFormatError,
+  normalizeEnterpriseAddress,
+  normalizeEnterprisePhone,
+  normalizeUnifiedSocialCreditCode,
+} from "@/lib/enterprise-verification-validation";
 
 type DashboardData = {
   member: {
@@ -117,6 +127,90 @@ type RecoveryResponse = {
   error?: string;
 };
 
+type SubmissionStatus = "draft" | "pending" | "approved" | "rejected";
+type SubmissionFilter = "all" | SubmissionStatus;
+
+type RecentSubmission = {
+  id: string;
+  title: string;
+  slug: string;
+  categoryHref: string | null;
+  subHref: string | null;
+  status: SubmissionStatus;
+  createdAt: string;
+  updatedAt?: string | null;
+};
+
+type VerifyStatus = "pending" | "approved" | "rejected";
+
+type VerificationRecord = {
+  id: string;
+  companyName: string;
+  companyShortName?: string | null;
+  accountName: string;
+  accountPassword: string;
+  contactPerson: string;
+  contactPhone: string;
+  contactEmail?: string | null;
+  logoUrl?: string | null;
+  licenseImageUrl: string;
+  licenseCode: string;
+  address: string;
+  foundedAt?: string | null;
+  registeredCapital?: string | null;
+  website?: string | null;
+  intro?: string | null;
+  businessScope?: string | null;
+  productSystem?: string | null;
+  coreAdvantages?: string | null;
+  attachmentsJson?: string | null;
+  status: VerifyStatus;
+  reviewNote?: string | null;
+  approvedEnterpriseId?: string | null;
+  updatedAt: string;
+};
+
+type VerificationFormState = {
+  companyName: string;
+  companyShortName: string;
+  accountName: string;
+  accountPassword: string;
+  contactPerson: string;
+  contactPhone: string;
+  contactEmail: string;
+  logoUrl: string;
+  licenseImageUrl: string;
+  licenseCode: string;
+  address: string;
+  foundedAt: string;
+  registeredCapital: string;
+  website: string;
+  intro: string;
+  businessScope: string;
+  productSystem: string;
+  coreAdvantages: string;
+  attachments: string[];
+};
+
+type GalleryItem = {
+  id: string;
+  title: string | null;
+  imageUrl: string;
+  alt: string | null;
+  category: string | null;
+  status: "draft" | "pending" | "approved" | "rejected";
+  createdAt: string;
+};
+
+type GalleryFormState = {
+  title: string;
+  alt: string;
+  category: string;
+  tagSlugs: string;
+  imageUrl: string;
+  syncToMainSite: boolean;
+};
+
 const EMPTY_SETTINGS: SiteSettings = {
   template: "brand_showcase",
   heroTitle: "",
@@ -169,11 +263,64 @@ const EMPTY_SETTINGS: SiteSettings = {
 const PRIMARY_ACTIONS = [
   { href: "/membership/content/publish?tab=articles", label: "发布资讯", desc: "发布企业资讯、词库或标准相关内容" },
   { href: "/membership/content/gallery", label: "管理图库", desc: "上传案例图、工艺图和空间图" },
-  { href: "/membership/content/submissions", label: "已发内容", desc: "查看你已提交的内容和当前状态" },
+  { href: "#recent-submissions", label: "最近提交", desc: "在当前页面查看最新提交、状态和编辑入口" },
   { href: "/membership/profile", label: "企业资料", desc: "维护关于品牌、品牌定位和 Logo" },
-  { href: "/membership/content/verification", label: "企业认证", desc: "提交或查看企业认证资料" },
-  { href: "/membership/content/status", label: "审核记录", desc: "查看待审核、已通过和退回内容" },
+  { href: "#verification-status", label: "企业认证", desc: "在当前页面查看认证状态、入口和企业主页" },
+  { href: "/membership/content/status", label: "审核记录", desc: "查看全部待审核、已通过和退回内容" },
 ];
+
+const SUBMISSION_STATUS_TEXT: Record<SubmissionStatus, string> = {
+  draft: "草稿",
+  pending: "待审核",
+  approved: "已通过",
+  rejected: "已退回",
+};
+
+const SUBMISSION_STATUS_TONE: Record<SubmissionStatus, string> = {
+  draft: "border-border bg-surface text-muted",
+  pending: "border-[rgba(180,154,107,0.28)] bg-[rgba(255,248,236,0.9)] text-accent",
+  approved: "border-[rgba(112,164,132,0.28)] bg-[rgba(240,249,243,0.92)] text-[#3f6d52]",
+  rejected: "border-[rgba(190,122,101,0.28)] bg-[rgba(255,243,239,0.92)] text-[#9b5a45]",
+};
+
+const EMPTY_VERIFICATION_FORM: VerificationFormState = {
+  companyName: "",
+  companyShortName: "",
+  accountName: "",
+  accountPassword: "",
+  contactPerson: "",
+  contactPhone: "",
+  contactEmail: "",
+  logoUrl: "",
+  licenseImageUrl: "",
+  licenseCode: "",
+  address: "",
+  foundedAt: "",
+  registeredCapital: "",
+  website: "",
+  intro: "",
+  businessScope: "",
+  productSystem: "",
+  coreAdvantages: "",
+  attachments: [],
+};
+
+const GALLERY_CATEGORY_LABEL_MAP: Record<string, string> = {
+  style: "风格",
+  space: "空间",
+  craft: "工艺",
+  product: "品类",
+  enterprise: "企业案例",
+};
+
+const EMPTY_GALLERY_FORM: GalleryFormState = {
+  title: "",
+  alt: "",
+  category: "",
+  tagSlugs: "",
+  imageUrl: "",
+  syncToMainSite: false,
+};
 
 function normalizeSettings(settings: SiteSettings): SiteSettings {
   return {
@@ -203,11 +350,65 @@ function verificationText(status: string | null | undefined) {
   return "未提交";
 }
 
+function formatRecordDate(value: string | null | undefined) {
+  const text = (value || "").trim();
+  if (!text) return "-";
+  const date = new Date(text);
+  if (Number.isNaN(date.getTime())) return text;
+  return new Intl.DateTimeFormat("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function buildSubmissionPreviewHref(item: RecentSubmission) {
+  const segment = (item.slug || item.title || "").trim();
+  if (!segment && !item.id) return null;
+  const encoded = encodeURIComponent(segment);
+  const tab = resolveTabKeyFromHref(item.categoryHref, item.subHref);
+  if (tab === "brands") return `/brands/${encoded}`;
+  if (tab === "buying") return `/brands/buying/${encoded}`;
+  if (tab === "terms") return `/dictionary/${encoded}`;
+  if (tab === "standards") return `/standards/${encoded}`;
+  if (tab === "awards") return `/awards/${encoded}`;
+  return item.id ? buildNewsPath(item.id) : `/news/${encoded}`;
+}
+
+function parseAttachments(raw: string | null | undefined) {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((x): x is string => typeof x === "string");
+  } catch {
+    return [];
+  }
+}
+
+function getGalleryCategoryLabel(value: string | null | undefined) {
+  if (!value) return "未分类";
+  return GALLERY_CATEGORY_LABEL_MAP[value] ?? "未分类";
+}
+
 export default function MemberContentPage() {
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [data, setData] = useState<DashboardData | null>(null);
+  const [recentItems, setRecentItems] = useState<RecentSubmission[]>([]);
+  const [submissionFilter, setSubmissionFilter] = useState<SubmissionFilter>("all");
+  const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([]);
+  const [galleryForm, setGalleryForm] = useState<GalleryFormState>(EMPTY_GALLERY_FORM);
+  const [galleryMessage, setGalleryMessage] = useState("");
+  const [savingGallery, setSavingGallery] = useState(false);
+  const [uploadingGalleryImage, setUploadingGalleryImage] = useState(false);
+  const [verificationForm, setVerificationForm] = useState<VerificationFormState>(EMPTY_VERIFICATION_FORM);
+  const [verificationMessage, setVerificationMessage] = useState("");
+  const [savingVerification, setSavingVerification] = useState(false);
+  const [uploadingVerificationAsset, setUploadingVerificationAsset] = useState(false);
 
   const [siteSettings, setSiteSettings] = useState<SiteSettings>(EMPTY_SETTINGS);
   const [siteSavedSnapshot, setSiteSavedSnapshot] = useState("");
@@ -242,12 +443,20 @@ export default function MemberContentPage() {
         setAuthed(true);
         setData(dashboardBody);
 
-        const [siteRes, recoveryRes] = await Promise.all([
+        const [siteRes, recoveryRes, recentRes, galleryRes] = await Promise.all([
           fetch("/api/member/site-settings", {
             credentials: "include",
             cache: "no-store",
           }),
           fetch("/api/auth/recovery-email", {
+            credentials: "include",
+            cache: "no-store",
+          }),
+          fetch("/api/member/articles?limit=20", {
+            credentials: "include",
+            cache: "no-store",
+          }),
+          fetch("/api/member/gallery?limit=12", {
             credentials: "include",
             cache: "no-store",
           }),
@@ -265,6 +474,48 @@ export default function MemberContentPage() {
           setAccount(typeof recoveryBody.account === "string" ? recoveryBody.account : "");
           setRecoveryEmail(typeof recoveryBody.recoveryEmail === "string" ? recoveryBody.recoveryEmail : "");
         }
+
+        const recentBody = await recentRes.json().catch(() => ({}));
+        if (recentRes.ok) {
+          setRecentItems(Array.isArray(recentBody.items) ? recentBody.items : []);
+        }
+
+        const galleryBody = await galleryRes.json().catch(() => ({}));
+        if (galleryRes.ok) {
+          setGalleryItems(Array.isArray(galleryBody.items) ? galleryBody.items : []);
+        }
+
+        if (dashboardBody.latestVerification) {
+          const verificationRes = await fetch("/api/member/enterprise-verification", {
+            credentials: "include",
+            cache: "no-store",
+          });
+          const verificationBody = await verificationRes.json().catch(() => ({}));
+          const record = (verificationBody.latest ?? null) as VerificationRecord | null;
+          if (verificationRes.ok && record) {
+            setVerificationForm({
+              companyName: record.companyName ?? "",
+              companyShortName: record.companyShortName ?? "",
+              accountName: record.accountName ?? "",
+              accountPassword: record.accountPassword ?? "",
+              contactPerson: record.contactPerson ?? "",
+              contactPhone: record.contactPhone ?? "",
+              contactEmail: record.contactEmail ?? "",
+              logoUrl: record.logoUrl ?? "",
+              licenseImageUrl: record.licenseImageUrl ?? "",
+              licenseCode: record.licenseCode ?? "",
+              address: record.address ?? "",
+              foundedAt: record.foundedAt ?? "",
+              registeredCapital: record.registeredCapital ?? "",
+              website: record.website ?? "",
+              intro: record.intro ?? "",
+              businessScope: record.businessScope ?? "",
+              productSystem: record.productSystem ?? "",
+              coreAdvantages: record.coreAdvantages ?? "",
+              attachments: parseAttachments(record.attachmentsJson),
+            });
+          }
+        }
       } catch {
         setMessage("网络异常，请稍后重试");
       } finally {
@@ -277,8 +528,60 @@ export default function MemberContentPage() {
     () => verificationText(data?.latestVerification?.status),
     [data?.latestVerification?.status]
   );
+  const verificationActionHref = useMemo(() => {
+    if (data?.latestVerification?.status === "approved" && data.enterprise?.id) {
+      return `/enterprise/${data.enterprise.id}`;
+    }
+    return "/membership/content/verification";
+  }, [data?.enterprise?.id, data?.latestVerification?.status]);
+  const verificationActionLabel = useMemo(() => {
+    if (data?.latestVerification?.status === "approved" && data.enterprise?.id) return "查看企业主页";
+    if (data?.latestVerification?.status === "pending") return "查看认证进度";
+    if (data?.latestVerification?.status === "rejected") return "重新提交认证";
+    return "去提交认证";
+  }, [data?.enterprise?.id, data?.latestVerification?.status]);
   const siteSnapshot = useMemo(() => JSON.stringify(siteSettings), [siteSettings]);
   const hasUnsavedSiteChanges = siteSnapshot !== siteSavedSnapshot;
+  const verificationAttachmentPreview = useMemo(() => verificationForm.attachments.slice(0, 6), [verificationForm.attachments]);
+  const submissionSummary = useMemo(
+    () =>
+      recentItems.reduce(
+        (acc, item) => {
+          acc[item.status] += 1;
+          acc.total += 1;
+          return acc;
+        },
+        { total: 0, draft: 0, pending: 0, approved: 0, rejected: 0 } as Record<SubmissionStatus | "total", number>
+      ),
+    [recentItems]
+  );
+  const filteredRecentItems = useMemo(
+    () => (submissionFilter === "all" ? recentItems : recentItems.filter((item) => item.status === submissionFilter)),
+    [recentItems, submissionFilter]
+  );
+  const gallerySummary = useMemo(
+    () =>
+      galleryItems.reduce(
+        (acc, item) => {
+          acc[item.status] += 1;
+          acc.total += 1;
+          return acc;
+        },
+        { total: 0, draft: 0, pending: 0, approved: 0, rejected: 0 } as Record<SubmissionStatus | "total", number>
+      ),
+    [galleryItems]
+  );
+
+  async function reloadGallery() {
+    const response = await fetch("/api/member/gallery?limit=12", {
+      credentials: "include",
+      cache: "no-store",
+    });
+    const body = await response.json().catch(() => ({}));
+    if (response.ok) {
+      setGalleryItems(Array.isArray(body.items) ? body.items : []);
+    }
+  }
 
   async function handleHeroImageUpload(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -388,6 +691,148 @@ export default function MemberContentPage() {
     }
   }
 
+  async function handleVerificationAssetUpload(
+    event: ChangeEvent<HTMLInputElement>,
+    key: "logoUrl" | "licenseImageUrl"
+  ) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setUploadingVerificationAsset(true);
+    setVerificationMessage("");
+    try {
+      const imageUrl = await uploadImageToServer(file, {
+        folder: key === "logoUrl" ? "verification/logos" : "verification/licenses",
+      });
+      setVerificationForm((prev) => ({ ...prev, [key]: imageUrl }));
+    } catch (error) {
+      setVerificationMessage(error instanceof Error ? error.message : "图片上传失败，请重试");
+    } finally {
+      setUploadingVerificationAsset(false);
+      event.target.value = "";
+    }
+  }
+
+  async function handleVerificationAttachmentsUpload(event: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.target.files ?? []);
+    if (files.length === 0) return;
+    setUploadingVerificationAsset(true);
+    setVerificationMessage("");
+    try {
+      const urls = await Promise.all(files.map((file) => uploadImageToServer(file, { folder: "verification/attachments" })));
+      setVerificationForm((prev) => ({
+        ...prev,
+        attachments: [...prev.attachments, ...urls].slice(0, 20),
+      }));
+    } catch (error) {
+      setVerificationMessage(error instanceof Error ? error.message : "附件上传失败，请重试");
+    } finally {
+      setUploadingVerificationAsset(false);
+      event.target.value = "";
+    }
+  }
+
+  function removeVerificationAttachment(index: number) {
+    setVerificationForm((prev) => ({
+      ...prev,
+      attachments: prev.attachments.filter((_, itemIndex) => itemIndex !== index),
+    }));
+  }
+
+  async function handleVerificationSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const normalizedForm = {
+      ...verificationForm,
+      contactPhone: normalizeEnterprisePhone(verificationForm.contactPhone),
+      licenseCode: normalizeUnifiedSocialCreditCode(verificationForm.licenseCode),
+      address: normalizeEnterpriseAddress(verificationForm.address),
+    };
+    const formatError = getEnterpriseVerificationFormatError(normalizedForm);
+    if (formatError) {
+      setVerificationForm(normalizedForm);
+      setVerificationMessage(formatError);
+      return;
+    }
+
+    setSavingVerification(true);
+    setVerificationMessage("");
+    setVerificationForm(normalizedForm);
+
+    try {
+      const response = await fetch("/api/member/enterprise-verification", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...normalizedForm, attachments: normalizedForm.attachments }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setVerificationMessage(body.error ?? "提交认证资料失败");
+        return;
+      }
+      setVerificationMessage(data?.latestVerification ? "认证资料修改已提交，等待重新审核。" : "认证资料已提交，等待审核。");
+    } catch {
+      setVerificationMessage("网络异常，请稍后重试");
+    } finally {
+      setSavingVerification(false);
+    }
+  }
+
+  async function handleGalleryImageUpload(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setUploadingGalleryImage(true);
+    setGalleryMessage("");
+    try {
+      const imageUrl = await uploadImageToServer(file, { folder: "content/gallery" });
+      setGalleryForm((prev) => ({ ...prev, imageUrl }));
+      setGalleryMessage("图片已上传，补充信息后即可加入图库。");
+    } catch (error) {
+      setGalleryMessage(error instanceof Error ? error.message : "图库图片上传失败");
+    } finally {
+      setUploadingGalleryImage(false);
+      event.target.value = "";
+    }
+  }
+
+  async function handleGallerySubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!galleryForm.imageUrl.trim()) {
+      setGalleryMessage("请先上传图片");
+      return;
+    }
+
+    setSavingGallery(true);
+    setGalleryMessage("");
+    try {
+      const response = await fetch("/api/member/gallery", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: galleryForm.title,
+          alt: galleryForm.alt,
+          category: galleryForm.category || null,
+          tagSlugs: galleryForm.tagSlugs,
+          imageUrl: galleryForm.imageUrl,
+          syncToMainSite: galleryForm.syncToMainSite,
+        }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setGalleryMessage(body.error ?? "保存图库图片失败");
+        return;
+      }
+
+      setGalleryForm(EMPTY_GALLERY_FORM);
+      setGalleryMessage("图片已加入图库，等待审核或同步。");
+      await reloadGallery();
+    } catch {
+      setGalleryMessage("网络异常，请稍后重试");
+    } finally {
+      setSavingGallery(false);
+    }
+  }
+
   if (loading) {
     return <div className="mx-auto max-w-6xl px-4 py-12 text-muted">加载中...</div>;
   }
@@ -421,6 +866,18 @@ export default function MemberContentPage() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-5 px-3 py-6 sm:space-y-6 sm:px-4 sm:py-12">
+      <section className="sticky top-16 z-20 rounded-[22px] border border-border/80 bg-white/88 px-3 py-3 shadow-[0_14px_28px_rgba(15,23,42,0.08)] backdrop-blur sm:top-20 sm:rounded-[26px] sm:px-4">
+        <div className="flex flex-wrap gap-2">
+          <AnchorLink href="#publish-center" label="发布中心" />
+          <AnchorLink href="#verification-status" label="企业认证" />
+          <AnchorLink href="#verification-form" label="认证表单" />
+          <AnchorLink href="#recent-submissions" label="内容记录" />
+          <AnchorLink href="#gallery-overview" label="图库概览" />
+          <AnchorLink href="#site-settings" label="主页配置" />
+          <AnchorLink href="#account-security" label="账号安全" />
+        </div>
+      </section>
+
       <section className="overflow-hidden rounded-[26px] border border-border bg-surface-elevated shadow-[0_18px_40px_rgba(15,23,42,0.08)] sm:rounded-[32px] sm:shadow-[0_24px_60px_rgba(15,23,42,0.08)]">
         <div className="bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(244,239,230,0.92))] px-4 py-5 sm:px-6 sm:py-7">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
@@ -446,6 +903,8 @@ export default function MemberContentPage() {
             <p className="mt-1 text-sm text-muted">发布、图库、审核和企业资料入口都放在这里。</p>
           </div>
           <div className="flex flex-wrap gap-2 text-xs text-muted">
+            <AnchorLink href="#verification-status" label="认证状态" />
+            <AnchorLink href="#recent-submissions" label="最近提交" />
             <AnchorLink href="#site-settings" label="主页配置" />
             <AnchorLink href="#account-security" label="账号安全" />
           </div>
@@ -469,6 +928,365 @@ export default function MemberContentPage() {
         <StatCard label="图库内容" value={data.stats.gallery.total} sub={`待审核 ${data.stats.gallery.pending} · 已通过 ${data.stats.gallery.approved}`} />
         <StatCard label="标准反馈" value={data.stats.standardFeedback.total} sub={`待审核 ${data.stats.standardFeedback.pending} · 已通过 ${data.stats.standardFeedback.approved}`} />
         <StatCard label="推荐额度" value={data.authorization.recommendation.remainingCount} sub={`全年 ${data.authorization.recommendation.annualLimit} 次`} />
+      </section>
+
+      <section id="verification-status" className="rounded-[24px] border border-border bg-surface-elevated p-4 shadow-[0_14px_30px_rgba(15,23,42,0.06)] sm:rounded-[28px] sm:p-6 sm:shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-primary">企业认证与企业主页</h2>
+            <p className="mt-1 text-sm text-muted">认证状态、企业主页和资料入口都放在这里，不用单独切到别页确认。</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link href={verificationActionHref} className="rounded-full border border-border bg-surface px-4 py-2 text-sm text-primary transition hover:bg-white">
+              {verificationActionLabel}
+            </Link>
+            <Link href="/membership/profile" className="rounded-full border border-border bg-surface px-4 py-2 text-sm text-primary transition hover:bg-white">
+              编辑企业资料
+            </Link>
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+          <article className="rounded-[20px] border border-border bg-white/90 p-4 sm:rounded-[24px] sm:p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm text-muted">当前认证状态</p>
+                <p className="mt-2 text-2xl font-semibold text-primary">{verification}</p>
+              </div>
+              <span className="rounded-full border border-border bg-surface px-3 py-1 text-xs text-muted">
+                {data.latestVerification ? `更新于 ${formatRecordDate(data.latestVerification.updatedAt)}` : "尚未提交"}
+              </span>
+            </div>
+            <div className="mt-4 space-y-2 text-sm leading-6 text-muted">
+              <p>企业名称：{data.latestVerification?.companyName || data.enterprise?.companyShortName || data.enterprise?.companyName || "未填写"}</p>
+              <p>企业主页：{data.enterprise?.id ? "已生成，可直接查看前台企业页" : "认证通过后自动生成"}</p>
+              <p>审核说明：{data.latestVerification?.reviewNote?.trim() || "暂无补充说明"}</p>
+            </div>
+          </article>
+
+          <article className="rounded-[20px] border border-[rgba(180,154,107,0.18)] bg-[linear-gradient(180deg,rgba(255,252,247,0.98),rgba(248,242,233,0.9))] p-4 sm:rounded-[24px] sm:p-5">
+            <p className="text-sm font-medium text-primary">建议管理顺序</p>
+            <div className="mt-3 space-y-2 text-sm leading-6 text-muted">
+              <p>1. 先在“企业资料”里把品牌信息、Logo 和基础介绍补齐。</p>
+              <p>2. 再提交企业认证，认证通过后企业主页会自动具备更完整展示能力。</p>
+              <p>3. 完成后回到本页，继续配置主页首屏、联系信息和内容发布。</p>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="verification-form" className="rounded-[24px] border border-border bg-surface-elevated p-4 shadow-[0_14px_30px_rgba(15,23,42,0.06)] sm:rounded-[28px] sm:p-6 sm:shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-primary">企业认证资料</h2>
+            <p className="mt-1 text-sm text-muted">认证表单直接放在工作台里，提交、修改、补资料都不需要再跳出去。</p>
+          </div>
+          {data.enterprise?.id ? (
+            <Link href={`/enterprise/${data.enterprise.id}`} className="rounded-full border border-border bg-surface px-4 py-2 text-sm text-primary transition hover:bg-white">
+              查看企业主页
+            </Link>
+          ) : null}
+        </div>
+
+        {verificationMessage ? <p className="mt-4 text-sm text-emerald-700">{verificationMessage}</p> : null}
+
+        <form onSubmit={handleVerificationSubmit} className="mt-5 space-y-5">
+          <section className="rounded-[20px] border border-border bg-white/92 p-4 sm:rounded-[24px] sm:p-5">
+            <div className="mb-4">
+              <h3 className="text-base font-medium text-primary">企业基础信息</h3>
+              <p className="mt-1 text-sm text-muted">用于审核和自动生成企业页，请尽量填写完整。</p>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <Field label="企业全称" value={verificationForm.companyName} onChange={(value) => setVerificationForm((prev) => ({ ...prev, companyName: value }))} />
+              <Field label="企业简称" value={verificationForm.companyShortName} onChange={(value) => setVerificationForm((prev) => ({ ...prev, companyShortName: value }))} />
+              <Field label="企业账号" value={verificationForm.accountName} onChange={(value) => setVerificationForm((prev) => ({ ...prev, accountName: value }))} />
+              <Field label="企业账号密码" value={verificationForm.accountPassword} onChange={(value) => setVerificationForm((prev) => ({ ...prev, accountPassword: value }))} />
+              <Field label="联系人" value={verificationForm.contactPerson} onChange={(value) => setVerificationForm((prev) => ({ ...prev, contactPerson: value }))} />
+              <Field label="联系电话" value={verificationForm.contactPhone} helper="支持手机号，或带区号的固定电话。" onChange={(value) => setVerificationForm((prev) => ({ ...prev, contactPhone: value }))} />
+              <Field label="联系邮箱" value={verificationForm.contactEmail} onChange={(value) => setVerificationForm((prev) => ({ ...prev, contactEmail: value }))} />
+              <Field label="统一社会信用代码" value={verificationForm.licenseCode} helper="请输入 18 位统一社会信用代码。" onChange={(value) => setVerificationForm((prev) => ({ ...prev, licenseCode: value }))} />
+              <Field label="公司官网" value={verificationForm.website} onChange={(value) => setVerificationForm((prev) => ({ ...prev, website: value }))} />
+              <Field label="成立时间" value={verificationForm.foundedAt} onChange={(value) => setVerificationForm((prev) => ({ ...prev, foundedAt: value }))} />
+              <Field label="注册资本" value={verificationForm.registeredCapital} onChange={(value) => setVerificationForm((prev) => ({ ...prev, registeredCapital: value }))} />
+              <Field label="企业地址" value={verificationForm.address} helper="请填写完整的省、市、区及详细地址。" onChange={(value) => setVerificationForm((prev) => ({ ...prev, address: value }))} />
+            </div>
+          </section>
+
+          <section className="rounded-[20px] border border-border bg-white/92 p-4 sm:rounded-[24px] sm:p-5">
+            <div className="mb-4">
+              <h3 className="text-base font-medium text-primary">补充说明</h3>
+              <p className="mt-1 text-sm text-muted">这些内容会帮助审核人员更快了解企业背景和产品能力。</p>
+            </div>
+            <div className="space-y-4">
+              <TextAreaField label="企业介绍" value={verificationForm.intro} onChange={(value) => setVerificationForm((prev) => ({ ...prev, intro: value }))} />
+              <TextAreaField label="经营范围" value={verificationForm.businessScope} onChange={(value) => setVerificationForm((prev) => ({ ...prev, businessScope: value }))} />
+              <TextAreaField label="产品体系" value={verificationForm.productSystem} onChange={(value) => setVerificationForm((prev) => ({ ...prev, productSystem: value }))} />
+              <TextAreaField label="核心优势" value={verificationForm.coreAdvantages} onChange={(value) => setVerificationForm((prev) => ({ ...prev, coreAdvantages: value }))} />
+            </div>
+          </section>
+
+          <section className="rounded-[20px] border border-border bg-white/92 p-4 sm:rounded-[24px] sm:p-5">
+            <div className="mb-4">
+              <h3 className="text-base font-medium text-primary">资质图片</h3>
+              <p className="mt-1 text-sm text-muted">支持手机直接上传，系统会自动处理大图压缩。</p>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="rounded-[18px] border border-border bg-surface p-4">
+                <p className="text-sm font-medium text-primary">企业 Logo</p>
+                <label className="mt-3 inline-flex cursor-pointer items-center rounded-full border border-border bg-white px-4 py-2 text-sm text-primary transition hover:bg-surface">
+                  <input type="file" accept="image/*" className="hidden" onChange={(event) => void handleVerificationAssetUpload(event, "logoUrl")} />
+                  {uploadingVerificationAsset ? "上传中..." : `上传图片（最大 ${MAX_UPLOAD_IMAGE_MB}MB）`}
+                </label>
+                {verificationForm.logoUrl ? (
+                  <Image src={resolveUploadedImageUrl(verificationForm.logoUrl)} alt="企业 Logo" width={72} height={72} className="mt-4 h-[72px] w-[72px] rounded-2xl border border-border object-cover" />
+                ) : null}
+              </div>
+              <div className="rounded-[18px] border border-border bg-surface p-4">
+                <p className="text-sm font-medium text-primary">营业执照</p>
+                <label className="mt-3 inline-flex cursor-pointer items-center rounded-full border border-border bg-white px-4 py-2 text-sm text-primary transition hover:bg-surface">
+                  <input type="file" accept="image/*" className="hidden" onChange={(event) => void handleVerificationAssetUpload(event, "licenseImageUrl")} />
+                  {uploadingVerificationAsset ? "上传中..." : `上传图片（最大 ${MAX_UPLOAD_IMAGE_MB}MB）`}
+                </label>
+                {verificationForm.licenseImageUrl ? (
+                  <Image src={resolveUploadedImageUrl(verificationForm.licenseImageUrl)} alt="营业执照" width={240} height={120} className="mt-4 h-24 w-auto rounded-2xl border border-border bg-white object-contain" />
+                ) : null}
+              </div>
+            </div>
+          </section>
+
+          <section className="rounded-[20px] border border-border bg-white/92 p-4 sm:rounded-[24px] sm:p-5">
+            <div className="mb-4">
+              <h3 className="text-base font-medium text-primary">补充附件</h3>
+              <p className="mt-1 text-sm text-muted">可上传工厂、展厅、证书等辅助材料，帮助加快审核判断。</p>
+            </div>
+            <label className="inline-flex cursor-pointer items-center rounded-full border border-border bg-white px-4 py-2 text-sm text-primary transition hover:bg-surface">
+              <input type="file" accept="image/*" multiple className="hidden" onChange={(event) => void handleVerificationAttachmentsUpload(event)} />
+              {uploadingVerificationAsset ? "上传中..." : "上传补充附件"}
+            </label>
+            {verificationAttachmentPreview.length > 0 ? (
+              <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-6">
+                {verificationAttachmentPreview.map((img, index) => (
+                  <button
+                    key={`${img.slice(0, 20)}-${index}`}
+                    type="button"
+                    onClick={() => removeVerificationAttachment(index)}
+                    className="overflow-hidden rounded-2xl border border-border"
+                    title="点击删除该附件"
+                  >
+                    <Image src={resolveUploadedImageUrl(img)} alt={`附件 ${index + 1}`} width={160} height={96} className="h-24 w-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </section>
+
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              disabled={savingVerification || uploadingVerificationAsset}
+              className="w-full rounded-full bg-accent px-5 py-3 text-sm font-medium text-white shadow-[0_16px_36px_rgba(180,154,107,0.28)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto sm:py-2.5"
+            >
+              {savingVerification ? "提交中..." : "提交认证资料"}
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section id="recent-submissions" className="rounded-[24px] border border-border bg-surface-elevated p-4 shadow-[0_14px_30px_rgba(15,23,42,0.06)] sm:rounded-[28px] sm:p-6 sm:shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-primary">已发内容与审核记录</h2>
+            <p className="mt-1 text-sm text-muted">把最新内容、审核状态和继续编辑入口放在一处，方便日常跟进。</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/membership/content/submissions" className="rounded-full border border-border bg-surface px-4 py-2 text-sm text-primary transition hover:bg-white">
+              查看全部内容
+            </Link>
+            <Link href="/membership/content/status" className="rounded-full border border-border bg-surface px-4 py-2 text-sm text-primary transition hover:bg-white">
+              查看审核记录
+            </Link>
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-3 lg:grid-cols-2">
+          {CONTENT_TAB_DEFS.map((tab) => (
+            <Link
+              key={tab.key}
+              href={`/membership/content/publish?tab=${tab.key}`}
+              className="rounded-[20px] border border-border bg-white/88 px-4 py-4 transition hover:-translate-y-0.5 hover:border-accent/35 hover:shadow-[0_14px_30px_rgba(15,23,42,0.08)] sm:rounded-[24px] sm:px-5"
+            >
+              <p className="text-sm text-muted">栏目直达</p>
+              <p className="mt-2 text-base font-semibold text-primary">{tab.label}</p>
+              <p className="mt-2 text-sm text-muted">进入该栏目继续发布或修改内容</p>
+            </Link>
+          ))}
+        </div>
+
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          <StatusFilterCard label="全部" value={submissionSummary.total} active={submissionFilter === "all"} onClick={() => setSubmissionFilter("all")} />
+          <StatusFilterCard label="草稿" value={submissionSummary.draft} active={submissionFilter === "draft"} onClick={() => setSubmissionFilter("draft")} />
+          <StatusFilterCard label="待审核" value={submissionSummary.pending} active={submissionFilter === "pending"} onClick={() => setSubmissionFilter("pending")} />
+          <StatusFilterCard label="已通过" value={submissionSummary.approved} active={submissionFilter === "approved"} onClick={() => setSubmissionFilter("approved")} />
+          <StatusFilterCard label="已退回" value={submissionSummary.rejected} active={submissionFilter === "rejected"} onClick={() => setSubmissionFilter("rejected")} />
+        </div>
+
+        <div className="mt-5 space-y-3">
+          {filteredRecentItems.length > 0 ? (
+            filteredRecentItems.map((item) => {
+              const previewHref = item.status === "approved" ? buildSubmissionPreviewHref(item) : null;
+              const editHref = `/membership/content/publish?tab=${encodeURIComponent(resolveTabKeyFromHref(item.categoryHref, item.subHref))}&edit=${encodeURIComponent(item.id)}`;
+              const categoryLabel = CONTENT_TAB_DEFS.find(
+                (tab) => tab.key === resolveTabKeyFromHref(item.categoryHref, item.subHref)
+              )?.label ?? "未分类";
+
+              return (
+                <article key={item.id} className="rounded-[20px] border border-border bg-white/90 px-4 py-4 sm:rounded-[24px] sm:px-5">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className={`rounded-full border px-3 py-1 text-xs ${SUBMISSION_STATUS_TONE[item.status]}`}>
+                          {SUBMISSION_STATUS_TEXT[item.status]}
+                        </span>
+                        <span className="text-xs text-muted">{categoryLabel}</span>
+                      </div>
+                      <p className="mt-3 text-base font-medium text-primary">{item.title}</p>
+                      <p className="mt-2 text-xs text-muted">
+                        提交时间 {formatRecordDate(item.createdAt)}
+                        {item.updatedAt ? ` · 最近更新 ${formatRecordDate(item.updatedAt)}` : ""}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Link href={editHref} className="rounded-full border border-border bg-surface px-4 py-2 text-sm text-primary transition hover:bg-white">
+                        继续编辑
+                      </Link>
+                      {previewHref ? (
+                        <Link href={previewHref} target="_blank" rel="noreferrer" className="rounded-full border border-border bg-surface px-4 py-2 text-sm text-primary transition hover:bg-white">
+                          预览前台
+                        </Link>
+                      ) : null}
+                    </div>
+                  </div>
+                </article>
+              );
+            })
+          ) : (
+            <div className="rounded-[20px] border border-dashed border-border bg-surface px-4 py-6 text-sm text-muted sm:rounded-[24px]">
+              {recentItems.length > 0 ? "当前筛选条件下还没有内容，可以切换状态查看其他记录。" : "还没有提交内容。可以先从上面的“栏目直达”进入对应栏目开始发布。"}
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section id="gallery-overview" className="rounded-[24px] border border-border bg-surface-elevated p-4 shadow-[0_14px_30px_rgba(15,23,42,0.06)] sm:rounded-[28px] sm:p-6 sm:shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-primary">图库概览</h2>
+            <p className="mt-1 text-sm text-muted">现在可以直接在这里上传图库图片；需要批量处理时再进入图库页。</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/membership/content/gallery" className="rounded-full border border-border bg-surface px-4 py-2 text-sm text-primary transition hover:bg-white">
+              打开图库管理
+            </Link>
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          <StatusSummaryCard label="全部图片" value={gallerySummary.total} />
+          <StatusSummaryCard label="草稿" value={gallerySummary.draft} />
+          <StatusSummaryCard label="待审核" value={gallerySummary.pending} />
+          <StatusSummaryCard label="已通过" value={gallerySummary.approved} />
+          <StatusSummaryCard label="已退回" value={gallerySummary.rejected} />
+        </div>
+
+        <form onSubmit={handleGallerySubmit} className="mt-5 rounded-[20px] border border-border bg-white/92 p-4 sm:rounded-[24px] sm:p-5">
+          <div className="mb-4">
+            <h3 className="text-base font-medium text-primary">快速上传图库</h3>
+            <p className="mt-1 text-sm text-muted">适合快速补案例图、工艺图、空间图，上传后会进入审核流程。</p>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
+            <div className="rounded-[18px] border border-border bg-surface p-4">
+              <p className="text-sm font-medium text-primary">图库图片</p>
+              <label className="mt-3 inline-flex cursor-pointer items-center rounded-full border border-border bg-white px-4 py-2 text-sm text-primary transition hover:bg-surface">
+                <input type="file" accept="image/*" className="hidden" onChange={handleGalleryImageUpload} />
+                {uploadingGalleryImage ? "上传中..." : `上传图片（最大 ${MAX_UPLOAD_IMAGE_MB}MB）`}
+              </label>
+              {galleryForm.imageUrl ? (
+                <div className="mt-4 overflow-hidden rounded-2xl border border-border bg-white">
+                  <Image src={resolveUploadedImageUrl(galleryForm.imageUrl)} alt="图库预览" width={320} height={240} className="h-auto w-full object-cover" />
+                </div>
+              ) : (
+                <p className="mt-4 text-xs leading-6 text-muted">建议上传横图，方便前台列表和详情页展示。</p>
+              )}
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <Field label="标题" value={galleryForm.title} onChange={(value) => setGalleryForm((prev) => ({ ...prev, title: value }))} />
+              <Field label="替代文本" value={galleryForm.alt} onChange={(value) => setGalleryForm((prev) => ({ ...prev, alt: value }))} />
+              <label className="block">
+                <span className="text-sm text-primary">图片分类</span>
+                <select
+                  className="mt-1 w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm text-primary"
+                  value={galleryForm.category}
+                  onChange={(event) => setGalleryForm((prev) => ({ ...prev, category: event.target.value }))}
+                >
+                  <option value="">请选择分类</option>
+                  {Object.entries(GALLERY_CATEGORY_LABEL_MAP).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <Field label="标签" value={galleryForm.tagSlugs} helper="多个标签可用逗号分隔。" onChange={(value) => setGalleryForm((prev) => ({ ...prev, tagSlugs: value }))} />
+              <label className="md:col-span-2 flex items-center gap-3 rounded-2xl border border-border bg-surface px-4 py-3 text-sm text-primary">
+                <input
+                  type="checkbox"
+                  checked={galleryForm.syncToMainSite}
+                  onChange={(event) => setGalleryForm((prev) => ({ ...prev, syncToMainSite: event.target.checked }))}
+                />
+                上传后同步到前台主站
+              </label>
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm leading-6 text-muted">{galleryMessage || "上传后可在下方图库概览查看最新状态。"}</p>
+            <button
+              type="submit"
+              disabled={savingGallery || uploadingGalleryImage}
+              className="w-full rounded-full bg-accent px-5 py-3 text-sm font-medium text-white shadow-[0_16px_36px_rgba(180,154,107,0.28)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto sm:py-2.5"
+            >
+              {savingGallery ? "保存中..." : "加入图库"}
+            </button>
+          </div>
+        </form>
+
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {galleryItems.length > 0 ? (
+            galleryItems.slice(0, 8).map((item) => (
+              <article key={item.id} className="overflow-hidden rounded-[20px] border border-border bg-white/92 sm:rounded-[24px]">
+                <div className="relative aspect-[4/3]">
+                  <Image src={resolveUploadedImageUrl(item.imageUrl)} alt={item.alt || item.title || "图库图片"} fill className="object-cover" />
+                </div>
+                <div className="space-y-2 px-4 py-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className={`rounded-full border px-3 py-1 text-xs ${SUBMISSION_STATUS_TONE[item.status]}`}>
+                      {SUBMISSION_STATUS_TEXT[item.status]}
+                    </span>
+                    <span className="text-xs text-muted">{getGalleryCategoryLabel(item.category)}</span>
+                  </div>
+                  <p className="line-clamp-2 text-sm font-medium text-primary">{item.title?.trim() || "未命名图片"}</p>
+                  <p className="text-xs text-muted">上传时间 {formatRecordDate(item.createdAt)}</p>
+                </div>
+              </article>
+            ))
+          ) : (
+            <div className="rounded-[20px] border border-dashed border-border bg-surface px-4 py-6 text-sm text-muted sm:col-span-2 sm:rounded-[24px] xl:col-span-4">
+              还没有上传图库内容。可以从图库管理页上传案例图、工艺图和空间图。
+            </div>
+          )}
+        </div>
       </section>
 
       {data.features.supportsEnterpriseSite ? (
@@ -690,6 +1508,42 @@ function StatCard({ label, value, sub }: { label: string; value: number; sub: st
       <p className="text-sm text-muted">{label}</p>
       <p className="mt-2 text-2xl font-semibold text-primary sm:text-3xl">{value}</p>
       <p className="mt-2 text-[11px] leading-5 text-muted sm:text-xs">{sub}</p>
+    </article>
+  );
+}
+
+function StatusFilterCard({
+  label,
+  value,
+  active,
+  onClick,
+}: {
+  label: string;
+  value: number;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-[20px] border px-4 py-4 text-left transition sm:rounded-[24px] ${
+        active
+          ? "border-accent/35 bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(244,239,230,0.9))] shadow-[0_14px_30px_rgba(15,23,42,0.08)]"
+          : "border-border bg-white/88 hover:border-accent/25 hover:bg-white"
+      }`}
+    >
+      <p className="text-sm text-muted">{label}</p>
+      <p className="mt-2 text-2xl font-semibold text-primary">{value}</p>
+    </button>
+  );
+}
+
+function StatusSummaryCard({ label, value }: { label: string; value: number }) {
+  return (
+    <article className="rounded-[20px] border border-border bg-white/90 px-4 py-4 sm:rounded-[24px]">
+      <p className="text-sm text-muted">{label}</p>
+      <p className="mt-2 text-2xl font-semibold text-primary">{value}</p>
     </article>
   );
 }
