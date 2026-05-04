@@ -1088,8 +1088,7 @@ export default function MemberContentPage() {
 
         {verificationMessage ? <p className="mt-4 text-sm text-emerald-700">{verificationMessage}</p> : null}
 
-        {verificationFormExpanded ? (
-          <form onSubmit={handleVerificationSubmit} className="mt-5 space-y-5">
+        <form onSubmit={handleVerificationSubmit} className={verificationFormExpanded ? "mt-5 space-y-5" : "mt-5 hidden space-y-5"}>
           <section className="rounded-[20px] border border-border bg-white/92 p-4 sm:rounded-[24px] sm:p-5">
             <div className="mb-4">
               <h3 className="text-base font-medium text-primary">企业基础信息</h3>
@@ -1188,8 +1187,8 @@ export default function MemberContentPage() {
               {savingVerification ? "提交中..." : "提交认证资料"}
             </button>
           </div>
-          </form>
-        ) : (
+        </form>
+        {!verificationFormExpanded ? (
           <div className="mt-5 rounded-[20px] border border-dashed border-border bg-white/80 px-4 py-5 text-sm leading-6 text-muted sm:rounded-[24px] sm:px-5">
             {data.latestVerification?.status === "approved"
               ? "企业认证资料已审核通过。如需更新企业主体资料，可展开后重新提交审核。"
@@ -1197,7 +1196,7 @@ export default function MemberContentPage() {
                 ? "企业认证资料已提交，正在审核中。如需核对已填信息，可展开查看当前表单内容。"
                 : "认证资料表单已收起。需要补充、修改或重新提交时，可点击上方“展开认证资料”。"}
           </div>
-        )}
+        ) : null}
       </section>
 
       <section id="recent-submissions" className="rounded-[24px] border border-border bg-surface-elevated p-4 shadow-[0_14px_30px_rgba(15,23,42,0.06)] sm:rounded-[28px] sm:p-6 sm:shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
