@@ -1,6 +1,7 @@
 ﻿import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AboutBrandExpandable } from "@/components/entity-profile/AboutBrandExpandable";
 import { articleOrderByPinnedLatest } from "@/lib/articles";
 import { htmlToPlainText, toSummaryText } from "@/lib/brand-content";
 import {
@@ -77,30 +78,6 @@ function buildContactHref(value: string | null | undefined) {
   const phone = input.replace(/[^\d+]/g, "");
   if (phone) return `tel:${phone}`;
   return null;
-}
-
-function chunkParagraphs(value: string) {
-  return value
-    .split(/\n{2,}/)
-    .map((item) => item.trim())
-    .filter(Boolean)
-    .slice(0, 4);
-}
-
-function splitSentences(value: string) {
-  return value
-    .split(/(?<=[。！？])/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
-function isBusinessScopeParagraph(value: string) {
-  const text = value.replace(/\s+/g, "");
-  if (!text) return false;
-  return (
-    /(加工|销售|制造|安装|维修|进出口|依法须经批准|经营活动)/.test(text) &&
-    /(木门|柜|衣柜|家具|护墙|木制|林木)/.test(text)
-  );
 }
 
 function shortText(value: string | null | undefined, maxLength = 18) {
@@ -205,21 +182,15 @@ function buildFallbackGallery(name: string, productSystem?: string | null): Gall
   ];
 }
 
-function buildAboutBlocks(
+function buildAboutFallback(
   name: string,
   input: {
     positioning?: string | null;
-    introPlain: string;
     productSystem?: string | null;
     region?: string | null;
     area?: string | null;
   },
 ) {
-  const introPieces = chunkParagraphs(input.introPlain);
-  if (introPieces.length >= 2) {
-    return introPieces.slice(0, 3);
-  }
-
   return [
     `${name}${input.region ? `立足${buildLocationLabel(input.region, input.area)}` : ""}，持续完善品牌展示、项目沟通与空间落地能力。`,
     input.productSystem
@@ -228,25 +199,7 @@ function buildAboutBlocks(
     input.positioning
       ? `${toSummaryText(input.positioning, 44)}，更关注空间气质、材质协调与整体完成度。`
       : "在方案呈现、工艺细节与合作节奏之间保持稳定平衡，让项目推进更顺畅。",
-  ];
-}
-
-function buildAboutParagraphs(introPlain: string, fallbackBlocks: string[]) {
-  const cleaned = chunkParagraphs(introPlain)
-    .map((item) =>
-      splitSentences(item)
-        .filter((sentence) => !isBusinessScopeParagraph(sentence))
-        .join("")
-        .replace(/\s+/g, " ")
-        .trim(),
-    )
-    .filter((item) => item && !isBusinessScopeParagraph(item));
-
-  if (cleaned.length > 0) {
-    return cleaned.slice(0, 2);
-  }
-
-  return fallbackBlocks.slice(0, 2);
+  ].join("");
 }
 
 export async function generateMetadata({ params }: Props) {
@@ -414,14 +367,12 @@ export default async function EnterprisePage({ params, searchParams }: Props) {
   const contactPrimaryHref =
     contactView.primaryCtaHref === "#contact-panel" ? secondaryWebsiteHref || "/membership" : contactView.primaryCtaHref;
   const heroTagline = heroView.tags[0] || buildHeroSubtitle(name, { positioning: ent.positioning, intro: ent.intro });
-  const aboutBlocks = buildAboutBlocks(name, {
+  const aboutFallback = buildAboutFallback(name, {
     positioning: ent.positioning,
-    introPlain,
     productSystem: ent.productSystem,
     region: ent.region,
     area: ent.area,
   });
-  const aboutParagraphs = buildAboutParagraphs(introPlain, aboutBlocks);
   const logoUrl = ent.logoUrl ? resolveUploadedImageUrl(ent.logoUrl) : null;
 
   return (
@@ -484,23 +435,7 @@ export default async function EnterprisePage({ params, searchParams }: Props) {
               </div>
 
               <div className="mt-5 rounded-[22px] border border-[rgba(140,111,78,0.08)] bg-[rgba(255,252,247,0.86)] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] sm:mt-7 sm:rounded-[26px] sm:p-7">
-                <div className="mx-auto max-w-4xl space-y-4 sm:space-y-5">
-                  {aboutParagraphs.slice(0, 3).map((paragraph, index) => (
-                    <p
-                      key={`${name}-about-${index}`}
-                      className="text-[15px] leading-7 text-[#3d3025] sm:text-[16px] sm:leading-8"
-                    >
-                      {paragraph}
-                    </p>
-                  ))}
-                  <a
-                    href="#contact-panel"
-                    className="inline-flex items-center gap-2 text-sm font-medium text-[#9f7a46] transition hover:text-[#876234]"
-                  >
-                    了解更多
-                    <span aria-hidden="true">→</span>
-                  </a>
-                </div>
+                <AboutBrandExpandable html={ent.intro} plainText={introPlain} fallbackText={aboutFallback} />
               </div>
             </div>
           </section>
