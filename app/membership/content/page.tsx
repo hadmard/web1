@@ -180,6 +180,7 @@ function normalizeSettings(settings: SiteSettings): SiteSettings {
     ...settings,
     template: "brand_showcase",
     contactLabel: settings.primaryCtaLabel || "立即咨询",
+    homepageTags: settings.homepageTags.filter(Boolean).slice(0, 1),
     modules: {
       ...settings.modules,
       intro: true,
@@ -488,20 +489,17 @@ export default function MemberContentPage() {
             <div className="space-y-4">
               <Field label="企业名称" value={siteSettings.heroTitle} onChange={(value) => setSiteSettings((prev) => ({ ...prev, heroTitle: value }))} />
               <div className="grid gap-4 md:grid-cols-2">
-                <InfoCard title="品牌定位" text="显示在首页头图副标题。请到企业资料里填写。" actionHref="/membership/profile" actionLabel="去填写" />
-                <InfoCard title="关于品牌" text="企业主页正文直接读取企业资料。" actionHref="/membership/profile" actionLabel="去填写" />
+                <InfoCard title="品牌定位" text="当这里未填写品牌标签时，会作为首图主标题下方的兜底副标题。请到企业资料里填写。" actionHref="/membership/profile" actionLabel="去填写" />
+                <InfoCard title="关于品牌" text="企业页这里只展示正文介绍，不再单独生成品牌摘要卡片。" actionHref="/membership/profile" actionLabel="去填写" />
               </div>
               <Field
                 label="品牌标签"
-                value={siteSettings.homepageTags.join(", ")}
+                helper="只填写 1 条，展示在企业页首图主标题下方。建议 4-12 个字。"
+                value={siteSettings.homepageTags[0] || ""}
                 onChange={(value) =>
                   setSiteSettings((prev) => ({
                     ...prev,
-                    homepageTags: value
-                      .split(/[,，]/)
-                      .map((item) => item.trim())
-                      .filter(Boolean)
-                      .slice(0, 6),
+                    homepageTags: value.trim() ? [value.trim()] : [],
                   }))
                 }
               />
@@ -702,15 +700,18 @@ function Field({
   value,
   onChange,
   type = "text",
+  helper,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   type?: string;
+  helper?: string;
 }) {
   return (
     <label className="block">
       <span className="text-sm text-primary">{label}</span>
+      {helper ? <p className="mt-1 text-xs leading-5 text-muted">{helper}</p> : null}
       <input
         type={type}
         className="mt-1 w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm text-primary"

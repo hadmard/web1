@@ -205,21 +205,6 @@ function buildFallbackGallery(name: string, productSystem?: string | null): Gall
   ];
 }
 
-function buildAboutSummary(
-  name: string,
-  input: {
-    positioning?: string | null;
-    intro?: string | null;
-    productSystem?: string | null;
-    region?: string | null;
-  },
-) {
-  return (
-    toSummaryText(input.positioning || input.intro, 120) ||
-    `${name}围绕${input.productSystem || "整木与空间服务"}建立统一展示与交付表达，持续服务${input.region || "区域"}客户咨询与项目合作。`
-  );
-}
-
 function buildAboutBlocks(
   name: string,
   input: {
@@ -428,13 +413,7 @@ export default async function EnterprisePage({ params, searchParams }: Props) {
   const contactPrimaryLabel = contactView.hasRealContact ? heroView.primaryCtaLabel : "提交咨询";
   const contactPrimaryHref =
     contactView.primaryCtaHref === "#contact-panel" ? secondaryWebsiteHref || "/membership" : contactView.primaryCtaHref;
-  const aboutSummary = buildAboutSummary(name, {
-    positioning: ent.positioning,
-    intro: ent.intro,
-    productSystem: ent.productSystem,
-    region: ent.region,
-  });
-  const heroSubtitle = buildHeroSubtitle(name, { positioning: ent.positioning, intro: ent.intro });
+  const heroTagline = heroView.tags[0] || buildHeroSubtitle(name, { positioning: ent.positioning, intro: ent.intro });
   const aboutBlocks = buildAboutBlocks(name, {
     positioning: ent.positioning,
     introPlain,
@@ -476,12 +455,9 @@ export default async function EnterprisePage({ params, searchParams }: Props) {
               <h1 className="mt-3 max-w-4xl font-serif text-[2rem] leading-[1.04] text-white drop-shadow-[0_10px_28px_rgba(0,0,0,0.3)] sm:text-6xl lg:text-[80px]">{name}</h1>
               <div className="mt-3 w-full max-w-full rounded-[22px] border border-white/12 bg-[linear-gradient(180deg,rgba(10,8,6,0.72),rgba(10,8,6,0.48))] px-4 py-3.5 shadow-[0_16px_36px_rgba(0,0,0,0.24)] backdrop-blur-[8px] sm:mt-5 sm:inline-flex sm:w-auto sm:max-w-2xl sm:rounded-[24px] sm:bg-[linear-gradient(180deg,rgba(10,8,6,0.52),rgba(10,8,6,0.28))] sm:px-5 sm:py-4">
                 <p className="max-w-none text-[1.08rem] font-medium leading-7 text-white drop-shadow-[0_8px_24px_rgba(0,0,0,0.48)] sm:max-w-2xl sm:text-[32px] sm:leading-tight">
-                  {heroSubtitle}
+                  {heroTagline}
                 </p>
               </div>
-              <p className="mt-3 max-w-lg px-1 text-sm leading-6 text-white/82 sm:hidden">
-                {aboutSummary}
-              </p>
             </div>
           </div>
         </section>
@@ -508,31 +484,22 @@ export default async function EnterprisePage({ params, searchParams }: Props) {
               </div>
 
               <div className="mt-5 rounded-[22px] border border-[rgba(140,111,78,0.08)] bg-[rgba(255,252,247,0.86)] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] sm:mt-7 sm:rounded-[26px] sm:p-7">
-                <div className="grid gap-5 lg:grid-cols-[minmax(0,0.84fr),minmax(0,1.16fr)] lg:gap-8">
-                  <div className="rounded-[20px] border border-[rgba(159,122,70,0.12)] bg-[linear-gradient(180deg,rgba(255,255,255,0.72),rgba(252,246,238,0.92))] p-4 sm:rounded-[22px] sm:p-5">
-                    <p className="text-[11px] uppercase tracking-[0.22em] text-[#9f7a46]">品牌摘要</p>
-                    <p className="mt-3 text-[15px] leading-7 text-[#3d3025] sm:text-base sm:leading-8">
-                      {aboutSummary}
-                    </p>
-                  </div>
-
-                  <div className="space-y-4 sm:space-y-5">
-                    {aboutParagraphs.slice(0, 2).map((paragraph, index) => (
-                      <p
-                        key={`${name}-about-${index}`}
-                        className="text-[15px] leading-7 text-[#3d3025] sm:text-base sm:leading-8"
-                      >
-                        {paragraph}
-                      </p>
-                    ))}
-                    <a
-                      href="#contact-panel"
-                      className="inline-flex items-center gap-2 text-sm font-medium text-[#9f7a46] transition hover:text-[#876234]"
+                <div className="mx-auto max-w-4xl space-y-4 sm:space-y-5">
+                  {aboutParagraphs.slice(0, 3).map((paragraph, index) => (
+                    <p
+                      key={`${name}-about-${index}`}
+                      className="text-[15px] leading-7 text-[#3d3025] sm:text-[16px] sm:leading-8"
                     >
-                      了解更多
-                      <span aria-hidden="true">→</span>
-                    </a>
-                  </div>
+                      {paragraph}
+                    </p>
+                  ))}
+                  <a
+                    href="#contact-panel"
+                    className="inline-flex items-center gap-2 text-sm font-medium text-[#9f7a46] transition hover:text-[#876234]"
+                  >
+                    了解更多
+                    <span aria-hidden="true">→</span>
+                  </a>
                 </div>
               </div>
             </div>

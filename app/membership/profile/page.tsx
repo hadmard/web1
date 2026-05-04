@@ -311,6 +311,7 @@ export default function MembershipProfilePage() {
               <div className="mt-6 border-t border-border/70 pt-6">
                 <label className="block">
                   <span className="text-sm font-medium text-primary">关于品牌</span>
+                  <p className="mt-1 text-xs leading-6 text-muted">这里只保留企业页“关于品牌”的正文介绍，不再单独生成摘要卡片。</p>
                   <div className="mt-3">
                     <RichEditor value={form.intro} onChange={(value) => setForm((prev) => ({ ...prev, intro: value }))} minHeight={260} placeholder="建议用 2-4 段讲清品牌故事、代表产品、服务对象和合作能力。" />
                   </div>
@@ -322,7 +323,7 @@ export default function MembershipProfilePage() {
               <section className="rounded-[24px] border border-border bg-surface-elevated p-4 shadow-[0_14px_30px_rgba(15,23,42,0.06)] sm:rounded-[28px] sm:p-6 sm:shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
                 <div>
                   <h2 className="text-lg font-semibold text-primary">品牌定位</h2>
-                  <p className="mt-2 text-sm text-muted">这里只保留一个“品牌定位”字段，会展示在前台首屏标题下方的副标题位置。</p>
+                  <p className="mt-2 text-sm text-muted">当企业主页未填写“品牌标签”时，这里会作为首图主标题下方的兜底副标题展示。</p>
                 </div>
                 <div className="mt-5 max-w-xl">
                   {ADVANCED_FIELDS.map((field) => (

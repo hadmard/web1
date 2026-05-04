@@ -66,7 +66,7 @@ export function normalizeHomepageTags(
   configuredTags: string[],
   enterprise: Pick<EnterpriseBase, "productSystem" | "craftLevel" | "region" | "area" | "positioning">,
 ) {
-  if (configuredTags.length > 0) return configuredTags.slice(0, 6);
+  if (configuredTags.length > 0) return configuredTags.slice(0, 1);
 
   return Array.from(
     new Set(
@@ -76,7 +76,7 @@ export function normalizeHomepageTags(
         compactTag(enterprise.productSystem, 10),
       ].filter(Boolean) as string[],
     ),
-  ).slice(0, 3);
+  ).slice(0, 1);
 }
 
 export function resolveEnterpriseHomepageHero(
