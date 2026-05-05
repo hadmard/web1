@@ -1122,18 +1122,17 @@ function PublishCenterPageInner() {
       </nav>
 
       <section className="mb-6 overflow-hidden rounded-[30px] border border-border bg-surface-elevated shadow-[0_24px_60px_rgba(15,23,42,0.08)]">
-        <div className="border-b border-border/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(244,239,230,0.9))] px-6 py-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="border-b border-border/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(244,239,230,0.9))] px-6 py-5">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h1 className="font-serif text-3xl font-semibold tracking-tight text-primary">内容发布中心</h1>
               <p className="mt-3 text-sm text-muted">
                 当前身份：{role === "SUPER_ADMIN" ? "主管理员" : role === "ADMIN" ? "子管理员" : "会员"} /{" "}
                 {memberType === "enterprise_advanced" ? "企业VIP会员" : memberType === "enterprise_basic" ? "企业基础会员" : "个人会员"}
               </p>
-              <p className="mt-2 text-sm text-muted">栏目保持全量可见，未开通栏目会锁定；已开通栏目按 {memberAccess.year} 年授权执行。</p>
               <p className="mt-2 text-sm text-muted">{verificationStatusText}</p>
             </div>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-3 lg:justify-end">
               <InlinePageBackLink href="/membership/content" label="返回工作台" />
               <Link href={verificationActionHref} className="apple-inline-link">
                 {verificationActionLabel}
@@ -1141,21 +1140,27 @@ function PublishCenterPageInner() {
             </div>
           </div>
         </div>
-        <div className="grid gap-3 px-6 py-5 md:grid-cols-3">
-          <article className="rounded-2xl border border-border bg-white/80 px-4 py-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-muted">当前栏目</p>
-            <p className="mt-2 text-lg font-semibold text-primary">{selectedTabDef.label}</p>
-            <p className="mt-2 text-sm text-muted">{selectedCategoryQuotaLabel}</p>
+        <div className="grid gap-3 px-6 py-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)]">
+          <article className="rounded-2xl border border-border bg-white/82 px-4 py-3">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-muted">当前栏目</p>
+            <div className="mt-2 flex flex-wrap items-end gap-x-3 gap-y-1">
+              <p className="text-lg font-semibold text-primary">{selectedTabDef.label}</p>
+              <p className="text-sm text-muted">{selectedCategoryQuotaLabel}</p>
+            </div>
           </article>
-          <article className="rounded-2xl border border-border bg-white/80 px-4 py-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-muted">当前子栏目</p>
-            <p className="mt-2 text-lg font-semibold text-primary">{activeSubAccess?.label ?? "待选择"}</p>
-            <p className="mt-2 text-sm text-muted">{selectedSubcategoryQuotaLabel}</p>
+          <article className="rounded-2xl border border-border bg-white/82 px-4 py-3">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-muted">当前子栏目</p>
+            <div className="mt-2 flex flex-wrap items-end gap-x-3 gap-y-1">
+              <p className="text-lg font-semibold text-primary">{activeSubAccess?.label ?? "待选择"}</p>
+              <p className="text-sm text-muted">{selectedSubcategoryQuotaLabel}</p>
+            </div>
           </article>
-          <article className="rounded-2xl border border-border bg-white/80 px-4 py-4">
-            <p className="text-xs uppercase tracking-[0.18em] text-muted">栏目状态</p>
-            <p className="mt-2 text-lg font-semibold text-primary">{enabledSubcategoryCount} 个已开通子栏目</p>
-            <p className="mt-2 text-sm text-muted">个体授权可以把基础会员额度单独提升到高于默认值。</p>
+          <article className="rounded-2xl border border-border bg-white/82 px-4 py-3">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-muted">栏目状态</p>
+            <div className="mt-2 flex flex-wrap items-end gap-x-3 gap-y-1">
+              <p className="text-lg font-semibold text-primary">{enabledSubcategoryCount} 个已开通子栏目</p>
+              <p className="text-sm text-muted">按当前授权执行</p>
+            </div>
           </article>
         </div>
       </section>
@@ -1223,9 +1228,9 @@ function PublishCenterPageInner() {
         </section>
       ) : null}
 
-      <div className="grid lg:grid-cols-[220px_1fr] gap-4 mb-8">
+      <div className="mb-8 grid gap-4 lg:grid-cols-[208px_1fr] lg:items-start">
         <aside className="rounded-[28px] border border-border bg-surface-elevated p-4 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-muted">发布栏目</p>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-muted">发布栏目</p>
           <ul className="space-y-1">
             {allCategoryAccess.map((cat) => {
               const catTab = tabFromHref(cat.href);
@@ -1258,28 +1263,36 @@ function PublishCenterPageInner() {
               );
             })}
           </ul>
-            <div className="mt-4 rounded-2xl border border-border bg-surface px-3 py-3 text-xs text-muted">
+            <div className="mt-3 rounded-2xl border border-border bg-surface px-3 py-3 text-xs text-muted">
               当前栏目：<span className="text-primary">{selectedTabDef.label}</span>
             </div>
-            <div className="mt-4 rounded-2xl border border-border bg-[linear-gradient(180deg,rgba(255,253,249,0.98),rgba(248,243,236,0.94))] p-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">已发内容</p>
-              <p className="mt-2 text-sm text-primary">
-                当前栏目共 {filteredItems.length} 条，已通过 {filteredStatusSummary.approved} 条，待审核 {filteredStatusSummary.pending} 条。
-              </p>
-              <p className="mt-2 text-xs leading-6 text-muted">
-                每页展示 20 条，不显示阅读量。点击后可查看全部历史内容、预览已通过稿件，或继续修改。
-              </p>
-              <Link
-                href={`/membership/content/submissions?tab=${encodeURIComponent(safeTab)}`}
-                className="mt-3 inline-flex rounded-full border border-border bg-white/85 px-3 py-2 text-xs font-medium text-primary transition hover:bg-white hover:text-accent"
-              >
-                查看当前栏目内容
-              </Link>
+            <div className="mt-3 rounded-2xl border border-border bg-[linear-gradient(180deg,rgba(255,253,249,0.98),rgba(248,243,236,0.94))] p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">已发内容</p>
+                  <p className="mt-2 text-sm text-primary">
+                    当前栏目共 {filteredItems.length} 条，已通过 {filteredStatusSummary.approved} 条，待审核 {filteredStatusSummary.pending} 条。
+                  </p>
+                </div>
+                <Link
+                  href={`/membership/content/submissions?tab=${encodeURIComponent(safeTab)}`}
+                  className="inline-flex shrink-0 rounded-full border border-border bg-white/90 px-3 py-2 text-xs font-medium text-primary transition hover:bg-white hover:text-accent"
+                >
+                  查看记录
+                </Link>
+              </div>
+              <div className="mt-3 h-px bg-border/80" />
+              <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted">
+                <span className="rounded-full border border-border bg-white/80 px-2.5 py-1">草稿 {filteredStatusSummary.draft}</span>
+                <span className="rounded-full border border-border bg-white/80 px-2.5 py-1">待审核 {filteredStatusSummary.pending}</span>
+                <span className="rounded-full border border-border bg-white/80 px-2.5 py-1">已通过 {filteredStatusSummary.approved}</span>
+                <span className="rounded-full border border-border bg-white/80 px-2.5 py-1">已退回 {filteredStatusSummary.rejected}</span>
+              </div>
             </div>
           </aside>
 
         <div className="space-y-4">
-        <form onSubmit={submit} className="rounded-[28px] border border-border bg-surface-elevated p-5 shadow-[0_16px_40px_rgba(15,23,42,0.06)] space-y-4">
+        <form onSubmit={submit} className="space-y-4 rounded-[28px] border border-border bg-surface-elevated p-5 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
           {!selectedCategoryAccess && (
             <div className="rounded-xl border border-dashed border-border bg-surface p-4 text-sm text-muted">
               当前账号还没有开通任何发布栏目，请联系管理员分配子栏目和年度数量。
