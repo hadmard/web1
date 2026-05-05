@@ -22,6 +22,7 @@ export type MemberSiteSeoFields = {
 
 const FORBIDDEN_SEO_TOKENS = ["Enterprise Showcase", "Zhonghua Zhengmu"];
 const HTML_ENTITY_PATTERN = /&(nbsp|amp|lt|gt|quot|apos|#\d+|#x[0-9a-f]+);/i;
+const SITE_TITLE_SUFFIX_PATTERN = /(?:\s*[｜|]\s*整木网)+$/i;
 
 function normalizeWhitespace(value: string) {
   return value.replace(/\s+/g, " ").trim();
@@ -33,7 +34,7 @@ function normalizeBrandName(value: string) {
 
 function isPlaceholder(value: string) {
   if (!value) return true;
-  return /^[-|/\\·,.，。:：]+$/.test(value) || value === "暂无" || value === "null" || value === "undefined";
+  return /^[-|/\\·,.，。]+$/.test(value) || value === "暂无" || value === "null" || value === "undefined";
 }
 
 function dedupeSegments(values: Array<string | null | undefined>) {
@@ -57,11 +58,19 @@ function clampText(value: string, maxLength: number) {
   return `${value.slice(0, Math.max(0, maxLength - 1)).trim()}…`;
 }
 
+function stripMemberSiteSeoTitleSuffix(value: string) {
+  return normalizeWhitespace(value.replace(SITE_TITLE_SUFFIX_PATTERN, ""));
+}
+
 export function cleanSeoText(input: unknown, maxLength = 160) {
   if (typeof input !== "string") return "";
   const normalized = normalizeWhitespace(htmlToPlainText(input)).replace(/[|]+/g, "｜");
   if (!normalized || isPlaceholder(normalized)) return "";
   return clampText(normalizeBrandName(normalized), maxLength);
+}
+
+function cleanSeoTitle(input: unknown, maxLength = 60) {
+  return clampText(stripMemberSiteSeoTitleSuffix(cleanSeoText(input, maxLength)), maxLength);
 }
 
 function containsHtmlLikeContent(input: unknown) {
@@ -76,10 +85,7 @@ export function containsHistoricalSeoNoise(input: unknown) {
 }
 
 function resolveCompanyName(source: MemberSiteSeoSource) {
-  const name = cleanSeoText(
-    source.companyShortName || source.companyName || source.heroTitle || "",
-    24,
-  );
+  const name = cleanSeoText(source.companyShortName || source.companyName || source.heroTitle || "", 24);
   return name || "会员企业主页";
 }
 
@@ -106,10 +112,7 @@ function resolveFocus(source: MemberSiteSeoSource) {
 
 function resolveSummary(source: MemberSiteSeoSource) {
   return cleanSeoText(
-    toSummaryText(
-      source.intro || source.positioning || source.productSystem || source.contactIntro || "",
-      72,
-    ),
+    toSummaryText(source.intro || source.positioning || source.productSystem || source.contactIntro || "", 72),
     72,
   );
 }
@@ -136,7 +139,7 @@ function isWocaEnterprise(source: MemberSiteSeoSource) {
 export function generateMemberSiteSeo(source: MemberSiteSeoSource): MemberSiteSeoFields {
   if (isWocaEnterprise(source)) {
     return {
-      title: "丹麦 WOCA 中国区代理｜木作清洁保养｜整木网",
+      title: "丹麦 WOCA 中国区代理｜木作清洁保养",
       description:
         "丹麦 WOCA 木作护理品牌中国区代理，面向整木定制、木地板、护墙板、木门、柜体等木制品场景，提供清洁、保养与护理产品及整木后市场服务方案。",
     };
@@ -149,10 +152,10 @@ export function generateMemberSiteSeo(source: MemberSiteSeoSource): MemberSiteSe
   const contactHint = resolveContactHint(source);
 
   const title = focus
-    ? `${companyName}｜${focus}｜整木网企业主页`
+    ? `${companyName}｜${focus}`
     : companyName === "会员企业主页"
-      ? "会员企业主页｜整木网"
-      : `${companyName}｜企业主页｜整木网`;
+      ? "会员企业主页"
+      : `${companyName}｜企业主页`;
 
   const description = clampText(
     dedupeSegments([
@@ -181,11 +184,11 @@ export function normalizeMemberSiteSeo(
   const generated = generateMemberSiteSeo(source);
   const rawTitle = typeof currentSeo?.title === "string" ? currentSeo.title : "";
   const rawDescription = typeof currentSeo?.description === "string" ? currentSeo.description : "";
-  const cleanTitle = cleanSeoText(rawTitle, 60);
+  const cleanTitle = cleanSeoTitle(rawTitle, 60);
   const cleanDescription = cleanSeoText(rawDescription, 160);
 
   return {
-    title: !cleanTitle || containsHistoricalSeoNoise(rawTitle) ? generated.title : clampText(cleanTitle, 60),
+    title: !cleanTitle || containsHistoricalSeoNoise(rawTitle) ? generated.title : cleanTitle,
     description:
       !cleanDescription || containsHistoricalSeoNoise(rawDescription)
         ? generated.description

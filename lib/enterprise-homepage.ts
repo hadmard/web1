@@ -3,6 +3,8 @@ import { normalizeMemberSiteSeo } from "@/lib/member-site-seo";
 import type { MemberSiteSettings } from "@/lib/member-site-settings";
 import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
 
+const SITE_TITLE_SUFFIX_PATTERN = /(?:\s*[｜|]\s*整木网)+$/i;
+
 type EnterpriseBase = {
   companyName?: string | null;
   companyShortName?: string | null;
@@ -231,6 +233,7 @@ export function resolveEnterpriseHomepageSeo(
     area: enterprise.area,
     contactIntro: siteSettings.contact.contactIntro,
   });
+  const dedupedTitle = normalizedSeo.title.replace(SITE_TITLE_SUFFIX_PATTERN, "").trim() || name;
 
   const imageUrl =
     pickFirst(siteSettings.seo.imageUrl)
@@ -242,7 +245,7 @@ export function resolveEnterpriseHomepageSeo(
           : null;
 
   return {
-    title: normalizedSeo.title,
+    title: dedupedTitle,
     description: normalizedSeo.description || `${name}的企业主页，展示品牌定位、能力表达与联系转化入口。`,
     imageUrl,
   };
