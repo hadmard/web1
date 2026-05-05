@@ -25,7 +25,7 @@ export async function PATCH(request: NextRequest) {
 
   const body = await request.json().catch(() => ({}));
   const settings = normalizeMemberSiteSettings(body);
-  await saveMemberSiteSettings(session.sub, settings);
+  const savedSettings = await saveMemberSiteSettings(session.sub, settings);
 
   await writeOperationLog({
     actorId: session.sub,
@@ -36,5 +36,5 @@ export async function PATCH(request: NextRequest) {
     detail: JSON.stringify({ memberType: session.memberType }),
   });
 
-  return NextResponse.json({ ok: true, settings });
+  return NextResponse.json({ ok: true, settings: savedSettings });
 }

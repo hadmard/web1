@@ -2,8 +2,9 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { MAX_UPLOAD_IMAGE_MB, uploadImageToServer } from "@/lib/client-image";
+import { generateMemberSiteSeo, normalizeMemberSiteSeo, type MemberSiteSeoSource } from "@/lib/member-site-seo";
 import { PUBLIC_CONTACT_PHONE } from "@/lib/public-site-config";
 import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
 
@@ -239,9 +240,9 @@ const EMPTY_GALLERY_FORM: GalleryFormState = {
 };
 
 function normalizeSettings(settings: SiteSettings): SiteSettings {
-  return {
+  const normalizedBase = {
     ...settings,
-    template: "brand_showcase",
+    template: "brand_showcase" as const,
     contactLabel: settings.primaryCtaLabel || "立即咨询",
     homepageTags: settings.homepageTags.filter(Boolean).slice(0, 1),
     modules: {
@@ -256,6 +257,33 @@ function normalizeSettings(settings: SiteSettings): SiteSettings {
       terms: false,
       video: false,
     },
+  };
+
+  return {
+    ...normalizedBase,
+    seo: {
+      ...normalizedBase.seo,
+      ...normalizeMemberSiteSeo(normalizedBase.seo, buildMemberSiteSeoSource(normalizedBase)),
+    },
+  };
+}
+
+function buildMemberSiteSeoSource(
+  settings: SiteSettings,
+  enterprise?: DashboardData["enterprise"],
+  enterpriseProfileSummary?: EnterpriseProfileSummary,
+): MemberSiteSeoSource {
+  return {
+    companyName: enterprise?.companyName,
+    companyShortName: enterprise?.companyShortName,
+    heroTitle: settings.heroTitle,
+    heroSubtitle: settings.heroSubtitle,
+    homepageTagline: settings.homepageTagline || settings.homepageTags[0] || "",
+    intro: enterpriseProfileSummary?.intro,
+    positioning: enterpriseProfileSummary?.positioning,
+    productSystem: settings.homepageTags[0] || "",
+    city: settings.contact.city,
+    contactIntro: settings.contact.contactIntro,
   };
 }
 
@@ -311,6 +339,7 @@ export default function MemberContentPage() {
   const [siteMessage, setSiteMessage] = useState("");
   const [savingSite, setSavingSite] = useState(false);
   const [uploadingHeroImage, setUploadingHeroImage] = useState(false);
+  const autoSiteSeoRef = useRef({ title: "", description: "" });
 
   const [account, setAccount] = useState("");
   const [phone, setPhone] = useState("");
@@ -362,6 +391,10 @@ export default function MemberContentPage() {
         const siteBody = await siteRes.json().catch(() => ({}));
         if (siteRes.ok) {
           const nextSettings = normalizeSettings(siteBody.settings ?? EMPTY_SETTINGS);
+          autoSiteSeoRef.current = {
+            title: nextSettings.seo.title,
+            description: nextSettings.seo.description,
+          };
           setSiteSettings(nextSettings);
           setSiteSavedSnapshot(JSON.stringify(nextSettings));
         }
@@ -405,6 +438,15 @@ export default function MemberContentPage() {
   const siteSnapshot = useMemo(() => JSON.stringify(siteSettings), [siteSettings]);
   const hasUnsavedSiteChanges = siteSnapshot !== siteSavedSnapshot;
   const missingMemberPhone = !phone.trim();
+  const siteSeoSource = useMemo(
+    () => buildMemberSiteSeoSource(siteSettings, data?.enterprise, enterpriseProfileSummary),
+    [
+      data?.enterprise,
+      enterpriseProfileSummary,
+      siteSettings,
+    ]
+  );
+  const generatedSiteSeo = useMemo(() => generateMemberSiteSeo(siteSeoSource), [siteSeoSource]);
   const aboutBrandFilled = useMemo(() => hasMeaningfulContent(enterpriseProfileSummary?.intro), [enterpriseProfileSummary?.intro]);
   const enterpriseProfileStatusText = useMemo(() => {
     if (aboutBrandFilled) return "关于品牌已填写，可前往更新正文内容。";
@@ -414,6 +456,33 @@ export default function MemberContentPage() {
     () => (aboutBrandFilled ? "去更新关于品牌" : "去填写关于品牌"),
     [aboutBrandFilled]
   );
+
+  useEffect(() => {
+    setSiteSettings((prev) => {
+      const nextTitle =
+        !prev.seo.title.trim() || prev.seo.title === autoSiteSeoRef.current.title
+          ? generatedSiteSeo.title
+          : prev.seo.title;
+      const nextDescription =
+        !prev.seo.description.trim() || prev.seo.description === autoSiteSeoRef.current.description
+          ? generatedSiteSeo.description
+          : prev.seo.description;
+
+      autoSiteSeoRef.current = generatedSiteSeo;
+      if (nextTitle === prev.seo.title && nextDescription === prev.seo.description) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        seo: {
+          ...prev.seo,
+          title: nextTitle,
+          description: nextDescription,
+        },
+      };
+    });
+  }, [generatedSiteSeo]);
   const gallerySummary = useMemo(
     () =>
       galleryItems.reduce(
@@ -438,6 +507,19 @@ export default function MemberContentPage() {
     }
   }
 
+  function handleRegenerateSiteSeo() {
+    autoSiteSeoRef.current = generatedSiteSeo;
+    setSiteSettings((prev) => ({
+      ...prev,
+      seo: {
+        ...prev.seo,
+        title: generatedSiteSeo.title,
+        description: generatedSiteSeo.description,
+      },
+    }));
+    setSiteMessage("已根据当前企业资料重新生成 SEO，点击保存后生效。");
+  }
+
   async function handleHeroImageUpload(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -459,7 +541,13 @@ export default function MemberContentPage() {
     setSavingSite(true);
     setSiteMessage("正在保存...");
     try {
-      const payload = normalizeSettings(siteSettings);
+      const payload = normalizeSettings({
+        ...siteSettings,
+        seo: {
+          ...siteSettings.seo,
+          ...normalizeMemberSiteSeo(siteSettings.seo, siteSeoSource),
+        },
+      });
       const res = await fetch("/api/member/site-settings", {
         method: "PATCH",
         credentials: "include",
@@ -472,6 +560,10 @@ export default function MemberContentPage() {
         return;
       }
       const nextSettings = normalizeSettings(body.settings ?? payload);
+      autoSiteSeoRef.current = {
+        title: nextSettings.seo.title,
+        description: nextSettings.seo.description,
+      };
       setSiteSettings(nextSettings);
       setSiteSavedSnapshot(JSON.stringify(nextSettings));
       setSiteMessage("企业主页配置已保存");
@@ -997,6 +1089,7 @@ export default function MemberContentPage() {
             />
             <TextAreaField
               label="SEO 描述"
+              helper="系统会自动生成适合搜索展示的纯文本摘要，不建议填写 HTML。"
               value={siteSettings.seo.description}
               onChange={(value) => setSiteSettings((prev) => ({ ...prev, seo: { ...prev.seo, description: value } }))}
             />
@@ -1005,6 +1098,7 @@ export default function MemberContentPage() {
           <div className="mt-5 grid gap-4 md:grid-cols-2">
             <Field
               label="SEO 标题"
+              helper="系统会根据企业名称、定位和简介自动生成，可手动调整。"
               value={siteSettings.seo.title}
               onChange={(value) => setSiteSettings((prev) => ({ ...prev, seo: { ...prev.seo, title: value } }))}
             />
@@ -1017,14 +1111,24 @@ export default function MemberContentPage() {
 
           <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm leading-6 text-muted">{siteMessage || "保存后企业主页会使用最新配置。"}</p>
-            <button
-              type="button"
-              onClick={() => void handleSaveSite()}
-              disabled={savingSite || uploadingHeroImage || !hasUnsavedSiteChanges}
-              className="w-full rounded-full bg-accent px-5 py-3 text-sm font-medium text-white shadow-[0_16px_36px_rgba(180,154,107,0.28)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto sm:py-2.5"
-            >
-              {savingSite ? "保存中..." : uploadingHeroImage ? "上传中..." : hasUnsavedSiteChanges ? "保存主页配置" : "已保存"}
-            </button>
+            <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+              <button
+                type="button"
+                onClick={handleRegenerateSiteSeo}
+                disabled={savingSite || uploadingHeroImage}
+                className="w-full rounded-full border border-border bg-white px-5 py-3 text-sm font-medium text-primary transition hover:bg-surface disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto sm:py-2.5"
+              >
+                重新自动生成 SEO
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleSaveSite()}
+                disabled={savingSite || uploadingHeroImage || !hasUnsavedSiteChanges}
+                className="w-full rounded-full bg-accent px-5 py-3 text-sm font-medium text-white shadow-[0_16px_36px_rgba(180,154,107,0.28)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto sm:py-2.5"
+              >
+                {savingSite ? "保存中..." : uploadingHeroImage ? "上传中..." : hasUnsavedSiteChanges ? "保存主页配置" : "已保存"}
+              </button>
+            </div>
           </div>
         </section>
       ) : null}
@@ -1157,14 +1261,17 @@ function TextAreaField({
   label,
   value,
   onChange,
+  helper,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
+  helper?: string;
 }) {
   return (
     <label className="block">
       <span className="text-sm text-primary">{label}</span>
+      {helper ? <p className="mt-1 text-xs leading-5 text-muted">{helper}</p> : null}
       <textarea
         className="mt-1 min-h-24 w-full rounded-2xl border border-border bg-surface px-3 py-2 text-sm text-primary"
         value={value}

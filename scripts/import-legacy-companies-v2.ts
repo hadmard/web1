@@ -3,6 +3,7 @@ const { resolve, dirname } = require("node:path") as typeof import("node:path");
 const { PrismaClient } = require("@prisma/client") as typeof import("@prisma/client");
 const bcrypt = require("bcryptjs") as typeof import("bcryptjs");
 const { normalizeRichTextField } = require("../lib/brand-content") as typeof import("../lib/brand-content");
+const { generateMemberSiteSeo } = require("../lib/member-site-seo") as typeof import("../lib/member-site-seo");
 
 type TemplateKey = "brand_showcase" | "professional_service" | "simple_elegant";
 
@@ -363,6 +364,17 @@ function buildSiteSettings(row: LegacyCompanyRow): MemberSiteSettings {
   const intro = buildIntro(row);
   const contactLabel = asString(row.contact) ? "Contact Person" : "Contact Us";
   const tags = buildTags(row);
+  const generatedSeo = generateMemberSiteSeo({
+    companyName: asNullableString(row.name),
+    companyShortName: asNullableString(row.short_name),
+    heroTitle: companyName,
+    heroSubtitle: asNullableString(row.signature) ?? asNullableString(row.business_scope),
+    intro,
+    positioning: asNullableString(row.signature),
+    productSystem: asNullableString(row.business_scope),
+    city: buildArea(row),
+    region: buildRegion(row),
+  });
 
   return {
     template: chooseTemplate(row),
@@ -387,9 +399,9 @@ function buildSiteSettings(row: LegacyCompanyRow): MemberSiteSettings {
       video: Boolean(asNullableString(row.video)),
     },
     seo: {
-      title: `${companyName} | Enterprise Showcase | Zhonghua Zhengmu`,
+      title: generatedSeo.title,
       keywords: tags.join(","),
-      description: limitText(intro ?? asNullableString(row.signature), 160),
+      description: generatedSeo.description,
     },
     sync: {
       websiteUrl: toAbsoluteUrl(asNullableString(row.website)) ?? "",

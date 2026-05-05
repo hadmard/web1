@@ -1,4 +1,5 @@
-﻿import { htmlToPlainText, toSummaryText } from "@/lib/brand-content";
+import { htmlToPlainText, toSummaryText } from "@/lib/brand-content";
+import { normalizeMemberSiteSeo } from "@/lib/member-site-seo";
 import type { MemberSiteSettings } from "@/lib/member-site-settings";
 import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
 
@@ -213,19 +214,23 @@ export function resolveEnterpriseHomepageSeo(
   gallery: GalleryLike[],
 ) {
   const name = enterprise.companyShortName || enterprise.companyName || "企业";
-  const tags = normalizeHomepageTags(siteSettings.homepageTags, enterprise).slice(0, 3);
   const tagline =
     pickFirst(siteSettings.homepageTagline, siteSettings.heroSubtitle, enterprise.positioning) ||
     "会员企业主页";
-
-  const title = pickFirst(siteSettings.seo.title) || (tagline ? `${name}｜${tagline}` : `${name}｜会员企业主页`);
-
-  const description =
-    pickFirst(siteSettings.seo.description) ||
-    [tagline, tags.join(" / "), toSummaryText(enterprise.productSystem || enterprise.intro || enterprise.positioning, 54)]
-      .filter(Boolean)
-      .join("，")
-      .slice(0, 120);
+  const normalizedSeo = normalizeMemberSiteSeo(siteSettings.seo, {
+    companyName: enterprise.companyName,
+    companyShortName: enterprise.companyShortName,
+    heroTitle: siteSettings.heroTitle,
+    heroSubtitle: siteSettings.heroSubtitle,
+    homepageTagline: siteSettings.homepageTagline || tagline,
+    intro: enterprise.intro,
+    positioning: enterprise.positioning,
+    productSystem: enterprise.productSystem,
+    city: siteSettings.contact.city,
+    region: enterprise.region,
+    area: enterprise.area,
+    contactIntro: siteSettings.contact.contactIntro,
+  });
 
   const imageUrl =
     pickFirst(siteSettings.seo.imageUrl)
@@ -237,8 +242,8 @@ export function resolveEnterpriseHomepageSeo(
           : null;
 
   return {
-    title,
-    description: description || `${name}的企业主页，展示品牌定位、能力表达与联系转化入口。`,
+    title: normalizedSeo.title,
+    description: normalizedSeo.description || `${name}的企业主页，展示品牌定位、能力表达与联系转化入口。`,
     imageUrl,
   };
 }

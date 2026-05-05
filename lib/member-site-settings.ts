@@ -1,4 +1,5 @@
-﻿import { prisma } from "@/lib/prisma";
+import { normalizeMemberSiteSeo, type MemberSiteSeoSource } from "@/lib/member-site-seo";
+import { prisma } from "@/lib/prisma";
 
 export type MemberSiteSettings = {
   template: "brand_showcase" | "professional_service" | "simple_elegant";
@@ -106,6 +107,23 @@ function buildKey(memberId: string) {
   return `member_site_settings:${memberId}`;
 }
 
+async function loadMemberSiteSeoSource(memberId: string): Promise<MemberSiteSeoSource> {
+  const enterprise = await prisma.enterprise.findUnique({
+    where: { memberId },
+    select: {
+      companyName: true,
+      companyShortName: true,
+      intro: true,
+      positioning: true,
+      productSystem: true,
+      region: true,
+      area: true,
+    },
+  });
+
+  return enterprise ?? {};
+}
+
 function asString(value: unknown, fallback = "") {
   return typeof value === "string" ? value.trim() : fallback;
 }
@@ -151,6 +169,13 @@ function asCapabilityCards(value: unknown) {
 }
 
 export function normalizeMemberSiteSettings(value: unknown): MemberSiteSettings {
+  return normalizeMemberSiteSettingsWithSource(value, {});
+}
+
+export function normalizeMemberSiteSettingsWithSource(
+  value: unknown,
+  seoSource: MemberSiteSeoSource,
+): MemberSiteSettings {
   const source = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
   const modules =
     source.modules && typeof source.modules === "object"
@@ -161,7 +186,7 @@ export function normalizeMemberSiteSettings(value: unknown): MemberSiteSettings 
   const contact = source.contact && typeof source.contact === "object" ? (source.contact as Record<string, unknown>) : {};
   const secondaryCtaType = asCtaType(source.secondaryCtaType);
 
-  return {
+  const settings: MemberSiteSettings = {
     template:
       source.template === "professional_service" || source.template === "simple_elegant"
         ? source.template
@@ -212,30 +237,52 @@ export function normalizeMemberSiteSettings(value: unknown): MemberSiteSettings 
       syncEnabled: asBool(sync.syncEnabled, DEFAULT_MEMBER_SITE_SETTINGS.sync.syncEnabled),
     },
   };
+
+  const normalizedSeo = normalizeMemberSiteSeo(settings.seo, {
+    ...seoSource,
+    heroTitle: settings.heroTitle,
+    heroSubtitle: settings.heroSubtitle,
+    homepageTagline: settings.homepageTagline,
+    city: settings.contact.city,
+    contactIntro: settings.contact.contactIntro,
+  });
+
+  return {
+    ...settings,
+    seo: {
+      ...settings.seo,
+      ...normalizedSeo,
+    },
+  };
 }
 
 export async function getMemberSiteSettings(memberId: string): Promise<MemberSiteSettings> {
-  const row = await prisma.appSetting.findUnique({
-    where: { key: buildKey(memberId) },
-    select: { value: true },
-  });
+  const [row, seoSource] = await Promise.all([
+    prisma.appSetting.findUnique({
+      where: { key: buildKey(memberId) },
+      select: { value: true },
+    }),
+    loadMemberSiteSeoSource(memberId),
+  ]);
 
-  if (!row?.value) return normalizeMemberSiteSettings({});
+  if (!row?.value) return normalizeMemberSiteSettingsWithSource({}, seoSource);
 
   try {
-    return normalizeMemberSiteSettings(JSON.parse(row.value));
+    return normalizeMemberSiteSettingsWithSource(JSON.parse(row.value), seoSource);
   } catch {
-    return normalizeMemberSiteSettings({});
+    return normalizeMemberSiteSettingsWithSource({}, seoSource);
   }
 }
 
 export async function saveMemberSiteSettings(memberId: string, settings: MemberSiteSettings) {
-  const normalized = normalizeMemberSiteSettings(settings);
-  return prisma.appSetting.upsert({
+  const seoSource = await loadMemberSiteSeoSource(memberId);
+  const normalized = normalizeMemberSiteSettingsWithSource(settings, seoSource);
+  await prisma.appSetting.upsert({
     where: { key: buildKey(memberId) },
     update: { value: JSON.stringify(normalized) },
     create: { key: buildKey(memberId), value: JSON.stringify(normalized) },
   });
+  return normalized;
 }
 
 export function getDefaultMemberSiteSettings() {
