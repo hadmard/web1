@@ -160,6 +160,13 @@ jobs:
               fi
             }
 
+            cleanup_build_worktree() {
+              if [ -n "${BUILD_WORKTREE:-}" ] && [ -d "${BUILD_WORKTREE}" ]; then
+                rm -rf "${BUILD_WORKTREE}"
+                echo "::notice::[deploy] removed staged build worktree ${BUILD_WORKTREE}"
+              fi
+            }
+
             restore_next_backup() {
               if [ -n "${NEXT_BACKUP_DIR:-}" ] && [ -d "${NEXT_BACKUP_DIR}" ]; then
                 rm -rf .next
@@ -204,18 +211,22 @@ jobs:
               fi
             fi
 
-            stage="build"
-            echo "[deploy] building next app"
-            NEXT_BACKUP_DIR=""
-            if [ -d .next ]; then
-              NEXT_BACKUP_DIR=".next-backup-$(date +%s)"
-              rm -rf "${NEXT_BACKUP_DIR}"
-              mv .next "${NEXT_BACKUP_DIR}"
-              printf '%s\n' "/home/web1/${NEXT_BACKUP_DIR}" > "${BACKUP_MARKER_FILE}"
-              echo "::warning::[deploy] moved existing .next to ${NEXT_BACKUP_DIR}"
-            else
-              rm -f "${BACKUP_MARKER_FILE}"
+            stage="build-prepare"
+            echo "[deploy] preparing isolated next build"
+            DEPLOY_COMMIT="$(git rev-parse HEAD)"
+            BUILD_WORKTREE="/tmp/web1-build-${DEPLOY_COMMIT:0:12}-$$"
+            rm -rf "${BUILD_WORKTREE}"
+            mkdir -p "${BUILD_WORKTREE}"
+            git archive "${DEPLOY_COMMIT}" | tar -x -C "${BUILD_WORKTREE}"
+            ln -s /home/web1/node_modules "${BUILD_WORKTREE}/node_modules"
+            if [ -f .env.production ]; then
+              cp .env.production "${BUILD_WORKTREE}/.env.production"
+            elif [ -f .env ]; then
+              cp .env "${BUILD_WORKTREE}/.env"
             fi
+
+            stage="build"
+            echo "[deploy] building next app in ${BUILD_WORKTREE}"
             export NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=4096}"
             export NEXT_TELEMETRY_DISABLED=1
             echo "::warning::[deploy] memory before build"
@@ -225,7 +236,10 @@ jobs:
               fi
             done < <(free -h 2>/dev/null || true)
             set +e
-            npm run build > /tmp/web1-build.log 2>&1
+            (
+              cd "${BUILD_WORKTREE}"
+              npm run build
+            ) > /tmp/web1-build.log 2>&1
             build_exit_code=$?
             set -e
             if [ "$build_exit_code" -ne 0 ]; then
@@ -257,15 +271,53 @@ jobs:
               done < <(tail -n 120 /tmp/web1-build.log)
               echo "::error::[deploy] build output tail end"
               echo "::error::[deploy] build output end"
-              restore_next_backup
+              cleanup_build_worktree
               exit "$build_exit_code"
             fi
+
+            stage="verify-build"
+            STAGED_NEXT_DIR="${BUILD_WORKTREE}/.next"
+            if [ ! -d "${STAGED_NEXT_DIR}" ]; then
+              echo "::error::[deploy] staged .next directory missing: ${STAGED_NEXT_DIR}"
+              cleanup_build_worktree
+              exit 1
+            fi
+            if [ ! -f "${STAGED_NEXT_DIR}/server/app/membership/admin/content/page.js" ]; then
+              echo "::error::[deploy] required admin content bundle missing: ${STAGED_NEXT_DIR}/server/app/membership/admin/content/page.js"
+              cleanup_build_worktree
+              exit 1
+            fi
+            if [ ! -f "${STAGED_NEXT_DIR}/server/app/membership/content/publish/page.js" ]; then
+              echo "::error::[deploy] required membership publish bundle missing: ${STAGED_NEXT_DIR}/server/app/membership/content/publish/page.js"
+              cleanup_build_worktree
+              exit 1
+            fi
+            echo "::notice::[deploy] staged bundle verified"
+
+            stage="stop-service"
+            echo "[deploy] stopping web1 before .next swap"
+            sudo systemctl stop web1
+
+            stage="swap-next"
+            NEXT_BACKUP_DIR=""
+            if [ -d .next ]; then
+              NEXT_BACKUP_DIR="/home/web1/.next-backup-$(date +%s)"
+              rm -rf "${NEXT_BACKUP_DIR}"
+              mv .next "${NEXT_BACKUP_DIR}"
+              printf '%s\n' "${NEXT_BACKUP_DIR}" > "${BACKUP_MARKER_FILE}"
+              echo "::warning::[deploy] moved existing .next to ${NEXT_BACKUP_DIR}"
+            else
+              rm -f "${BACKUP_MARKER_FILE}"
+            fi
+            mv "${STAGED_NEXT_DIR}" /home/web1/.next
+            cleanup_build_worktree
 
             stage="restart"
             echo "[deploy] restarting web1"
             if ! sudo systemctl restart web1; then
               echo "::error::[deploy] web1 restart failed, dumping service logs"
               restore_next_backup
+              cleanup_build_worktree
               sudo systemctl status web1 --no-pager -l || true
               sudo journalctl -u web1 -n 120 --no-pager || true
               exit 1
