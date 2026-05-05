@@ -4,9 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { MAX_UPLOAD_IMAGE_MB, uploadImageToServer } from "@/lib/client-image";
-import { CONTENT_TAB_DEFS, resolveTabKeyFromHref } from "@/lib/content-taxonomy";
 import { PUBLIC_CONTACT_PHONE } from "@/lib/public-site-config";
-import { buildNewsPath } from "@/lib/share-config";
 import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
 
 type DashboardData = {
@@ -131,18 +129,6 @@ type RecoveryResponse = {
 };
 
 type SubmissionStatus = "draft" | "pending" | "approved" | "rejected";
-type SubmissionFilter = "all" | SubmissionStatus;
-
-type RecentSubmission = {
-  id: string;
-  title: string;
-  slug: string;
-  categoryHref: string | null;
-  subHref: string | null;
-  status: SubmissionStatus;
-  createdAt: string;
-  updatedAt?: string | null;
-};
 
 type GalleryItem = {
   id: string;
@@ -215,7 +201,7 @@ const EMPTY_SETTINGS: SiteSettings = {
 const PRIMARY_ACTIONS = [
   { href: "/membership/content/publish?tab=articles", label: "发布资讯", desc: "发布企业资讯、词库或标准相关内容" },
   { href: "/membership/content/gallery", label: "管理图库", desc: "上传案例图、工艺图和空间图" },
-  { href: "#recent-submissions", label: "最近提交", desc: "在当前页面查看最新提交、状态和编辑入口" },
+  { href: "/membership/content/submissions", label: "内容记录", desc: "查看草稿、待审核、已通过和已退回内容" },
   { href: "/membership/profile", label: "企业资料", desc: "维护关于品牌、品牌定位和 Logo" },
   { href: "/membership/content/verification", label: "企业认证", desc: "查看认证状态、补充资料并跟进审核进度" },
   { href: "/membership/content/status", label: "审核记录", desc: "查看全部待审核、已通过和退回内容" },
@@ -294,19 +280,6 @@ function formatRecordDate(value: string | null | undefined) {
   }).format(date);
 }
 
-function buildSubmissionPreviewHref(item: RecentSubmission) {
-  const segment = (item.slug || item.title || "").trim();
-  if (!segment && !item.id) return null;
-  const encoded = encodeURIComponent(segment);
-  const tab = resolveTabKeyFromHref(item.categoryHref, item.subHref);
-  if (tab === "brands") return `/brands/${encoded}`;
-  if (tab === "buying") return `/brands/buying/${encoded}`;
-  if (tab === "terms") return `/dictionary/${encoded}`;
-  if (tab === "standards") return `/standards/${encoded}`;
-  if (tab === "awards") return `/awards/${encoded}`;
-  return item.id ? buildNewsPath(item.id) : `/news/${encoded}`;
-}
-
 function hasMeaningfulContent(value: string | null | undefined) {
   const normalized = (value || "")
     .replace(/<[^>]*>/g, " ")
@@ -326,8 +299,6 @@ export default function MemberContentPage() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [data, setData] = useState<DashboardData | null>(null);
-  const [recentItems, setRecentItems] = useState<RecentSubmission[]>([]);
-  const [submissionFilter, setSubmissionFilter] = useState<SubmissionFilter>("all");
   const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([]);
   const [galleryForm, setGalleryForm] = useState<GalleryFormState>(EMPTY_GALLERY_FORM);
   const [galleryMessage, setGalleryMessage] = useState("");
@@ -369,16 +340,12 @@ export default function MemberContentPage() {
         setAuthed(true);
         setData(dashboardBody);
 
-        const [siteRes, recoveryRes, recentRes, galleryRes, profileRes] = await Promise.all([
+        const [siteRes, recoveryRes, galleryRes, profileRes] = await Promise.all([
           fetch("/api/member/site-settings", {
             credentials: "include",
             cache: "no-store",
           }),
           fetch("/api/auth/recovery-email", {
-            credentials: "include",
-            cache: "no-store",
-          }),
-          fetch("/api/member/articles?limit=20", {
             credentials: "include",
             cache: "no-store",
           }),
@@ -404,11 +371,6 @@ export default function MemberContentPage() {
           setAccount(typeof recoveryBody.account === "string" ? recoveryBody.account : "");
           setPhone(typeof recoveryBody.phone === "string" ? recoveryBody.phone : "");
           setRecoveryEmail(typeof recoveryBody.recoveryEmail === "string" ? recoveryBody.recoveryEmail : "");
-        }
-
-        const recentBody = await recentRes.json().catch(() => ({}));
-        if (recentRes.ok) {
-          setRecentItems(Array.isArray(recentBody.items) ? recentBody.items : []);
         }
 
         const galleryBody = await galleryRes.json().catch(() => ({}));
@@ -451,22 +413,6 @@ export default function MemberContentPage() {
   const enterpriseProfileActionLabel = useMemo(
     () => (aboutBrandFilled ? "去更新关于品牌" : "去填写关于品牌"),
     [aboutBrandFilled]
-  );
-  const submissionSummary = useMemo(
-    () =>
-      recentItems.reduce(
-        (acc, item) => {
-          acc[item.status] += 1;
-          acc.total += 1;
-          return acc;
-        },
-        { total: 0, draft: 0, pending: 0, approved: 0, rejected: 0 } as Record<SubmissionStatus | "total", number>
-      ),
-    [recentItems]
-  );
-  const filteredRecentItems = useMemo(
-    () => (submissionFilter === "all" ? recentItems : recentItems.filter((item) => item.status === submissionFilter)),
-    [recentItems, submissionFilter]
   );
   const gallerySummary = useMemo(
     () =>
@@ -696,7 +642,9 @@ export default function MemberContentPage() {
           <Link href="/membership/content/verification" className="rounded-full border border-border bg-surface px-3 py-2 text-xs text-primary transition hover:bg-white">
             企业认证
           </Link>
-          <AnchorLink href="#recent-submissions" label="内容记录" />
+          <Link href="/membership/content/submissions" className="rounded-full border border-border bg-surface px-3 py-2 text-xs text-primary transition hover:bg-white">
+            内容记录
+          </Link>
           <AnchorLink href="#gallery-overview" label="图库概览" />
           <AnchorLink href="#site-settings" label="主页配置" />
           <AnchorLink href="#account-security" label="账号安全" />
@@ -766,7 +714,9 @@ export default function MemberContentPage() {
             <Link href="/membership/content/verification" className="rounded-full border border-border bg-surface px-3 py-2 text-xs text-primary transition hover:bg-white">
               企业认证
             </Link>
-            <AnchorLink href="#recent-submissions" label="最近提交" />
+            <Link href="/membership/content/submissions" className="rounded-full border border-border bg-surface px-3 py-2 text-xs text-primary transition hover:bg-white">
+              内容记录
+            </Link>
             <AnchorLink href="#site-settings" label="主页配置" />
             <AnchorLink href="#account-security" label="账号安全" />
           </div>
@@ -790,90 +740,6 @@ export default function MemberContentPage() {
         <StatCard label="图库内容" value={data.stats.gallery.total} sub={`待审核 ${data.stats.gallery.pending} · 已通过 ${data.stats.gallery.approved}`} />
         <StatCard label="标准反馈" value={data.stats.standardFeedback.total} sub={`待审核 ${data.stats.standardFeedback.pending} · 已通过 ${data.stats.standardFeedback.approved}`} />
         <StatCard label="推荐额度" value={data.authorization.recommendation.remainingCount} sub={`全年 ${data.authorization.recommendation.annualLimit} 次`} />
-      </section>
-
-      <section id="recent-submissions" className="rounded-[24px] border border-border bg-surface-elevated p-4 shadow-[0_14px_30px_rgba(15,23,42,0.06)] sm:rounded-[28px] sm:p-6 sm:shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-primary">已发内容与审核记录</h2>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Link href="/membership/content/submissions" className="rounded-full border border-border bg-surface px-4 py-2 text-sm text-primary transition hover:bg-white">
-              查看全部内容
-            </Link>
-            <Link href="/membership/content/status" className="rounded-full border border-border bg-surface px-4 py-2 text-sm text-primary transition hover:bg-white">
-              查看审核记录
-            </Link>
-          </div>
-        </div>
-
-        <div className="mt-5 grid gap-3 lg:grid-cols-2">
-          {CONTENT_TAB_DEFS.map((tab) => (
-            <Link
-              key={tab.key}
-              href={`/membership/content/publish?tab=${tab.key}`}
-              className="rounded-[20px] border border-border bg-white/88 px-4 py-4 transition hover:-translate-y-0.5 hover:border-accent/35 hover:shadow-[0_14px_30px_rgba(15,23,42,0.08)] sm:rounded-[24px] sm:px-5"
-            >
-              <p className="text-sm text-muted">栏目直达</p>
-              <p className="mt-2 text-base font-semibold text-primary">{tab.label}</p>
-              <p className="mt-2 text-sm text-muted">进入该栏目继续发布或修改内容</p>
-            </Link>
-          ))}
-        </div>
-
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          <StatusFilterCard label="全部" value={submissionSummary.total} active={submissionFilter === "all"} onClick={() => setSubmissionFilter("all")} />
-          <StatusFilterCard label="草稿" value={submissionSummary.draft} active={submissionFilter === "draft"} onClick={() => setSubmissionFilter("draft")} />
-          <StatusFilterCard label="待审核" value={submissionSummary.pending} active={submissionFilter === "pending"} onClick={() => setSubmissionFilter("pending")} />
-          <StatusFilterCard label="已通过" value={submissionSummary.approved} active={submissionFilter === "approved"} onClick={() => setSubmissionFilter("approved")} />
-          <StatusFilterCard label="已退回" value={submissionSummary.rejected} active={submissionFilter === "rejected"} onClick={() => setSubmissionFilter("rejected")} />
-        </div>
-
-        <div className="mt-5 space-y-3">
-          {filteredRecentItems.length > 0 ? (
-            filteredRecentItems.map((item) => {
-              const previewHref = item.status === "approved" ? buildSubmissionPreviewHref(item) : null;
-              const editHref = `/membership/content/publish?tab=${encodeURIComponent(resolveTabKeyFromHref(item.categoryHref, item.subHref))}&edit=${encodeURIComponent(item.id)}`;
-              const categoryLabel = CONTENT_TAB_DEFS.find(
-                (tab) => tab.key === resolveTabKeyFromHref(item.categoryHref, item.subHref)
-              )?.label ?? "未分类";
-
-              return (
-                <article key={item.id} className="rounded-[20px] border border-border bg-white/90 px-4 py-4 sm:rounded-[24px] sm:px-5">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className={`rounded-full border px-3 py-1 text-xs ${SUBMISSION_STATUS_TONE[item.status]}`}>
-                          {SUBMISSION_STATUS_TEXT[item.status]}
-                        </span>
-                        <span className="text-xs text-muted">{categoryLabel}</span>
-                      </div>
-                      <p className="mt-3 text-base font-medium text-primary">{item.title}</p>
-                      <p className="mt-2 text-xs text-muted">
-                        提交时间 {formatRecordDate(item.createdAt)}
-                        {item.updatedAt ? ` · 最近更新 ${formatRecordDate(item.updatedAt)}` : ""}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Link href={editHref} className="rounded-full border border-border bg-surface px-4 py-2 text-sm text-primary transition hover:bg-white">
-                        继续编辑
-                      </Link>
-                      {previewHref ? (
-                        <Link href={previewHref} target="_blank" rel="noreferrer" className="rounded-full border border-border bg-surface px-4 py-2 text-sm text-primary transition hover:bg-white">
-                          预览前台
-                        </Link>
-                      ) : null}
-                    </div>
-                  </div>
-                </article>
-              );
-            })
-          ) : (
-            <div className="rounded-[20px] border border-dashed border-border bg-surface px-4 py-6 text-sm text-muted sm:rounded-[24px]">
-              {recentItems.length > 0 ? "当前筛选条件下还没有内容，可以切换状态查看其他记录。" : "还没有提交内容。可以先从上面的“栏目直达”进入对应栏目开始发布。"}
-            </div>
-          )}
-        </div>
       </section>
 
       <section id="gallery-overview" className="rounded-[24px] border border-border bg-surface-elevated p-4 shadow-[0_14px_30px_rgba(15,23,42,0.06)] sm:rounded-[28px] sm:p-6 sm:shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
@@ -1248,33 +1114,6 @@ function StatCard({ label, value, sub }: { label: string; value: number; sub: st
       <p className="mt-2 text-2xl font-semibold text-primary sm:text-3xl">{value}</p>
       <p className="mt-2 text-[11px] leading-5 text-muted sm:text-xs">{sub}</p>
     </article>
-  );
-}
-
-function StatusFilterCard({
-  label,
-  value,
-  active,
-  onClick,
-}: {
-  label: string;
-  value: number;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-[20px] border px-4 py-4 text-left transition sm:rounded-[24px] ${
-        active
-          ? "border-accent/35 bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(244,239,230,0.9))] shadow-[0_14px_30px_rgba(15,23,42,0.08)]"
-          : "border-border bg-white/88 hover:border-accent/25 hover:bg-white"
-      }`}
-    >
-      <p className="text-sm text-muted">{label}</p>
-      <p className="mt-2 text-2xl font-semibold text-primary">{value}</p>
-    </button>
   );
 }
 
