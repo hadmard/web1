@@ -8,12 +8,6 @@ import { CONTENT_TAB_DEFS, resolveTabKeyFromHref } from "@/lib/content-taxonomy"
 import { PUBLIC_CONTACT_PHONE } from "@/lib/public-site-config";
 import { buildNewsPath } from "@/lib/share-config";
 import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
-import {
-  getEnterpriseVerificationFormatError,
-  normalizeEnterpriseAddress,
-  normalizeEnterprisePhone,
-  normalizeUnifiedSocialCreditCode,
-} from "@/lib/enterprise-verification-validation";
 
 type DashboardData = {
   member: {
@@ -150,57 +144,6 @@ type RecentSubmission = {
   updatedAt?: string | null;
 };
 
-type VerifyStatus = "pending" | "approved" | "rejected";
-
-type VerificationRecord = {
-  id: string;
-  companyName: string;
-  companyShortName?: string | null;
-  accountName: string;
-  accountPassword: string;
-  contactPerson: string;
-  contactPhone: string;
-  contactEmail?: string | null;
-  logoUrl?: string | null;
-  licenseImageUrl: string;
-  licenseCode: string;
-  address: string;
-  foundedAt?: string | null;
-  registeredCapital?: string | null;
-  website?: string | null;
-  intro?: string | null;
-  businessScope?: string | null;
-  productSystem?: string | null;
-  coreAdvantages?: string | null;
-  attachmentsJson?: string | null;
-  status: VerifyStatus;
-  reviewNote?: string | null;
-  approvedEnterpriseId?: string | null;
-  updatedAt: string;
-};
-
-type VerificationFormState = {
-  companyName: string;
-  companyShortName: string;
-  accountName: string;
-  accountPassword: string;
-  contactPerson: string;
-  contactPhone: string;
-  contactEmail: string;
-  logoUrl: string;
-  licenseImageUrl: string;
-  licenseCode: string;
-  address: string;
-  foundedAt: string;
-  registeredCapital: string;
-  website: string;
-  intro: string;
-  businessScope: string;
-  productSystem: string;
-  coreAdvantages: string;
-  attachments: string[];
-};
-
 type GalleryItem = {
   id: string;
   title: string | null;
@@ -274,7 +217,7 @@ const PRIMARY_ACTIONS = [
   { href: "/membership/content/gallery", label: "管理图库", desc: "上传案例图、工艺图和空间图" },
   { href: "#recent-submissions", label: "最近提交", desc: "在当前页面查看最新提交、状态和编辑入口" },
   { href: "/membership/profile", label: "企业资料", desc: "维护关于品牌、品牌定位和 Logo" },
-  { href: "#verification-status", label: "企业认证", desc: "在当前页面查看认证状态、入口和企业主页" },
+  { href: "/membership/content/verification", label: "企业认证", desc: "查看认证状态、补充资料并跟进审核进度" },
   { href: "/membership/content/status", label: "审核记录", desc: "查看全部待审核、已通过和退回内容" },
 ];
 
@@ -290,28 +233,6 @@ const SUBMISSION_STATUS_TONE: Record<SubmissionStatus, string> = {
   pending: "border-[rgba(180,154,107,0.28)] bg-[rgba(255,248,236,0.9)] text-accent",
   approved: "border-[rgba(112,164,132,0.28)] bg-[rgba(240,249,243,0.92)] text-[#3f6d52]",
   rejected: "border-[rgba(190,122,101,0.28)] bg-[rgba(255,243,239,0.92)] text-[#9b5a45]",
-};
-
-const EMPTY_VERIFICATION_FORM: VerificationFormState = {
-  companyName: "",
-  companyShortName: "",
-  accountName: "",
-  accountPassword: "",
-  contactPerson: "",
-  contactPhone: "",
-  contactEmail: "",
-  logoUrl: "",
-  licenseImageUrl: "",
-  licenseCode: "",
-  address: "",
-  foundedAt: "",
-  registeredCapital: "",
-  website: "",
-  intro: "",
-  businessScope: "",
-  productSystem: "",
-  coreAdvantages: "",
-  attachments: [],
 };
 
 const GALLERY_CATEGORY_LABEL_MAP: Record<string, string> = {
@@ -386,17 +307,6 @@ function buildSubmissionPreviewHref(item: RecentSubmission) {
   return item.id ? buildNewsPath(item.id) : `/news/${encoded}`;
 }
 
-function parseAttachments(raw: string | null | undefined) {
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter((x): x is string => typeof x === "string");
-  } catch {
-    return [];
-  }
-}
-
 function hasMeaningfulContent(value: string | null | undefined) {
   const normalized = (value || "")
     .replace(/<[^>]*>/g, " ")
@@ -423,11 +333,6 @@ export default function MemberContentPage() {
   const [galleryMessage, setGalleryMessage] = useState("");
   const [savingGallery, setSavingGallery] = useState(false);
   const [uploadingGalleryImage, setUploadingGalleryImage] = useState(false);
-  const [verificationForm, setVerificationForm] = useState<VerificationFormState>(EMPTY_VERIFICATION_FORM);
-  const [verificationMessage, setVerificationMessage] = useState("");
-  const [verificationFormExpanded, setVerificationFormExpanded] = useState(true);
-  const [savingVerification, setSavingVerification] = useState(false);
-  const [uploadingVerificationAsset, setUploadingVerificationAsset] = useState(false);
   const [enterpriseProfileSummary, setEnterpriseProfileSummary] = useState<EnterpriseProfileSummary>(null);
 
   const [siteSettings, setSiteSettings] = useState<SiteSettings>(EMPTY_SETTINGS);
@@ -516,37 +421,6 @@ export default function MemberContentPage() {
           setEnterpriseProfileSummary(profileBody.enterprise ?? null);
         }
 
-        if (dashboardBody.latestVerification) {
-          const verificationRes = await fetch("/api/member/enterprise-verification", {
-            credentials: "include",
-            cache: "no-store",
-          });
-          const verificationBody = await verificationRes.json().catch(() => ({}));
-          const record = (verificationBody.latest ?? null) as VerificationRecord | null;
-          if (verificationRes.ok && record) {
-            setVerificationForm({
-              companyName: record.companyName ?? "",
-              companyShortName: record.companyShortName ?? "",
-              accountName: record.accountName ?? "",
-              accountPassword: record.accountPassword ?? "",
-              contactPerson: record.contactPerson ?? "",
-              contactPhone: record.contactPhone ?? "",
-              contactEmail: record.contactEmail ?? "",
-              logoUrl: record.logoUrl ?? "",
-              licenseImageUrl: record.licenseImageUrl ?? "",
-              licenseCode: record.licenseCode ?? "",
-              address: record.address ?? "",
-              foundedAt: record.foundedAt ?? "",
-              registeredCapital: record.registeredCapital ?? "",
-              website: record.website ?? "",
-              intro: record.intro ?? "",
-              businessScope: record.businessScope ?? "",
-              productSystem: record.productSystem ?? "",
-              coreAdvantages: record.coreAdvantages ?? "",
-              attachments: parseAttachments(record.attachmentsJson),
-            });
-          }
-        }
       } catch {
         setMessage("网络异常，请稍后重试");
       } finally {
@@ -559,21 +433,12 @@ export default function MemberContentPage() {
     () => verificationText(data?.latestVerification?.status),
     [data?.latestVerification?.status]
   );
-  const verificationActionHref = useMemo(() => {
-    if (data?.latestVerification?.status === "approved" && data.enterprise?.id) {
-      return `/enterprise/${data.enterprise.id}`;
-    }
-    return "/membership/content/verification";
-  }, [data?.enterprise?.id, data?.latestVerification?.status]);
+  const verificationActionHref = "/membership/content/verification";
   const verificationActionLabel = useMemo(() => {
-    if (data?.latestVerification?.status === "approved" && data.enterprise?.id) return "查看企业主页";
+    if (data?.latestVerification?.status === "approved") return "已认证，查看或修改";
     if (data?.latestVerification?.status === "pending") return "查看认证进度";
-    if (data?.latestVerification?.status === "rejected") return "重新提交认证";
-    return "去提交认证";
-  }, [data?.enterprise?.id, data?.latestVerification?.status]);
-  const shouldExpandVerificationFormByDefault = useMemo(() => {
-    const status = data?.latestVerification?.status;
-    return !status || status === "rejected";
+    if (data?.latestVerification?.status === "rejected") return "重新提交认证资料";
+    return "去企业认证";
   }, [data?.latestVerification?.status]);
   const siteSnapshot = useMemo(() => JSON.stringify(siteSettings), [siteSettings]);
   const hasUnsavedSiteChanges = siteSnapshot !== siteSavedSnapshot;
@@ -587,7 +452,6 @@ export default function MemberContentPage() {
     () => (aboutBrandFilled ? "去更新关于品牌" : "去填写关于品牌"),
     [aboutBrandFilled]
   );
-  const verificationAttachmentPreview = useMemo(() => verificationForm.attachments.slice(0, 6), [verificationForm.attachments]);
   const submissionSummary = useMemo(
     () =>
       recentItems.reduce(
@@ -616,10 +480,6 @@ export default function MemberContentPage() {
       ),
     [galleryItems]
   );
-
-  useEffect(() => {
-    setVerificationFormExpanded(shouldExpandVerificationFormByDefault);
-  }, [shouldExpandVerificationFormByDefault]);
 
   async function reloadGallery() {
     const response = await fetch("/api/member/gallery?limit=12", {
@@ -741,93 +601,6 @@ export default function MemberContentPage() {
     }
   }
 
-  async function handleVerificationAssetUpload(
-    event: ChangeEvent<HTMLInputElement>,
-    key: "logoUrl" | "licenseImageUrl"
-  ) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    setUploadingVerificationAsset(true);
-    setVerificationMessage("");
-    try {
-      const imageUrl = await uploadImageToServer(file, {
-        folder: key === "logoUrl" ? "verification/logos" : "verification/licenses",
-      });
-      setVerificationForm((prev) => ({ ...prev, [key]: imageUrl }));
-    } catch (error) {
-      setVerificationMessage(error instanceof Error ? error.message : "图片上传失败，请重试");
-    } finally {
-      setUploadingVerificationAsset(false);
-      event.target.value = "";
-    }
-  }
-
-  async function handleVerificationAttachmentsUpload(event: ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(event.target.files ?? []);
-    if (files.length === 0) return;
-    setUploadingVerificationAsset(true);
-    setVerificationMessage("");
-    try {
-      const urls = await Promise.all(files.map((file) => uploadImageToServer(file, { folder: "verification/attachments" })));
-      setVerificationForm((prev) => ({
-        ...prev,
-        attachments: [...prev.attachments, ...urls].slice(0, 20),
-      }));
-    } catch (error) {
-      setVerificationMessage(error instanceof Error ? error.message : "附件上传失败，请重试");
-    } finally {
-      setUploadingVerificationAsset(false);
-      event.target.value = "";
-    }
-  }
-
-  function removeVerificationAttachment(index: number) {
-    setVerificationForm((prev) => ({
-      ...prev,
-      attachments: prev.attachments.filter((_, itemIndex) => itemIndex !== index),
-    }));
-  }
-
-  async function handleVerificationSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const normalizedForm = {
-      ...verificationForm,
-      contactPhone: normalizeEnterprisePhone(verificationForm.contactPhone),
-      licenseCode: normalizeUnifiedSocialCreditCode(verificationForm.licenseCode),
-      address: normalizeEnterpriseAddress(verificationForm.address),
-    };
-    const formatError = getEnterpriseVerificationFormatError(normalizedForm);
-    if (formatError) {
-      setVerificationForm(normalizedForm);
-      setVerificationMessage(formatError);
-      return;
-    }
-
-    setSavingVerification(true);
-    setVerificationMessage("");
-    setVerificationForm(normalizedForm);
-
-    try {
-      const response = await fetch("/api/member/enterprise-verification", {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...normalizedForm, attachments: normalizedForm.attachments }),
-      });
-      const body = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        setVerificationMessage(body.error ?? "提交认证资料失败");
-        return;
-      }
-      setVerificationMessage(data?.latestVerification ? "认证资料修改已提交，等待重新审核。" : "认证资料已提交，等待审核。");
-      setVerificationFormExpanded(false);
-    } catch {
-      setVerificationMessage("网络异常，请稍后重试");
-    } finally {
-      setSavingVerification(false);
-    }
-  }
-
   async function handleGalleryImageUpload(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -920,8 +693,9 @@ export default function MemberContentPage() {
       <section className="sticky top-16 z-20 rounded-[22px] border border-border/80 bg-white/88 px-3 py-3 shadow-[0_14px_28px_rgba(15,23,42,0.08)] backdrop-blur sm:top-20 sm:rounded-[26px] sm:px-4">
         <div className="flex flex-wrap gap-2">
           <AnchorLink href="#publish-center" label="发布中心" />
-          <AnchorLink href="#verification-status" label="企业认证" />
-          <AnchorLink href="#verification-form" label="认证表单" />
+          <Link href="/membership/content/verification" className="rounded-full border border-border bg-surface px-3 py-2 text-xs text-primary transition hover:bg-white">
+            企业认证
+          </Link>
           <AnchorLink href="#recent-submissions" label="内容记录" />
           <AnchorLink href="#gallery-overview" label="图库概览" />
           <AnchorLink href="#site-settings" label="主页配置" />
@@ -962,11 +736,9 @@ export default function MemberContentPage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            {data.member.type === "personal" ? (
-              <Link href="/membership/content/verification" className="rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white transition hover:brightness-105">
-                去企业认证
-              </Link>
-            ) : null}
+            <Link href={verificationActionHref} className="rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white transition hover:brightness-105">
+              {verificationActionLabel}
+            </Link>
             {data.member.type === "enterprise_basic" ? (
               <a
                 href={`tel:${PUBLIC_CONTACT_PHONE}`}
@@ -991,7 +763,9 @@ export default function MemberContentPage() {
             <p className="mt-1 text-sm text-muted">发布、图库、审核和企业资料入口都放在这里。</p>
           </div>
           <div className="flex flex-wrap gap-2 text-xs text-muted">
-            <AnchorLink href="#verification-status" label="认证状态" />
+            <Link href="/membership/content/verification" className="rounded-full border border-border bg-surface px-3 py-2 text-xs text-primary transition hover:bg-white">
+              企业认证
+            </Link>
             <AnchorLink href="#recent-submissions" label="最近提交" />
             <AnchorLink href="#site-settings" label="主页配置" />
             <AnchorLink href="#account-security" label="账号安全" />
@@ -1016,187 +790,6 @@ export default function MemberContentPage() {
         <StatCard label="图库内容" value={data.stats.gallery.total} sub={`待审核 ${data.stats.gallery.pending} · 已通过 ${data.stats.gallery.approved}`} />
         <StatCard label="标准反馈" value={data.stats.standardFeedback.total} sub={`待审核 ${data.stats.standardFeedback.pending} · 已通过 ${data.stats.standardFeedback.approved}`} />
         <StatCard label="推荐额度" value={data.authorization.recommendation.remainingCount} sub={`全年 ${data.authorization.recommendation.annualLimit} 次`} />
-      </section>
-
-      <section id="verification-status" className="rounded-[24px] border border-border bg-surface-elevated p-4 shadow-[0_14px_30px_rgba(15,23,42,0.06)] sm:rounded-[28px] sm:p-6 sm:shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-primary">企业认证与企业主页</h2>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Link href={verificationActionHref} className="rounded-full border border-border bg-surface px-4 py-2 text-sm text-primary transition hover:bg-white">
-              {verificationActionLabel}
-            </Link>
-            <Link href="/membership/profile" className="rounded-full border border-border bg-surface px-4 py-2 text-sm text-primary transition hover:bg-white">
-              编辑企业资料
-            </Link>
-          </div>
-        </div>
-
-        <div className="mt-5">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <article className="rounded-[20px] border border-border bg-white/90 p-4 sm:rounded-[24px]">
-              <p className="text-sm text-muted">当前认证状态</p>
-              <p className="mt-2 text-2xl font-semibold text-primary">{verification}</p>
-              <p className="mt-3 text-xs text-muted">
-                {data.latestVerification ? `更新于 ${formatRecordDate(data.latestVerification.updatedAt)}` : "尚未提交"}
-              </p>
-            </article>
-            <article className="rounded-[20px] border border-border bg-white/90 p-4 sm:rounded-[24px]">
-              <p className="text-sm text-muted">企业名称</p>
-              <p className="mt-2 text-base font-semibold text-primary">
-                {data.latestVerification?.companyName || data.enterprise?.companyShortName || data.enterprise?.companyName || "未填写"}
-              </p>
-              <p className="mt-3 text-xs text-muted">认证通过后会同步到企业主体资料中。</p>
-            </article>
-            <article className="rounded-[20px] border border-border bg-white/90 p-4 sm:rounded-[24px]">
-              <p className="text-sm text-muted">企业主页</p>
-              <p className="mt-2 text-base font-semibold text-primary">{data.enterprise?.id ? "已生成" : "待生成"}</p>
-              <p className="mt-3 text-xs text-muted">
-                {data.enterprise?.id ? "可以直接查看前台企业页。" : "认证通过后会自动生成。"}
-              </p>
-            </article>
-            <article className="rounded-[20px] border border-border bg-white/90 p-4 sm:rounded-[24px]">
-              <p className="text-sm text-muted">审核说明</p>
-              <p className="mt-2 text-sm leading-6 text-primary">{data.latestVerification?.reviewNote?.trim() || "暂无补充说明"}</p>
-            </article>
-          </div>
-
-        </div>
-      </section>
-
-      <section id="verification-form" className="rounded-[24px] border border-border bg-surface-elevated p-4 shadow-[0_14px_30px_rgba(15,23,42,0.06)] sm:rounded-[28px] sm:p-6 sm:shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-primary">企业认证资料</h2>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => setVerificationFormExpanded((prev) => !prev)}
-              className="rounded-full border border-border bg-surface px-4 py-2 text-sm text-primary transition hover:bg-white"
-            >
-              {verificationFormExpanded ? "收起认证资料" : "展开认证资料"}
-            </button>
-            {data.enterprise?.id ? (
-              <Link href={`/enterprise/${data.enterprise.id}`} className="rounded-full border border-border bg-surface px-4 py-2 text-sm text-primary transition hover:bg-white">
-                查看企业主页
-              </Link>
-            ) : null}
-          </div>
-        </div>
-
-        {verificationMessage ? <p className="mt-4 text-sm text-emerald-700">{verificationMessage}</p> : null}
-
-        <form onSubmit={handleVerificationSubmit} className={verificationFormExpanded ? "mt-5 space-y-5" : "mt-5 hidden space-y-5"}>
-          <section className="rounded-[20px] border border-border bg-white/92 p-4 sm:rounded-[24px] sm:p-5">
-            <div className="mb-4">
-              <h3 className="text-base font-medium text-primary">企业基础信息</h3>
-              <p className="mt-1 text-sm text-muted">用于审核和自动生成企业页，请尽量填写完整。</p>
-            </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <Field label="企业全称" value={verificationForm.companyName} onChange={(value) => setVerificationForm((prev) => ({ ...prev, companyName: value }))} />
-              <Field label="企业简称" value={verificationForm.companyShortName} onChange={(value) => setVerificationForm((prev) => ({ ...prev, companyShortName: value }))} />
-              <Field label="企业账号" value={verificationForm.accountName} onChange={(value) => setVerificationForm((prev) => ({ ...prev, accountName: value }))} />
-              <Field label="企业账号密码" value={verificationForm.accountPassword} onChange={(value) => setVerificationForm((prev) => ({ ...prev, accountPassword: value }))} />
-              <Field label="联系人" value={verificationForm.contactPerson} onChange={(value) => setVerificationForm((prev) => ({ ...prev, contactPerson: value }))} />
-              <Field label="联系电话" value={verificationForm.contactPhone} helper="支持手机号，或带区号的固定电话。" onChange={(value) => setVerificationForm((prev) => ({ ...prev, contactPhone: value }))} />
-              <Field label="联系邮箱" value={verificationForm.contactEmail} onChange={(value) => setVerificationForm((prev) => ({ ...prev, contactEmail: value }))} />
-              <Field label="统一社会信用代码" value={verificationForm.licenseCode} helper="请输入 18 位统一社会信用代码。" onChange={(value) => setVerificationForm((prev) => ({ ...prev, licenseCode: value }))} />
-              <Field label="公司官网" value={verificationForm.website} onChange={(value) => setVerificationForm((prev) => ({ ...prev, website: value }))} />
-              <Field label="成立时间" value={verificationForm.foundedAt} onChange={(value) => setVerificationForm((prev) => ({ ...prev, foundedAt: value }))} />
-              <Field label="注册资本" value={verificationForm.registeredCapital} onChange={(value) => setVerificationForm((prev) => ({ ...prev, registeredCapital: value }))} />
-              <Field label="企业地址" value={verificationForm.address} helper="请填写完整的省、市、区及详细地址。" onChange={(value) => setVerificationForm((prev) => ({ ...prev, address: value }))} />
-            </div>
-          </section>
-
-          <section className="rounded-[20px] border border-border bg-white/92 p-4 sm:rounded-[24px] sm:p-5">
-            <div className="mb-4">
-              <h3 className="text-base font-medium text-primary">补充说明</h3>
-              <p className="mt-1 text-sm text-muted">这些内容会帮助审核人员更快了解企业背景和产品能力。</p>
-            </div>
-            <div className="space-y-4">
-              <TextAreaField label="企业介绍" value={verificationForm.intro} onChange={(value) => setVerificationForm((prev) => ({ ...prev, intro: value }))} />
-              <TextAreaField label="经营范围" value={verificationForm.businessScope} onChange={(value) => setVerificationForm((prev) => ({ ...prev, businessScope: value }))} />
-              <TextAreaField label="产品体系" value={verificationForm.productSystem} onChange={(value) => setVerificationForm((prev) => ({ ...prev, productSystem: value }))} />
-              <TextAreaField label="核心优势" value={verificationForm.coreAdvantages} onChange={(value) => setVerificationForm((prev) => ({ ...prev, coreAdvantages: value }))} />
-            </div>
-          </section>
-
-          <section className="rounded-[20px] border border-border bg-white/92 p-4 sm:rounded-[24px] sm:p-5">
-            <div className="mb-4">
-              <h3 className="text-base font-medium text-primary">资质图片</h3>
-              <p className="mt-1 text-sm text-muted">支持手机直接上传，系统会自动处理大图压缩。</p>
-            </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="rounded-[18px] border border-border bg-surface p-4">
-                <p className="text-sm font-medium text-primary">企业 Logo</p>
-                <label className="mt-3 inline-flex cursor-pointer items-center rounded-full border border-border bg-white px-4 py-2 text-sm text-primary transition hover:bg-surface">
-                  <input type="file" accept="image/*" className="hidden" onChange={(event) => void handleVerificationAssetUpload(event, "logoUrl")} />
-                  {uploadingVerificationAsset ? "上传中..." : `上传图片（最大 ${MAX_UPLOAD_IMAGE_MB}MB）`}
-                </label>
-                {verificationForm.logoUrl ? (
-                  <Image src={resolveUploadedImageUrl(verificationForm.logoUrl)} alt="企业 Logo" width={72} height={72} className="mt-4 h-[72px] w-[72px] rounded-2xl border border-border object-cover" />
-                ) : null}
-              </div>
-              <div className="rounded-[18px] border border-border bg-surface p-4">
-                <p className="text-sm font-medium text-primary">营业执照</p>
-                <label className="mt-3 inline-flex cursor-pointer items-center rounded-full border border-border bg-white px-4 py-2 text-sm text-primary transition hover:bg-surface">
-                  <input type="file" accept="image/*" className="hidden" onChange={(event) => void handleVerificationAssetUpload(event, "licenseImageUrl")} />
-                  {uploadingVerificationAsset ? "上传中..." : `上传图片（最大 ${MAX_UPLOAD_IMAGE_MB}MB）`}
-                </label>
-                {verificationForm.licenseImageUrl ? (
-                  <Image src={resolveUploadedImageUrl(verificationForm.licenseImageUrl)} alt="营业执照" width={240} height={120} className="mt-4 h-24 w-auto rounded-2xl border border-border bg-white object-contain" />
-                ) : null}
-              </div>
-            </div>
-          </section>
-
-          <section className="rounded-[20px] border border-border bg-white/92 p-4 sm:rounded-[24px] sm:p-5">
-            <div className="mb-4">
-              <h3 className="text-base font-medium text-primary">补充附件</h3>
-              <p className="mt-1 text-sm text-muted">可上传工厂、展厅、证书等辅助材料，帮助加快审核判断。</p>
-            </div>
-            <label className="inline-flex cursor-pointer items-center rounded-full border border-border bg-white px-4 py-2 text-sm text-primary transition hover:bg-surface">
-              <input type="file" accept="image/*" multiple className="hidden" onChange={(event) => void handleVerificationAttachmentsUpload(event)} />
-              {uploadingVerificationAsset ? "上传中..." : "上传补充附件"}
-            </label>
-            {verificationAttachmentPreview.length > 0 ? (
-              <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-6">
-                {verificationAttachmentPreview.map((img, index) => (
-                  <button
-                    key={`${img.slice(0, 20)}-${index}`}
-                    type="button"
-                    onClick={() => removeVerificationAttachment(index)}
-                    className="overflow-hidden rounded-2xl border border-border"
-                    title="点击删除该附件"
-                  >
-                    <Image src={resolveUploadedImageUrl(img)} alt={`附件 ${index + 1}`} width={160} height={96} className="h-24 w-full object-cover" />
-                  </button>
-                ))}
-              </div>
-            ) : null}
-          </section>
-
-          <div className="flex justify-end">
-            <button
-              type="submit"
-              disabled={savingVerification || uploadingVerificationAsset}
-              className="w-full rounded-full bg-accent px-5 py-3 text-sm font-medium text-white shadow-[0_16px_36px_rgba(180,154,107,0.28)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto sm:py-2.5"
-            >
-              {savingVerification ? "提交中..." : "提交认证资料"}
-            </button>
-          </div>
-        </form>
-        {!verificationFormExpanded ? (
-          <div className="mt-5 rounded-[20px] border border-dashed border-border bg-white/80 px-4 py-5 text-sm leading-6 text-muted sm:rounded-[24px] sm:px-5">
-            {data.latestVerification?.status === "approved"
-              ? "企业认证资料已审核通过。如需更新企业主体资料，可展开后重新提交审核。"
-              : data.latestVerification?.status === "pending"
-                ? "企业认证资料已提交，正在审核中。如需核对已填信息，可展开查看当前表单内容。"
-                : "认证资料表单已收起。需要补充、修改或重新提交时，可点击上方“展开认证资料”。"}
-          </div>
-        ) : null}
       </section>
 
       <section id="recent-submissions" className="rounded-[24px] border border-border bg-surface-elevated p-4 shadow-[0_14px_30px_rgba(15,23,42,0.06)] sm:rounded-[28px] sm:p-6 sm:shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
