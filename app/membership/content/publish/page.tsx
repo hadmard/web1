@@ -1270,9 +1270,10 @@ function PublishCenterPageInner() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">已发内容</p>
-                  <p className="mt-2 text-sm text-primary">
-                    当前栏目共 {filteredItems.length} 条，已通过 {filteredStatusSummary.approved} 条，待审核 {filteredStatusSummary.pending} 条。
-                  </p>
+                  <div className="mt-2 flex items-end gap-2">
+                    <span className="text-2xl font-semibold leading-none text-primary">{filteredItems.length}</span>
+                    <span className="pb-0.5 text-xs text-muted">当前栏目内容</span>
+                  </div>
                 </div>
                 <Link
                   href={`/membership/content/submissions?tab=${encodeURIComponent(safeTab)}`}
@@ -1282,11 +1283,23 @@ function PublishCenterPageInner() {
                 </Link>
               </div>
               <div className="mt-3 h-px bg-border/80" />
-              <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted">
-                <span className="rounded-full border border-border bg-white/80 px-2.5 py-1">草稿 {filteredStatusSummary.draft}</span>
-                <span className="rounded-full border border-border bg-white/80 px-2.5 py-1">待审核 {filteredStatusSummary.pending}</span>
-                <span className="rounded-full border border-border bg-white/80 px-2.5 py-1">已通过 {filteredStatusSummary.approved}</span>
-                <span className="rounded-full border border-border bg-white/80 px-2.5 py-1">已退回 {filteredStatusSummary.rejected}</span>
+              <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                <div className="rounded-xl border border-border bg-white/82 px-3 py-2 text-muted">
+                  <span className="block">草稿</span>
+                  <span className="mt-1 block text-sm font-medium text-primary">{filteredStatusSummary.draft}</span>
+                </div>
+                <div className="rounded-xl border border-border bg-white/82 px-3 py-2 text-muted">
+                  <span className="block">待审核</span>
+                  <span className="mt-1 block text-sm font-medium text-primary">{filteredStatusSummary.pending}</span>
+                </div>
+                <div className="rounded-xl border border-border bg-white/82 px-3 py-2 text-muted">
+                  <span className="block">已通过</span>
+                  <span className="mt-1 block text-sm font-medium text-primary">{filteredStatusSummary.approved}</span>
+                </div>
+                <div className="rounded-xl border border-border bg-white/82 px-3 py-2 text-muted">
+                  <span className="block">已退回</span>
+                  <span className="mt-1 block text-sm font-medium text-primary">{filteredStatusSummary.rejected}</span>
+                </div>
               </div>
             </div>
           </aside>
