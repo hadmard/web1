@@ -1134,18 +1134,10 @@ function PublishCenterPageInner() {
               <p className="mt-2 text-sm text-muted">{verificationStatusText}</p>
             </div>
             <div className="flex flex-wrap gap-3">
-              <InlinePageBackLink href="/membership" label="返回会员系统" />
-              <Link href="/membership/account-security" className="apple-inline-link">
-                账号安全
-              </Link>
+              <InlinePageBackLink href="/membership/content" label="返回工作台" />
               <Link href={verificationActionHref} className="apple-inline-link">
                 {verificationActionLabel}
               </Link>
-              {memberType !== "personal" ? (
-                <Link href="/membership/content/site" className="apple-inline-link">
-                  管理会员站
-                </Link>
-              ) : null}
             </div>
           </div>
         </div>
