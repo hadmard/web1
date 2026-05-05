@@ -42,7 +42,11 @@ export async function POST(request: NextRequest) {
     });
 
     if (!member) {
-      return NextResponse.json({ ok: true, message: GENERIC_SUCCESS_MESSAGE });
+      return NextResponse.json({
+        ok: true,
+        message: GENERIC_SUCCESS_MESSAGE,
+        reason: "account_hidden",
+      });
     }
 
     const result = await issuePasswordResetForMember({
@@ -56,12 +60,33 @@ export async function POST(request: NextRequest) {
           {
             error: "该账号尚未绑定找回邮箱，可先提交人工找回申请。",
             needsRecoveryRequest: true,
+            reason: "missing_recovery_email",
           },
           { status: 400 }
         );
       }
 
-      return NextResponse.json({ error: "请求过于频繁，请 1 分钟后再试。" }, { status: 429 });
+      if (result.reason === "email_service_unavailable") {
+        console.error("POST /api/auth/password/forgot email service unavailable", {
+          missingConfig: result.missingConfig,
+        });
+        return NextResponse.json(
+          {
+            error: "邮件服务未配置，请提交人工找回申请。",
+            needsRecoveryRequest: true,
+            reason: "email_service_unavailable",
+          },
+          { status: 503 }
+        );
+      }
+
+      return NextResponse.json(
+        {
+          error: "请求过于频繁，请 1 分钟后再试。",
+          reason: "cooldown",
+        },
+        { status: 429 }
+      );
     }
 
     await writeOperationLog({
@@ -76,6 +101,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       ok: true,
       message: GENERIC_SUCCESS_MESSAGE,
+      reason: "email_sent",
       debugResetUrl:
         result.delivery.mode === "debug" && process.env.NODE_ENV !== "production"
           ? result.delivery.resetUrl
@@ -83,6 +109,13 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("POST /api/auth/password/forgot", error);
-    return NextResponse.json({ error: "发送重置说明失败，请稍后重试。" }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: "邮件发送失败，请稍后重试或提交人工找回申请。",
+        needsRecoveryRequest: true,
+        reason: "send_failed",
+      },
+      { status: 500 }
+    );
   }
 }

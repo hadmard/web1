@@ -116,14 +116,25 @@ export async function PATCH(
       });
 
       if (!result.ok) {
+        const isMissingRecoveryEmail = result.reason === "missing_recovery_email";
+        const isEmailServiceUnavailable = result.reason === "email_service_unavailable";
+
+        if (isEmailServiceUnavailable) {
+          console.error("PATCH /api/admin/password-recovery-requests/[id] email service unavailable", {
+            missingConfig: result.missingConfig,
+          });
+        }
+
         return NextResponse.json(
           {
-            error:
-              result.reason === "missing_recovery_email"
-                ? "请先为该账号填写找回邮箱，再发送重置链接。"
+            error: isMissingRecoveryEmail
+              ? "请先为该账号填写找回邮箱，再发送重置链接。"
+              : isEmailServiceUnavailable
+                ? "邮件服务未配置，请先补齐 SMTP 或 Resend 配置。"
                 : "请求过于频繁，请稍后再试。",
+            reason: result.reason,
           },
-          { status: result.reason === "missing_recovery_email" ? 400 : 429 }
+          { status: isMissingRecoveryEmail ? 400 : isEmailServiceUnavailable ? 503 : 429 }
         );
       }
 
@@ -151,6 +162,7 @@ export async function PATCH(
       return NextResponse.json({
         ok: true,
         item: updated,
+        reason: "email_sent",
         debugResetUrl:
           result.delivery.mode === "debug" && process.env.NODE_ENV !== "production"
             ? result.delivery.resetUrl
@@ -185,6 +197,12 @@ export async function PATCH(
     return NextResponse.json({ error: "不支持的操作。" }, { status: 400 });
   } catch (error) {
     console.error("PATCH /api/admin/password-recovery-requests/[id]", error);
-    return NextResponse.json({ error: "处理找回申请失败，请稍后重试。" }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: "邮件发送失败或处理找回申请失败，请稍后重试。",
+        reason: "send_failed",
+      },
+      { status: 500 }
+    );
   }
 }

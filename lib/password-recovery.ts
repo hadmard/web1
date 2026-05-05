@@ -1,4 +1,5 @@
-﻿import { createHash, randomBytes } from "crypto";
+import { createHash, randomBytes } from "crypto";
+import nodemailer from "nodemailer";
 import { prisma } from "@/lib/prisma";
 
 const PASSWORD_RESET_TTL_MS = 30 * 60 * 1000;
@@ -44,24 +45,129 @@ type SendPasswordResetEmailInput = {
   resetUrl: string;
 };
 
+type PasswordResetEmailConfig =
+  | {
+      mode: "smtp";
+      host: string;
+      port: number;
+      secure: boolean;
+      user: string;
+      pass: string;
+      from: string;
+    }
+  | { mode: "resend"; resendApiKey: string; from: string }
+  | { mode: "debug" }
+  | { mode: "disabled"; missing: string[] };
+
 type SendPasswordResetEmailResult =
+  | { mode: "smtp" }
   | { mode: "resend" }
   | { mode: "debug"; resetUrl: string };
+
+type PasswordResetIssueResult =
+  | {
+      ok: true;
+      deliveryEmail: string;
+      resetUrl: string;
+      delivery: SendPasswordResetEmailResult;
+    }
+  | { ok: false; reason: "missing_recovery_email" }
+  | { ok: false; reason: "cooldown" }
+  | { ok: false; reason: "email_service_unavailable"; missingConfig: string[] };
+
+function parseBooleanEnv(value: string | undefined) {
+  const normalized = value?.trim().toLowerCase();
+  if (!normalized) return null;
+  if (["true", "1", "yes", "on"].includes(normalized)) return true;
+  if (["false", "0", "no", "off"].includes(normalized)) return false;
+  return null;
+}
+
+function getPasswordResetEmailConfig(): PasswordResetEmailConfig {
+  const smtpHost = process.env.SMTP_HOST?.trim();
+  const smtpPortRaw = process.env.SMTP_PORT?.trim();
+  const smtpSecureRaw = process.env.SMTP_SECURE?.trim();
+  const smtpUser = process.env.SMTP_USER?.trim();
+  const smtpPass = process.env.SMTP_PASS?.trim();
+  const from = process.env.MAIL_FROM?.trim();
+
+  if (smtpHost && smtpPortRaw && smtpUser && smtpPass && from) {
+    const port = Number.parseInt(smtpPortRaw, 10);
+    if (Number.isFinite(port) && port > 0) {
+      const secure = parseBooleanEnv(smtpSecureRaw) ?? port === 465;
+      return {
+        mode: "smtp",
+        host: smtpHost,
+        port,
+        secure,
+        user: smtpUser,
+        pass: smtpPass,
+        from,
+      };
+    }
+  }
+
+  const resendApiKey = process.env.RESEND_API_KEY?.trim();
+  if (resendApiKey && from) {
+    return { mode: "resend", resendApiKey, from };
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    const smtpMissing = [
+      !smtpHost ? "SMTP_HOST" : null,
+      !smtpPortRaw ? "SMTP_PORT" : null,
+      !smtpUser ? "SMTP_USER" : null,
+      !smtpPass ? "SMTP_PASS" : null,
+      !from ? "MAIL_FROM" : null,
+    ].filter((value): value is string => Boolean(value));
+
+    const resendMissing = [
+      !resendApiKey ? "RESEND_API_KEY" : null,
+      !from ? "MAIL_FROM" : null,
+    ].filter((value): value is string => Boolean(value));
+
+    const missing = Array.from(new Set([...smtpMissing, ...resendMissing]));
+    return { mode: "disabled", missing };
+  }
+
+  return { mode: "debug" };
+}
+
+function buildPasswordResetEmailHtml(input: SendPasswordResetEmailInput) {
+  return `
+    <div style="font-family:Arial,'PingFang SC','Microsoft YaHei',sans-serif;line-height:1.7;color:#1f2937">
+      <p>您好，</p>
+      <p>我们收到账号 <strong>${escapeHtml(input.account)}</strong> 的密码重置申请。</p>
+      <p>请在 30 分钟内点击下面的链接重设密码：</p>
+      <p><a href="${input.resetUrl}">${input.resetUrl}</a></p>
+      <p>如果这不是您的操作，请忽略这封邮件。</p>
+    </div>
+  `;
+}
 
 export async function issuePasswordResetForMember(input: {
   member: ResettableMember;
   origin: string;
-}) {
+}): Promise<PasswordResetIssueResult> {
   const deliveryEmail =
     normalizeRecoveryEmail(input.member.recoveryEmail) ||
     (input.member.email.includes("@") ? normalizeRecoveryEmail(input.member.email) : null);
 
   if (!deliveryEmail) {
-    return { ok: false as const, reason: "missing_recovery_email" as const };
+    return { ok: false, reason: "missing_recovery_email" };
   }
 
   if (!canRequestPasswordReset(input.member.passwordResetRequestedAt)) {
-    return { ok: false as const, reason: "cooldown" as const };
+    return { ok: false, reason: "cooldown" };
+  }
+
+  const emailConfig = getPasswordResetEmailConfig();
+  if (emailConfig.mode === "disabled") {
+    return {
+      ok: false,
+      reason: "email_service_unavailable",
+      missingConfig: emailConfig.missing,
+    };
   }
 
   const { token, tokenHash, expiresAt } = createPasswordResetToken();
@@ -76,14 +182,17 @@ export async function issuePasswordResetForMember(input: {
   });
 
   const resetUrl = buildPasswordResetUrl(input.origin, token);
-  const delivery = await sendPasswordResetEmail({
-    to: deliveryEmail,
-    account: input.member.email,
-    resetUrl,
-  });
+  const delivery = await sendPasswordResetEmail(
+    {
+      to: deliveryEmail,
+      account: input.member.email,
+      resetUrl,
+    },
+    emailConfig
+  );
 
   return {
-    ok: true as const,
+    ok: true,
     deliveryEmail,
     resetUrl,
     delivery,
@@ -91,31 +200,42 @@ export async function issuePasswordResetForMember(input: {
 }
 
 export async function sendPasswordResetEmail(
-  input: SendPasswordResetEmailInput
+  input: SendPasswordResetEmailInput,
+  config: PasswordResetEmailConfig = getPasswordResetEmailConfig()
 ): Promise<SendPasswordResetEmailResult> {
-  const resendApiKey = process.env.RESEND_API_KEY?.trim();
-  const from = process.env.MAIL_FROM?.trim();
+  if (config.mode === "smtp") {
+    const transporter = nodemailer.createTransport({
+      host: config.host,
+      port: config.port,
+      secure: config.secure,
+      auth: {
+        user: config.user,
+        pass: config.pass,
+      },
+    });
 
-  if (resendApiKey && from) {
+    await transporter.sendMail({
+      from: config.from,
+      to: input.to,
+      subject: "整木网账号密码重置",
+      html: buildPasswordResetEmailHtml(input),
+    });
+
+    return { mode: "smtp" };
+  }
+
+  if (config.mode === "resend") {
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${resendApiKey}`,
+        Authorization: `Bearer ${config.resendApiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from,
+        from: config.from,
         to: [input.to],
         subject: "整木网账号密码重置",
-        html: `
-          <div style="font-family:Arial,'PingFang SC','Microsoft YaHei',sans-serif;line-height:1.7;color:#1f2937">
-            <p>您好，</p>
-            <p>我们收到账号 <strong>${escapeHtml(input.account)}</strong> 的密码重置申请。</p>
-            <p>请在 30 分钟内点击下面的链接重设密码：</p>
-            <p><a href="${input.resetUrl}">${input.resetUrl}</a></p>
-            <p>如果这不是您的操作，请忽略这封邮件。</p>
-          </div>
-        `,
+        html: buildPasswordResetEmailHtml(input),
       }),
     });
 
@@ -125,6 +245,10 @@ export async function sendPasswordResetEmail(
     }
 
     return { mode: "resend" };
+  }
+
+  if (config.mode === "disabled") {
+    throw new Error(`密码重置邮件服务未配置: ${config.missing.join(", ")}`);
   }
 
   console.info("[password-recovery] debug_reset_link", {
