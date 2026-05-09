@@ -151,6 +151,7 @@ type Row = {
 };
 
 const COVER_IMAGE_MAX_BYTES = 2 * 1024 * 1024;
+const ENTERPRISE_NEWS_SUBHREF = "/news/enterprise";
 
 function getDefaultMemberAccess(): MemberAccess {
   return {
@@ -265,6 +266,7 @@ function PublishCenterPageInner() {
   const [relatedStandardIds, setRelatedStandardIds] = useState("");
   const [relatedBrandIds, setRelatedBrandIds] = useState("");
   const [tagSlugs, setTagSlugs] = useState("");
+  const [syncToMainSite, setSyncToMainSite] = useState(false);
   const [isPinned, setIsPinned] = useState(false);
   const [slug, setSlug] = useState("");
   const [documentMeta, setDocumentMeta] = useState<DocumentMetadata>(createEmptyDocumentMetadata());
@@ -324,6 +326,13 @@ function PublishCenterPageInner() {
   const canPasteImages = authed === true;
   const isDocumentTab = safeTab === "terms" || safeTab === "standards";
   const documentKind = safeTab === "standards" ? "standards" : "terms";
+  const canLockSyncToEnterpriseNews = safeTab === "articles" && Boolean(enterprise?.id);
+  const effectivePublishSubHref =
+    canLockSyncToEnterpriseNews && syncToMainSite ? ENTERPRISE_NEWS_SUBHREF : subHref;
+  const effectiveActiveSubAccess = useMemo(
+    () => subOptions.find((item) => item.href === effectivePublishSubHref) ?? null,
+    [effectivePublishSubHref, subOptions],
+  );
 
   const filteredItems = useMemo(
     () => items.filter((item) => resolveTabKeyFromHref(item.categoryHref, item.subHref) === safeTab),
@@ -624,6 +633,7 @@ function PublishCenterPageInner() {
     setRelatedStandardIds("");
     setRelatedBrandIds("");
     setTagSlugs("");
+    setSyncToMainSite(false);
     setIsPinned(false);
     setSlug("");
     setDocumentMeta(createEmptyDocumentMetadata());
@@ -671,7 +681,7 @@ function PublishCenterPageInner() {
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (loading || !selectedCategory || !selectedCategoryAccess?.enabled) return;
-    if (subOptions.length > 0 && !activeSubAccess?.enabled) {
+    if (subOptions.length > 0 && !effectiveActiveSubAccess?.enabled) {
       setMessage("当前子栏目未开通投稿权限，请联系管理员授权。");
       return;
     }
@@ -701,7 +711,7 @@ function PublishCenterPageInner() {
       excerpt: excerpt.trim() || null,
       content: composedContent,
       categoryHref: selectedCategory.href,
-      subHref: subOptions.length > 0 ? subHref || null : null,
+      subHref: subOptions.length > 0 ? effectivePublishSubHref || null : null,
       coverImage:
         safeTab === "brands"
           ? brandStructured.logoUrl.trim() || null
@@ -724,7 +734,7 @@ function PublishCenterPageInner() {
       relatedBrandIds: relatedBrandIds.trim() || null,
       tagSlugs: tagSlugs.trim() || null,
       faqJson: safeTab === "terms" || safeTab === "standards" ? stringifyDocumentMetadata(documentMeta) : null,
-      syncToMainSite: true,
+      syncToMainSite,
       isPinned,
     };
 
@@ -794,6 +804,7 @@ function PublishCenterPageInner() {
     setDocumentMeta(createEmptyDocumentMetadata());
     autoSlugRef.current = "";
     autoSeoRef.current = { seoTitle: "", seoKeywords: "", seoDescription: "" };
+    setSyncToMainSite(false);
     setIsPinned(false);
     await load();
     setLoading(false);
@@ -1339,8 +1350,8 @@ function PublishCenterPageInner() {
               <label className="block text-sm text-muted">子栏目</label>
               <div className="flex flex-wrap gap-2 rounded-lg border border-border bg-surface p-2">
                 {subOptions.map((s) => {
-                  const active = subHref === s.href;
-                  const disabled = !s.enabled;
+                  const active = effectivePublishSubHref === s.href;
+                  const disabled = !s.enabled || (canLockSyncToEnterpriseNews && syncToMainSite && s.href !== ENTERPRISE_NEWS_SUBHREF);
                   return (
                     <button
                       key={s.href}
@@ -1446,9 +1457,31 @@ function PublishCenterPageInner() {
                     企业会员在这里发布的资讯，审核通过后会直接进入整木资讯栏目中的企业动态内容，同时自动汇总到你的企业页“企业动态”，不需要再单独同步。
                   </p>
                 </div>
-                <span className="inline-flex min-w-[128px] items-center justify-center rounded-full border border-[rgba(180,154,107,0.32)] bg-white/92 px-4 py-2 text-sm font-medium text-primary shadow-[0_10px_24px_-20px_rgba(15,23,42,0.18)]">
-                  发布后自动同步
-                </span>
+                <div className="flex flex-col items-start gap-2 md:items-end">
+                  <button
+                    type="button"
+                    aria-pressed={syncToMainSite}
+                    onClick={() => {
+                      if (!canLockSyncToEnterpriseNews) {
+                        setMessage("完成企业认证后，才可以将会员稿同步到整木资讯企业动态。");
+                        return;
+                      }
+                      setSyncToMainSite((value) => !value);
+                    }}
+                    className={`inline-flex min-w-[128px] items-center justify-center rounded-full border px-4 py-2 text-sm font-medium transition shadow-[0_10px_24px_-20px_rgba(15,23,42,0.18)] ${
+                      syncToMainSite
+                        ? "border-[rgba(180,154,107,0.54)] bg-[#b49a6b] text-white"
+                        : "border-[rgba(180,154,107,0.32)] bg-white/92 text-primary hover:border-[rgba(180,154,107,0.5)] hover:bg-white"
+                    }`}
+                  >
+                    {syncToMainSite ? "已开启自动同步" : "点击开启同步"}
+                  </button>
+                  <p className="text-xs text-muted">
+                    {syncToMainSite
+                      ? "已锁定同步到整木资讯的“企业动态”栏目，并同步显示在企业主页。"
+                      : "如需同步到整木资讯，请先点击开启；同步稿将统一进入“企业动态”。"}
+                  </p>
+                </div>
               </div>
             </div>
           )}

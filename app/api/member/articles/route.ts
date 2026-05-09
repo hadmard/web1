@@ -129,13 +129,16 @@ export async function POST(request: NextRequest) {
 
   const categoryDef = MEMBER_PUBLISH_CATEGORY_OPTIONS.find((item) => item.href === categoryHrefTrim);
   const rawSubHref = typeof subHref === "string" ? subHref.trim() : "";
+  const normalizedSyncToMainSite = syncToMainSite === true;
   const memberEnterprise = await prisma.enterprise.findUnique({
     where: { memberId: session.sub },
     select: { id: true },
   });
   const normalizedSubHref =
     categoryHrefTrim === "/news" && memberEnterprise
-      ? rawSubHref || "/news/enterprise"
+      ? normalizedSyncToMainSite
+        ? "/news/enterprise"
+        : rawSubHref || "/news/enterprise"
       : rawSubHref || null;
 
   if (categoryDef && categoryDef.subs.length > 0) {
@@ -243,7 +246,7 @@ export async function POST(request: NextRequest) {
       faqJson: typeof faqJson === "string" ? faqJson.trim() || null : null,
       tagSlugs: resolvedTagSlugs.length > 0 ? resolvedTagSlugs.join(",") : null,
       manualKeywords: typeof manualKeywords === "string" ? formatKeywordCsv(manualKeywords.split(/[,\n，]+/)) || null : null,
-      syncToMainSite: syncToMainSite === true,
+      syncToMainSite: normalizedSyncToMainSite,
       isPinned: (session.role === "SUPER_ADMIN" || session.role === "ADMIN") && isPinned === true,
       publishedAt: submissionStatus === "approved" ? new Date() : null,
       status: submissionStatus,
