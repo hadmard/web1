@@ -542,11 +542,11 @@ export default async function ArticlePage({ params, searchParams }: Props) {
         ) : null}
 
         {productRecommendations.length > 0 ? (
-          <section className="mt-10 rounded-[24px] border border-[rgba(194,182,154,0.28)] bg-[linear-gradient(180deg,rgba(255,252,246,0.98),rgba(246,240,231,0.92))] px-5 py-6 shadow-[0_18px_40px_-34px_rgba(180,154,107,0.28)] sm:px-7">
+          <section className="mt-10 rounded-[24px] border border-[rgba(194,182,154,0.28)] bg-[linear-gradient(180deg,rgba(255,252,246,0.98),rgba(246,240,231,0.92))] px-5 py-6 text-[#1f2937] shadow-[0_18px_40px_-34px_rgba(180,154,107,0.28)] sm:px-7">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <h2 className="text-lg font-semibold text-primary">相关产品推荐</h2>
-                <p className="mt-1 text-sm leading-7 text-muted">文章已关联木作清洁养护商品，可继续前往商城或商品详情页了解。</p>
+                <h2 className="text-lg font-semibold text-[#111827]">相关产品推荐</h2>
+                <p className="mt-1 text-sm leading-7 text-[#4b5563]">文章已关联木作清洁养护商品，可继续前往商城或商品详情页了解。</p>
               </div>
             </div>
             <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -556,7 +556,7 @@ export default async function ArticlePage({ params, searchParams }: Props) {
                   href={item.url}
                   target={item.url.startsWith("http") ? "_blank" : undefined}
                   rel={item.url.startsWith("http") ? "noreferrer" : undefined}
-                  className="rounded-[20px] border border-[rgba(194,182,154,0.26)] bg-white/88 p-4 transition hover:-translate-y-0.5 hover:border-[rgba(170,154,122,0.42)]"
+                  className="rounded-[20px] border border-[rgba(194,182,154,0.26)] bg-white/88 p-4 text-[#1f2937] transition hover:-translate-y-0.5 hover:border-[rgba(170,154,122,0.42)]"
                 >
                   {item.imageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -567,12 +567,12 @@ export default async function ArticlePage({ params, searchParams }: Props) {
                       loading="lazy"
                     />
                   ) : (
-                    <div className="flex h-40 items-center justify-center rounded-[16px] bg-[rgba(250,245,237,0.92)] text-sm text-muted">
+                    <div className="flex h-40 items-center justify-center rounded-[16px] bg-[rgba(250,245,237,0.92)] text-sm text-[#5b6472]">
                       木作护理推荐
                     </div>
                   )}
-                  <h3 className="mt-4 text-base font-semibold leading-7 text-primary">{item.title}</h3>
-                  {item.sellingPoint ? <p className="mt-2 text-sm leading-7 text-muted">{item.sellingPoint}</p> : null}
+                  <h3 className="mt-4 text-base font-semibold leading-7 text-[#111827]">{item.title}</h3>
+                  {item.sellingPoint ? <p className="mt-2 text-sm leading-7 text-[#374151]">{item.sellingPoint}</p> : null}
                   <span className="mt-4 inline-flex items-center rounded-full border border-[rgba(180,154,107,0.34)] px-4 py-2 text-sm font-medium text-[#7b6542]">
                     去商城
                   </span>
@@ -583,10 +583,10 @@ export default async function ArticlePage({ params, searchParams }: Props) {
         ) : null}
 
         {recommendedArticles.length > 0 ? (
-          <section className="mt-10 rounded-[20px] bg-[#fafafa] px-4 py-4 sm:px-5">
+          <section className="mt-10 rounded-[20px] bg-[#fafafa] px-4 py-4 text-[#1f2937] sm:px-5">
             <div className="mb-4 flex items-center justify-between gap-4">
-              <h2 className="text-lg font-semibold text-primary">相关文章</h2>
-              <Link href="/news/all" className="text-sm text-muted hover:text-accent">
+              <h2 className="text-lg font-semibold text-[#111827]">相关文章</h2>
+              <Link href="/news/all" className="text-sm text-[#4b5563] hover:text-accent">
                 查看更多
               </Link>
             </div>
@@ -595,7 +595,7 @@ export default async function ArticlePage({ params, searchParams }: Props) {
                 <Link
                   key={item.id}
                   href={buildNewsPath(getArticleSegment(item))}
-                  className="flex items-start gap-3 rounded-xl px-2 py-3 text-sm leading-7 text-primary transition hover:bg-white hover:text-accent"
+                  className="flex items-start gap-3 rounded-xl px-2 py-3 text-sm leading-7 text-[#1f2937] transition hover:bg-white hover:text-accent"
                 >
                   <span className="mt-2 h-1.5 w-1.5 rounded-full bg-[rgba(180,154,107,0.86)]" />
                   <span className="flex-1">{decodeEscapedUnicode(item.title)}</span>
