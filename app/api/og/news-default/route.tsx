@@ -47,7 +47,7 @@ export async function GET() {
         >
           <div
             style={{
-              display: "inline-flex",
+              display: "flex",
               alignItems: "center",
               gap: 20,
             }}

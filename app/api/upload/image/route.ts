@@ -60,10 +60,27 @@ function normalizeUploadPathFromSrc(src: string) {
 
   try {
     const parsed = new URL(trimmed);
+    if (!["http:", "https:"].includes(parsed.protocol)) return "";
     if (!LEGACY_UPLOAD_HOSTS.has(parsed.hostname.toLowerCase())) return "";
     return normalizePathname(parsed.pathname);
   } catch {
     return "";
+  }
+}
+
+function parseWhitelistedRemoteUploadUrl(src: string) {
+  const trimmed = src.trim();
+  if (!trimmed || trimmed.includes("\\") || /%2e|%2f|%5c/i.test(trimmed)) return null;
+
+  try {
+    const parsed = new URL(trimmed);
+    if (!["http:", "https:"].includes(parsed.protocol)) return null;
+    if (!LEGACY_UPLOAD_HOSTS.has(parsed.hostname.toLowerCase())) return null;
+    const uploadPath = normalizeUploadPathFromSrc(trimmed);
+    if (!uploadPath) return null;
+    return { parsed, uploadPath };
+  } catch {
+    return null;
   }
 }
 
@@ -147,14 +164,16 @@ async function writeUploadedImage(bytes: Uint8Array, folderRaw: string, ext: str
 }
 
 async function fetchLegacyUpload(src: string, method: "GET" | "HEAD") {
-  const uploadPath = normalizeUploadPathFromSrc(src);
+  const remoteTarget = parseWhitelistedRemoteUploadUrl(src);
+  const uploadPath = remoteTarget?.uploadPath ?? normalizeUploadPathFromSrc(src);
   if (!uploadPath) return null;
 
   const candidates = [
+    remoteTarget ? `${remoteTarget.parsed.protocol}//${remoteTarget.parsed.host}${uploadPath}` : null,
     `https://jiu.cnzhengmu.com${uploadPath}`,
     `https://www.cnzhengmu.com${uploadPath}`,
     `https://cnzhengmu.com${uploadPath}`,
-  ];
+  ].filter((value, index, items): value is string => Boolean(value) && items.indexOf(value) === index);
 
   for (const candidate of candidates) {
     try {
@@ -164,8 +183,15 @@ async function fetchLegacyUpload(src: string, method: "GET" | "HEAD") {
         cache: "force-cache",
       });
       if (!response.ok) continue;
-      const contentType = response.headers.get("content-type") || "application/octet-stream";
+      const contentType = (response.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
+      if (!contentType.startsWith("image/") || contentType === "image/svg+xml") continue;
+
+      const contentLength = Number(response.headers.get("content-length") || 0);
+      if (contentLength > MAX_SERVER_IMAGE_BYTES) continue;
+
       const body = method === "HEAD" ? null : await response.arrayBuffer();
+      if (body && body.byteLength > MAX_SERVER_IMAGE_BYTES) continue;
+
       return new NextResponse(body, {
         headers: {
           "Content-Type": contentType,
