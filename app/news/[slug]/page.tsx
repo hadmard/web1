@@ -493,7 +493,7 @@ export default async function ArticlePage({ params, searchParams }: Props) {
         ) : null}
 
         <div className="mt-8 rounded-[24px] border border-[rgba(15,23,42,0.06)] bg-[rgba(255,255,255,0.94)] px-5 py-7 shadow-[0_22px_44px_-38px_rgba(15,23,42,0.12)] sm:rounded-[26px] sm:px-8 sm:py-9 sm:shadow-[0_24px_48px_-40px_rgba(15,23,42,0.12)]">
-          <RichContent html={stripNewsLeadingOverviewHeading(displayContent)} className="prose prose-neutral dark:prose-invert max-w-none" />
+          <RichContent html={stripNewsLeadingOverviewHeading(displayContent)} className="prose prose-neutral article-reading-rich-content max-w-none" />
           {sourceSummary ? (
             <section className="mt-10 rounded-2xl border border-[rgba(15,23,42,0.08)] bg-[#f6f7f9] px-5 py-4 text-[14px] leading-7 text-[#666] sm:px-6">
               <h2 className="text-[15px] font-semibold text-[#333]">信息来源</h2>

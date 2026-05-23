@@ -1317,6 +1317,84 @@ html[data-motion-tier="low"] .mouse-parallax {
 .rich-editor-content a[href]:focus-visible {
   outline: none;
 }
+
+.article-reading-rich-content {
+  color: #1f2937;
+}
+
+.article-reading-rich-content :where(
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  p,
+  li,
+  strong,
+  b,
+  span,
+  div,
+  section,
+  article,
+  figure,
+  figcaption,
+  summary,
+  details,
+  td,
+  th
+) {
+  color: inherit;
+}
+
+.article-reading-rich-content :where(h1, h2, h3, h4, h5, h6) {
+  color: #111827;
+}
+
+.article-reading-rich-content :where(p, li, figcaption, summary, td, th) {
+  color: #374151;
+}
+
+.article-reading-rich-content :where(strong, b) {
+  color: #111827;
+}
+
+.article-reading-rich-content :where(a) {
+  color: #8a734d;
+}
+
+.article-reading-rich-content :where(blockquote) {
+  color: #374151;
+  background: rgba(248, 250, 252, 0.92);
+  border-radius: 16px;
+  padding: 0.9rem 1rem 0.9rem 1.1rem;
+  border-left-width: 3px;
+}
+
+.article-reading-rich-content :where(table) {
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.article-reading-rich-content :where(td, th) {
+  background: transparent;
+}
+
+.article-reading-rich-content :where(pre) {
+  color: #1f2937;
+  background: rgba(15, 23, 42, 0.06);
+}
+
+.article-reading-rich-content :where(details) {
+  border: 1px solid rgba(216, 220, 225, 0.92);
+  border-radius: 16px;
+  background: rgba(248, 250, 252, 0.88);
+  padding: 0.8rem 0.95rem;
+}
+
+.article-reading-rich-content :where(summary) {
+  font-weight: 600;
+  color: #111827;
+}
 @media (max-width: 640px) {
   .rich-editor-content img {
     border-radius: 8px;
@@ -1337,6 +1415,15 @@ html[data-motion-tier="low"] .mouse-parallax {
   .rich-editor-content blockquote {
     padding-left: 0.7rem;
     border-left-width: 2px;
+  }
+  .article-reading-rich-content {
+    color: #111827;
+  }
+  .article-reading-rich-content :where(p, li, figcaption, summary, td, th) {
+    color: #374151;
+  }
+  .article-reading-rich-content :where(blockquote) {
+    padding: 0.8rem 0.9rem 0.8rem 0.95rem;
   }
 }
 
