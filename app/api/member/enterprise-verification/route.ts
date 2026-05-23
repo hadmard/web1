@@ -10,6 +10,8 @@ import {
   normalizeUnifiedSocialCreditCode,
 } from "@/lib/enterprise-verification-validation";
 
+const REMOVED_SENSITIVE_FIELD_PLACEHOLDER = "[removed]";
+
 function trimRequired(value: unknown, label: string) {
   const text = typeof value === "string" ? value.trim() : "";
   if (!text) throw new Error(`${label}不能为空`);
@@ -41,6 +43,30 @@ export async function GET() {
     prisma.enterpriseVerification.findFirst({
       where: { memberId: session.sub },
       orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        companyName: true,
+        companyShortName: true,
+        accountName: true,
+        contactPerson: true,
+        contactPhone: true,
+        contactEmail: true,
+        logoUrl: true,
+        licenseImageUrl: true,
+        licenseCode: true,
+        address: true,
+        foundedAt: true,
+        registeredCapital: true,
+        website: true,
+        intro: true,
+        businessScope: true,
+        productSystem: true,
+        coreAdvantages: true,
+        attachmentsJson: true,
+        status: true,
+        reviewNote: true,
+        updatedAt: true,
+      },
     }),
     prisma.enterprise.findUnique({
       where: { memberId: session.sub },
@@ -54,7 +80,10 @@ export async function GET() {
     }),
   ]);
 
-  return NextResponse.json({ latest, enterprise });
+  return NextResponse.json({
+    latest: latest ? { ...latest, accountPassword: "" } : null,
+    enterprise,
+  });
 }
 
 export async function POST(request: NextRequest) {
@@ -92,7 +121,7 @@ export async function POST(request: NextRequest) {
       companyName: trimRequired(body.companyName, "企业全称"),
       companyShortName: trimOptional(body.companyShortName),
       accountName: trimRequired(body.accountName, "企业账号"),
-      accountPassword: trimRequired(body.accountPassword, "企业账号密码"),
+      accountPassword: REMOVED_SENSITIVE_FIELD_PLACEHOLDER,
       contactPerson: trimRequired(body.contactPerson, "联系人"),
       contactPhone: normalizeEnterprisePhone(trimRequired(body.contactPhone, "联系电话")),
       contactEmail: trimOptional(body.contactEmail),

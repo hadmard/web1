@@ -44,7 +44,7 @@ type VerificationRecord = {
   companyName: string;
   companyShortName?: string | null;
   accountName: string;
-  accountPassword: string;
+  accountPassword?: string | null;
   contactPerson: string;
   contactPhone: string;
   contactEmail?: string | null;
@@ -157,7 +157,7 @@ function mapRecordToForm(record: VerificationRecord | null) {
     companyName: record.companyName ?? "",
     companyShortName: record.companyShortName ?? "",
     accountName: record.accountName ?? "",
-    accountPassword: record.accountPassword ?? "",
+    accountPassword: "",
     contactPerson: record.contactPerson ?? "",
     contactPhone: record.contactPhone ?? "",
     contactEmail: record.contactEmail ?? "",
@@ -459,7 +459,13 @@ export default function MembershipVerificationPage() {
               <Field label="企业全称" value={form.companyName} onChange={(value) => setForm((prev) => ({ ...prev, companyName: value }))} />
               <Field label="企业简称" value={form.companyShortName} onChange={(value) => setForm((prev) => ({ ...prev, companyShortName: value }))} />
               <Field label="企业账号" value={form.accountName} onChange={(value) => setForm((prev) => ({ ...prev, accountName: value }))} />
-              <Field label="企业账号密码" value={form.accountPassword} onChange={(value) => setForm((prev) => ({ ...prev, accountPassword: value }))} />
+              <Field
+                label="企业账号密码"
+                type="password"
+                value={form.accountPassword}
+                helper="系统不再保存企业账号密码明文；如需补充，请仅在本次提交时填写，保存后不会回显。"
+                onChange={(value) => setForm((prev) => ({ ...prev, accountPassword: value }))}
+              />
               <Field label="联系人" value={form.contactPerson} onChange={(value) => setForm((prev) => ({ ...prev, contactPerson: value }))} />
               <Field label="电话" value={form.contactPhone} helper="支持手机号，或带区号的固定电话。" onChange={(value) => setForm((prev) => ({ ...prev, contactPhone: value }))} />
               <Field label="联系邮箱" value={form.contactEmail} onChange={(value) => setForm((prev) => ({ ...prev, contactEmail: value }))} />

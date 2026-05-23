@@ -25,7 +25,24 @@ export async function GET(request: NextRequest) {
     where,
     orderBy: [{ status: "asc" }, { createdAt: "desc" }],
     take: limit,
-    include: {
+    select: {
+      id: true,
+      companyName: true,
+      companyShortName: true,
+      contactPerson: true,
+      contactPhone: true,
+      contactEmail: true,
+      logoUrl: true,
+      licenseImageUrl: true,
+      licenseCode: true,
+      address: true,
+      website: true,
+      intro: true,
+      businessScope: true,
+      productSystem: true,
+      coreAdvantages: true,
+      status: true,
+      approvedEnterpriseId: true,
       member: {
         select: {
           id: true,

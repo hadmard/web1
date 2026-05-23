@@ -25,6 +25,7 @@ const EXTENSION_MIME: Record<string, string> = {
 
 const LEGACY_UPLOAD_HOSTS = new Set(["cnzhengmu.com", "www.cnzhengmu.com", "jiu.cnzhengmu.com"]);
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
+const PUBLIC_UPLOADS_DIR = path.resolve(process.cwd(), "public", "uploads");
 
 function sanitizeFolder(input: string) {
   const cleaned = input
@@ -39,12 +40,28 @@ function sanitizeFolder(input: string) {
 function normalizeUploadPathFromSrc(src: string) {
   const trimmed = src.trim();
   if (!trimmed) return "";
-  if (trimmed.startsWith("/uploads/")) return trimmed;
+  if (trimmed.includes("\\") || /%2e|%2f|%5c/i.test(trimmed)) return "";
+
+  const normalizePathname = (pathname: string) => {
+    if (!pathname || pathname.startsWith("//") || !pathname.startsWith("/uploads/")) return "";
+    if (pathname.includes("\\") || pathname.includes("\0")) return "";
+    const normalized = path.posix.normalize(pathname);
+    if (!normalized.startsWith("/uploads/")) return "";
+    const relativePath = normalized.slice("/uploads/".length);
+    if (!relativePath) return "";
+    const segments = relativePath.split("/");
+    if (segments.some((segment) => !segment || segment === "." || segment === "..")) return "";
+    return normalized;
+  };
+
+  if (trimmed.startsWith("/")) {
+    return normalizePathname(trimmed);
+  }
 
   try {
     const parsed = new URL(trimmed);
     if (!LEGACY_UPLOAD_HOSTS.has(parsed.hostname.toLowerCase())) return "";
-    return parsed.pathname.startsWith("/uploads/") ? parsed.pathname : "";
+    return normalizePathname(parsed.pathname);
   } catch {
     return "";
   }
@@ -53,14 +70,16 @@ function normalizeUploadPathFromSrc(src: string) {
 function toUploadDiskPath(src: string) {
   const normalized = normalizeUploadPathFromSrc(src);
   if (!normalized) return null;
-  const parts = normalized
-    .replace(/^\/+/, "")
-    .split("/")
-    .map((segment) => segment.trim())
-    .filter(Boolean);
+  const relativePath = normalized.slice("/uploads/".length);
+  if (!relativePath) return null;
 
-  if (parts.length < 2 || parts[0] !== "uploads") return null;
-  return path.join(process.cwd(), "public", ...parts);
+  const resolvedPath = path.resolve(PUBLIC_UPLOADS_DIR, relativePath);
+  const relativeToUploads = path.relative(PUBLIC_UPLOADS_DIR, resolvedPath);
+  if (!relativeToUploads || relativeToUploads.startsWith("..") || path.isAbsolute(relativeToUploads)) {
+    return null;
+  }
+
+  return resolvedPath;
 }
 
 function sanitizeRemoteImageUrl(input: string) {
