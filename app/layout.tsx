@@ -1,4 +1,4 @@
-﻿import type { Metadata, Viewport } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 import { PageBackButton } from "@/components/PageBackButton";
@@ -100,7 +100,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       if (href === "/youxuan") {
         return {
           href: YOUXUAN_H5_URL,
-          label: cat?.title ?? "整木优选",
+          label: cat?.title ?? "整木商城",
           desc: cat?.desc,
           external: true,
           featured: true,
@@ -114,7 +114,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       };
     })
     .flatMap((item) =>
-      item.label === "整木优选"
+      item.label === "整木商城"
         ? [
             item,
             {

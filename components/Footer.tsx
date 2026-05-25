@@ -5,14 +5,14 @@ const quickActionLinks = [
   { href: "/news", label: "资讯速览", desc: "查看最新行业动态与内容更新" },
   { href: "/brands/all", label: "市场总览", desc: "按区域与关键词浏览品牌信息" },
   { href: "/dictionary/all", label: "词库检索", desc: "快速查询术语、概念与定义" },
-  { href: YOUXUAN_H5_URL, label: "整木优选", desc: "进入 H5 商城页面" },
+  { href: YOUXUAN_H5_URL, label: "整木商城", desc: "进入 H5 商城页面" },
 ];
 
 const exploreLinks = [
   { href: "/news", label: "整木资讯" },
   { href: "/brands", label: "整木市场" },
   { href: "/awards", label: "整木评选" },
-  { href: YOUXUAN_H5_URL, label: "整木优选" },
+  { href: YOUXUAN_H5_URL, label: "整木商城" },
 ];
 
 const knowledgeLinks = [

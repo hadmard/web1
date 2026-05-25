@@ -32,7 +32,7 @@ export const YOUXUAN_CATEGORIES: YouxuanCategory[] = [
   },
 ];
 
-export const YOUXUAN_NAME = "整木优选";
+export const YOUXUAN_NAME = "整木商城";
 
 export const YOUXUAN_NAME_OPTIONS = [
   {
@@ -53,12 +53,12 @@ export const YOUXUAN_COPY_VARIANTS = [
   {
     title: "把行业阅读与木作养护，放进同一个专业采购入口",
     description:
-      "整木优选聚焦行业书籍、木作护理与专业精选，用更克制的频道化体验，让用户在浏览内容时自然进入购买场景。",
+      "整木商城聚焦行业书籍、木作护理与专业精选，用更克制的频道化体验，让用户在浏览内容时自然进入购买场景。",
   },
   {
     title: "不是促销卖场，而是整木行业的精选补给站",
     description:
-      "从知识工具到交付护理，整木优选围绕从业者真实使用场景组织商品，让下单更像一次专业补货，而不是被广告打断。",
+      "从知识工具到交付护理，整木商城围绕从业者真实使用场景组织商品，让下单更像一次专业补货，而不是被广告打断。",
   },
   {
     title: "为整木从业者准备的内容型商城入口",

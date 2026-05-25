@@ -287,8 +287,8 @@ export function Header({
                 className={`youxuan-mobile-entry ${isActivePath(pathname, featuredNav.href) ? "is-active" : ""}`}
               >
                 <span className="youxuan-mobile-entry-text youxuan-mobile-entry-text--full">{featuredNav.label}</span>
-                <span className="youxuan-mobile-entry-text youxuan-mobile-entry-text--short">优选</span>
-                <span className="youxuan-mobile-entry-icon" aria-hidden="true">优</span>
+                <span className="youxuan-mobile-entry-text youxuan-mobile-entry-text--short">商城</span>
+                <span className="youxuan-mobile-entry-icon" aria-hidden="true">商</span>
               </Link>
             ) : null}
 

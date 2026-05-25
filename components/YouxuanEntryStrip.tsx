@@ -9,10 +9,10 @@ export function YouxuanEntryStrip() {
         target="_blank"
         rel="noreferrer"
         className="youxuan-entry-copy youxuan-entry-copy--link"
-        aria-label="进入整木优选商城"
+        aria-label="进入整木商城"
       >
         <p className="youxuan-entry-kicker">{YOUXUAN_NAME}</p>
-        <p className="youxuan-entry-title">行业书籍与高端木作护理优选</p>
+        <p className="youxuan-entry-title">行业书籍与高端木作护理商城</p>
       </Link>
     </div>
   );
