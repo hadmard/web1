@@ -1430,21 +1430,29 @@ function PublishCenterPageInner() {
           </div>
           {(role === "SUPER_ADMIN" || role === "ADMIN") && (
             <div className={`rounded-2xl border px-4 py-3 transition ${isPinned ? "border-[rgba(180,154,107,0.54)] bg-[linear-gradient(180deg,rgba(202,174,121,0.2),rgba(180,154,107,0.14))] shadow-[0_18px_34px_-24px_rgba(180,154,107,0.6)]" : "border-border bg-[linear-gradient(180deg,rgba(255,253,249,0.98),rgba(248,243,236,0.94))] shadow-[0_14px_28px_-24px_rgba(15,23,42,0.16)]"}`}>
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-sm font-semibold text-primary">置顶</p>
-                </div>
+              <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                 <button
                   type="button"
-                  onClick={() => setIsPinned((value) => !value)}
-                  className={`inline-flex min-w-[86px] items-center justify-center rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
-                    isPinned
-                      ? "border-[rgba(180,154,107,0.6)] bg-[#b49a6b] text-white shadow-[0_10px_24px_-18px_rgba(180,154,107,0.8)]"
-                      : "border-border bg-white/90 text-primary hover:border-[rgba(180,154,107,0.45)] hover:bg-white"
+                  onClick={() => {
+                    if (!canLockSyncToEnterpriseNews) {
+                      setMessage("完成企业认证后，才可以将会员稿同步到整木资讯企业动态。");
+                      return;
+                    }
+                    setSyncToMainSite((value) => !value);
+                  }}
+                  className={`inline-flex min-w-[128px] items-center justify-center rounded-full border px-4 py-2 text-sm font-medium transition shadow-[0_10px_24px_-20px_rgba(15,23,42,0.18)] ${
+                    syncToMainSite
+                      ? "border-[rgba(180,154,107,0.54)] bg-[#b49a6b] text-white"
+                      : "border-[rgba(180,154,107,0.32)] bg-white/92 text-primary hover:border-[rgba(180,154,107,0.5)] hover:bg-white"
                   }`}
                 >
-                  {isPinned ? "已置顶" : "设为置顶"}
+                  {syncToMainSite ? "已开启自动同步" : "点击开启同步"}
                 </button>
+                <p className="text-xs text-muted">
+                  {syncToMainSite
+                    ? "已锁定同步到整木资讯的“企业动态”栏目，并同步显示在企业主页。"
+                    : "如需同步到整木资讯，请先点击开启；同步稿将统一进入“企业动态”。"}
+                </p>
               </div>
             </div>
           )}
