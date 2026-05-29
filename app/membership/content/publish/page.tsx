@@ -1399,28 +1399,28 @@ function PublishCenterPageInner() {
           <label className="block text-sm text-muted">标题</label>
           <input className="w-full border border-border rounded px-3 py-2 bg-surface" value={title} onChange={(e) => setTitle(e.target.value)} required />
           <div className="grid gap-3 md:grid-cols-3">
-            <div className="rounded-xl border border-border/80 bg-surface px-3 py-2 transition focus-within:border-[rgba(180,154,107,0.65)] focus-within:bg-white focus-within:shadow-[0_8px_20px_-18px_rgba(15,23,42,0.28)]">
+            <div className="rounded-xl border border-border/80 bg-surface px-3 py-2 transition focus-within:border-[rgba(180,154,107,0.68)] focus-within:bg-white focus-within:shadow-[0_8px_22px_-18px_rgba(15,23,42,0.30)]">
               <label className="block text-xs font-medium leading-4 text-muted">作者</label>
               <input
-                className="mt-1.5 h-8 w-full rounded-md border border-border bg-white px-2.5 py-1 text-xs leading-5 text-primary outline-none transition placeholder:text-muted/45 hover:border-[rgba(180,154,107,0.45)] focus:border-[rgba(180,154,107,0.75)] focus:ring-2 focus:ring-[rgba(180,154,107,0.16)]"
+                className="mt-1.5 block h-8 w-full rounded-md border border-border bg-white px-2.5 py-1 text-xs leading-5 text-primary outline-none transition placeholder:text-muted/45 hover:border-[rgba(180,154,107,0.48)] focus:border-[rgba(180,154,107,0.78)] focus:ring-2 focus:ring-[rgba(180,154,107,0.16)]"
                 value={displayAuthor}
                 onChange={(e) => setDisplayAuthor(e.target.value)}
                 placeholder="请输入作者，如：编辑部 / 张三"
               />
             </div>
-            <div className="rounded-xl border border-border/80 bg-surface px-3 py-2 transition focus-within:border-[rgba(180,154,107,0.65)] focus-within:bg-white focus-within:shadow-[0_8px_20px_-18px_rgba(15,23,42,0.28)]">
+            <div className="rounded-xl border border-border/80 bg-surface px-3 py-2 transition focus-within:border-[rgba(180,154,107,0.68)] focus-within:bg-white focus-within:shadow-[0_8px_22px_-18px_rgba(15,23,42,0.30)]">
               <label className="block text-xs font-medium leading-4 text-muted">来源</label>
               <input
-                className="mt-1.5 h-8 w-full rounded-md border border-border bg-white px-2.5 py-1 text-xs leading-5 text-primary outline-none transition placeholder:text-muted/45 hover:border-[rgba(180,154,107,0.45)] focus:border-[rgba(180,154,107,0.75)] focus:ring-2 focus:ring-[rgba(180,154,107,0.16)]"
+                className="mt-1.5 block h-8 w-full rounded-md border border-border bg-white px-2.5 py-1 text-xs leading-5 text-primary outline-none transition placeholder:text-muted/45 hover:border-[rgba(180,154,107,0.48)] focus:border-[rgba(180,154,107,0.78)] focus:ring-2 focus:ring-[rgba(180,154,107,0.16)]"
                 value={source}
                 onChange={(e) => setSource(e.target.value)}
                 placeholder="请输入来源，如：整木网 / 品牌官方"
               />
             </div>
-            <div className="rounded-xl border border-border/80 bg-surface px-3 py-2 transition focus-within:border-[rgba(180,154,107,0.65)] focus-within:bg-white focus-within:shadow-[0_8px_20px_-18px_rgba(15,23,42,0.28)]">
+            <div className="rounded-xl border border-border/80 bg-surface px-3 py-2 transition focus-within:border-[rgba(180,154,107,0.68)] focus-within:bg-white focus-within:shadow-[0_8px_22px_-18px_rgba(15,23,42,0.30)]">
               <label className="block text-xs font-medium leading-4 text-muted">原文链接</label>
               <input
-                className="mt-1.5 h-8 w-full rounded-md border border-border bg-white px-2.5 py-1 text-xs leading-5 text-primary outline-none transition placeholder:text-muted/45 hover:border-[rgba(180,154,107,0.45)] focus:border-[rgba(180,154,107,0.75)] focus:ring-2 focus:ring-[rgba(180,154,107,0.16)]"
+                className="mt-1.5 block h-8 w-full rounded-md border border-border bg-white px-2.5 py-1 text-xs leading-5 text-primary outline-none transition placeholder:text-muted/45 hover:border-[rgba(180,154,107,0.48)] focus:border-[rgba(180,154,107,0.78)] focus:ring-2 focus:ring-[rgba(180,154,107,0.16)]"
                 value={sourceUrl}
                 onChange={(e) => setSourceUrl(e.target.value)}
                 placeholder="请输入原文链接，如：https://example.com/article"
