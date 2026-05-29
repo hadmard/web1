@@ -394,25 +394,63 @@ export default function AdminContentPage() {
   }, [tab, subHref, subOptions]);
 
   useEffect(() => {
-    if (tab === "brands") setBrandStructured(createDefaultBrandStructuredData());
-    if (tab === "standards") setStandardStructured(createDefaultStandardStructuredData());
-    if (tab === "industry-data") setDataStructured(createDefaultDataStructuredData());
-    if (tab === "awards") setAwardStructured(createDefaultAwardStructuredData());
-    setMessage("");
-    setLastSubmitted(null);
-    setCoverImage("");
-    replacePreviewUrl("publish", "");
-    setIsPinned(false);
+    setTitle("");
     setSlug("");
     setSource("");
+    setSourceUrl("");
     setDisplayAuthor("");
     setOwnedEnterpriseId("");
     setOwnedEnterpriseSearch("");
     setOwnedEnterpriseOpen(false);
+    setExcerpt("");
+    setContent("");
+    setBrandStructured(createDefaultBrandStructuredData());
+    setStandardStructured(createDefaultStandardStructuredData());
+    setDataStructured(createDefaultDataStructuredData());
+    setAwardStructured(createDefaultAwardStructuredData());
+    setSubHref(subOptions[0]?.href ?? "");
+    setCoverImage("");
+    setTagSlugs("");
+    setManualKeywords("");
+    setRecommendIds("");
+    setProductRecommendations("");
+    setIsPinned(false);
+    setDocumentMeta(createEmptyDocumentMetadata());
+    setMessage("");
+    setLastSubmitted(null);
+    replacePreviewUrl("publish", "");
     autoSlugRef.current = "";
     autoSeoRef.current = { seoTitle: "", seoKeywords: "", seoDescription: "" };
-    setDocumentMeta(createEmptyDocumentMetadata());
-  }, [tab]);
+
+    setEditingId(null);
+    setEditingChangeId(null);
+    setEditSlug("");
+    setEditTitle("");
+    setEditSource("");
+    setEditSourceUrl("");
+    setEditDisplayAuthor("");
+    setEditOwnedEnterpriseId("");
+    setEditOwnedEnterpriseSearch("");
+    setEditOwnedEnterpriseOpen(false);
+    setEditExcerpt("");
+    setEditContent("");
+    setEditBrandStructured(createDefaultBrandStructuredData());
+    setEditStandardStructured(createDefaultStandardStructuredData());
+    setEditDataStructured(createDefaultDataStructuredData());
+    setEditAwardStructured(createDefaultAwardStructuredData());
+    setEditCoverImage("");
+    setEditTagSlugs("");
+    setEditManualKeywords("");
+    setEditRecommendIds("");
+    setEditProductRecommendations("");
+    setEditSubHref("");
+    setEditIsPinned(false);
+    setEditDocumentMeta(createEmptyDocumentMetadata());
+    setReviewAction(null);
+    replacePreviewUrl("edit", "");
+    autoEditSlugRef.current = "";
+    autoEditSeoRef.current = { seoTitle: "", seoKeywords: "", seoDescription: "" };
+  }, [tab, subOptions]);
 
   useEffect(() => {
     if (!isDocumentTab) return;
@@ -1169,12 +1207,7 @@ export default function AdminContentPage() {
 
     setManualKeywords(typeof data.keywordCsv === "string" ? data.keywordCsv : "");
     suppressMessageScrollRef.current = true;
-    const pendingBrandCount = Array.isArray(data.pendingBrands) ? data.pendingBrands.length : 0;
-    setMessage(
-      pendingBrandCount > 0
-        ? `已按新规则生成关键词，并识别到 ${pendingBrandCount} 个疑似新品牌候选。`
-        : "已按新规则生成关键词，可直接用于前台展示与推荐。",
-    );
+    setMessage("已按新规则生成关键词，可直接用于前台展示、聚合与推荐。");
   }
 
   async function generateEditManualKeywords() {
@@ -1196,12 +1229,7 @@ export default function AdminContentPage() {
 
     setEditManualKeywords(typeof data.keywordCsv === "string" ? data.keywordCsv : "");
     suppressMessageScrollRef.current = true;
-    const pendingBrandCount = Array.isArray(data.pendingBrands) ? data.pendingBrands.length : 0;
-    setMessage(
-      pendingBrandCount > 0
-        ? `已按新规则生成关键词，并识别到 ${pendingBrandCount} 个疑似新品牌候选。`
-        : "已按新规则生成关键词，可直接用于前台展示与推荐。",
-    );
+    setMessage("已按新规则生成关键词，可直接用于前台展示、聚合与推荐。");
   }
 
   function applyManageSearch(event?: FormEvent) {
@@ -1573,7 +1601,7 @@ export default function AdminContentPage() {
             {tab !== "terms" && tab !== "brands" && tab !== "standards" && tab !== "industry-data" && tab !== "awards" && (
               <>
                 <label className="block text-sm text-muted">正文</label>
-                <RichEditor value={content} onChange={setContent} minHeight={300} placeholder="" allowClipboardImagePaste />
+                <RichEditor value={content} onChange={setContent} minHeight={300} placeholder="" allowClipboardImagePaste toolbarIcons />
               </>
             )}
             {tab === "brands" && (
@@ -1961,6 +1989,7 @@ export default function AdminContentPage() {
                   minHeight={360}
                   placeholder="支持标题分级、表格、图片和条款结构的标准正文编辑。"
                   allowClipboardImagePaste
+                  toolbarIcons
                 />
               </>
             ) : tab === "brands" ? (
@@ -1993,7 +2022,7 @@ export default function AdminContentPage() {
             ) : (
               <>
                 <label className="block text-sm text-muted">正文</label>
-                <RichEditor value={editContent} onChange={setEditContent} minHeight={320} placeholder="" allowClipboardImagePaste />
+                <RichEditor value={editContent} onChange={setEditContent} minHeight={320} placeholder="" allowClipboardImagePaste toolbarIcons />
               </>
             )}
             <div className="flex gap-2 flex-wrap">

@@ -18,6 +18,7 @@ type Props = {
   minHeight?: number;
   placeholder?: string;
   allowClipboardImagePaste?: boolean;
+  toolbarIcons?: boolean;
 };
 
 type ImageAttrs = {
@@ -448,24 +449,62 @@ function ToolButton({
   label,
   onClick,
   className = "",
+  toolbarIcons = false,
 }: {
   active?: boolean;
   label: string;
   onClick: () => void;
   className?: string;
+  toolbarIcons?: boolean;
 }) {
   return (
     <button
       type="button"
       onMouseDown={(e) => e.preventDefault()}
       onClick={onClick}
+      title={label}
+      aria-label={label}
       className={`px-2.5 py-1.5 rounded text-xs border transition-colors ${
         active ? "bg-accent text-white border-accent" : "border-border text-primary hover:bg-surface"
       } ${className}`}
     >
-      {label}
+      {toolbarIcons ? <ToolbarButtonVisual label={label} /> : label}
     </button>
   );
+}
+
+function ToolbarButtonVisual({ label }: { label: string }) {
+  const common = "inline-flex min-w-[1.1rem] items-center justify-center text-[13px] leading-none";
+  switch (label) {
+    case "加粗":
+      return <span className={`${common} font-black`}>B</span>;
+    case "斜体":
+      return <span className={`${common} italic font-semibold`}>I</span>;
+    case "下划线":
+      return <span className={`${common} underline font-semibold`}>U</span>;
+    case "链接":
+      return <span className={common}>🔗</span>;
+    case "取消链接":
+      return <span className={common}>⛓</span>;
+    case "清除格式":
+      return <span className={common}>Tx</span>;
+    case "左对齐":
+      return <span className={common}>≡</span>;
+    case "居中":
+      return <span className={common}>≣</span>;
+    case "右对齐":
+      return <span className={common}>☰</span>;
+    case "无序列表":
+      return <span className={common}>•≡</span>;
+    case "有序列表":
+      return <span className={common}>1.</span>;
+    case "撤销":
+      return <span className={common}>↶</span>;
+    case "重做":
+      return <span className={common}>↷</span>;
+    default:
+      return <span className={common}>{label}</span>;
+  }
 }
 
 export function RichEditor({
@@ -474,6 +513,7 @@ export function RichEditor({
   minHeight = 260,
   placeholder = "请输入正文...",
   allowClipboardImagePaste = false,
+  toolbarIcons = false,
 }: Props) {
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const insertImageRef = useRef<((file: File) => Promise<void>) | null>(null);
@@ -869,12 +909,13 @@ export function RichEditor({
         <ToolButton label="正文" active={editor.isActive("paragraph")} onClick={setParagraphPlain} />
         <ToolButton label="取消标题" onClick={setParagraphPlain} />
 
-        <ToolButton label="加粗" active={editor.isActive("bold")} onClick={toggleBoldMark} />
-        <ToolButton label="斜体" active={editor.isActive("italic")} onClick={() => editor.chain().focus().toggleItalic().run()} />
-        <ToolButton label="下划线" active={editor.isActive("underline")} onClick={() => editor.chain().focus().toggleUnderline().run()} />
-        <ToolButton label="链接" active={editor.isActive("link") || !!selectedImageAttrs?.href} onClick={setOrEditLink} />
+        <ToolButton label="加粗" active={editor.isActive("bold")} onClick={toggleBoldMark} toolbarIcons={toolbarIcons} />
+        <ToolButton label="斜体" active={editor.isActive("italic")} onClick={() => editor.chain().focus().toggleItalic().run()} toolbarIcons={toolbarIcons} />
+        <ToolButton label="下划线" active={editor.isActive("underline")} onClick={() => editor.chain().focus().toggleUnderline().run()} toolbarIcons={toolbarIcons} />
+        <ToolButton label="链接" active={editor.isActive("link") || !!selectedImageAttrs?.href} onClick={setOrEditLink} toolbarIcons={toolbarIcons} />
         <ToolButton
           label="取消链接"
+          toolbarIcons={toolbarIcons}
           onClick={() => {
             if (hasSelectedImage) {
               updateSelectedImage({ href: null });
@@ -883,17 +924,17 @@ export function RichEditor({
             editor.chain().focus().unsetLink().run();
           }}
         />
-        <ToolButton label="清除格式" onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()} />
+        <ToolButton label="清除格式" onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()} toolbarIcons={toolbarIcons} />
 
-        <ToolButton label="左对齐" active={editor.isActive({ textAlign: "left" })} onClick={() => editor.chain().focus().setTextAlign("left").run()} />
-        <ToolButton label="居中" active={editor.isActive({ textAlign: "center" })} onClick={() => editor.chain().focus().setTextAlign("center").run()} />
-        <ToolButton label="右对齐" active={editor.isActive({ textAlign: "right" })} onClick={() => editor.chain().focus().setTextAlign("right").run()} />
+        <ToolButton label="左对齐" active={editor.isActive({ textAlign: "left" })} onClick={() => editor.chain().focus().setTextAlign("left").run()} toolbarIcons={toolbarIcons} />
+        <ToolButton label="居中" active={editor.isActive({ textAlign: "center" })} onClick={() => editor.chain().focus().setTextAlign("center").run()} toolbarIcons={toolbarIcons} />
+        <ToolButton label="右对齐" active={editor.isActive({ textAlign: "right" })} onClick={() => editor.chain().focus().setTextAlign("right").run()} toolbarIcons={toolbarIcons} />
 
-        <ToolButton label="无序列表" active={editor.isActive("bulletList")} onClick={() => editor.chain().focus().toggleBulletList().run()} />
-        <ToolButton label="有序列表" active={editor.isActive("orderedList")} onClick={() => editor.chain().focus().toggleOrderedList().run()} />
+        <ToolButton label="无序列表" active={editor.isActive("bulletList")} onClick={() => editor.chain().focus().toggleBulletList().run()} toolbarIcons={toolbarIcons} />
+        <ToolButton label="有序列表" active={editor.isActive("orderedList")} onClick={() => editor.chain().focus().toggleOrderedList().run()} toolbarIcons={toolbarIcons} />
 
-        <ToolButton label="撤销" onClick={() => editor.chain().focus().undo().run()} />
-        <ToolButton label="重做" onClick={() => editor.chain().focus().redo().run()} />
+        <ToolButton label="撤销" onClick={() => editor.chain().focus().undo().run()} toolbarIcons={toolbarIcons} />
+        <ToolButton label="重做" onClick={() => editor.chain().focus().redo().run()} toolbarIcons={toolbarIcons} />
 
         <input
           ref={imageInputRef}

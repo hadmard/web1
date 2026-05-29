@@ -1428,7 +1428,7 @@ function PublishCenterPageInner() {
               />
             </div>
           </div>
-          {(role === "SUPER_ADMIN" || role === "ADMIN") && (
+          {safeTab === "articles" && (
             <div className="rounded-xl border border-[rgba(180,154,107,0.18)] bg-[linear-gradient(180deg,rgba(255,253,249,0.98),rgba(248,243,236,0.94))] px-3 py-2.5">
               <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between md:gap-4">
                 <button
@@ -1599,7 +1599,7 @@ function PublishCenterPageInner() {
             safeTab !== "awards" && (
             <>
               <label className="block text-sm text-muted">正文</label>
-              <RichEditor value={content} onChange={setContent} minHeight={280} placeholder="" allowClipboardImagePaste={canPasteImages} />
+              <RichEditor value={content} onChange={setContent} minHeight={280} placeholder="" allowClipboardImagePaste={canPasteImages} toolbarIcons />
             </>
           )}
           {safeTab === "brands" && (
