@@ -1398,90 +1398,53 @@ function PublishCenterPageInner() {
 
           <label className="block text-sm text-muted">标题</label>
           <input className="w-full border border-border rounded px-3 py-2 bg-surface" value={title} onChange={(e) => setTitle(e.target.value)} required />
-          <div className={`grid gap-3 ${(role === "SUPER_ADMIN" || role === "ADMIN") ? "md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]" : "md:grid-cols-2"}`}>
-            <div className="rounded-2xl border border-border bg-surface px-4 py-3">
+          <div className="grid gap-3 md:grid-cols-3">
+            <div className="rounded-xl border border-border bg-surface px-3 py-2.5">
               <label className="mb-2 block text-sm font-medium text-primary">作者</label>
               <input
-                className="w-full border-0 bg-transparent px-0 py-0 text-[15px] text-primary placeholder:text-muted focus:outline-none"
+                className="w-full border-0 bg-transparent px-0 py-0 text-[14px] text-primary placeholder:text-muted focus:outline-none"
                 value={displayAuthor}
                 onChange={(e) => setDisplayAuthor(e.target.value)}
                 placeholder="如：编辑部 / 张三"
               />
             </div>
-            <div className="rounded-2xl border border-border bg-surface px-4 py-3">
+            <div className="rounded-xl border border-border bg-surface px-3 py-2.5">
               <label className="mb-2 block text-sm font-medium text-primary">来源</label>
               <input
-                className="w-full border-0 bg-transparent px-0 py-0 text-[15px] text-primary placeholder:text-muted focus:outline-none"
+                className="w-full border-0 bg-transparent px-0 py-0 text-[14px] text-primary placeholder:text-muted focus:outline-none"
                 value={source}
                 onChange={(e) => setSource(e.target.value)}
                 placeholder="如：整木网 / 品牌官方"
               />
             </div>
-            <div className="rounded-2xl border border-border bg-surface px-4 py-3 md:col-span-2">
+            <div className="rounded-xl border border-border bg-surface px-3 py-2.5">
               <label className="mb-2 block text-sm font-medium text-primary">原文链接</label>
               <input
-                className="w-full border-0 bg-transparent px-0 py-0 text-[15px] text-primary placeholder:text-muted focus:outline-none"
+                className="w-full border-0 bg-transparent px-0 py-0 text-[14px] text-primary placeholder:text-muted focus:outline-none"
                 value={sourceUrl}
                 onChange={(e) => setSourceUrl(e.target.value)}
                 placeholder="如：https://example.com/article"
                 inputMode="url"
               />
             </div>
-            {(role === "SUPER_ADMIN" || role === "ADMIN") && (
-              <div className={`rounded-2xl border px-4 py-3 transition md:min-w-[168px] ${isPinned ? "border-[rgba(180,154,107,0.54)] bg-[linear-gradient(180deg,rgba(202,174,121,0.2),rgba(180,154,107,0.14))] shadow-[0_18px_34px_-24px_rgba(180,154,107,0.6)]" : "border-border bg-[linear-gradient(180deg,rgba(255,253,249,0.98),rgba(248,243,236,0.94))] shadow-[0_14px_28px_-24px_rgba(15,23,42,0.16)]"}`}>
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-semibold text-primary">置顶</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setIsPinned((value) => !value)}
-                    className={`inline-flex min-w-[86px] items-center justify-center rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
-                      isPinned
-                        ? "border-[rgba(180,154,107,0.6)] bg-[#b49a6b] text-white shadow-[0_10px_24px_-18px_rgba(180,154,107,0.8)]"
-                        : "border-border bg-white/90 text-primary hover:border-[rgba(180,154,107,0.45)] hover:bg-white"
-                    }`}
-                  >
-                    {isPinned ? "已置顶" : "设为置顶"}
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
-          {safeTab === "articles" && (
-            <div className="rounded-2xl border border-[rgba(180,154,107,0.18)] bg-[linear-gradient(180deg,rgba(255,253,249,0.98),rgba(248,243,236,0.94))] px-4 py-4 shadow-[0_12px_28px_-24px_rgba(15,23,42,0.16)]">
-              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          {(role === "SUPER_ADMIN" || role === "ADMIN") && (
+            <div className={`rounded-2xl border px-4 py-3 transition ${isPinned ? "border-[rgba(180,154,107,0.54)] bg-[linear-gradient(180deg,rgba(202,174,121,0.2),rgba(180,154,107,0.14))] shadow-[0_18px_34px_-24px_rgba(180,154,107,0.6)]" : "border-border bg-[linear-gradient(180deg,rgba(255,253,249,0.98),rgba(248,243,236,0.94))] shadow-[0_14px_28px_-24px_rgba(15,23,42,0.16)]"}`}>
+              <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-sm font-semibold text-primary">默认同步到整木资讯</p>
-                  <p className="mt-1 text-xs leading-6 text-muted">
-                    企业会员在这里发布的资讯，审核通过后会直接进入整木资讯栏目中的企业动态内容，同时自动汇总到你的企业页“企业动态”，不需要再单独同步。
-                  </p>
+                  <p className="text-sm font-semibold text-primary">置顶</p>
                 </div>
-                <div className="flex flex-col items-start gap-2 md:items-end">
-                  <button
-                    type="button"
-                    aria-pressed={syncToMainSite}
-                    onClick={() => {
-                      if (!canLockSyncToEnterpriseNews) {
-                        setMessage("完成企业认证后，才可以将会员稿同步到整木资讯企业动态。");
-                        return;
-                      }
-                      setSyncToMainSite((value) => !value);
-                    }}
-                    className={`inline-flex min-w-[128px] items-center justify-center rounded-full border px-4 py-2 text-sm font-medium transition shadow-[0_10px_24px_-20px_rgba(15,23,42,0.18)] ${
-                      syncToMainSite
-                        ? "border-[rgba(180,154,107,0.54)] bg-[#b49a6b] text-white"
-                        : "border-[rgba(180,154,107,0.32)] bg-white/92 text-primary hover:border-[rgba(180,154,107,0.5)] hover:bg-white"
-                    }`}
-                  >
-                    {syncToMainSite ? "已开启自动同步" : "点击开启同步"}
-                  </button>
-                  <p className="text-xs text-muted">
-                    {syncToMainSite
-                      ? "已锁定同步到整木资讯的“企业动态”栏目，并同步显示在企业主页。"
-                      : "如需同步到整木资讯，请先点击开启；同步稿将统一进入“企业动态”。"}
-                  </p>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsPinned((value) => !value)}
+                  className={`inline-flex min-w-[86px] items-center justify-center rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                    isPinned
+                      ? "border-[rgba(180,154,107,0.6)] bg-[#b49a6b] text-white shadow-[0_10px_24px_-18px_rgba(180,154,107,0.8)]"
+                      : "border-border bg-white/90 text-primary hover:border-[rgba(180,154,107,0.45)] hover:bg-white"
+                  }`}
+                >
+                  {isPinned ? "已置顶" : "设为置顶"}
+                </button>
               </div>
             </div>
           )}
