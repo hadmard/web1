@@ -1399,31 +1399,31 @@ function PublishCenterPageInner() {
           <label className="block text-sm text-muted">标题</label>
           <input className="w-full border border-border rounded px-3 py-2 bg-surface" value={title} onChange={(e) => setTitle(e.target.value)} required />
           <div className="grid gap-3 md:grid-cols-3">
-            <div className="rounded-xl border border-border bg-surface px-3 py-2.5">
-              <label className="mb-2 block text-sm font-medium text-primary">作者</label>
+            <div className="rounded-xl border border-border bg-white/80 px-3 py-2.5 transition focus-within:border-[rgba(180,154,107,0.55)] focus-within:bg-white focus-within:shadow-sm hover:border-[rgba(180,154,107,0.28)] hover:bg-white">
+              <label className="block text-xs font-medium text-muted">作者</label>
               <input
-                className="w-full border-0 bg-transparent px-0 py-0 text-[14px] text-primary placeholder:text-muted focus:outline-none"
+                className="mt-1 w-full border-0 bg-transparent p-0 text-sm text-primary outline-none placeholder:text-muted/55"
                 value={displayAuthor}
                 onChange={(e) => setDisplayAuthor(e.target.value)}
-                placeholder="如：编辑部 / 张三"
+                placeholder="编辑部 / 张三"
               />
             </div>
-            <div className="rounded-xl border border-border bg-surface px-3 py-2.5">
-              <label className="mb-2 block text-sm font-medium text-primary">来源</label>
+            <div className="rounded-xl border border-border bg-white/80 px-3 py-2.5 transition focus-within:border-[rgba(180,154,107,0.55)] focus-within:bg-white focus-within:shadow-sm hover:border-[rgba(180,154,107,0.28)] hover:bg-white">
+              <label className="block text-xs font-medium text-muted">来源</label>
               <input
-                className="w-full border-0 bg-transparent px-0 py-0 text-[14px] text-primary placeholder:text-muted focus:outline-none"
+                className="mt-1 w-full border-0 bg-transparent p-0 text-sm text-primary outline-none placeholder:text-muted/55"
                 value={source}
                 onChange={(e) => setSource(e.target.value)}
-                placeholder="如：整木网 / 品牌官方"
+                placeholder="整木网 / 品牌官方"
               />
             </div>
-            <div className="rounded-xl border border-border bg-surface px-3 py-2.5">
-              <label className="mb-2 block text-sm font-medium text-primary">原文链接</label>
+            <div className="rounded-xl border border-border bg-white/80 px-3 py-2.5 transition focus-within:border-[rgba(180,154,107,0.55)] focus-within:bg-white focus-within:shadow-sm hover:border-[rgba(180,154,107,0.28)] hover:bg-white">
+              <label className="block text-xs font-medium text-muted">原文链接</label>
               <input
-                className="w-full border-0 bg-transparent px-0 py-0 text-[14px] text-primary placeholder:text-muted focus:outline-none"
+                className="mt-1 w-full border-0 bg-transparent p-0 text-sm text-primary outline-none placeholder:text-muted/55"
                 value={sourceUrl}
                 onChange={(e) => setSourceUrl(e.target.value)}
-                placeholder="如：https://example.com/article"
+                placeholder="https://example.com/article"
                 inputMode="url"
               />
             </div>
