@@ -1429,8 +1429,8 @@ function PublishCenterPageInner() {
             </div>
           </div>
           {(role === "SUPER_ADMIN" || role === "ADMIN") && (
-            <div className={`rounded-2xl border px-4 py-3 transition ${isPinned ? "border-[rgba(180,154,107,0.54)] bg-[linear-gradient(180deg,rgba(202,174,121,0.2),rgba(180,154,107,0.14))] shadow-[0_18px_34px_-24px_rgba(180,154,107,0.6)]" : "border-border bg-[linear-gradient(180deg,rgba(255,253,249,0.98),rgba(248,243,236,0.94))] shadow-[0_14px_28px_-24px_rgba(15,23,42,0.16)]"}`}>
-              <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <div className="rounded-xl border border-[rgba(180,154,107,0.18)] bg-[linear-gradient(180deg,rgba(255,253,249,0.98),rgba(248,243,236,0.94))] px-3 py-2.5">
+              <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between md:gap-4">
                 <button
                   type="button"
                   onClick={() => {
@@ -1448,7 +1448,7 @@ function PublishCenterPageInner() {
                 >
                   {syncToMainSite ? "已开启自动同步" : "点击开启同步"}
                 </button>
-                <p className="text-xs text-muted">
+                <p className="text-xs leading-6 text-muted md:text-right">
                   {syncToMainSite
                     ? "已锁定同步到整木资讯的“企业动态”栏目，并同步显示在企业主页。"
                     : "如需同步到整木资讯，请先点击开启；同步稿将统一进入“企业动态”。"}
