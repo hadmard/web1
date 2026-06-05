@@ -3,10 +3,11 @@ import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { getEffectiveMemberAccessForMember } from "@/lib/member-access-resolver";
 import { getMemberSiteSettings } from "@/lib/member-site-settings";
+import { getEffectiveVerificationStatus } from "@/lib/member-verification";
 
 export async function GET() {
   const session = await getSession();
-  if (!session) return NextResponse.json({ error: "未登录" }, { status: 401 });
+  if (!session) return NextResponse.json({ error: "\u672a\u767b\u5f55" }, { status: 401 });
 
   const currentYear = new Date().getFullYear();
   const yearStart = new Date(Date.UTC(currentYear, 0, 1, 0, 0, 0, 0));
@@ -68,6 +69,12 @@ export async function GET() {
     }),
     session.memberType === "personal" ? Promise.resolve(null) : getMemberSiteSettings(session.sub),
   ]);
+
+  const effectiveVerification = getEffectiveVerificationStatus({
+    member: { memberType: session.memberType },
+    verification: latestVerification,
+    enterprise,
+  });
 
   const summarize = (rows: Array<{ status: string; _count: { _all: number } }>) => ({
     total: rows.reduce((sum, row) => sum + row._count._all, 0),
@@ -145,6 +152,7 @@ export async function GET() {
       standardFeedback,
     },
     latestVerification,
+    effectiveVerification,
     enterprise,
     siteSettingsSummary: siteSettings
       ? {

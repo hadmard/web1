@@ -26,6 +26,16 @@ type DashboardData = {
     reviewNote?: string | null;
     updatedAt: string;
   } | null;
+  effectiveVerification: {
+    status: VerifyStatus | "not_submitted";
+    label: string;
+    source: string;
+    isLegacyEnterpriseMember: boolean;
+    shouldUpgradeMemberType: boolean;
+    companyName?: string | null;
+    updatedAt?: string | null;
+    reviewNote?: string | null;
+  };
   enterprise: {
     id: string;
     companyName?: string | null;
@@ -233,20 +243,23 @@ export default function MembershipVerificationPage() {
     })();
   }, []);
 
+  const isEnterpriseMember = data?.member.type === "enterprise_basic" || data?.member.type === "enterprise_advanced";
+  const currentVerificationStatus = data?.effectiveVerification?.status ?? record?.status ?? data?.latestVerification?.status;
   const verificationStatus = useMemo(
-    () => verificationText(record?.status ?? data?.latestVerification?.status),
-    [data?.latestVerification?.status, record?.status]
+    () => data?.effectiveVerification?.label ?? verificationText(currentVerificationStatus),
+    [currentVerificationStatus, data?.effectiveVerification?.label]
   );
-  const companyName = data?.enterprise?.companyName || record?.companyName || "尚未提交";
+  const companyName = data?.effectiveVerification?.companyName || data?.enterprise?.companyName || record?.companyName || "\u5c1a\u672a\u63d0\u4ea4";
   const enterpriseHomeStatus = buildHomepageStatusText(data);
   const attachmentPreview = useMemo(() => form.attachments.slice(0, 8), [form.attachments]);
   const showEnterpriseLink = Boolean(data?.enterprise?.id);
   const submitLabel = useMemo(() => {
-    if (record?.status === "approved") return "提交修改并重新审核";
-    if (record?.status === "rejected") return "重新提交审核";
-    if (record?.status === "pending") return "更新资料并继续审核";
-    return "提交审核";
-  }, [record?.status]);
+    if (isEnterpriseMember) return "\u4fdd\u5b58\u4f01\u4e1a\u8d44\u6599";
+    if (currentVerificationStatus === "approved") return "\u63d0\u4ea4\u4fee\u6539\u5e76\u91cd\u65b0\u5ba1\u6838";
+    if (currentVerificationStatus === "rejected") return "\u91cd\u65b0\u63d0\u4ea4\u5ba1\u6838";
+    if (currentVerificationStatus === "pending") return "\u66f4\u65b0\u8d44\u6599\u5e76\u7ee7\u7eed\u5ba1\u6838";
+    return "\u63d0\u4ea4\u5ba1\u6838";
+  }, [currentVerificationStatus, isEnterpriseMember]);
 
   async function handleAssetUpload(event: ChangeEvent<HTMLInputElement>, key: "logoUrl" | "licenseImageUrl") {
     const file = event.target.files?.[0];
@@ -388,52 +401,6 @@ export default function MembershipVerificationPage() {
         <StatusCard label="当前认证状态" value={verificationStatus} text={`最近更新：${formatRecordDate(record?.updatedAt ?? data.latestVerification?.updatedAt)}`} />
         <StatusCard label="企业名称" value={companyName} text={data.enterprise?.companyShortName ? `简称：${data.enterprise.companyShortName}` : "尚未生成企业简称"} />
         <StatusCard label="企业主页状态" value={showEnterpriseLink ? "已生成" : "待生成"} text={enterpriseHomeStatus} />
-      </section>
-
-      <section className="rounded-[24px] border border-border bg-surface-elevated p-4 shadow-[0_14px_30px_rgba(15,23,42,0.06)] sm:rounded-[28px] sm:p-6 sm:shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
-        <div className="grid gap-4 lg:grid-cols-[1.4fr_0.9fr]">
-          <article className="rounded-[20px] border border-border bg-white/92 p-4 sm:rounded-[24px] sm:p-5">
-            <h2 className="text-lg font-semibold text-primary">当前认证状态</h2>
-            <p className="mt-2 text-sm leading-6 text-muted">
-              {record?.status === "approved"
-                ? "企业主体资料已审核通过。若修改企业名称、营业执照、统一社会信用代码等关键字段，建议重新提交审核。"
-                : record?.status === "pending"
-                  ? "你的认证资料正在审核中。你可以在本页核对已提交的企业信息。"
-                  : record?.status === "rejected"
-                    ? "认证资料已被退回，请根据审核说明补充或修正后重新提交。"
-                    : "你还没有提交企业认证。完成认证后可生成企业主页，并解锁企业展示能力。"}
-            </p>
-            {record?.reviewNote ? (
-              <div className="mt-4 rounded-[18px] border border-[rgba(190,122,101,0.22)] bg-[rgba(255,244,240,0.92)] px-4 py-4 text-sm leading-6 text-[#8b5c49]">
-                <p className="font-medium text-primary">审核说明</p>
-                <p className="mt-2">{record.reviewNote}</p>
-              </div>
-            ) : (
-              <div className="mt-4 rounded-[18px] border border-border bg-surface px-4 py-4 text-sm leading-6 text-muted">
-                审核说明：{record?.status === "pending" ? "正在等待管理员审核。" : record?.status === "approved" ? "当前资料已通过审核。" : "提交后管理员会在后台核验企业主体资料。"}
-              </div>
-            )}
-          </article>
-
-          <article className="rounded-[20px] border border-[rgba(180,154,107,0.18)] bg-[linear-gradient(180deg,rgba(255,252,247,0.98),rgba(248,242,233,0.9))] p-4 sm:rounded-[24px] sm:p-5">
-            <p className="text-sm font-medium text-primary">企业主页状态</p>
-            <p className="mt-2 text-sm leading-6 text-muted">{enterpriseHomeStatus}</p>
-            <div className="mt-4 space-y-2 text-sm text-muted">
-              <p>企业主页主体资料：{showEnterpriseLink ? "已生成" : "待认证生成"}</p>
-              <p>企业主页展示内容：在“企业主页配置”中维护，不与主体认证资料混用。</p>
-            </div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {showEnterpriseLink ? (
-                <Link href={`/enterprise/${data.enterprise?.id}`} className="rounded-full border border-border bg-white px-4 py-2 text-sm text-primary transition hover:bg-surface">
-                  查看企业主页
-                </Link>
-              ) : null}
-              <Link href="/membership/content#site-settings" className="rounded-full border border-border bg-white px-4 py-2 text-sm text-primary transition hover:bg-surface">
-                去配置企业主页
-              </Link>
-            </div>
-          </article>
-        </div>
       </section>
 
       <section className="rounded-[24px] border border-border bg-surface-elevated p-4 shadow-[0_14px_30px_rgba(15,23,42,0.06)] sm:rounded-[28px] sm:p-6 sm:shadow-[0_16px_40px_rgba(15,23,42,0.06)]">

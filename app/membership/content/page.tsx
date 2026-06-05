@@ -50,6 +50,16 @@ type DashboardData = {
     reviewNote?: string | null;
     updatedAt: string;
   } | null;
+  effectiveVerification: {
+    status: string;
+    label: string;
+    source: string;
+    isLegacyEnterpriseMember: boolean;
+    shouldUpgradeMemberType: boolean;
+    companyName?: string | null;
+    updatedAt?: string | null;
+    reviewNote?: string | null;
+  };
   enterprise: {
     id: string;
     companyName?: string | null;
@@ -424,17 +434,20 @@ export default function MemberContentPage() {
     })();
   }, []);
 
+  const isEnterpriseMember = data?.member.type === "enterprise_basic" || data?.member.type === "enterprise_advanced";
   const verification = useMemo(
-    () => verificationText(data?.latestVerification?.status),
-    [data?.latestVerification?.status]
+    () => data?.effectiveVerification?.label ?? verificationText(data?.effectiveVerification?.status),
+    [data?.effectiveVerification?.label, data?.effectiveVerification?.status]
   );
   const verificationActionHref = "/membership/content/verification";
   const verificationActionLabel = useMemo(() => {
-    if (data?.latestVerification?.status === "approved") return "已认证，查看或修改";
-    if (data?.latestVerification?.status === "pending") return "查看认证进度";
-    if (data?.latestVerification?.status === "rejected") return "重新提交认证资料";
-    return "去企业认证";
-  }, [data?.latestVerification?.status]);
+    if (isEnterpriseMember) return "\u5df2\u8ba4\u8bc1\uff0c\u67e5\u770b\u6216\u4fee\u6539";
+    if (data?.effectiveVerification?.status === "approved") return "\u5df2\u8ba4\u8bc1\uff0c\u67e5\u770b\u6216\u4fee\u6539";
+    if (data?.effectiveVerification?.status === "pending") return "\u67e5\u770b\u8ba4\u8bc1\u8fdb\u5ea6";
+    if (data?.effectiveVerification?.status === "rejected") return "\u91cd\u65b0\u63d0\u4ea4\u8ba4\u8bc1\u8d44\u6599";
+    return "\u53bb\u4f01\u4e1a\u8ba4\u8bc1";
+  }, [data?.effectiveVerification?.status, isEnterpriseMember]);
+  const verificationEntryLabel = isEnterpriseMember ? "\u4f01\u4e1a\u8d44\u6599" : "\u4f01\u4e1a\u8ba4\u8bc1";
   const siteSnapshot = useMemo(() => JSON.stringify(siteSettings), [siteSettings]);
   const hasUnsavedSiteChanges = siteSnapshot !== siteSavedSnapshot;
   const missingMemberPhone = !phone.trim();

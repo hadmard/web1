@@ -118,12 +118,26 @@ type VerificationSummary = {
   reviewNote?: string | null;
   approvedEnterpriseId?: string | null;
 } | null;
+type EffectiveVerificationSummary = {
+  status: VerifyStatus | "not_submitted";
+  label: string;
+  source: string;
+  isLegacyEnterpriseMember: boolean;
+  shouldUpgradeMemberType: boolean;
+  companyName?: string | null;
+  updatedAt?: string | null;
+  reviewNote?: string | null;
+} | null;
 type EnterpriseSummary = {
   id: string;
   companyName?: string | null;
   companyShortName?: string | null;
   verificationStatus?: string | null;
 } | null;
+type DashboardVerificationSummary = {
+  effectiveVerification?: EffectiveVerificationSummary;
+  enterprise?: EnterpriseSummary;
+};
 
 type Row = {
   id: string;
@@ -244,6 +258,7 @@ function PublishCenterPageInner() {
   const [pendingPreviewScroll, setPendingPreviewScroll] = useState<"publish" | "edit" | null>(null);
   const [cropTarget, setCropTarget] = useState<"publish" | "edit" | null>(null);
   const [latestVerification, setLatestVerification] = useState<VerificationSummary>(null);
+  const [effectiveVerification, setEffectiveVerification] = useState<EffectiveVerificationSummary>(null);
   const [enterprise, setEnterprise] = useState<EnterpriseSummary>(null);
 
   const [title, setTitle] = useState("");
@@ -372,9 +387,10 @@ function PublishCenterPageInner() {
     setMembershipRule(me.membershipRule ?? null);
     setMemberAccess(me.memberAccess ?? getDefaultMemberAccess());
 
-    const [listRes, verificationRes] = await Promise.all([
+    const [listRes, verificationRes, dashboardRes] = await Promise.all([
       fetch("/api/member/articles?limit=100", { credentials: "include", cache: "no-store" }),
       fetch("/api/member/enterprise-verification", { credentials: "include", cache: "no-store" }),
+      fetch("/api/member/dashboard", { credentials: "include", cache: "no-store" }),
     ]);
 
     if (listRes.ok) {
@@ -386,6 +402,14 @@ function PublishCenterPageInner() {
       const data = await verificationRes.json();
       setLatestVerification((data.latest ?? null) as VerificationSummary);
       setEnterprise((data.enterprise ?? null) as EnterpriseSummary);
+    }
+
+    if (dashboardRes.ok) {
+      const data = (await dashboardRes.json()) as DashboardVerificationSummary;
+      setEffectiveVerification((data.effectiveVerification ?? null) as EffectiveVerificationSummary);
+      if (data.enterprise) {
+        setEnterprise(data.enterprise);
+      }
     }
   }, []);
 
@@ -1098,29 +1122,38 @@ function PublishCenterPageInner() {
     );
   }
 
+  const isEnterpriseMember = memberType === "enterprise_basic" || memberType === "enterprise_advanced";
+  const currentVerificationStatus = effectiveVerification?.status ?? latestVerification?.status ?? "not_submitted";
   const enterpriseHref = enterprise?.id || latestVerification?.approvedEnterpriseId ? `/enterprise/${enterprise?.id ?? latestVerification?.approvedEnterpriseId}` : null;
   const verificationActionHref =
-    latestVerification?.status === "pending"
+    isEnterpriseMember
       ? "/membership/content/verification"
-      : latestVerification?.status === "rejected"
+      : currentVerificationStatus === "pending"
         ? "/membership/content/verification"
-        : enterpriseHref ?? "/membership/content/verification";
+        : currentVerificationStatus === "rejected"
+          ? "/membership/content/verification"
+          : enterpriseHref ?? "/membership/content/verification";
   const verificationActionLabel =
-    latestVerification?.status === "pending"
-      ? "查看认证进度"
-      : latestVerification?.status === "rejected"
-        ? "重新提交认证资料"
-        : enterpriseHref
-          ? "查看企业主页"
-          : "去提交企业认证资料";
+    isEnterpriseMember
+      ? "\u4f01\u4e1a\u8d44\u6599"
+      : currentVerificationStatus === "pending"
+        ? "\u67e5\u770b\u8ba4\u8bc1\u8fdb\u5ea6"
+        : currentVerificationStatus === "rejected"
+          ? "\u91cd\u65b0\u63d0\u4ea4\u8ba4\u8bc1\u8d44\u6599"
+          : enterpriseHref
+            ? "\u67e5\u770b\u4f01\u4e1a\u4e3b\u9875"
+            : "\u53bb\u4f01\u4e1a\u8ba4\u8bc1";
   const verificationStatusText =
-    latestVerification?.status === "approved"
-      ? "企业认证已通过，企业详情页已生成。"
-      : latestVerification?.status === "pending"
-        ? "企业认证资料已提交，当前正在审核中。"
-        : latestVerification?.status === "rejected"
-          ? "企业认证曾被驳回，可按审核意见补充后重新提交。"
-          : "完成企业认证后可获得企业详情展示页，并同步企业资料。";
+    isEnterpriseMember
+      ? "\u4f01\u4e1a\u8d44\u6599\u5df2\u8ba4\u8bc1\uff0c\u53ef\u53d1\u5e03\u4f01\u4e1a\u5185\u5bb9\u5e76\u7ee7\u7eed\u7ef4\u62a4\u4f01\u4e1a\u4e3b\u9875\u5c55\u793a\u3002"
+      : currentVerificationStatus === "approved"
+        ? "\u4f01\u4e1a\u8ba4\u8bc1\u5df2\u901a\u8fc7\uff0c\u4f01\u4e1a\u8be6\u60c5\u9875\u5df2\u751f\u6210\u3002"
+        : currentVerificationStatus === "pending"
+          ? "\u4f01\u4e1a\u8ba4\u8bc1\u8d44\u6599\u5df2\u63d0\u4ea4\uff0c\u5f53\u524d\u6b63\u5728\u5ba1\u6838\u4e2d\u3002"
+          : currentVerificationStatus === "rejected"
+            ? "\u4f01\u4e1a\u8ba4\u8bc1\u66fe\u88ab\u9a73\u56de\uff0c\u53ef\u6309\u5ba1\u6838\u610f\u89c1\u8865\u5145\u540e\u91cd\u65b0\u63d0\u4ea4\u3002"
+            : "\u5b8c\u6210\u4f01\u4e1a\u8ba4\u8bc1\u540e\u53ef\u83b7\u5f97\u4f01\u4e1a\u8be6\u60c5\u5c55\u793a\u9875\uff0c\u5e76\u540c\u6b65\u4f01\u4e1a\u8d44\u6599\u3002";
+
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-12">
