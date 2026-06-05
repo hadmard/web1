@@ -7,7 +7,7 @@ import TextAlign from "@tiptap/extension-text-align";
 import Image from "@tiptap/extension-image";
 import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";
-import { Mark } from "@tiptap/core";
+import { Mark, type JSONContent } from "@tiptap/core";
 import { NodeSelection, TextSelection } from "@tiptap/pm/state";
 import { MAX_UPLOAD_IMAGE_MB, uploadImageToServer, uploadRemoteImageToServer } from "@/lib/client-image";
 import { sanitizeRichText } from "@/lib/brand-content";
@@ -30,6 +30,10 @@ type ImageAttrs = {
 };
 
 type MenuMode = "text" | "image";
+type PasteTransferState = {
+  type: "idle" | "loading" | "success" | "error";
+  message: string;
+};
 
 function escapeHtml(input: string) {
   return input
@@ -95,6 +99,7 @@ function normalizePastedImageSrc(src: string, rawHtml: string) {
   const value = src.trim();
   if (!value) return "";
   const baseUrl = extractClipboardSourceUrl(rawHtml);
+  if (value.startsWith("data:image/")) return value;
 
   try {
     if (/^\/\//.test(value)) {
@@ -183,7 +188,7 @@ function sanitizePastedHtml(rawHtml: string, imageMap?: Map<string, string>) {
 
     const tag = node.tagName.toLowerCase();
 
-    if (["style", "script", "meta", "link", "svg", "iframe", "object", "embed", "form"].includes(tag)) {
+    if (["style", "script", "meta", "link", "svg", "canvas", "iframe", "object", "embed", "form", "input", "button"].includes(tag)) {
       return null;
     }
 
@@ -193,12 +198,16 @@ function sanitizePastedHtml(rawHtml: string, imageMap?: Map<string, string>) {
       if (nextSrc) {
         const image = document.createElement("img");
         image.setAttribute("src", nextSrc);
+        image.setAttribute("alt", node.getAttribute("alt") || "");
+        if (node.getAttribute("title")) image.setAttribute("title", node.getAttribute("title") || "");
         return image;
       }
       const fallbackSrc = getNormalizedPastedImageSrc(node, rawHtml);
       if (fallbackSrc) {
         const image = document.createElement("img");
         image.setAttribute("src", fallbackSrc);
+        image.setAttribute("alt", node.getAttribute("alt") || "");
+        if (node.getAttribute("title")) image.setAttribute("title", node.getAttribute("title") || "");
         return image;
       }
       return null;
@@ -238,8 +247,9 @@ function sanitizePastedHtml(rawHtml: string, imageMap?: Map<string, string>) {
       return anchor.childNodes.length > 0 ? anchor : null;
     }
 
-    if (["h1", "h2", "h3", "blockquote", "ul", "ol", "li"].includes(tag)) {
-      const element = document.createElement(tag);
+    if (["h1", "h2", "h3", "h4", "blockquote", "ul", "ol", "li"].includes(tag)) {
+      const normalizedTag = tag === "h1" ? "h2" : tag;
+      const element = document.createElement(normalizedTag);
       cleanChildren(node, element);
       return element.textContent?.trim() || element.querySelector("br") ? element : null;
     }
@@ -247,12 +257,23 @@ function sanitizePastedHtml(rawHtml: string, imageMap?: Map<string, string>) {
     if (tag === "p") {
       const paragraph = document.createElement("p");
       cleanChildren(node, paragraph);
-      return paragraph.textContent?.trim() || paragraph.querySelector("br") ? paragraph : null;
+      if (!paragraph.textContent?.trim() && !paragraph.querySelector("br")) {
+        const imageOnlyNodes = Array.from(paragraph.childNodes).filter((child) => {
+          if (!(child instanceof HTMLElement)) return false;
+          if (child.tagName.toLowerCase() === "img") return true;
+          if (child.tagName.toLowerCase() !== "a") return false;
+          return !!child.querySelector("img") && !child.textContent?.trim();
+        });
+        if (imageOnlyNodes.length > 0) {
+          return imageOnlyNodes;
+        }
+      }
+      return paragraph.textContent?.trim() || paragraph.querySelector("br, img") ? paragraph : null;
     }
 
-    if (["div", "section", "article", "header", "footer", "aside"].includes(tag)) {
+    if (["div", "section", "article", "header", "footer", "aside", "figure"].includes(tag)) {
       const hasBlockChildren = Array.from(node.children).some((child) =>
-        ["h1", "h2", "h3", "blockquote", "ul", "ol", "li", "p", "div", "section", "article"].includes(child.tagName.toLowerCase())
+        ["h1", "h2", "h3", "h4", "blockquote", "ul", "ol", "li", "p", "div", "section", "article", "figure", "table"].includes(child.tagName.toLowerCase())
       );
       if (hasBlockChildren) {
         return Array.from(node.childNodes)
@@ -261,7 +282,13 @@ function sanitizePastedHtml(rawHtml: string, imageMap?: Map<string, string>) {
       }
       const paragraph = document.createElement("p");
       cleanChildren(node, paragraph);
-      return paragraph.textContent?.trim() || paragraph.querySelector("br") ? paragraph : null;
+      return paragraph.textContent?.trim() || paragraph.querySelector("br, img") ? paragraph : null;
+    }
+
+    if (tag === "figcaption") {
+      const paragraph = document.createElement("p");
+      cleanChildren(node, paragraph);
+      return paragraph.textContent?.trim() ? paragraph : null;
     }
 
     if (["table", "tbody", "thead", "tr"].includes(tag)) {
@@ -301,6 +328,232 @@ function sanitizePastedHtml(rawHtml: string, imageMap?: Map<string, string>) {
     .trim();
 
   return html || "<p></p>";
+}
+
+function hasMeaningfulInlineContent(nodes: JSONContent[]) {
+  return nodes.some((node) => {
+    if (node.type === "text") return Boolean(node.text);
+    if (node.type === "hardBreak") return true;
+    return false;
+  });
+}
+
+function appendTextNodes(target: JSONContent[], text: string, marks?: JSONContent["marks"]) {
+  const normalized = normalizePastedText(text);
+  if (!normalized) return;
+  const parts = normalized.split("\n");
+  parts.forEach((part, index) => {
+    if (part) {
+      target.push({
+        type: "text",
+        text: part,
+        ...(marks?.length ? { marks } : {}),
+      });
+    }
+    if (index < parts.length - 1) {
+      target.push({ type: "hardBreak" });
+    }
+  });
+}
+
+function buildImageNode(element: HTMLElement, href?: string | null): JSONContent | null {
+  const src = element.getAttribute("src") || "";
+  if (!src) return null;
+  return {
+    type: "image",
+    attrs: {
+      src,
+      alt: element.getAttribute("alt") || "",
+      title: element.getAttribute("title") || "",
+      href: href || null,
+    },
+  };
+}
+
+function buildBlocksFromInlineContainer(
+  element: HTMLElement,
+  blockFactory: (content: JSONContent[]) => JSONContent
+): JSONContent[] {
+  const blocks: JSONContent[] = [];
+  let inlineContent: JSONContent[] = [];
+
+  const flushInline = () => {
+    if (!hasMeaningfulInlineContent(inlineContent)) {
+      inlineContent = [];
+      return;
+    }
+    blocks.push(blockFactory(inlineContent));
+    inlineContent = [];
+  };
+
+  const walk = (node: Node, activeMarks: NonNullable<JSONContent["marks"]> = []) => {
+    if (node.nodeType === window.Node.TEXT_NODE) {
+      appendTextNodes(inlineContent, node.textContent || "", activeMarks);
+      return;
+    }
+
+    if (!(node instanceof HTMLElement)) return;
+
+    const tag = node.tagName.toLowerCase();
+
+    if (tag === "br") {
+      inlineContent.push({ type: "hardBreak" });
+      return;
+    }
+
+    if (tag === "img") {
+      flushInline();
+      const imageNode = buildImageNode(node);
+      if (imageNode) blocks.push(imageNode);
+      return;
+    }
+
+    if (tag === "a") {
+      const imageChild = Array.from(node.children).find((child) => child.tagName.toLowerCase() === "img");
+      if (imageChild instanceof HTMLImageElement && !node.textContent?.trim()) {
+        flushInline();
+        const imageNode = buildImageNode(imageChild, node.getAttribute("href") || null);
+        if (imageNode) blocks.push(imageNode);
+        return;
+      }
+
+      const href = normalizePastedHref(node.getAttribute("href") || "");
+      const nextMarks = href
+        ? [...activeMarks, { type: "link", attrs: { href, target: "_blank", rel: "noopener noreferrer nofollow" } }]
+        : activeMarks;
+      Array.from(node.childNodes).forEach((child) => walk(child, nextMarks));
+      return;
+    }
+
+    if (tag === "strong" || tag === "b") {
+      Array.from(node.childNodes).forEach((child) => walk(child, [...activeMarks, { type: "bold" }]));
+      return;
+    }
+
+    if (tag === "em" || tag === "i") {
+      Array.from(node.childNodes).forEach((child) => walk(child, [...activeMarks, { type: "italic" }]));
+      return;
+    }
+
+    if (tag === "u") {
+      Array.from(node.childNodes).forEach((child) => walk(child, [...activeMarks, { type: "underline" }]));
+      return;
+    }
+
+    Array.from(node.childNodes).forEach((child) => walk(child, activeMarks));
+  };
+
+  Array.from(element.childNodes).forEach((child) => walk(child));
+  flushInline();
+  return blocks;
+}
+
+function buildTiptapContentFromSanitizedHtml(sanitizedHtml: string): JSONContent[] {
+  if (typeof window === "undefined") return [];
+
+  const parser = new window.DOMParser();
+  const doc = parser.parseFromString(`<div>${sanitizedHtml}</div>`, "text/html");
+  const roots = Array.from(doc.body.firstElementChild?.childNodes ?? doc.body.childNodes);
+  const content: JSONContent[] = [];
+
+  for (const node of roots) {
+    if (node.nodeType === window.Node.TEXT_NODE) {
+      const inline: JSONContent[] = [];
+      appendTextNodes(inline, node.textContent || "");
+      if (hasMeaningfulInlineContent(inline)) {
+        content.push({ type: "paragraph", content: inline });
+      }
+      continue;
+    }
+
+    if (!(node instanceof HTMLElement)) continue;
+
+    const tag = node.tagName.toLowerCase();
+
+    if (tag === "img") {
+      const imageNode = buildImageNode(node);
+      if (imageNode) content.push(imageNode);
+      continue;
+    }
+
+    if (tag === "a") {
+      const imageChild = Array.from(node.children).find((child) => child.tagName.toLowerCase() === "img");
+      if (imageChild instanceof HTMLImageElement && !node.textContent?.trim()) {
+        const imageNode = buildImageNode(imageChild, node.getAttribute("href") || null);
+        if (imageNode) content.push(imageNode);
+        continue;
+      }
+    }
+
+    if (["p", "div", "section", "article", "figure", "figcaption"].includes(tag)) {
+      content.push(
+        ...buildBlocksFromInlineContainer(node, (inlineContent) => ({
+          type: "paragraph",
+          content: inlineContent,
+        }))
+      );
+      continue;
+    }
+
+    if (["h1", "h2", "h3", "h4"].includes(tag)) {
+      const level = tag === "h1" ? 2 : Number.parseInt(tag.slice(1), 10);
+      content.push(
+        ...buildBlocksFromInlineContainer(node, (inlineContent) => ({
+          type: "heading",
+          attrs: { level },
+          content: inlineContent,
+        }))
+      );
+      continue;
+    }
+
+    if (tag === "blockquote") {
+      const quoteParagraphs = buildBlocksFromInlineContainer(node, (inlineContent) => ({
+        type: "paragraph",
+        content: inlineContent,
+      }));
+      const quoteContent = quoteParagraphs.filter((item) => item.type === "paragraph");
+      if (quoteContent.length > 0) {
+        content.push({ type: "blockquote", content: quoteContent });
+      }
+      content.push(...quoteParagraphs.filter((item) => item.type === "image"));
+      continue;
+    }
+
+    if (tag === "ul" || tag === "ol") {
+      const listItems = Array.from(node.children)
+        .filter((child) => child.tagName.toLowerCase() === "li")
+        .map((child) => {
+          const paragraphs = buildBlocksFromInlineContainer(child as HTMLElement, (inlineContent) => ({
+            type: "paragraph",
+            content: inlineContent,
+          })).filter((item) => item.type === "paragraph");
+          if (paragraphs.length === 0) return null;
+          return {
+            type: "listItem",
+            content: paragraphs,
+          } as JSONContent;
+        })
+        .filter((item): item is JSONContent => Boolean(item));
+
+      if (listItems.length > 0) {
+        content.push({
+          type: tag === "ul" ? "bulletList" : "orderedList",
+          content: listItems,
+        });
+      }
+      continue;
+    }
+
+    content.push(
+      ...buildBlocksFromInlineContainer(node, (inlineContent) => ({
+        type: "paragraph",
+        content: inlineContent,
+      }))
+    );
+  }
+
+  return content;
 }
 
 async function transferPastedRemoteImages(rawHtml: string): Promise<{ html: string; failedCount: number; totalCount: number }> {
@@ -529,6 +782,7 @@ export function RichEditor({
   const [lockRatio, setLockRatio] = useState(true);
   const [ratio, setRatio] = useState(1);
   const [selectedImagePos, setSelectedImagePos] = useState<number | null>(null);
+  const [pasteTransferState, setPasteTransferState] = useState<PasteTransferState>({ type: "idle", message: "" });
   const selectedImagePosRef = useRef<number | null>(null);
   const lastAppliedValueRef = useRef(normalizeEditorContentInput(value));
   const lastEmittedValueRef = useRef(normalizeEditorContentInput(value));
@@ -600,6 +854,14 @@ export function RichEditor({
           event.preventDefault();
           window.setTimeout(() => {
             void insertPastedHtmlRef.current?.(`<p><img src="${pastedText.trim()}" alt="" /></p>`);
+          }, 0);
+          return true;
+        }
+        if (allowClipboardImagePaste && pastedText) {
+          event.preventDefault();
+          const safeTextHtml = `<p>${escapeHtml(pastedText).replace(/\r\n?/g, "\n").replace(/\n/g, "<br>")}</p>`;
+          window.setTimeout(() => {
+            void insertPastedHtmlRef.current?.(safeTextHtml);
           }, 0);
           return true;
         }
@@ -744,6 +1006,7 @@ export function RichEditor({
     insertPastedHtmlRef.current = async (html: string) => {
       if (!editor) return;
       const anchor = createSelectionAnchor(editor);
+      const needsImageTransfer = /<img\b|data:image\//i.test(html);
       const applyDefaultSizeToPastedImages = async (from: number, to: number) => {
         const targets: Array<{ pos: number; src: string }> = [];
         editor.state.doc.nodesBetween(from, to, (node, pos) => {
@@ -767,24 +1030,40 @@ export function RichEditor({
       };
 
       try {
+        if (needsImageTransfer) {
+          setPasteTransferState({ type: "loading", message: "图片处理中，正在转存网页里的图片…" });
+        }
         const result = await transferPastedRemoteImages(html);
+        const tiptapContent = buildTiptapContentFromSanitizedHtml(result.html);
         const tr = editor.state.tr.setSelection(TextSelection.create(editor.state.doc, anchor.from, anchor.to));
         editor.view.dispatch(tr);
-        editor.chain().focus().insertContent(result.html).run();
+        editor.chain().focus().insertContent(tiptapContent.length > 0 ? tiptapContent : result.html).run();
         await applyDefaultSizeToPastedImages(anchor.from, editor.state.selection.to);
         if (result.failedCount > 0) {
-          window.alert(
-            result.failedCount === result.totalCount
-              ? "本次粘贴里的网页图片没有成功转存，已尽量保留可用图片与文字内容。"
-              : `本次粘贴有 ${result.failedCount} 张网页图片转存失败，已保留文字和成功导入的图片。`
-          );
+          setPasteTransferState({
+            type: "error",
+            message:
+              result.failedCount === result.totalCount
+                ? "本次粘贴里的图片没有成功转存，已保留文字；请手动补图。"
+                : `本次粘贴有 ${result.failedCount} 张图片转存失败，成功的图片已保留。`,
+          });
+          return;
         }
+        setPasteTransferState({
+          type: "success",
+          message: result.totalCount > 0 ? `已完成粘贴并转存 ${result.totalCount} 张图片。` : "已完成粘贴，文字和排版已自动整理。",
+        });
       } catch {
+        const fallbackHtml = sanitizePastedHtml(html);
+        const tiptapContent = buildTiptapContentFromSanitizedHtml(fallbackHtml);
         const tr = editor.state.tr.setSelection(TextSelection.create(editor.state.doc, anchor.from, anchor.to));
         editor.view.dispatch(tr);
-        editor.chain().focus().insertContent(sanitizePastedHtml(html)).run();
+        editor.chain().focus().insertContent(tiptapContent.length > 0 ? tiptapContent : fallbackHtml).run();
         await applyDefaultSizeToPastedImages(anchor.from, editor.state.selection.to);
-        window.alert("网页内容已粘贴，图片转存失败时会尽量保留可用图片；如个别图片仍缺失，可再手动补图。");
+        setPasteTransferState({
+          type: "error",
+          message: "网页内容已粘贴，但图片转存失败；如有缺图，请手动补图后再保存。",
+        });
       }
     };
     return () => {
@@ -953,6 +1232,19 @@ export function RichEditor({
           {allowClipboardImagePaste ? "支持粘贴图片，文字会自动整理格式" : "支持上传图片，文字会自动整理格式"}
         </span>
       </div>
+      {pasteTransferState.type !== "idle" ? (
+        <div
+          className={`border-b px-3 py-2 text-xs ${
+            pasteTransferState.type === "loading"
+              ? "border-[rgba(180,154,107,0.22)] bg-[rgba(250,245,237,0.92)] text-[#7a6643]"
+              : pasteTransferState.type === "success"
+                ? "border-[rgba(74,163,102,0.18)] bg-[rgba(240,251,244,0.92)] text-[#24663a]"
+                : "border-[rgba(196,76,76,0.18)] bg-[rgba(255,244,244,0.94)] text-[#a03f3f]"
+          }`}
+        >
+          {pasteTransferState.message}
+        </div>
+      ) : null}
 
       {isImageActive && (
         <div className="border-b border-[rgba(194,182,154,0.28)] bg-[linear-gradient(180deg,rgba(255,253,250,0.98),rgba(247,242,235,0.95))] px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.82)] backdrop-blur">
