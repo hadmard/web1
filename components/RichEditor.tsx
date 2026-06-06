@@ -1,20 +1,28 @@
 ﻿"use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import TextAlign from "@tiptap/extension-text-align";
 import Image from "@tiptap/extension-image";
 import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";
-import { Mark } from "@tiptap/core";
+import { Table } from "@tiptap/extension-table";
+import TableCell from "@tiptap/extension-table-cell";
+import TableHeader from "@tiptap/extension-table-header";
+import TableRow from "@tiptap/extension-table-row";
+import { Mark, type JSONContent } from "@tiptap/core";
 import { NodeSelection, TextSelection } from "@tiptap/pm/state";
 import { MAX_UPLOAD_IMAGE_MB, uploadImageToServer, uploadRemoteImageToServer } from "@/lib/client-image";
 import { sanitizeRichText } from "@/lib/brand-content";
 
+const DOCUMENT_IMPORT_HELP_TEXT = "支持 .docx、.txt 格式，文件大小小于 10MB。导入后可自动识别标题，并导入正文、图片和表格。";
+
+
 type Props = {
   value: string;
   onChange: (html: string) => void;
+  onImportedTitle?: (title: string, meta?: { source?: string }) => void;
   minHeight?: number;
   placeholder?: string;
   allowClipboardImagePaste?: boolean;
@@ -30,6 +38,14 @@ type ImageAttrs = {
 };
 
 type MenuMode = "text" | "image";
+type PasteTransferState = {
+  type: "idle" | "loading" | "success" | "error";
+  message: string;
+};
+type DocumentImportState = PasteTransferState;
+
+const MAX_DOCUMENT_IMPORT_MB = 10;
+const MAX_DOCUMENT_IMPORT_BYTES = MAX_DOCUMENT_IMPORT_MB * 1024 * 1024;
 
 function escapeHtml(input: string) {
   return input
@@ -95,6 +111,7 @@ function normalizePastedImageSrc(src: string, rawHtml: string) {
   const value = src.trim();
   if (!value) return "";
   const baseUrl = extractClipboardSourceUrl(rawHtml);
+  if (value.startsWith("data:image/")) return value;
 
   try {
     if (/^\/\//.test(value)) {
@@ -183,7 +200,7 @@ function sanitizePastedHtml(rawHtml: string, imageMap?: Map<string, string>) {
 
     const tag = node.tagName.toLowerCase();
 
-    if (["style", "script", "meta", "link", "svg", "iframe", "object", "embed", "form"].includes(tag)) {
+    if (["style", "script", "meta", "link", "svg", "canvas", "iframe", "object", "embed", "form", "input", "button"].includes(tag)) {
       return null;
     }
 
@@ -193,12 +210,16 @@ function sanitizePastedHtml(rawHtml: string, imageMap?: Map<string, string>) {
       if (nextSrc) {
         const image = document.createElement("img");
         image.setAttribute("src", nextSrc);
+        image.setAttribute("alt", node.getAttribute("alt") || "");
+        if (node.getAttribute("title")) image.setAttribute("title", node.getAttribute("title") || "");
         return image;
       }
       const fallbackSrc = getNormalizedPastedImageSrc(node, rawHtml);
       if (fallbackSrc) {
         const image = document.createElement("img");
         image.setAttribute("src", fallbackSrc);
+        image.setAttribute("alt", node.getAttribute("alt") || "");
+        if (node.getAttribute("title")) image.setAttribute("title", node.getAttribute("title") || "");
         return image;
       }
       return null;
@@ -238,8 +259,9 @@ function sanitizePastedHtml(rawHtml: string, imageMap?: Map<string, string>) {
       return anchor.childNodes.length > 0 ? anchor : null;
     }
 
-    if (["h1", "h2", "h3", "blockquote", "ul", "ol", "li"].includes(tag)) {
-      const element = document.createElement(tag);
+    if (["h1", "h2", "h3", "h4", "blockquote", "ul", "ol", "li"].includes(tag)) {
+      const normalizedTag = tag === "h1" ? "h2" : tag;
+      const element = document.createElement(normalizedTag);
       cleanChildren(node, element);
       return element.textContent?.trim() || element.querySelector("br") ? element : null;
     }
@@ -247,12 +269,23 @@ function sanitizePastedHtml(rawHtml: string, imageMap?: Map<string, string>) {
     if (tag === "p") {
       const paragraph = document.createElement("p");
       cleanChildren(node, paragraph);
-      return paragraph.textContent?.trim() || paragraph.querySelector("br") ? paragraph : null;
+      if (!paragraph.textContent?.trim() && !paragraph.querySelector("br")) {
+        const imageOnlyNodes = Array.from(paragraph.childNodes).filter((child) => {
+          if (!(child instanceof HTMLElement)) return false;
+          if (child.tagName.toLowerCase() === "img") return true;
+          if (child.tagName.toLowerCase() !== "a") return false;
+          return !!child.querySelector("img") && !child.textContent?.trim();
+        });
+        if (imageOnlyNodes.length > 0) {
+          return imageOnlyNodes;
+        }
+      }
+      return paragraph.textContent?.trim() || paragraph.querySelector("br, img") ? paragraph : null;
     }
 
-    if (["div", "section", "article", "header", "footer", "aside"].includes(tag)) {
+    if (["div", "section", "article", "header", "footer", "aside", "figure"].includes(tag)) {
       const hasBlockChildren = Array.from(node.children).some((child) =>
-        ["h1", "h2", "h3", "blockquote", "ul", "ol", "li", "p", "div", "section", "article"].includes(child.tagName.toLowerCase())
+        ["h1", "h2", "h3", "h4", "blockquote", "ul", "ol", "li", "p", "div", "section", "article", "figure", "table"].includes(child.tagName.toLowerCase())
       );
       if (hasBlockChildren) {
         return Array.from(node.childNodes)
@@ -261,7 +294,13 @@ function sanitizePastedHtml(rawHtml: string, imageMap?: Map<string, string>) {
       }
       const paragraph = document.createElement("p");
       cleanChildren(node, paragraph);
-      return paragraph.textContent?.trim() || paragraph.querySelector("br") ? paragraph : null;
+      return paragraph.textContent?.trim() || paragraph.querySelector("br, img") ? paragraph : null;
+    }
+
+    if (tag === "figcaption") {
+      const paragraph = document.createElement("p");
+      cleanChildren(node, paragraph);
+      return paragraph.textContent?.trim() ? paragraph : null;
     }
 
     if (["table", "tbody", "thead", "tr"].includes(tag)) {
@@ -301,6 +340,281 @@ function sanitizePastedHtml(rawHtml: string, imageMap?: Map<string, string>) {
     .trim();
 
   return html || "<p></p>";
+}
+
+function hasMeaningfulInlineContent(nodes: JSONContent[]) {
+  return nodes.some((node) => {
+    if (node.type === "text") return Boolean(node.text);
+    if (node.type === "hardBreak") return true;
+    return false;
+  });
+}
+
+function appendTextNodes(target: JSONContent[], text: string, marks?: JSONContent["marks"]) {
+  const normalized = normalizePastedText(text);
+  if (!normalized) return;
+  const parts = normalized.split("\n");
+  parts.forEach((part, index) => {
+    if (part) {
+      target.push({
+        type: "text",
+        text: part,
+        ...(marks?.length ? { marks } : {}),
+      });
+    }
+    if (index < parts.length - 1) {
+      target.push({ type: "hardBreak" });
+    }
+  });
+}
+
+function buildImageNode(element: HTMLElement, href?: string | null): JSONContent | null {
+  const src = element.getAttribute("src") || "";
+  if (!src) return null;
+  return {
+    type: "image",
+    attrs: {
+      src,
+      alt: element.getAttribute("alt") || "",
+      title: element.getAttribute("title") || "",
+      href: href || null,
+    },
+  };
+}
+
+function buildTableCellNode(element: HTMLElement): JSONContent {
+  const tag = element.tagName.toLowerCase();
+  const colspan = Number.parseInt(element.getAttribute("colspan") || "", 10);
+  const rowspan = Number.parseInt(element.getAttribute("rowspan") || "", 10);
+  const content = buildBlocksFromInlineContainer(element, (inlineContent) => ({
+    type: "paragraph",
+    content: inlineContent,
+  })).filter((item) => item.type === "paragraph" || item.type === "image");
+
+  return {
+    type: tag === "th" ? "tableHeader" : "tableCell",
+    attrs: {
+      colspan: Number.isFinite(colspan) && colspan > 1 ? colspan : 1,
+      rowspan: Number.isFinite(rowspan) && rowspan > 1 ? rowspan : 1,
+      colwidth: null,
+    },
+    content: content.length > 0 ? content : [{ type: "paragraph" }],
+  };
+}
+
+function buildTableNode(element: HTMLElement): JSONContent | null {
+  const rowElements = Array.from(element.querySelectorAll("tr"));
+  const rows = rowElements
+    .map((row) => {
+      const cells = Array.from(row.children)
+        .filter((child) => ["td", "th"].includes(child.tagName.toLowerCase()))
+        .map((child) => buildTableCellNode(child as HTMLElement));
+      if (cells.length === 0) return null;
+      return {
+        type: "tableRow",
+        content: cells,
+      } as JSONContent;
+    })
+    .filter((row): row is JSONContent => Boolean(row));
+
+  if (rows.length === 0) return null;
+
+  return {
+    type: "table",
+    content: rows,
+  };
+}
+
+function buildBlocksFromInlineContainer(
+  element: HTMLElement,
+  blockFactory: (content: JSONContent[]) => JSONContent
+): JSONContent[] {
+  const blocks: JSONContent[] = [];
+  let inlineContent: JSONContent[] = [];
+
+  const flushInline = () => {
+    if (!hasMeaningfulInlineContent(inlineContent)) {
+      inlineContent = [];
+      return;
+    }
+    blocks.push(blockFactory(inlineContent));
+    inlineContent = [];
+  };
+
+  const walk = (node: Node, activeMarks: NonNullable<JSONContent["marks"]> = []) => {
+    if (node.nodeType === window.Node.TEXT_NODE) {
+      appendTextNodes(inlineContent, node.textContent || "", activeMarks);
+      return;
+    }
+
+    if (!(node instanceof HTMLElement)) return;
+
+    const tag = node.tagName.toLowerCase();
+
+    if (tag === "br") {
+      inlineContent.push({ type: "hardBreak" });
+      return;
+    }
+
+    if (tag === "img") {
+      flushInline();
+      const imageNode = buildImageNode(node);
+      if (imageNode) blocks.push(imageNode);
+      return;
+    }
+
+    if (tag === "a") {
+      const imageChild = Array.from(node.children).find((child) => child.tagName.toLowerCase() === "img");
+      if (imageChild instanceof HTMLImageElement && !node.textContent?.trim()) {
+        flushInline();
+        const imageNode = buildImageNode(imageChild, node.getAttribute("href") || null);
+        if (imageNode) blocks.push(imageNode);
+        return;
+      }
+
+      const href = normalizePastedHref(node.getAttribute("href") || "");
+      const nextMarks = href
+        ? [...activeMarks, { type: "link", attrs: { href, target: "_blank", rel: "noopener noreferrer nofollow" } }]
+        : activeMarks;
+      Array.from(node.childNodes).forEach((child) => walk(child, nextMarks));
+      return;
+    }
+
+    if (tag === "strong" || tag === "b") {
+      Array.from(node.childNodes).forEach((child) => walk(child, [...activeMarks, { type: "bold" }]));
+      return;
+    }
+
+    if (tag === "em" || tag === "i") {
+      Array.from(node.childNodes).forEach((child) => walk(child, [...activeMarks, { type: "italic" }]));
+      return;
+    }
+
+    if (tag === "u") {
+      Array.from(node.childNodes).forEach((child) => walk(child, [...activeMarks, { type: "underline" }]));
+      return;
+    }
+
+    Array.from(node.childNodes).forEach((child) => walk(child, activeMarks));
+  };
+
+  Array.from(element.childNodes).forEach((child) => walk(child));
+  flushInline();
+  return blocks;
+}
+
+function buildTiptapContentFromSanitizedHtml(sanitizedHtml: string): JSONContent[] {
+  if (typeof window === "undefined") return [];
+
+  const parser = new window.DOMParser();
+  const doc = parser.parseFromString(`<div>${sanitizedHtml}</div>`, "text/html");
+  const roots = Array.from(doc.body.firstElementChild?.childNodes ?? doc.body.childNodes);
+  const content: JSONContent[] = [];
+
+  for (const node of roots) {
+    if (node.nodeType === window.Node.TEXT_NODE) {
+      const inline: JSONContent[] = [];
+      appendTextNodes(inline, node.textContent || "");
+      if (hasMeaningfulInlineContent(inline)) {
+        content.push({ type: "paragraph", content: inline });
+      }
+      continue;
+    }
+
+    if (!(node instanceof HTMLElement)) continue;
+
+    const tag = node.tagName.toLowerCase();
+
+    if (tag === "img") {
+      const imageNode = buildImageNode(node);
+      if (imageNode) content.push(imageNode);
+      continue;
+    }
+
+    if (tag === "a") {
+      const imageChild = Array.from(node.children).find((child) => child.tagName.toLowerCase() === "img");
+      if (imageChild instanceof HTMLImageElement && !node.textContent?.trim()) {
+        const imageNode = buildImageNode(imageChild, node.getAttribute("href") || null);
+        if (imageNode) content.push(imageNode);
+        continue;
+      }
+    }
+
+    if (["p", "div", "section", "article", "figure", "figcaption"].includes(tag)) {
+      content.push(
+        ...buildBlocksFromInlineContainer(node, (inlineContent) => ({
+          type: "paragraph",
+          content: inlineContent,
+        }))
+      );
+      continue;
+    }
+
+    if (["h1", "h2", "h3", "h4"].includes(tag)) {
+      const level = tag === "h1" ? 2 : Number.parseInt(tag.slice(1), 10);
+      content.push(
+        ...buildBlocksFromInlineContainer(node, (inlineContent) => ({
+          type: "heading",
+          attrs: { level },
+          content: inlineContent,
+        }))
+      );
+      continue;
+    }
+
+    if (tag === "blockquote") {
+      const quoteParagraphs = buildBlocksFromInlineContainer(node, (inlineContent) => ({
+        type: "paragraph",
+        content: inlineContent,
+      }));
+      const quoteContent = quoteParagraphs.filter((item) => item.type === "paragraph");
+      if (quoteContent.length > 0) {
+        content.push({ type: "blockquote", content: quoteContent });
+      }
+      content.push(...quoteParagraphs.filter((item) => item.type === "image"));
+      continue;
+    }
+
+    if (tag === "table") {
+      const tableNode = buildTableNode(node);
+      if (tableNode) content.push(tableNode);
+      continue;
+    }
+
+    if (tag === "ul" || tag === "ol") {
+      const listItems = Array.from(node.children)
+        .filter((child) => child.tagName.toLowerCase() === "li")
+        .map((child) => {
+          const paragraphs = buildBlocksFromInlineContainer(child as HTMLElement, (inlineContent) => ({
+            type: "paragraph",
+            content: inlineContent,
+          })).filter((item) => item.type === "paragraph");
+          if (paragraphs.length === 0) return null;
+          return {
+            type: "listItem",
+            content: paragraphs,
+          } as JSONContent;
+        })
+        .filter((item): item is JSONContent => Boolean(item));
+
+      if (listItems.length > 0) {
+        content.push({
+          type: tag === "ul" ? "bulletList" : "orderedList",
+          content: listItems,
+        });
+      }
+      continue;
+    }
+
+    content.push(
+      ...buildBlocksFromInlineContainer(node, (inlineContent) => ({
+        type: "paragraph",
+        content: inlineContent,
+      }))
+    );
+  }
+
+  return content;
 }
 
 async function transferPastedRemoteImages(rawHtml: string): Promise<{ html: string; failedCount: number; totalCount: number }> {
@@ -510,12 +824,14 @@ function ToolbarButtonVisual({ label }: { label: string }) {
 export function RichEditor({
   value,
   onChange,
+  onImportedTitle,
   minHeight = 260,
   placeholder = "请输入正文...",
   allowClipboardImagePaste = false,
   toolbarIcons = false,
 }: Props) {
   const imageInputRef = useRef<HTMLInputElement | null>(null);
+  const documentInputRef = useRef<HTMLInputElement | null>(null);
   const insertImageRef = useRef<((file: File) => Promise<void>) | null>(null);
   const insertPastedHtmlRef = useRef<((html: string) => Promise<void>) | null>(null);
   const [menu, setMenu] = useState<{ open: boolean; x: number; y: number; mode: MenuMode }>({
@@ -529,6 +845,8 @@ export function RichEditor({
   const [lockRatio, setLockRatio] = useState(true);
   const [ratio, setRatio] = useState(1);
   const [selectedImagePos, setSelectedImagePos] = useState<number | null>(null);
+  const [pasteTransferState, setPasteTransferState] = useState<PasteTransferState>({ type: "idle", message: "" });
+  const [documentImportState, setDocumentImportState] = useState<DocumentImportState>({ type: "idle", message: "" });
   const selectedImagePosRef = useRef<number | null>(null);
   const lastAppliedValueRef = useRef(normalizeEditorContentInput(value));
   const lastEmittedValueRef = useRef(normalizeEditorContentInput(value));
@@ -556,6 +874,10 @@ export function RichEditor({
         autolink: true,
         defaultProtocol: "https",
       }),
+      Table.configure({ resizable: true }),
+      TableRow,
+      TableHeader,
+      TableCell,
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       SpecialText,
       RichImage,
@@ -603,6 +925,14 @@ export function RichEditor({
           }, 0);
           return true;
         }
+        if (allowClipboardImagePaste && pastedText) {
+          event.preventDefault();
+          const safeTextHtml = `<p>${escapeHtml(pastedText).replace(/\r\n?/g, "\n").replace(/\n/g, "<br>")}</p>`;
+          window.setTimeout(() => {
+            void insertPastedHtmlRef.current?.(safeTextHtml);
+          }, 0);
+          return true;
+        }
         return false;
       },
       handleDOMEvents: {
@@ -644,6 +974,30 @@ export function RichEditor({
     },
     immediatelyRender: false,
   });
+
+  const applyDefaultSizeToInsertedImages = useCallback(async (from: number, to: number) => {
+    if (!editor) return;
+
+    const targets: Array<{ pos: number; src: string }> = [];
+    editor.state.doc.nodesBetween(from, to, (node, pos) => {
+      if (node.type.name !== "image") return;
+      if (node.attrs.width && node.attrs.height) return;
+      const src = typeof node.attrs.src === "string" ? node.attrs.src : "";
+      if (!src) return;
+      targets.push({ pos, src });
+    });
+
+    for (const target of targets) {
+      const size = await getImageSize(target.src);
+      const { width, height } = resolveDefaultImageSize(size);
+      editor
+        .chain()
+        .focus()
+        .setNodeSelection(target.pos)
+        .updateAttributes("image", { width, height, align: "center" })
+        .run();
+    }
+  }, [editor]);
 
   useEffect(() => {
     if (!editor) return;
@@ -744,53 +1098,49 @@ export function RichEditor({
     insertPastedHtmlRef.current = async (html: string) => {
       if (!editor) return;
       const anchor = createSelectionAnchor(editor);
-      const applyDefaultSizeToPastedImages = async (from: number, to: number) => {
-        const targets: Array<{ pos: number; src: string }> = [];
-        editor.state.doc.nodesBetween(from, to, (node, pos) => {
-          if (node.type.name !== "image") return;
-          if (node.attrs.width && node.attrs.height) return;
-          const src = typeof node.attrs.src === "string" ? node.attrs.src : "";
-          if (!src) return;
-          targets.push({ pos, src });
-        });
-
-        for (const target of targets) {
-          const size = await getImageSize(target.src);
-          const { width, height } = resolveDefaultImageSize(size);
-          editor
-            .chain()
-            .focus()
-            .setNodeSelection(target.pos)
-            .updateAttributes("image", { width, height, align: "center" })
-            .run();
-        }
-      };
+      const needsImageTransfer = /<img\b|data:image\//i.test(html);
 
       try {
-        const result = await transferPastedRemoteImages(html);
-        const tr = editor.state.tr.setSelection(TextSelection.create(editor.state.doc, anchor.from, anchor.to));
-        editor.view.dispatch(tr);
-        editor.chain().focus().insertContent(result.html).run();
-        await applyDefaultSizeToPastedImages(anchor.from, editor.state.selection.to);
-        if (result.failedCount > 0) {
-          window.alert(
-            result.failedCount === result.totalCount
-              ? "本次粘贴里的网页图片没有成功转存，已尽量保留可用图片与文字内容。"
-              : `本次粘贴有 ${result.failedCount} 张网页图片转存失败，已保留文字和成功导入的图片。`
-          );
+        if (needsImageTransfer) {
+          setPasteTransferState({ type: "loading", message: "图片处理中，正在转存网页里的图片…" });
         }
-      } catch {
+        const result = await transferPastedRemoteImages(html);
+        const tiptapContent = buildTiptapContentFromSanitizedHtml(result.html);
         const tr = editor.state.tr.setSelection(TextSelection.create(editor.state.doc, anchor.from, anchor.to));
         editor.view.dispatch(tr);
-        editor.chain().focus().insertContent(sanitizePastedHtml(html)).run();
-        await applyDefaultSizeToPastedImages(anchor.from, editor.state.selection.to);
-        window.alert("网页内容已粘贴，图片转存失败时会尽量保留可用图片；如个别图片仍缺失，可再手动补图。");
+        editor.chain().focus().insertContent(tiptapContent.length > 0 ? tiptapContent : result.html).run();
+        await applyDefaultSizeToInsertedImages(anchor.from, editor.state.selection.to);
+        if (result.failedCount > 0) {
+          setPasteTransferState({
+            type: "error",
+            message:
+              result.failedCount === result.totalCount
+                ? "本次粘贴里的图片没有成功转存，已保留文字；请手动补图。"
+                : `本次粘贴有 ${result.failedCount} 张图片转存失败，成功的图片已保留。`,
+          });
+          return;
+        }
+        setPasteTransferState({
+          type: "success",
+          message: result.totalCount > 0 ? `已完成粘贴并转存 ${result.totalCount} 张图片。` : "已完成粘贴，文字和排版已自动整理。",
+        });
+      } catch {
+        const fallbackHtml = sanitizePastedHtml(html);
+        const tiptapContent = buildTiptapContentFromSanitizedHtml(fallbackHtml);
+        const tr = editor.state.tr.setSelection(TextSelection.create(editor.state.doc, anchor.from, anchor.to));
+        editor.view.dispatch(tr);
+        editor.chain().focus().insertContent(tiptapContent.length > 0 ? tiptapContent : fallbackHtml).run();
+        await applyDefaultSizeToInsertedImages(anchor.from, editor.state.selection.to);
+        setPasteTransferState({
+          type: "error",
+          message: "网页内容已粘贴，但图片转存失败；如有缺图，请手动补图后再保存。",
+        });
       }
     };
     return () => {
       insertPastedHtmlRef.current = null;
     };
-  }, [editor]);
+  }, [editor, applyDefaultSizeToInsertedImages]);
 
   const updateSelectedImage = (attrs: Partial<ImageAttrs>) => {
     if (!editor) return false;
@@ -900,6 +1250,65 @@ export function RichEditor({
     setRatio(width / height);
   };
 
+  const importDocument = async (file: File) => {
+    if (!editor) return;
+    if (!/\.(docx|txt)$/i.test(file.name)) {
+      setDocumentImportState({ type: "error", message: "仅支持导入 .docx 或 .txt 文件。" });
+      return;
+    }
+    if (file.size <= 0) {
+      setDocumentImportState({ type: "error", message: "上传文件为空，请重新选择文档。" });
+      return;
+    }
+    if (file.size >= MAX_DOCUMENT_IMPORT_BYTES) {
+      setDocumentImportState({ type: "error", message: `文件大小必须小于 ${MAX_DOCUMENT_IMPORT_MB}MB。` });
+      return;
+    }
+
+    const anchor = createSelectionAnchor(editor);
+    const formData = new FormData();
+    formData.set("file", file);
+    setDocumentImportState({ type: "loading", message: "正在导入文档..." });
+
+    try {
+      const response = await fetch("/api/richtext/import-document", {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || typeof result.html !== "string") {
+        throw new Error(typeof result.error === "string" ? result.error : "导入文档失败");
+      }
+
+      if (typeof result.title === "string" && result.title.trim()) {
+        onImportedTitle?.(result.title.trim(), {
+          source: typeof result.titleSource === "string" ? result.titleSource : undefined,
+        });
+      }
+
+      const sanitizedHtml = typeof result.html === "string" ? result.html.trim() : "";
+      if (!sanitizedHtml) {
+        throw new Error("文档中没有可导入的正文内容");
+      }
+
+      const tiptapContent = buildTiptapContentFromSanitizedHtml(sanitizedHtml);
+      const tr = editor.state.tr.setSelection(TextSelection.create(editor.state.doc, anchor.from, anchor.to));
+      editor.view.dispatch(tr);
+      editor.chain().focus().insertContent(tiptapContent.length > 0 ? tiptapContent : sanitizedHtml).run();
+      await applyDefaultSizeToInsertedImages(anchor.from, editor.state.selection.to);
+
+      const warningCount = Array.isArray(result.warnings) ? result.warnings.filter((item: unknown) => typeof item === "string" && item.trim()).length : 0;
+      setDocumentImportState({
+        type: "success",
+        message: warningCount > 0 ? `已导入文档，包含 ${warningCount} 条提示，请检查表格或图片细节。` : "已导入文档。",
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "导入文档失败";
+      setDocumentImportState({ type: "error", message: `导入失败：${message}` });
+    }
+  };
+
   return (
     <div className="relative rounded-xl border border-border bg-surface-elevated">
       <div className="p-3 border-b border-border flex flex-wrap gap-2 sticky top-0 bg-surface-elevated/95 backdrop-blur supports-[backdrop-filter]:bg-surface-elevated/75 z-10">
@@ -947,12 +1356,56 @@ export function RichEditor({
             e.target.value = "";
           }}
         />
+        <input
+          ref={documentInputRef}
+          type="file"
+          accept=".docx,.txt,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) void importDocument(file);
+            e.target.value = "";
+          }}
+        />
         <ToolButton label="上传图片" onClick={() => imageInputRef.current?.click()} />
+        <span className="group relative inline-flex">
+          <ToolButton label="导入文档" onClick={() => documentInputRef.current?.click()} />
+          <span className="pointer-events-none absolute right-0 top-full z-50 mt-2 hidden w-72 rounded-xl border border-border bg-white px-3 py-2 text-left text-xs leading-5 text-primary shadow-[0_12px_28px_rgba(15,23,42,0.14)] group-hover:block">
+            {DOCUMENT_IMPORT_HELP_TEXT}
+          </span>
+        </span>
         <span className="self-center text-[11px] text-muted">图片最大 {MAX_UPLOAD_IMAGE_MB}MB（超限可压缩）</span>
+        <span className="self-center text-[11px] text-muted">文档支持 .docx / .txt，且小于 {MAX_DOCUMENT_IMPORT_MB}MB</span>
         <span className="self-center text-[11px] text-[#8f7b59]">
           {allowClipboardImagePaste ? "支持粘贴图片，文字会自动整理格式" : "支持上传图片，文字会自动整理格式"}
         </span>
       </div>
+      {pasteTransferState.type !== "idle" ? (
+        <div
+          className={`border-b px-3 py-2 text-xs ${
+            pasteTransferState.type === "loading"
+              ? "border-[rgba(180,154,107,0.22)] bg-[rgba(250,245,237,0.92)] text-[#7a6643]"
+              : pasteTransferState.type === "success"
+                ? "border-[rgba(74,163,102,0.18)] bg-[rgba(240,251,244,0.92)] text-[#24663a]"
+                : "border-[rgba(196,76,76,0.18)] bg-[rgba(255,244,244,0.94)] text-[#a03f3f]"
+          }`}
+        >
+          {pasteTransferState.message}
+        </div>
+      ) : null}
+      {documentImportState.type !== "idle" ? (
+        <div
+          className={`border-b px-3 py-2 text-xs ${
+            documentImportState.type === "loading"
+              ? "border-[rgba(180,154,107,0.22)] bg-[rgba(250,245,237,0.92)] text-[#7a6643]"
+              : documentImportState.type === "success"
+                ? "border-[rgba(74,163,102,0.18)] bg-[rgba(240,251,244,0.92)] text-[#24663a]"
+                : "border-[rgba(196,76,76,0.18)] bg-[rgba(255,244,244,0.94)] text-[#a03f3f]"
+          }`}
+        >
+          {documentImportState.message}
+        </div>
+      ) : null}
 
       {isImageActive && (
         <div className="border-b border-[rgba(194,182,154,0.28)] bg-[linear-gradient(180deg,rgba(255,253,250,0.98),rgba(247,242,235,0.95))] px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.82)] backdrop-blur">

@@ -1018,6 +1018,15 @@ html[data-motion-tier="low"] .mouse-parallax {
   max-width: 100%;
 }
 
+.rich-content-shell .table-scroll,
+.rich-editor-content .tableWrapper {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
 .rich-editor-content {
   min-width: 0;
   max-width: 100%;
@@ -1056,7 +1065,6 @@ html[data-motion-tier="low"] .mouse-parallax {
   margin: 0.6em 0;
   font-weight: 400;
 }
-.rich-editor-content table,
 .rich-editor-content pre,
 .rich-editor-content iframe,
 .rich-editor-content video {
@@ -1065,8 +1073,11 @@ html[data-motion-tier="low"] .mouse-parallax {
   max-width: 100%;
 }
 .rich-editor-content table {
+  display: table;
   border-collapse: collapse;
-  overflow-x: auto;
+  width: 100%;
+  max-width: 100%;
+  min-width: 100%;
 }
 .rich-editor-content thead,
 .rich-editor-content tbody,
@@ -1081,6 +1092,10 @@ html[data-motion-tier="low"] .mouse-parallax {
   padding: 0.65rem 0.75rem;
   border: 1px solid color-mix(in srgb, var(--color-border) 88%, white);
   vertical-align: top;
+}
+.rich-editor-content th {
+  background: rgba(246, 248, 250, 0.92);
+  font-weight: 600;
 }
 .rich-editor-content pre {
   overflow-x: auto;

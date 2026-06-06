@@ -1595,7 +1595,6 @@ export default function AdminContentPage() {
                   onChange={(e) => setProductRecommendations(e.target.value)}
                   placeholder={'[{"title":"WOCA 木作清洁养护产品","url":"/product/981746066","sellingPoint":"进口护理方向"},{"title":"整木优选护理频道","url":"https://csj.cnzhengmu.com/h5/index.html?id=1#/category/care"}]'}
                 />
-                <p className="text-xs text-muted">支持 `/product/商品ID`、`/youxuan` 或 H5 绝对地址；字段支持 `title`、`url`、`imageUrl`、`sellingPoint`。</p>
               </>
             )}
             {tab !== "terms" && tab !== "brands" && tab !== "standards" && tab !== "industry-data" && tab !== "awards" && (

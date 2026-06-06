@@ -26,7 +26,6 @@
   "th",
   "pre",
   "code",
-  "iframe",
   "video",
 ]);
 
@@ -61,7 +60,6 @@ const ALLOWED_TAGS = new Set([
   "th",
   "pre",
   "code",
-  "iframe",
   "video",
   "source",
 ]);
@@ -171,12 +169,47 @@ function isSafeHref(value: string) {
   return /^(https?:|mailto:|tel:|\/)/i.test(value);
 }
 
-function isSafeSrc(value: string) {
-  return /^(https?:|\/)/i.test(value);
+function normalizeManagedImageSrc(value: string) {
+  const input = String(value ?? "").trim();
+  if (!input) return "";
+
+  if (input.startsWith("/api/upload/image?src=")) {
+    const encoded = input.slice("/api/upload/image?src=".length).trim();
+    let decoded = encoded;
+    if (encoded) {
+      try {
+        decoded = decodeURIComponent(encoded);
+      } catch {
+        decoded = encoded;
+      }
+    }
+    return normalizeManagedImageSrc(decoded);
+  }
+
+  if (input.startsWith("/uploads/")) {
+    if (input.includes("\\") || input.includes("\0")) return "";
+    const normalized = input.replace(/\/{2,}/g, "/");
+    const segments = normalized.slice("/uploads/".length).split("/");
+    if (segments.some((segment) => !segment || segment === "." || segment === "..")) return "";
+    return normalized;
+  }
+
+  if (/^https?:\/\//i.test(input)) {
+    try {
+      const parsed = new URL(input);
+      const host = parsed.hostname.toLowerCase();
+      if (!["cnzhengmu.com", "www.cnzhengmu.com", "jiu.cnzhengmu.com"].includes(host)) return "";
+      return normalizeManagedImageSrc(parsed.pathname);
+    } catch {
+      return "";
+    }
+  }
+
+  return "";
 }
 
-function isSafeIframeSrc(value: string) {
-  return /^(https?:|\/)/i.test(value);
+function isSafeSrc(value: string) {
+  return Boolean(normalizeManagedImageSrc(value));
 }
 
 function parseAttributes(input: string) {
@@ -294,7 +327,7 @@ function extractSafePreStyle(styleText: string | null | undefined) {
   return align ? `max-width:100%;text-align:${align}` : "max-width:100%";
 }
 
-function extractSafeIframeStyle(styleText: string | null | undefined) {
+function extractSafeMediaStyle(styleText: string | null | undefined) {
   const source = String(styleText ?? "");
   const safeRules = ["width:100%", "max-width:100%"];
   const width = clampLength(pickCssValue(source, "width"), 1600);
@@ -318,7 +351,7 @@ function sanitizeTag(tagName: string, attrText: string) {
 
   if (tag === "img") {
     const attrs = parseAttributes(attrText);
-    const src = attrs.get("src") ?? "";
+    const src = normalizeManagedImageSrc(attrs.get("src") ?? "");
     if (!isSafeSrc(src)) return "";
     const alt = attrs.get("alt") ?? "";
     const title = attrs.get("title");
@@ -332,23 +365,11 @@ function sanitizeTag(tagName: string, attrText: string) {
     }>`;
   }
 
-  if (tag === "iframe") {
-    const attrs = parseAttributes(attrText);
-    const src = attrs.get("src") ?? "";
-    if (!isSafeIframeSrc(src)) return "";
-    const title = attrs.get("title") ?? "Embedded content";
-    const width = clampLength(attrs.get("width"), 1600);
-    const height = clampLength(attrs.get("height"), 1200) || "480px";
-    const style = extractSafeIframeStyle(attrs.get("style"));
-    const loading = attrs.get("loading")?.toLowerCase() === "eager" ? "eager" : "lazy";
-    return `<iframe src="${escapeHtml(src)}" title="${escapeHtml(title)}" loading="${loading}" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen${width ? ` width="${width.replace(/px$/i, "")}"` : ""} height="${height.replace(/px$/i, "")}"${style ? ` style="${escapeHtml(style)}"` : ""}></iframe>`;
-  }
-
   if (tag === "video") {
     const attrs = parseAttributes(attrText);
     const src = attrs.get("src") ?? "";
     const poster = attrs.get("poster") ?? "";
-    const style = extractSafeIframeStyle(attrs.get("style"));
+    const style = extractSafeMediaStyle(attrs.get("style"));
     return `<video${isSafeSrc(src) ? ` src="${escapeHtml(src)}"` : ""}${isSafeSrc(poster) ? ` poster="${escapeHtml(poster)}"` : ""} preload="metadata" controls${style ? ` style="${escapeHtml(style)}"` : ""}></video>`;
   }
 
@@ -443,13 +464,15 @@ export function sanitizeRichText(input: string | null | undefined) {
   if (!raw) return "";
   if (!looksLikeHtml(raw)) return textToParagraphs(raw);
 
-  let html = normalizeWhitespace(decodeHtmlEntities(raw));
+  const containsActualTags = /<[^>]+>/.test(raw);
+  let html = normalizeWhitespace(containsActualTags ? raw : decodeHtmlEntities(raw));
   html = stripUnsafeContainers(html);
   html = html
     .replace(/<!--[\s\S]*?-->/g, "")
     .replace(/<(?:meta|link|base|input|button|textarea|select)\b[^>]*>/gi, "")
     .replace(/<\/(?:meta|link|base|input|button|textarea|select)>/gi, "");
   html = normalizeUnsafeWrappers(html);
+  html = html.replace(/<h1\b/gi, "<h2").replace(/<\/h1>/gi, "</h2>");
   html = html.replace(/<br\s*\/?>/gi, "<br>");
   html = html.replace(/<([a-z0-9-]+)\b([^>]*)>/gi, (_match, tagName, attrs) => sanitizeTag(tagName, attrs));
   html = html.replace(/<\/([a-z0-9-]+)>/gi, (_match, tagName) => {
