@@ -12,8 +12,17 @@ function rewriteUploadedImageSources(html: string): string {
   });
 }
 
+function wrapScrollableTables(html: string): string {
+  return html.replace(/<table\b[\s\S]*?<\/table>/gi, (tableHtml) => {
+    if (/^<div\b[^>]*class=["'][^"']*\btable-scroll\b/i.test(tableHtml)) {
+      return tableHtml;
+    }
+    return `<div class="table-scroll">${tableHtml}</div>`;
+  });
+}
+
 export function RichContent({ html, className }: RichContentProps) {
-  const safe = rewriteUploadedImageSources(sanitizeRichText(html || ""));
+  const safe = wrapScrollableTables(rewriteUploadedImageSources(sanitizeRichText(html || "")));
   const mergedClassName = ["rich-content-shell", "rich-editor-content", className].filter(Boolean).join(" ");
   return <div className={mergedClassName} dangerouslySetInnerHTML={{ __html: safe }} />;
 }

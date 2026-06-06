@@ -1,12 +1,16 @@
 ﻿"use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import TextAlign from "@tiptap/extension-text-align";
 import Image from "@tiptap/extension-image";
 import Underline from "@tiptap/extension-underline";
 import Link from "@tiptap/extension-link";
+import { Table } from "@tiptap/extension-table";
+import TableCell from "@tiptap/extension-table-cell";
+import TableHeader from "@tiptap/extension-table-header";
+import TableRow from "@tiptap/extension-table-row";
 import { Mark, type JSONContent } from "@tiptap/core";
 import { NodeSelection, TextSelection } from "@tiptap/pm/state";
 import { MAX_UPLOAD_IMAGE_MB, uploadImageToServer, uploadRemoteImageToServer } from "@/lib/client-image";
@@ -15,6 +19,7 @@ import { sanitizeRichText } from "@/lib/brand-content";
 type Props = {
   value: string;
   onChange: (html: string) => void;
+  onImportedTitle?: (title: string, meta?: { source?: string }) => void;
   minHeight?: number;
   placeholder?: string;
   allowClipboardImagePaste?: boolean;
@@ -34,6 +39,10 @@ type PasteTransferState = {
   type: "idle" | "loading" | "success" | "error";
   message: string;
 };
+type DocumentImportState = PasteTransferState;
+
+const MAX_DOCUMENT_IMPORT_MB = 10;
+const MAX_DOCUMENT_IMPORT_BYTES = MAX_DOCUMENT_IMPORT_MB * 1024 * 1024;
 
 function escapeHtml(input: string) {
   return input
@@ -370,6 +379,49 @@ function buildImageNode(element: HTMLElement, href?: string | null): JSONContent
   };
 }
 
+function buildTableCellNode(element: HTMLElement): JSONContent {
+  const tag = element.tagName.toLowerCase();
+  const colspan = Number.parseInt(element.getAttribute("colspan") || "", 10);
+  const rowspan = Number.parseInt(element.getAttribute("rowspan") || "", 10);
+  const content = buildBlocksFromInlineContainer(element, (inlineContent) => ({
+    type: "paragraph",
+    content: inlineContent,
+  })).filter((item) => item.type === "paragraph" || item.type === "image");
+
+  return {
+    type: tag === "th" ? "tableHeader" : "tableCell",
+    attrs: {
+      colspan: Number.isFinite(colspan) && colspan > 1 ? colspan : 1,
+      rowspan: Number.isFinite(rowspan) && rowspan > 1 ? rowspan : 1,
+      colwidth: null,
+    },
+    content: content.length > 0 ? content : [{ type: "paragraph" }],
+  };
+}
+
+function buildTableNode(element: HTMLElement): JSONContent | null {
+  const rowElements = Array.from(element.querySelectorAll("tr"));
+  const rows = rowElements
+    .map((row) => {
+      const cells = Array.from(row.children)
+        .filter((child) => ["td", "th"].includes(child.tagName.toLowerCase()))
+        .map((child) => buildTableCellNode(child as HTMLElement));
+      if (cells.length === 0) return null;
+      return {
+        type: "tableRow",
+        content: cells,
+      } as JSONContent;
+    })
+    .filter((row): row is JSONContent => Boolean(row));
+
+  if (rows.length === 0) return null;
+
+  return {
+    type: "table",
+    content: rows,
+  };
+}
+
 function buildBlocksFromInlineContainer(
   element: HTMLElement,
   blockFactory: (content: JSONContent[]) => JSONContent
@@ -517,6 +569,12 @@ function buildTiptapContentFromSanitizedHtml(sanitizedHtml: string): JSONContent
         content.push({ type: "blockquote", content: quoteContent });
       }
       content.push(...quoteParagraphs.filter((item) => item.type === "image"));
+      continue;
+    }
+
+    if (tag === "table") {
+      const tableNode = buildTableNode(node);
+      if (tableNode) content.push(tableNode);
       continue;
     }
 
@@ -763,12 +821,14 @@ function ToolbarButtonVisual({ label }: { label: string }) {
 export function RichEditor({
   value,
   onChange,
+  onImportedTitle,
   minHeight = 260,
   placeholder = "请输入正文...",
   allowClipboardImagePaste = false,
   toolbarIcons = false,
 }: Props) {
   const imageInputRef = useRef<HTMLInputElement | null>(null);
+  const documentInputRef = useRef<HTMLInputElement | null>(null);
   const insertImageRef = useRef<((file: File) => Promise<void>) | null>(null);
   const insertPastedHtmlRef = useRef<((html: string) => Promise<void>) | null>(null);
   const [menu, setMenu] = useState<{ open: boolean; x: number; y: number; mode: MenuMode }>({
@@ -783,6 +843,7 @@ export function RichEditor({
   const [ratio, setRatio] = useState(1);
   const [selectedImagePos, setSelectedImagePos] = useState<number | null>(null);
   const [pasteTransferState, setPasteTransferState] = useState<PasteTransferState>({ type: "idle", message: "" });
+  const [documentImportState, setDocumentImportState] = useState<DocumentImportState>({ type: "idle", message: "" });
   const selectedImagePosRef = useRef<number | null>(null);
   const lastAppliedValueRef = useRef(normalizeEditorContentInput(value));
   const lastEmittedValueRef = useRef(normalizeEditorContentInput(value));
@@ -810,6 +871,10 @@ export function RichEditor({
         autolink: true,
         defaultProtocol: "https",
       }),
+      Table.configure({ resizable: true }),
+      TableRow,
+      TableHeader,
+      TableCell,
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       SpecialText,
       RichImage,
@@ -906,6 +971,30 @@ export function RichEditor({
     },
     immediatelyRender: false,
   });
+
+  const applyDefaultSizeToInsertedImages = useCallback(async (from: number, to: number) => {
+    if (!editor) return;
+
+    const targets: Array<{ pos: number; src: string }> = [];
+    editor.state.doc.nodesBetween(from, to, (node, pos) => {
+      if (node.type.name !== "image") return;
+      if (node.attrs.width && node.attrs.height) return;
+      const src = typeof node.attrs.src === "string" ? node.attrs.src : "";
+      if (!src) return;
+      targets.push({ pos, src });
+    });
+
+    for (const target of targets) {
+      const size = await getImageSize(target.src);
+      const { width, height } = resolveDefaultImageSize(size);
+      editor
+        .chain()
+        .focus()
+        .setNodeSelection(target.pos)
+        .updateAttributes("image", { width, height, align: "center" })
+        .run();
+    }
+  }, [editor]);
 
   useEffect(() => {
     if (!editor) return;
@@ -1007,27 +1096,6 @@ export function RichEditor({
       if (!editor) return;
       const anchor = createSelectionAnchor(editor);
       const needsImageTransfer = /<img\b|data:image\//i.test(html);
-      const applyDefaultSizeToPastedImages = async (from: number, to: number) => {
-        const targets: Array<{ pos: number; src: string }> = [];
-        editor.state.doc.nodesBetween(from, to, (node, pos) => {
-          if (node.type.name !== "image") return;
-          if (node.attrs.width && node.attrs.height) return;
-          const src = typeof node.attrs.src === "string" ? node.attrs.src : "";
-          if (!src) return;
-          targets.push({ pos, src });
-        });
-
-        for (const target of targets) {
-          const size = await getImageSize(target.src);
-          const { width, height } = resolveDefaultImageSize(size);
-          editor
-            .chain()
-            .focus()
-            .setNodeSelection(target.pos)
-            .updateAttributes("image", { width, height, align: "center" })
-            .run();
-        }
-      };
 
       try {
         if (needsImageTransfer) {
@@ -1038,7 +1106,7 @@ export function RichEditor({
         const tr = editor.state.tr.setSelection(TextSelection.create(editor.state.doc, anchor.from, anchor.to));
         editor.view.dispatch(tr);
         editor.chain().focus().insertContent(tiptapContent.length > 0 ? tiptapContent : result.html).run();
-        await applyDefaultSizeToPastedImages(anchor.from, editor.state.selection.to);
+        await applyDefaultSizeToInsertedImages(anchor.from, editor.state.selection.to);
         if (result.failedCount > 0) {
           setPasteTransferState({
             type: "error",
@@ -1059,7 +1127,7 @@ export function RichEditor({
         const tr = editor.state.tr.setSelection(TextSelection.create(editor.state.doc, anchor.from, anchor.to));
         editor.view.dispatch(tr);
         editor.chain().focus().insertContent(tiptapContent.length > 0 ? tiptapContent : fallbackHtml).run();
-        await applyDefaultSizeToPastedImages(anchor.from, editor.state.selection.to);
+        await applyDefaultSizeToInsertedImages(anchor.from, editor.state.selection.to);
         setPasteTransferState({
           type: "error",
           message: "网页内容已粘贴，但图片转存失败；如有缺图，请手动补图后再保存。",
@@ -1069,7 +1137,7 @@ export function RichEditor({
     return () => {
       insertPastedHtmlRef.current = null;
     };
-  }, [editor]);
+  }, [editor, applyDefaultSizeToInsertedImages]);
 
   const updateSelectedImage = (attrs: Partial<ImageAttrs>) => {
     if (!editor) return false;
@@ -1179,6 +1247,65 @@ export function RichEditor({
     setRatio(width / height);
   };
 
+  const importDocument = async (file: File) => {
+    if (!editor) return;
+    if (!/\.(docx|txt)$/i.test(file.name)) {
+      setDocumentImportState({ type: "error", message: "仅支持导入 .docx 或 .txt 文件。" });
+      return;
+    }
+    if (file.size <= 0) {
+      setDocumentImportState({ type: "error", message: "上传文件为空，请重新选择文档。" });
+      return;
+    }
+    if (file.size >= MAX_DOCUMENT_IMPORT_BYTES) {
+      setDocumentImportState({ type: "error", message: `文件大小必须小于 ${MAX_DOCUMENT_IMPORT_MB}MB。` });
+      return;
+    }
+
+    const anchor = createSelectionAnchor(editor);
+    const formData = new FormData();
+    formData.set("file", file);
+    setDocumentImportState({ type: "loading", message: "正在导入文档..." });
+
+    try {
+      const response = await fetch("/api/richtext/import-document", {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || typeof result.html !== "string") {
+        throw new Error(typeof result.error === "string" ? result.error : "导入文档失败");
+      }
+
+      if (typeof result.title === "string" && result.title.trim()) {
+        onImportedTitle?.(result.title.trim(), {
+          source: typeof result.titleSource === "string" ? result.titleSource : undefined,
+        });
+      }
+
+      const sanitizedHtml = typeof result.html === "string" ? result.html.trim() : "";
+      if (!sanitizedHtml) {
+        throw new Error("文档中没有可导入的正文内容");
+      }
+
+      const tiptapContent = buildTiptapContentFromSanitizedHtml(sanitizedHtml);
+      const tr = editor.state.tr.setSelection(TextSelection.create(editor.state.doc, anchor.from, anchor.to));
+      editor.view.dispatch(tr);
+      editor.chain().focus().insertContent(tiptapContent.length > 0 ? tiptapContent : sanitizedHtml).run();
+      await applyDefaultSizeToInsertedImages(anchor.from, editor.state.selection.to);
+
+      const warningCount = Array.isArray(result.warnings) ? result.warnings.filter((item: unknown) => typeof item === "string" && item.trim()).length : 0;
+      setDocumentImportState({
+        type: "success",
+        message: warningCount > 0 ? `已导入文档，包含 ${warningCount} 条提示，请检查表格或图片细节。` : "已导入文档。",
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "导入文档失败";
+      setDocumentImportState({ type: "error", message: `导入失败：${message}` });
+    }
+  };
+
   return (
     <div className="relative rounded-xl border border-border bg-surface-elevated">
       <div className="p-3 border-b border-border flex flex-wrap gap-2 sticky top-0 bg-surface-elevated/95 backdrop-blur supports-[backdrop-filter]:bg-surface-elevated/75 z-10">
@@ -1226,8 +1353,21 @@ export function RichEditor({
             e.target.value = "";
           }}
         />
+        <input
+          ref={documentInputRef}
+          type="file"
+          accept=".docx,.txt,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) void importDocument(file);
+            e.target.value = "";
+          }}
+        />
         <ToolButton label="上传图片" onClick={() => imageInputRef.current?.click()} />
+        <ToolButton label="导入文档" onClick={() => documentInputRef.current?.click()} />
         <span className="self-center text-[11px] text-muted">图片最大 {MAX_UPLOAD_IMAGE_MB}MB（超限可压缩）</span>
+        <span className="self-center text-[11px] text-muted">文档支持 .docx / .txt，且小于 {MAX_DOCUMENT_IMPORT_MB}MB</span>
         <span className="self-center text-[11px] text-[#8f7b59]">
           {allowClipboardImagePaste ? "支持粘贴图片，文字会自动整理格式" : "支持上传图片，文字会自动整理格式"}
         </span>
@@ -1243,6 +1383,19 @@ export function RichEditor({
           }`}
         >
           {pasteTransferState.message}
+        </div>
+      ) : null}
+      {documentImportState.type !== "idle" ? (
+        <div
+          className={`border-b px-3 py-2 text-xs ${
+            documentImportState.type === "loading"
+              ? "border-[rgba(180,154,107,0.22)] bg-[rgba(250,245,237,0.92)] text-[#7a6643]"
+              : documentImportState.type === "success"
+                ? "border-[rgba(74,163,102,0.18)] bg-[rgba(240,251,244,0.92)] text-[#24663a]"
+                : "border-[rgba(196,76,76,0.18)] bg-[rgba(255,244,244,0.94)] text-[#a03f3f]"
+          }`}
+        >
+          {documentImportState.message}
         </div>
       ) : null}
 
