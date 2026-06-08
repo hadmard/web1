@@ -30,6 +30,7 @@ type ImageAttrs = {
 };
 
 type MenuMode = "text" | "image";
+const FONT_SIZE_OPTIONS = ["12px", "14px", "16px", "18px", "20px", "24px", "28px", "32px"];
 
 function escapeHtml(input: string) {
   return input
@@ -59,7 +60,7 @@ function normalizeEditorContentInput(input: string) {
   const raw = typeof input === "string" ? input.trim() : "";
   if (!raw) return "<p></p>";
 
-  const looksEscapedHtml = /&lt;\/?(p|h[1-6]|br|ul|ol|li|blockquote|img|a|div|section|article)[^&]*&gt;/i.test(raw);
+  const looksEscapedHtml = /&lt;\/?(p|span|h[1-6]|br|ul|ol|li|blockquote|img|a|div|section|article)[^&]*&gt;/i.test(raw);
   const decoded = looksEscapedHtml ? decodeHtmlEntities(raw) : raw;
   return sanitizeRichText(decoded) || "<p></p>";
 }
@@ -391,6 +392,29 @@ const SpecialText = Mark.create({
   },
 });
 
+const FontSize = Mark.create({
+  name: "fontSize",
+  addAttributes() {
+    return {
+      size: {
+        default: null,
+        parseHTML: (element) => {
+          const style = element.getAttribute("style") || "";
+          const match = style.match(/font-size\s*:\s*([^;]+)/i);
+          return match?.[1]?.trim() || null;
+        },
+        renderHTML: (attributes) => (attributes.size ? { style: `font-size:${attributes.size}` } : {}),
+      },
+    };
+  },
+  parseHTML() {
+    return [{ tag: "span[style*='font-size']" }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    return ["span", HTMLAttributes, 0];
+  },
+});
+
 const RichImage = Image.extend({
   addAttributes() {
     return {
@@ -557,6 +581,7 @@ export function RichEditor({
         defaultProtocol: "https",
       }),
       TextAlign.configure({ types: ["heading", "paragraph"] }),
+      FontSize,
       SpecialText,
       RichImage,
     ],
@@ -850,6 +875,16 @@ export function RichEditor({
     editor.chain().focus().setParagraph().setTextAlign("left").run();
   };
 
+  const setFontSize = (size: string) => {
+    if (!size) {
+      editor.chain().focus().unsetMark("fontSize").run();
+      return;
+    }
+    editor.chain().focus().setMark("fontSize", { size }).run();
+  };
+
+  const activeFontSize = (editor.getAttributes("fontSize").size as string | undefined) || "";
+
   const toggleBoldMark = () => {
     if (editor.isActive("bold")) {
       editor.chain().focus().unsetBold().run();
@@ -908,6 +943,19 @@ export function RichEditor({
         <ToolButton label="H3" active={editor.isActive("heading", { level: 3 })} onClick={() => setHeadingLevel(3)} />
         <ToolButton label="正文" active={editor.isActive("paragraph")} onClick={setParagraphPlain} />
         <ToolButton label="取消标题" onClick={setParagraphPlain} />
+        <select
+          value={activeFontSize}
+          onChange={(event) => setFontSize(event.target.value)}
+          className="rounded border border-border bg-white px-2.5 py-1.5 text-xs text-primary shadow-sm focus:outline-none focus:ring-2 focus:ring-[rgba(180,154,107,0.18)]"
+          title="字体大小"
+        >
+          <option value="">默认字号</option>
+          {FONT_SIZE_OPTIONS.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
 
         <ToolButton label="加粗" active={editor.isActive("bold")} onClick={toggleBoldMark} toolbarIcons={toolbarIcons} />
         <ToolButton label="斜体" active={editor.isActive("italic")} onClick={() => editor.chain().focus().toggleItalic().run()} toolbarIcons={toolbarIcons} />
