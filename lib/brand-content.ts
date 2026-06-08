@@ -32,6 +32,7 @@
 const ALLOWED_TAGS = new Set([
   "p",
   "br",
+  "span",
   "strong",
   "em",
   "u",
@@ -65,6 +66,7 @@ const ALLOWED_TAGS = new Set([
 ]);
 const DROP_WITH_CONTENT_TAGS = ["script", "style", "object", "embed", "svg", "math", "form", "noscript"];
 const SUSPICIOUS_TEXT_PATTERN = /[�]{2,}|(?:Ã|Â|â|ð|æ|å|ç){2,}|(?:\?{2,})/;
+const SAFE_FONT_SIZE_VALUES = new Set(["12px", "14px", "16px", "18px", "20px", "24px", "28px", "32px"]);
 
 function decodeNamedEntity(entity: string) {
   switch (entity) {
@@ -156,7 +158,7 @@ function stripUnsafeContainers(input: string) {
 
 function normalizeUnsafeWrappers(input: string) {
   return input
-    .replace(/<\/?(?:span|font)\b[^>]*>/gi, "")
+    .replace(/<\/?font\b[^>]*>/gi, "")
     .replace(/<(?:header|footer|aside)\b[^>]*>/gi, "<section>")
     .replace(/<\/(?:header|footer|aside)>/gi, "</section>")
     .replace(/<b\b[^>]*>/gi, "<strong>")
@@ -297,6 +299,11 @@ function extractSafeBlockStyle(styleText: string | null | undefined) {
   return align ? `text-align:${align}` : "";
 }
 
+function extractSafeInlineStyle(styleText: string | null | undefined) {
+  const size = pickCssValue(String(styleText ?? ""), "font-size").toLowerCase();
+  return SAFE_FONT_SIZE_VALUES.has(size) ? `font-size:${size}` : "";
+}
+
 function extractSafeElementId(value: string | null | undefined) {
   const normalized = String(value ?? "").trim();
   return /^[a-z][a-z0-9_-]*$/i.test(normalized) ? normalized : "";
@@ -381,6 +388,12 @@ function sanitizeTag(tagName: string, attrText: string) {
     return `<source src="${escapeHtml(src)}"${type ? ` type="${escapeHtml(type)}"` : ""}>`;
   }
 
+  if (tag === "span") {
+    const attrs = parseAttributes(attrText);
+    const style = extractSafeInlineStyle(attrs.get("style"));
+    return style ? `<span style="${escapeHtml(style)}">` : "";
+  }
+
   if (["p", "blockquote", "div", "section", "article", "figure", "figcaption", "h1", "h2", "h3", "h4", "h5", "h6"].includes(tag)) {
     const attrs = parseAttributes(attrText);
     const style = extractSafeBlockStyle(attrs.get("style"));
@@ -459,6 +472,21 @@ function repairNestedParagraphs(input: string) {
     .replace(/(<\/(?:p|h[1-6]|blockquote|ul|ol|table|pre|div|section|article|figure)>)\s*<\/p>/gi, "$1");
 }
 
+function normalizeSpanClosures(input: string) {
+  let openSpans = 0;
+  return input.replace(/<\/?span\b[^>]*>/gi, (tag) => {
+    if (/^<span\b/i.test(tag)) {
+      openSpans += 1;
+      return tag;
+    }
+    if (openSpans > 0) {
+      openSpans -= 1;
+      return tag;
+    }
+    return "";
+  });
+}
+
 export function sanitizeRichText(input: string | null | undefined) {
   const raw = repairMojibake(String(input ?? "").trim());
   if (!raw) return "";
@@ -485,7 +513,7 @@ export function sanitizeRichText(input: string | null | undefined) {
     .replace(/(?:<br>\s*){3,}/gi, "<br><br>")
     .replace(/\s+(<\/(?:p|li|blockquote|h[1-6]|ul|ol|pre|code|table|thead|tbody|tr|td|th|figure|figcaption|section|article|div)>)/gi, "$1")
     .replace(/(<(?:p|li|blockquote|h[1-6]|figcaption)>)[\s\n]+/gi, "$1");
-  html = repairNestedParagraphs(removeEmptyBlocks(html)).trim();
+  html = normalizeSpanClosures(repairNestedParagraphs(removeEmptyBlocks(html))).trim();
   return html || textToParagraphs(raw);
 }
 
