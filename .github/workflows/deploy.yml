@@ -330,6 +330,8 @@ jobs:
         run: |
           node - <<'NODE'
           const baseUrl = "https://cnzhengmu.com";
+          const maxAttempts = 6;
+          const retryDelayMs = 10000;
 
           function firstMatch(input, pattern) {
             const match = input.match(pattern);
@@ -352,62 +354,77 @@ jobs:
             return fetch(url, { method: "GET", redirect: "follow" });
           }
 
+          function delay(ms) {
+            return new Promise((resolve) => setTimeout(resolve, ms));
+          }
+
           (async () => {
-            const failures = [];
+            let lastFailures = [];
 
-            const homepage = await fetchText(baseUrl);
-            const homepageStatus = homepage.response.status;
-            console.log(`HEALTH homepage status=${homepageStatus}`);
-            if (homepageStatus !== 200) {
-              failures.push(`homepage expected 200 but got ${homepageStatus}`);
-            }
+            for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+              const failures = [];
 
-            const html = homepage.text;
-            const cssHref = normalizeAssetUrl(firstMatch(html, /href=\"([^\"]*\/_next\/static\/css\/[^"]+\.css[^"]*)\"/i));
-            const jsSrc = normalizeAssetUrl(firstMatch(html, /src=\"([^\"]*\/_next\/static\/chunks\/[^"]+\.js[^"]*)\"/i));
-
-            if (!cssHref) {
-              failures.push("could not find homepage CSS asset");
-            }
-
-            if (!jsSrc) {
-              failures.push("could not find homepage JS asset");
-            }
-
-            if (cssHref) {
-              const cssResponse = await fetchHead(cssHref);
-              const cssType = cssResponse.headers.get("content-type") || "";
-              console.log(`HEALTH css url=${cssHref}`);
-              console.log(`HEALTH css status=${cssResponse.status} content_type=${cssType}`);
-              if (cssResponse.status !== 200) {
-                failures.push(`css expected 200 but got ${cssResponse.status}`);
+              const homepage = await fetchText(baseUrl);
+              const homepageStatus = homepage.response.status;
+              console.log(`HEALTH attempt=${attempt}/${maxAttempts} homepage status=${homepageStatus}`);
+              if (homepageStatus !== 200) {
+                failures.push(`homepage expected 200 but got ${homepageStatus}`);
               }
-              if (!/text\/css/i.test(cssType)) {
-                failures.push(`css expected text/css but got ${cssType || "missing"}`);
+
+              const html = homepage.text;
+              const cssHref = normalizeAssetUrl(firstMatch(html, /href=\"([^\"]*\/_next\/static\/css\/[^"]+\.css[^"]*)\"/i));
+              const jsSrc = normalizeAssetUrl(firstMatch(html, /src=\"([^\"]*\/_next\/static\/chunks\/[^"]+\.js[^"]*)\"/i));
+
+              if (!cssHref) {
+                failures.push("could not find homepage CSS asset");
+              }
+
+              if (!jsSrc) {
+                failures.push("could not find homepage JS asset");
+              }
+
+              if (cssHref) {
+                const cssResponse = await fetchHead(cssHref);
+                const cssType = cssResponse.headers.get("content-type") || "";
+                console.log(`HEALTH attempt=${attempt}/${maxAttempts} css url=${cssHref}`);
+                console.log(`HEALTH attempt=${attempt}/${maxAttempts} css status=${cssResponse.status} content_type=${cssType}`);
+                if (cssResponse.status !== 200) {
+                  failures.push(`css expected 200 but got ${cssResponse.status}`);
+                }
+                if (!/text\/css/i.test(cssType)) {
+                  failures.push(`css expected text/css but got ${cssType || "missing"}`);
+                }
+              }
+
+              if (jsSrc) {
+                const jsResponse = await fetchHead(jsSrc);
+                const jsType = jsResponse.headers.get("content-type") || "";
+                console.log(`HEALTH attempt=${attempt}/${maxAttempts} js url=${jsSrc}`);
+                console.log(`HEALTH attempt=${attempt}/${maxAttempts} js status=${jsResponse.status} content_type=${jsType}`);
+                if (jsResponse.status !== 200) {
+                  failures.push(`js expected 200 but got ${jsResponse.status}`);
+                }
+                if (!/(application|text)\/javascript/i.test(jsType)) {
+                  failures.push(`js expected javascript content-type but got ${jsType || "missing"}`);
+                }
+              }
+
+              if (failures.length === 0) {
+                console.log(`HEALTH overall=ok after attempt ${attempt}`);
+                return;
+              }
+
+              lastFailures = failures;
+              console.warn(`::warning::[health] attempt ${attempt}/${maxAttempts} failed: ${failures.join(" | ")}`);
+              if (attempt < maxAttempts) {
+                await delay(retryDelayMs);
               }
             }
 
-            if (jsSrc) {
-              const jsResponse = await fetchHead(jsSrc);
-              const jsType = jsResponse.headers.get("content-type") || "";
-              console.log(`HEALTH js url=${jsSrc}`);
-              console.log(`HEALTH js status=${jsResponse.status} content_type=${jsType}`);
-              if (jsResponse.status !== 200) {
-                failures.push(`js expected 200 but got ${jsResponse.status}`);
-              }
-              if (!/(application|text)\/javascript/i.test(jsType)) {
-                failures.push(`js expected javascript content-type but got ${jsType || "missing"}`);
-              }
+            for (const failure of lastFailures) {
+              console.error(`::error::[health] ${failure}`);
             }
-
-            if (failures.length > 0) {
-              for (const failure of failures) {
-                console.error(`::error::[health] ${failure}`);
-              }
-              process.exit(1);
-            }
-
-            console.log("HEALTH overall=ok");
+            process.exit(1);
           })().catch((error) => {
             console.error(`::error::[health] ${error instanceof Error ? error.stack || error.message : String(error)}`);
             process.exit(1);
