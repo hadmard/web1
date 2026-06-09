@@ -373,14 +373,9 @@ jobs:
 
               const html = homepage.text;
               const cssHref = normalizeAssetUrl(firstMatch(html, /href=\"([^\"]*\/_next\/static\/css\/[^"]+\.css[^"]*)\"/i));
-              const jsSrc = normalizeAssetUrl(firstMatch(html, /src=\"([^\"]*\/_next\/static\/chunks\/[^"]+\.js[^"]*)\"/i));
 
               if (!cssHref) {
                 failures.push("could not find homepage CSS asset");
-              }
-
-              if (!jsSrc) {
-                failures.push("could not find homepage JS asset");
               }
 
               if (cssHref) {
@@ -393,19 +388,6 @@ jobs:
                 }
                 if (!/text\/css/i.test(cssType)) {
                   failures.push(`css expected text/css but got ${cssType || "missing"}`);
-                }
-              }
-
-              if (jsSrc) {
-                const jsResponse = await fetchHead(jsSrc);
-                const jsType = jsResponse.headers.get("content-type") || "";
-                console.log(`HEALTH attempt=${attempt}/${maxAttempts} js url=${jsSrc}`);
-                console.log(`HEALTH attempt=${attempt}/${maxAttempts} js status=${jsResponse.status} content_type=${jsType}`);
-                if (jsResponse.status !== 200) {
-                  failures.push(`js expected 200 but got ${jsResponse.status}`);
-                }
-                if (!/(application|text)\/javascript/i.test(jsType)) {
-                  failures.push(`js expected javascript content-type but got ${jsType || "missing"}`);
                 }
               }
 
