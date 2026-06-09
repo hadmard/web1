@@ -351,16 +351,34 @@ function hasMeaningfulInlineContent(nodes: JSONContent[]) {
   });
 }
 
+function dedupeMarks(marks?: JSONContent["marks"]) {
+  if (!marks?.length) return undefined;
+
+  const seen = new Set<string>();
+  const deduped = marks.filter((mark) => {
+    const key = JSON.stringify({
+      type: mark.type,
+      attrs: "attrs" in mark ? mark.attrs ?? null : null,
+    });
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  return deduped.length > 0 ? deduped : undefined;
+}
+
 function appendTextNodes(target: JSONContent[], text: string, marks?: JSONContent["marks"]) {
   const normalized = normalizePastedText(text);
   if (!normalized) return;
+  const safeMarks = dedupeMarks(marks);
   const parts = normalized.split("\n");
   parts.forEach((part, index) => {
     if (part) {
       target.push({
         type: "text",
         text: part,
-        ...(marks?.length ? { marks } : {}),
+        ...(safeMarks?.length ? { marks: safeMarks } : {}),
       });
     }
     if (index < parts.length - 1) {

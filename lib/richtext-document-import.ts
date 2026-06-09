@@ -14,7 +14,6 @@ function toUploadProxyUrl(src: string) {
   return value;
 }
 
-
 export const MAX_DOCUMENT_IMPORT_BYTES = 10 * 1024 * 1024;
 
 const DOCX_MIME_TYPES = new Set([
@@ -28,6 +27,7 @@ const IMAGE_EXTENSIONS: Record<string, string> = {
   "image/webp": ".webp",
 };
 const GENERIC_FILENAME_TITLES = new Set(["doc", "docx", "document", "txt", "untitled", "wen-dang"]);
+const MAX_IMPORTED_TITLE_LENGTH = 120;
 
 export type ImportedTitleSource = "heading" | "firstLine" | "filename" | "none";
 
@@ -49,10 +49,10 @@ type BlockMatch = {
 const BLOCK_TAG_PATTERN = /<(h[1-6]|p|div|section|article|figure)[^>]*>([\s\S]*?)<\/\1>/gi;
 const DOCX_STYLE_MAP = [
   "p[style-name='Title'] => h1:fresh",
-  "p[style-name='标题'] => h1:fresh",
+  "p[style-name='\u6807\u9898'] => h1:fresh",
   "p[style-name='Heading 1'] => h1:fresh",
-  "p[style-name='标题 1'] => h1:fresh",
-  "p[style-name='标题1'] => h1:fresh",
+  "p[style-name='\u6807\u9898 1'] => h1:fresh",
+  "p[style-name='\u6807\u98981'] => h1:fresh",
 ];
 
 function getLowerExt(fileName: string) {
@@ -99,38 +99,34 @@ function stripHtmlTags(input: string) {
   return decodeHtmlEntities(input.replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();
 }
 
-function normalizeComparableTitle(input: string) {
+function normalizeImportedTitleText(input: string) {
   return stripHtmlTags(input)
-    .replace(/[“”"'‘’`~!@#$%^&*()_\-+=\[\]{}|\\:;,.<>/?，。！？；：、（）【】《》\s]/g, "")
-    .toLowerCase();
+    .replace(/[\u00a0\u2002-\u200b\u202f\u205f\u3000]+/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/\s*([:\uFF1A;\uFF1B,\uFF0C.\u3002!?\uFF01\uFF1F\u3001|\uFF5C\u300B\u3009\u3011\u3015\uFF09\]])/g, "$1")
+    .replace(/([\u300A\u3008\u3010\u3014\uFF08\[])\s*/g, "$1")
+    .replace(/([\u4e00-\u9fff])\s+(?=[0-9A-Za-z])/g, "$1")
+    .replace(/([0-9A-Za-z])\s+(?=[\u4e00-\u9fff])/g, "$1")
+    .trim();
 }
 
-function punctuationRatio(text: string) {
-  const punctuationCount = (text.match(/[，。！？；：、,.!?;:()[\]【】《》“”"'-]/g) ?? []).length;
-  return punctuationCount / Math.max(1, text.length);
+function normalizeComparableTitle(input: string) {
+  return normalizeImportedTitleText(input).replace(/[^0-9A-Za-z\u4e00-\u9fff]+/g, "").toLowerCase();
 }
 
-function looksLikeLongSentence(text: string) {
-  return /[。！？?!]$/.test(text) && text.length >= 18;
-}
-
-function isReasonableTitleCandidate(rawText: string) {
-  const text = stripHtmlTags(rawText).replace(/\s+/g, " ").trim();
+function isReasonableStructuredTitleCandidate(rawText: string) {
+  const text = normalizeImportedTitleText(rawText);
   if (!text) return false;
-  if (text.length < 4 || text.length > 80) return false;
-  if (/\n/.test(text)) return false;
-  if (looksLikeLongSentence(text)) return false;
-  if (punctuationRatio(text) > 0.22) return false;
-  if ((text.match(/[，。！？；：、,.!?;:]/g) ?? []).length >= 4) return false;
+  if (text.length < 4 || text.length > MAX_IMPORTED_TITLE_LENGTH) return false;
   return true;
 }
 
 function isReasonableFilenameTitle(text: string) {
-  const normalized = text.trim();
-  if (!normalized || normalized.length > 80) return false;
+  const normalized = normalizeImportedTitleText(text);
+  if (!normalized || normalized.length > MAX_IMPORTED_TITLE_LENGTH) return false;
   if (GENERIC_FILENAME_TITLES.has(normalized.toLowerCase())) return false;
   if (/^\d+$/.test(normalized)) return false;
-  return isReasonableTitleCandidate(normalized);
+  return isReasonableStructuredTitleCandidate(normalized);
 }
 
 function extractLeadingBlock(html: string): BlockMatch | null {
@@ -181,17 +177,17 @@ function extractFirstMeaningfulBlock(html: string) {
 
 function detectTitleFromHtml(rawHtml: string, fallbackTitle: string) {
   const heading = extractFirstHeadingBlock(rawHtml);
-  if (heading && isReasonableTitleCandidate(heading.text)) {
-    return { title: heading.text, titleSource: "heading" as const };
+  if (heading && isReasonableStructuredTitleCandidate(heading.text)) {
+    return { title: normalizeImportedTitleText(heading.text), titleSource: "heading" as const };
   }
 
   const leading = extractFirstMeaningfulBlock(rawHtml) ?? extractLeadingBlock(rawHtml);
-  if (leading && isReasonableTitleCandidate(leading.text)) {
-    return { title: leading.text, titleSource: "firstLine" as const };
+  if (leading && isReasonableStructuredTitleCandidate(leading.text)) {
+    return { title: normalizeImportedTitleText(leading.text), titleSource: "firstLine" as const };
   }
 
   if (isReasonableFilenameTitle(fallbackTitle)) {
-    return { title: fallbackTitle, titleSource: "filename" as const };
+    return { title: normalizeImportedTitleText(fallbackTitle), titleSource: "filename" as const };
   }
 
   return { title: "", titleSource: "none" as const };
@@ -208,13 +204,7 @@ function dedupeLeadingTitleFromHtml(html: string, title: string, titleSource: Im
   const normalizedTitle = normalizeComparableTitle(title);
   const normalizedLeading = normalizeComparableTitle(leading.text);
   if (!normalizedTitle || !normalizedLeading) return html;
-
-  const sameTitle =
-    normalizedTitle === normalizedLeading ||
-    normalizedLeading.startsWith(normalizedTitle) ||
-    normalizedTitle.startsWith(normalizedLeading);
-
-  if (!sameTitle) return html;
+  if (normalizedTitle !== normalizedLeading) return html;
 
   return `${html.slice(0, leading.start)}${html.slice(leading.end)}`.trim();
 }
@@ -278,6 +268,27 @@ async function importDocx(file: File): Promise<ImportedDocumentPayload> {
   };
 }
 
+function removeLeadingTitleLineFromBlocks(blocks: string[], title: string) {
+  if (blocks.length === 0) return blocks;
+
+  const nextBlocks = [...blocks];
+  const firstBlockLines = nextBlocks[0].split("\n");
+  const firstMeaningfulLine = firstBlockLines.find((line) => line.trim()) ?? "";
+
+  if (normalizeComparableTitle(firstMeaningfulLine) !== normalizeComparableTitle(title)) {
+    return nextBlocks;
+  }
+
+  const remainingFirstBlock = firstBlockLines.slice(1).join("\n").trim();
+  if (remainingFirstBlock) {
+    nextBlocks[0] = remainingFirstBlock;
+    return nextBlocks;
+  }
+
+  nextBlocks.shift();
+  return nextBlocks;
+}
+
 async function importTxt(file: File): Promise<ImportedDocumentPayload> {
   const fallbackTitle = normalizeBaseName(file.name);
   const text = Buffer.from(await file.arrayBuffer()).toString("utf8").replace(/^\uFEFF/, "");
@@ -293,15 +304,12 @@ async function importTxt(file: File): Promise<ImportedDocumentPayload> {
     .filter(Boolean);
 
   const firstLine = normalized.split("\n").map((line) => line.trim()).find(Boolean) ?? "";
-  const firstLineTitle = isReasonableTitleCandidate(firstLine) ? firstLine : "";
-  const filenameTitle = isReasonableFilenameTitle(fallbackTitle) ? fallbackTitle : "";
+  const firstLineTitle = isReasonableStructuredTitleCandidate(firstLine) ? normalizeImportedTitleText(firstLine) : "";
+  const filenameTitle = isReasonableFilenameTitle(fallbackTitle) ? normalizeImportedTitleText(fallbackTitle) : "";
   const title = firstLineTitle || filenameTitle || "";
   const titleSource: ImportedTitleSource = firstLineTitle ? "firstLine" : filenameTitle ? "filename" : "none";
 
-  const bodyBlocks =
-    titleSource === "firstLine" && blocks.length > 0 && normalizeComparableTitle(blocks[0]) === normalizeComparableTitle(title)
-      ? blocks.slice(1)
-      : blocks;
+  const bodyBlocks = titleSource === "firstLine" ? removeLeadingTitleLineFromBlocks(blocks, title) : blocks;
 
   const html = bodyBlocks
     .map((block) => `<p>${escapeHtml(block).replace(/\n/g, "<br>")}</p>`)
