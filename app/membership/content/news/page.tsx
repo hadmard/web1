@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
+import { RichEditor } from "@/components/RichEditor";
 import { NEWS_SUBCATEGORY_OPTIONS } from "@/lib/content-taxonomy";
 import { InlinePageBackLink } from "@/components/InlinePageBackLink";
 import { buildDirtyTextErrorMessage } from "@/lib/article-input-guard";
@@ -70,6 +71,34 @@ export default function MembershipContentNewsPage() {
       annualLimit: null,
       remainingCount: null,
     }));
+
+  const handleImportedTitle = useCallback(
+    (nextTitleRaw: string) => {
+      const nextTitle = nextTitleRaw.trim();
+      if (!nextTitle) return;
+
+      if (!title.trim()) {
+        setTitle(nextTitle);
+        setMessage(`已识别并填入文档标题：${nextTitle}`);
+        return;
+      }
+
+      if (title.trim() === nextTitle) {
+        setMessage(`已识别到相同文档标题：${nextTitle}`);
+        return;
+      }
+
+      const shouldReplace = window.confirm(`检测到文档标题：${nextTitle}，是否替换当前标题？`);
+      if (shouldReplace) {
+        setTitle(nextTitle);
+        setMessage(`已替换为文档标题：${nextTitle}`);
+        return;
+      }
+
+      setMessage(`已识别到文档标题：${nextTitle}，已保留当前标题。`);
+    },
+    [title]
+  );
 
   async function load(query = "") {
     const meRes = await fetch("/api/auth/me", { credentials: "include" });
@@ -250,7 +279,15 @@ export default function MembershipContentNewsPage() {
           </div>
 
           <label className="block text-sm text-muted">正文</label>
-          <textarea className="min-h-[140px] w-full rounded border border-border bg-surface px-3 py-2" value={content} onChange={(e) => setContent(e.target.value)} required />
+          <RichEditor
+            value={content}
+            onChange={setContent}
+            onImportedTitle={handleImportedTitle}
+            minHeight={300}
+            placeholder="支持从网页、Word、公众号粘贴图文内容，系统会尽量保留排版并自动转存图片。"
+            allowClipboardImagePaste={authed === true}
+            toolbarIcons
+          />
 
           <button disabled={loading} className="rounded bg-accent px-4 py-2 text-sm text-white disabled:opacity-50">
             {loading ? "提交中..." : "提交审核"}

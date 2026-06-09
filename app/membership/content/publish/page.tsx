@@ -305,6 +305,53 @@ function PublishCenterPageInner() {
   const autoEditSlugRef = useRef("");
   const autoEditSeoRef = useRef({ seoTitle: "", seoKeywords: "", seoDescription: "" });
 
+  const applyImportedTitle = useCallback(
+    (
+      nextTitleRaw: string,
+      currentTitle: string,
+      setTitleValue: (value: string) => void,
+      contextLabel: "标题" | "标题草稿"
+    ) => {
+      const nextTitle = nextTitleRaw.trim();
+      if (!nextTitle) return;
+
+      if (!currentTitle.trim()) {
+        setTitleValue(nextTitle);
+        setMessage(`已识别并填入文档标题：${nextTitle}`);
+        return;
+      }
+
+      if (currentTitle.trim() === nextTitle) {
+        setMessage(`已识别到相同文档标题：${nextTitle}`);
+        return;
+      }
+
+      const shouldReplace = window.confirm(`检测到文档标题：${nextTitle}，是否替换当前${contextLabel}？`);
+      if (shouldReplace) {
+        setTitleValue(nextTitle);
+        setMessage(`已替换为文档标题：${nextTitle}`);
+        return;
+      }
+
+      setMessage(`已识别到文档标题：${nextTitle}，已保留当前${contextLabel}。`);
+    },
+    []
+  );
+
+  const handleImportedPublishTitle = useCallback(
+    (nextTitle: string) => {
+      applyImportedTitle(nextTitle, title, setTitle, "标题");
+    },
+    [applyImportedTitle, title]
+  );
+
+  const handleImportedEditTitle = useCallback(
+    (nextTitle: string) => {
+      applyImportedTitle(nextTitle, editTitle, setEditTitle, "标题草稿");
+    },
+    [applyImportedTitle, editTitle]
+  );
+
   const allCategoryAccess = useMemo(
     () => (memberAccess.categories.length > 0 ? memberAccess.categories : getDefaultMemberAccess().categories),
     [memberAccess]
@@ -1059,6 +1106,7 @@ function PublishCenterPageInner() {
             <RichEditor
               value={content}
               onChange={setContent}
+              onImportedTitle={handleImportedPublishTitle}
               minHeight={360}
               placeholder="支持标题分级、表格、图片和条款结构的标准正文编辑。"
             />
@@ -1632,7 +1680,7 @@ function PublishCenterPageInner() {
             safeTab !== "awards" && (
             <>
               <label className="block text-sm text-muted">正文</label>
-              <RichEditor value={content} onChange={setContent} minHeight={280} placeholder="" allowClipboardImagePaste={canPasteImages} toolbarIcons />
+              <RichEditor value={content} onChange={setContent} onImportedTitle={handleImportedPublishTitle} minHeight={280} placeholder="" allowClipboardImagePaste={canPasteImages} toolbarIcons />
             </>
           )}
           {safeTab === "brands" && (
@@ -1786,7 +1834,7 @@ function PublishCenterPageInner() {
             ) : (
               <>
                 <label className="block text-sm text-muted">新正文</label>
-                <RichEditor value={editContent} onChange={setEditContent} minHeight={260} placeholder="" allowClipboardImagePaste={canPasteImages} />
+                <RichEditor value={editContent} onChange={setEditContent} onImportedTitle={handleImportedEditTitle} minHeight={260} placeholder="" allowClipboardImagePaste={canPasteImages} />
               </>
             )}
             <label className="block text-sm text-muted">修改说明</label>

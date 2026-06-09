@@ -43,7 +43,17 @@ type BlockMatch = {
   text: string;
   start: number;
   end: number;
+  tag: string;
 };
+
+const BLOCK_TAG_PATTERN = /<(h[1-6]|p|div|section|article|figure)[^>]*>([\s\S]*?)<\/\1>/gi;
+const DOCX_STYLE_MAP = [
+  "p[style-name='Title'] => h1:fresh",
+  "p[style-name='标题'] => h1:fresh",
+  "p[style-name='Heading 1'] => h1:fresh",
+  "p[style-name='标题 1'] => h1:fresh",
+  "p[style-name='标题1'] => h1:fresh",
+];
 
 function getLowerExt(fileName: string) {
   return path.extname(fileName || "").trim().toLowerCase();
@@ -131,6 +141,7 @@ function extractLeadingBlock(html: string): BlockMatch | null {
     text: stripHtmlTags(match[2] ?? ""),
     start: match.index,
     end: match.index + match[0].length,
+    tag: String(match[1] ?? "").toLowerCase(),
   };
 }
 
@@ -142,7 +153,30 @@ function extractFirstHeadingBlock(html: string): BlockMatch | null {
     text: stripHtmlTags(match[2] ?? ""),
     start: match.index,
     end: match.index + match[0].length,
+    tag: "h1",
   };
+}
+
+function extractBlockMatches(html: string) {
+  const matches: BlockMatch[] = [];
+  let match: RegExpExecArray | null;
+
+  BLOCK_TAG_PATTERN.lastIndex = 0;
+  while ((match = BLOCK_TAG_PATTERN.exec(html)) !== null) {
+    matches.push({
+      full: match[0],
+      text: stripHtmlTags(match[2] ?? ""),
+      start: match.index,
+      end: match.index + match[0].length,
+      tag: String(match[1] ?? "").toLowerCase(),
+    });
+  }
+
+  return matches;
+}
+
+function extractFirstMeaningfulBlock(html: string) {
+  return extractBlockMatches(html).find((block) => block.text.trim());
 }
 
 function detectTitleFromHtml(rawHtml: string, fallbackTitle: string) {
@@ -151,7 +185,7 @@ function detectTitleFromHtml(rawHtml: string, fallbackTitle: string) {
     return { title: heading.text, titleSource: "heading" as const };
   }
 
-  const leading = extractLeadingBlock(rawHtml);
+  const leading = extractFirstMeaningfulBlock(rawHtml) ?? extractLeadingBlock(rawHtml);
   if (leading && isReasonableTitleCandidate(leading.text)) {
     return { title: leading.text, titleSource: "firstLine" as const };
   }
@@ -168,7 +202,7 @@ function dedupeLeadingTitleFromHtml(html: string, title: string, titleSource: Im
     return html;
   }
 
-  const leading = extractLeadingBlock(html);
+  const leading = extractFirstMeaningfulBlock(html) ?? extractLeadingBlock(html);
   if (!leading) return html;
 
   const normalizedTitle = normalizeComparableTitle(title);
@@ -210,6 +244,7 @@ async function importDocx(file: File): Promise<ImportedDocumentPayload> {
   const result = await mammoth.convertToHtml(
     { buffer },
     {
+      styleMap: DOCX_STYLE_MAP,
       convertImage: mammoth.images.imgElement(async (image) => {
         const mimeType = String(image.contentType ?? "").toLowerCase();
         try {

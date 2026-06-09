@@ -354,6 +354,53 @@ export default function AdminContentPage() {
   const [manageSearchDraft, setManageSearchDraft] = useState(searchQuery);
   const [manageSourceTypeDraft, setManageSourceTypeDraft] = useState<ManageSourceFilter>(sourceTypeFilter);
 
+  const applyImportedTitle = useCallback(
+    (
+      nextTitleRaw: string,
+      currentTitle: string,
+      setTitleValue: (value: string) => void,
+      contextLabel: "标题" | "编辑标题"
+    ) => {
+      const nextTitle = nextTitleRaw.trim();
+      if (!nextTitle) return;
+
+      if (!currentTitle.trim()) {
+        setTitleValue(nextTitle);
+        setMessage(`已识别并填入文档标题：${nextTitle}`);
+        return;
+      }
+
+      if (currentTitle.trim() === nextTitle) {
+        setMessage(`已识别到相同文档标题：${nextTitle}`);
+        return;
+      }
+
+      const shouldReplace = window.confirm(`检测到文档标题：${nextTitle}，是否替换当前${contextLabel}？`);
+      if (shouldReplace) {
+        setTitleValue(nextTitle);
+        setMessage(`已替换为文档标题：${nextTitle}`);
+        return;
+      }
+
+      setMessage(`已识别到文档标题：${nextTitle}，已保留当前${contextLabel}。`);
+    },
+    []
+  );
+
+  const handleImportedPublishTitle = useCallback(
+    (nextTitle: string) => {
+      applyImportedTitle(nextTitle, title, setTitle, "标题");
+    },
+    [applyImportedTitle, title]
+  );
+
+  const handleImportedEditTitle = useCallback(
+    (nextTitle: string) => {
+      applyImportedTitle(nextTitle, editTitle, setEditTitle, "编辑标题");
+    },
+    [applyImportedTitle, editTitle]
+  );
+
 
   const selectedTabDef = useMemo(() => CONTENT_TAB_DEFS.find((x) => x.key === tab) ?? CONTENT_TAB_DEFS[0], [tab]);
   const selectedCategory = useMemo(() => ADMIN_PUBLISH_CATEGORY_OPTIONS.find((x) => x.href === selectedTabDef.href) ?? ADMIN_PUBLISH_CATEGORY_OPTIONS[0], [selectedTabDef.href]);
@@ -1569,6 +1616,7 @@ export default function AdminContentPage() {
                 <RichEditor
                   value={content}
                   onChange={setContent}
+                  onImportedTitle={handleImportedPublishTitle}
                   minHeight={360}
                   placeholder="支持标题分级、表格、图片和条款结构的标准正文编辑。"
                   allowClipboardImagePaste
@@ -1600,7 +1648,7 @@ export default function AdminContentPage() {
             {tab !== "terms" && tab !== "brands" && tab !== "standards" && tab !== "industry-data" && tab !== "awards" && (
               <>
                 <label className="block text-sm text-muted">正文</label>
-                <RichEditor value={content} onChange={setContent} minHeight={300} placeholder="" allowClipboardImagePaste toolbarIcons />
+                <RichEditor value={content} onChange={setContent} onImportedTitle={handleImportedPublishTitle} minHeight={300} placeholder="" allowClipboardImagePaste toolbarIcons />
               </>
             )}
             {tab === "brands" && (
@@ -1985,6 +2033,7 @@ export default function AdminContentPage() {
                 <RichEditor
                   value={editContent}
                   onChange={setEditContent}
+                  onImportedTitle={handleImportedEditTitle}
                   minHeight={360}
                   placeholder="支持标题分级、表格、图片和条款结构的标准正文编辑。"
                   allowClipboardImagePaste
@@ -2021,7 +2070,7 @@ export default function AdminContentPage() {
             ) : (
               <>
                 <label className="block text-sm text-muted">正文</label>
-                <RichEditor value={editContent} onChange={setEditContent} minHeight={320} placeholder="" allowClipboardImagePaste toolbarIcons />
+                <RichEditor value={editContent} onChange={setEditContent} onImportedTitle={handleImportedEditTitle} minHeight={320} placeholder="" allowClipboardImagePaste toolbarIcons />
               </>
             )}
             <div className="flex gap-2 flex-wrap">
