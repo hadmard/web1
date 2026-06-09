@@ -330,7 +330,7 @@ jobs:
         run: |
           node - <<'NODE'
           const baseUrl = "https://cnzhengmu.com";
-          const maxAttempts = 6;
+          const maxAttempts = 18;
           const retryDelayMs = 10000;
 
           function firstMatch(input, pattern) {
