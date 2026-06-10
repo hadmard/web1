@@ -30,6 +30,24 @@ export function isNewsTrendsSummaryArticle(article: { slug?: string | null; titl
   return title === NEWS_TRENDS_SUMMARY_TITLE || title.includes(NEWS_TRENDS_SUMMARY_TITLE_PREFIX);
 }
 
+export type NewsTrendsSummaryArticle = {
+  id: string;
+  title: string;
+  slug: string;
+  content?: string | null;
+  publishedAt?: Date | null;
+  createdAt?: Date | null;
+  updatedAt?: Date | null;
+};
+
+export function getNewsTrendsSummaryBaseDate(article: {
+  publishedAt?: Date | null;
+  createdAt?: Date | null;
+  updatedAt?: Date | null;
+}) {
+  return article.publishedAt ?? article.createdAt ?? article.updatedAt ?? null;
+}
+
 export async function findNewsTrendsSummaryArticle() {
   const exact = await prisma.article.findFirst({
     where: {
@@ -45,14 +63,15 @@ export async function findNewsTrendsSummaryArticle() {
       content: true,
       publishedAt: true,
       createdAt: true,
+      updatedAt: true,
     },
   });
 
   if (exact) {
-    return exact;
+    return exact satisfies NewsTrendsSummaryArticle;
   }
 
-  return prisma.article.findFirst({
+  const fallback = await prisma.article.findFirst({
     where: {
       status: "approved",
       publishedAt: { not: null },
@@ -69,17 +88,33 @@ export async function findNewsTrendsSummaryArticle() {
       content: true,
       publishedAt: true,
       createdAt: true,
+      updatedAt: true,
     },
   });
+
+  return fallback satisfies NewsTrendsSummaryArticle | null;
 }
 
-export async function getNewsTrendsSummaryRelatedArticles(excludeId: string, limit = 50) {
+export async function getNewsTrendsSummaryRelatedArticles(
+  summaryArticle: {
+    id: string;
+    publishedAt?: Date | null;
+    createdAt?: Date | null;
+    updatedAt?: Date | null;
+  },
+  limit = 50,
+) {
+  const baseDate = getNewsTrendsSummaryBaseDate(summaryArticle);
+  if (!baseDate) {
+    return [];
+  }
+
   const items = await prisma.article.findMany({
     where: {
       status: "approved",
-      publishedAt: { not: null },
+      publishedAt: { gt: baseDate },
       ...buildNewsTrendsWhere(),
-      id: { not: excludeId },
+      id: { not: summaryArticle.id },
     },
     orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
     take: Math.max(1, Math.min(limit, 50)),

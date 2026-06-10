@@ -386,14 +386,25 @@ export default async function ArticlePage({ params, searchParams }: Props) {
   );
   const isTrendsArticle = isNewsTrendsArticle(article);
   const isTrendsSummaryPage = isNewsTrendsSummaryArticle(article);
-  const trendsSummaryArticle = isTrendsSummaryPage ? article : isTrendsArticle ? await findNewsTrendsSummaryArticle() : null;
+  const trendsSummaryArticle = isTrendsSummaryPage
+    ? {
+        id: article.id,
+        title: article.title,
+        slug: article.slug,
+        content: article.content,
+        publishedAt: article.publishedAt,
+        updatedAt: article.updatedAt,
+      }
+    : isTrendsArticle
+      ? await findNewsTrendsSummaryArticle()
+      : null;
   const trendsSummaryPath = trendsSummaryArticle?.slug ? buildNewsPath(trendsSummaryArticle.slug) : null;
-  const relatedTrendArticles = isTrendsSummaryPage
-    ? (await getNewsTrendsSummaryRelatedArticles(article.id, 50)).filter(
+  const relatedTrendArticles = isTrendsSummaryPage && trendsSummaryArticle
+    ? (await getNewsTrendsSummaryRelatedArticles(trendsSummaryArticle, 50)).filter(
         (item) => !hasNewsTrendsArticleLink(displayContent, item.slug)
       )
     : [];
-  const shouldShowTrendsSummaryList = isTrendsSummaryPage && relatedTrendArticles.length > 0;
+  const shouldShowTrendsSummarySection = isTrendsSummaryPage;
   const shouldShowTrendsSummaryBackLink =
     isTrendsArticle &&
     !isTrendsSummaryPage &&
@@ -517,21 +528,27 @@ export default async function ArticlePage({ params, searchParams }: Props) {
 
         <div className="mt-8 rounded-[24px] border border-[rgba(15,23,42,0.06)] bg-[rgba(255,255,255,0.94)] px-5 py-7 shadow-[0_22px_44px_-38px_rgba(15,23,42,0.12)] sm:rounded-[26px] sm:px-8 sm:py-9 sm:shadow-[0_24px_48px_-40px_rgba(15,23,42,0.12)]">
           <RichContent html={stripNewsLeadingOverviewHeading(displayContent)} className="prose prose-neutral article-reading-rich-content max-w-none" />
-          {shouldShowTrendsSummaryList ? (
+          {shouldShowTrendsSummarySection ? (
             <div className="mt-8 border-t border-[rgba(15,23,42,0.08)] pt-6">
               <h2 className="text-lg font-semibold text-primary sm:text-xl">更多整木行业趋势观察</h2>
-              <ul className="mt-4 space-y-3 text-sm leading-7 text-primary sm:text-[15px]">
-                {relatedTrendArticles.map((item) => (
-                  <li key={item.id}>
-                    <a
-                      href={buildNewsPath(item.slug)}
-                      className="font-medium text-[#ab8a5e] underline decoration-[rgba(171,138,94,0.42)] underline-offset-4 transition-colors hover:text-[#8b6d45]"
-                    >
-                      {decodeEscapedUnicode(item.title)}
-                    </a>
-                  </li>
-                ))}
-              </ul>
+              {relatedTrendArticles.length > 0 ? (
+                <ul className="mt-4 space-y-3 text-sm leading-7 text-primary sm:text-[15px]">
+                  {relatedTrendArticles.map((item) => (
+                    <li key={item.id}>
+                      <a
+                        href={buildNewsPath(item.slug)}
+                        className="font-medium text-[#ab8a5e] underline decoration-[rgba(171,138,94,0.42)] underline-offset-4 transition-colors hover:text-[#8b6d45]"
+                      >
+                        {decodeEscapedUnicode(item.title)}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-4 text-sm leading-7 text-muted sm:text-[15px]">
+                  后续发布的整木行业趋势文章，将自动汇总在这里。
+                </p>
+              )}
             </div>
           ) : null}
           {shouldShowTrendsSummaryBackLink && trendsSummaryPath ? (
