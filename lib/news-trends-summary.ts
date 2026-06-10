@@ -6,6 +6,8 @@ import { PUBLIC_SITE_URL } from "@/lib/public-site-config";
 const NEWS_TRENDS_HREF = "/news/trends";
 const NEWS_TRENDS_SUMMARY_TITLE_PREFIX = "整木行业趋势观察";
 export const NEWS_TRENDS_SUMMARY_TITLE = "整木行业趋势观察：市场变化、消费升级与门店转型";
+export const NEWS_TRENDS_SUMMARY_SLUG =
+  "zheng-mu-hang-ye-qu-shi-guan-cha-shi-chang-bian-hua-xiao-fei-sheng-ji-yu-men-dia";
 
 function buildNewsTrendsWhere(): Prisma.ArticleWhereInput {
   return {
@@ -18,7 +20,13 @@ export function isNewsTrendsArticle(article: { categoryHref?: string | null; sub
 }
 
 export function isNewsTrendsSummaryArticle(article: { slug?: string | null; title?: string | null }) {
+  const slug = article.slug?.trim().toLowerCase() ?? "";
   const title = article.title?.trim() ?? "";
+
+  if (slug === NEWS_TRENDS_SUMMARY_SLUG) {
+    return true;
+  }
+
   return title === NEWS_TRENDS_SUMMARY_TITLE || title.includes(NEWS_TRENDS_SUMMARY_TITLE_PREFIX);
 }
 
@@ -27,8 +35,7 @@ export async function findNewsTrendsSummaryArticle() {
     where: {
       status: "approved",
       publishedAt: { not: null },
-      ...buildNewsTrendsWhere(),
-      title: NEWS_TRENDS_SUMMARY_TITLE,
+      OR: [{ slug: NEWS_TRENDS_SUMMARY_SLUG }, { title: NEWS_TRENDS_SUMMARY_TITLE }],
     },
     orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
     select: {
@@ -49,8 +56,10 @@ export async function findNewsTrendsSummaryArticle() {
     where: {
       status: "approved",
       publishedAt: { not: null },
-      ...buildNewsTrendsWhere(),
-      title: { contains: NEWS_TRENDS_SUMMARY_TITLE_PREFIX },
+      OR: [
+        { slug: NEWS_TRENDS_SUMMARY_SLUG },
+        { title: { contains: NEWS_TRENDS_SUMMARY_TITLE_PREFIX } },
+      ],
     },
     orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
     select: {

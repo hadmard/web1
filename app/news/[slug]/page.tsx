@@ -385,7 +385,7 @@ export default async function ArticlePage({ params, searchParams }: Props) {
     aftermarketConfig.detailRecommendCount,
   );
   const isTrendsArticle = isNewsTrendsArticle(article);
-  const isTrendsSummaryPage = isTrendsArticle && isNewsTrendsSummaryArticle(article);
+  const isTrendsSummaryPage = isNewsTrendsSummaryArticle(article);
   const trendsSummaryArticle = isTrendsSummaryPage ? article : isTrendsArticle ? await findNewsTrendsSummaryArticle() : null;
   const trendsSummaryPath = trendsSummaryArticle?.slug ? buildNewsPath(trendsSummaryArticle.slug) : null;
   const relatedTrendArticles = isTrendsSummaryPage
