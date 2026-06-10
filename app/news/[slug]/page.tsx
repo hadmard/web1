@@ -19,6 +19,14 @@ import { getRecommendedNews, isValidKeywordCandidate } from "@/lib/news-keywords
 import { resolveArticleSourceType } from "@/lib/article-source";
 import { decodeEscapedUnicode } from "@/lib/text";
 import { NEWS_AFTERMARKET_SUBCATEGORY, getNewsAftermarketConfig, parseProductRecommendations } from "@/lib/news-aftermarket";
+import {
+  findNewsTrendsSummaryArticle,
+  getNewsTrendsSummaryRelatedArticles,
+  hasNewsTrendsArticleLink,
+  hasNewsTrendsSummaryLink,
+  isNewsTrendsArticle,
+  isNewsTrendsSummaryArticle,
+} from "@/lib/news-trends-summary";
 
 export const revalidate = 300;
 export const dynamic = "force-dynamic";
@@ -376,6 +384,21 @@ export default async function ArticlePage({ params, searchParams }: Props) {
     0,
     aftermarketConfig.detailRecommendCount,
   );
+  const isTrendsArticle = isNewsTrendsArticle(article);
+  const isTrendsSummaryPage = isTrendsArticle && isNewsTrendsSummaryArticle(article);
+  const trendsSummaryArticle = isTrendsSummaryPage ? article : isTrendsArticle ? await findNewsTrendsSummaryArticle() : null;
+  const trendsSummaryPath = trendsSummaryArticle?.slug ? buildNewsPath(trendsSummaryArticle.slug) : null;
+  const relatedTrendArticles = isTrendsSummaryPage
+    ? (await getNewsTrendsSummaryRelatedArticles(article.id, 50)).filter(
+        (item) => !hasNewsTrendsArticleLink(displayContent, item.slug)
+      )
+    : [];
+  const shouldShowTrendsSummaryList = isTrendsSummaryPage && relatedTrendArticles.length > 0;
+  const shouldShowTrendsSummaryBackLink =
+    isTrendsArticle &&
+    !isTrendsSummaryPage &&
+    trendsSummaryArticle?.slug &&
+    !hasNewsTrendsSummaryLink(displayContent, trendsSummaryArticle.slug);
 
   const articleSchema = {
     "@context": "https://schema.org",
@@ -494,6 +517,34 @@ export default async function ArticlePage({ params, searchParams }: Props) {
 
         <div className="mt-8 rounded-[24px] border border-[rgba(15,23,42,0.06)] bg-[rgba(255,255,255,0.94)] px-5 py-7 shadow-[0_22px_44px_-38px_rgba(15,23,42,0.12)] sm:rounded-[26px] sm:px-8 sm:py-9 sm:shadow-[0_24px_48px_-40px_rgba(15,23,42,0.12)]">
           <RichContent html={stripNewsLeadingOverviewHeading(displayContent)} className="prose prose-neutral article-reading-rich-content max-w-none" />
+          {shouldShowTrendsSummaryList ? (
+            <div className="mt-8 border-t border-[rgba(15,23,42,0.08)] pt-6">
+              <h2 className="text-lg font-semibold text-primary sm:text-xl">更多整木行业趋势观察</h2>
+              <ul className="mt-4 space-y-3 text-sm leading-7 text-primary sm:text-[15px]">
+                {relatedTrendArticles.map((item) => (
+                  <li key={item.id}>
+                    <a
+                      href={buildNewsPath(item.slug)}
+                      className="font-medium text-[#ab8a5e] underline decoration-[rgba(171,138,94,0.42)] underline-offset-4 transition-colors hover:text-[#8b6d45]"
+                    >
+                      {decodeEscapedUnicode(item.title)}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {shouldShowTrendsSummaryBackLink && trendsSummaryPath ? (
+            <div className="mt-8 border-t border-[rgba(15,23,42,0.08)] pt-6 text-sm leading-7 text-muted sm:text-[15px]">
+              更多整木行业趋势观察，可以查看：
+              <a
+                href={trendsSummaryPath}
+                className="ml-1 font-medium text-[#ab8a5e] underline decoration-[rgba(171,138,94,0.42)] underline-offset-4 transition-colors hover:text-[#8b6d45]"
+              >
+                整木行业趋势专题汇总
+              </a>
+            </div>
+          ) : null}
           {sourceSummary ? (
             <section className="mt-10 rounded-2xl border border-[rgba(15,23,42,0.08)] bg-[#f6f7f9] px-5 py-4 text-[14px] leading-7 text-[#666] sm:px-6">
               <h2 className="text-[15px] font-semibold text-[#333]">信息来源</h2>
