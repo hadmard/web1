@@ -24,6 +24,22 @@ type Props = {
   params: Promise<{ slug: string }>;
 };
 
+const BUYING_ARTICLE_SELECT = {
+  id: true,
+  title: true,
+  slug: true,
+  excerpt: true,
+  content: true,
+  coverImage: true,
+  source: true,
+  sourceUrl: true,
+  sourceType: true,
+  displayAuthor: true,
+  tagSlugs: true,
+  publishedAt: true,
+  updatedAt: true,
+} as const;
+
 function normalizeSegment(raw: string) {
   let value = (raw || "").trim();
   for (let i = 0; i < 2; i += 1) {
@@ -36,6 +52,13 @@ function normalizeSegment(raw: string) {
     }
   }
   return value.trim();
+}
+
+function normalizeBuyingSlugAlias(value?: string | null) {
+  return normalizeSegment(value || "")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .toLowerCase();
 }
 
 async function findBuyingArticleBySegment(segment: string) {
@@ -55,27 +78,37 @@ async function findBuyingArticleBySegment(segment: string) {
         },
       ],
     },
-    select: {
-      id: true,
-      title: true,
-      slug: true,
-      excerpt: true,
-      content: true,
-      coverImage: true,
-      source: true,
-      sourceUrl: true,
-      sourceType: true,
-      displayAuthor: true,
-      tagSlugs: true,
-      publishedAt: true,
-      updatedAt: true,
-    },
+    select: BUYING_ARTICLE_SELECT,
   });
+}
+
+async function findBuyingArticleByAlias(segment: string) {
+  const normalizedAlias = normalizeBuyingSlugAlias(segment);
+  if (!normalizedAlias) return null;
+
+  const candidates = await prisma.article.findMany({
+    where: {
+      status: "approved",
+      OR: [{ categoryHref: { startsWith: "/brands/buying" } }, { subHref: { startsWith: "/brands/buying" } }],
+      slug: { startsWith: normalizedAlias, mode: "insensitive" },
+    },
+    orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }],
+    take: 8,
+    select: BUYING_ARTICLE_SELECT,
+  });
+
+  const matches = candidates.filter((item) => normalizeBuyingSlugAlias(item.slug) === normalizedAlias);
+  if (matches.length !== 1) return null;
+  return matches[0];
+}
+
+async function resolveBuyingArticle(segment: string) {
+  return (await findBuyingArticleBySegment(segment)) ?? findBuyingArticleByAlias(segment);
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const article = await findBuyingArticleBySegment(slug);
+  const article = await resolveBuyingArticle(slug);
   if (!article) {
     return buildPageMetadata({
       title: "整木选购内容解析｜整木网",
@@ -102,7 +135,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function BuyingArticleDetailPage({ params }: Props) {
   const { slug } = await params;
   const segment = normalizeSegment(slug);
-  const article = await findBuyingArticleBySegment(segment);
+  const article = await resolveBuyingArticle(segment);
   if (!article) notFound();
 
   if (segment !== article.slug) {
