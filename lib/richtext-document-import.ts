@@ -198,15 +198,22 @@ function dedupeLeadingTitleFromHtml(html: string, title: string, titleSource: Im
     return html;
   }
 
-  const leading = extractFirstMeaningfulBlock(html) ?? extractLeadingBlock(html);
-  if (!leading) return html;
-
   const normalizedTitle = normalizeComparableTitle(title);
-  const normalizedLeading = normalizeComparableTitle(leading.text);
-  if (!normalizedTitle || !normalizedLeading) return html;
-  if (normalizedTitle !== normalizedLeading) return html;
+  if (!normalizedTitle) return html;
 
-  return `${html.slice(0, leading.start)}${html.slice(leading.end)}`.trim();
+  let nextHtml = html.trim();
+
+  while (nextHtml) {
+    const leading = extractFirstMeaningfulBlock(nextHtml) ?? extractLeadingBlock(nextHtml);
+    if (!leading) break;
+
+    const normalizedLeading = normalizeComparableTitle(leading.text);
+    if (!normalizedLeading || normalizedTitle !== normalizedLeading) break;
+
+    nextHtml = `${nextHtml.slice(0, leading.start)}${nextHtml.slice(leading.end)}`.trim();
+  }
+
+  return nextHtml;
 }
 
 async function saveImportedImage(imageBuffer: Buffer, mimeType: string) {

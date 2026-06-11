@@ -215,6 +215,26 @@ function buildAutoExcerpt(text: string) {
   return previewText(text, 120);
 }
 
+function isRichTextArticleTab(tab: ContentTabKey) {
+  return tab === "articles" || tab === "buying";
+}
+
+function getPublishTabHint(tab: ContentTabKey) {
+  if (tab === "articles" || tab === "buying") {
+    return "支持标题、作者、来源、原文链接、摘要、顶部配图、富文本正文和导入文档。";
+  }
+
+  if (tab === "standards") {
+    return "支持标准正文编辑、文档导入、表格图片保留与结构化标准信息维护。";
+  }
+
+  if (tab === "terms") {
+    return "支持词条内容整理、自动结构识别与文档信息维护。";
+  }
+
+  return null;
+}
+
 function normalizeEnterpriseOptions(input: unknown): EnterpriseOption[] {
   if (!Array.isArray(input)) return [];
 
@@ -405,6 +425,7 @@ export default function AdminContentPage() {
   const selectedTabDef = useMemo(() => CONTENT_TAB_DEFS.find((x) => x.key === tab) ?? CONTENT_TAB_DEFS[0], [tab]);
   const selectedCategory = useMemo(() => ADMIN_PUBLISH_CATEGORY_OPTIONS.find((x) => x.href === selectedTabDef.href) ?? ADMIN_PUBLISH_CATEGORY_OPTIONS[0], [selectedTabDef.href]);
   const subOptions = selectedCategory.subs;
+  const publishTabHint = useMemo(() => getPublishTabHint(tab), [tab]);
   const supportsOwnedEnterprise = tab === "articles";
   const isDocumentTab = tab === "terms" || tab === "standards";
   const documentKind = tab === "standards" ? "standards" : "terms";
@@ -1309,6 +1330,7 @@ export default function AdminContentPage() {
       <InlinePageBackLink href="/membership/admin" label="返回后台首页" />
       <header className="rounded-xl border border-border bg-surface-elevated p-5">
         <h1 className="font-serif text-2xl font-bold text-primary">{mode === "publish" ? "内容发布" : mode === "manage" ? "内容管理" : "审核中心"} · {selectedTabDef.label}</h1>
+        {mode === "publish" && publishTabHint ? <p className="mt-2 text-sm text-muted">{publishTabHint}</p> : null}
         {message && (
           <div ref={messageRef} className="mt-2 scroll-mt-24 space-y-1">
             <p className="text-sm text-accent">{message}</p>
@@ -1645,7 +1667,7 @@ export default function AdminContentPage() {
                 />
               </>
             )}
-            {tab !== "terms" && tab !== "brands" && tab !== "standards" && tab !== "industry-data" && tab !== "awards" && (
+            {isRichTextArticleTab(tab) && (
               <>
                 <label className="block text-sm text-muted">正文</label>
                 <RichEditor value={content} onChange={setContent} onImportedTitle={handleImportedPublishTitle} minHeight={300} placeholder="" allowClipboardImagePaste toolbarIcons />
