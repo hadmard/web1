@@ -61,6 +61,7 @@ export default function MembershipContentNewsPage() {
   const [content, setContent] = useState("");
   const [subHref, setSubHref] = useState("/news/trends");
   const [message, setMessage] = useState("");
+  const [editorStatusVersion, setEditorStatusVersion] = useState(0);
   const [loading, setLoading] = useState(false);
   const newsPublishLimit = newsCategoryAccess?.annualLimit ?? null;
   const newsSubcategoryOptions =
@@ -138,6 +139,10 @@ export default function MembershipContentNewsPage() {
     }
   }, [newsCategoryAccess, subHref]);
 
+  useEffect(() => {
+    setEditorStatusVersion((value) => value + 1);
+  }, [subHref]);
+
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (!newsSubcategoryOptions.some((item) => item.href === subHref && item.enabled)) {
@@ -184,6 +189,7 @@ export default function MembershipContentNewsPage() {
     setTitle("");
     setSlug("");
     setContent("");
+    setEditorStatusVersion((value) => value + 1);
     await load(search);
     setLoading(false);
   }
@@ -287,6 +293,7 @@ export default function MembershipContentNewsPage() {
             placeholder="支持从网页、Word、公众号粘贴图文内容，系统会尽量保留排版并自动转存图片。"
             allowClipboardImagePaste={authed === true}
             toolbarIcons
+            statusResetKey={`member-news:${subHref}:${editorStatusVersion}`}
           />
 
           <button disabled={loading} className="rounded bg-accent px-4 py-2 text-sm text-white disabled:opacity-50">

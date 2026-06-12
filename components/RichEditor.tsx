@@ -27,6 +27,7 @@ type Props = {
   placeholder?: string;
   allowClipboardImagePaste?: boolean;
   toolbarIcons?: boolean;
+  statusResetKey?: string | number;
 };
 
 type ImageAttrs = {
@@ -871,6 +872,7 @@ export function RichEditor({
   placeholder = "请输入正文...",
   allowClipboardImagePaste = false,
   toolbarIcons = false,
+  statusResetKey,
 }: Props) {
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const documentInputRef = useRef<HTMLInputElement | null>(null);
@@ -1056,6 +1058,10 @@ export function RichEditor({
     }
     lastAppliedValueRef.current = nextValue;
   }, [editor, value]);
+
+  useEffect(() => {
+    setDocumentImportState({ type: "idle", message: "" });
+  }, [statusResetKey]);
 
   useEffect(() => {
     if (!menu.open) return;
@@ -1429,6 +1435,7 @@ export function RichEditor({
           className="hidden"
           onChange={(e) => {
             const file = e.target.files?.[0];
+            setDocumentImportState({ type: "idle", message: "" });
             if (file) void importDocument(file);
             e.target.value = "";
           }}

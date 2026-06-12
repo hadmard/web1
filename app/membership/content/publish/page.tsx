@@ -299,6 +299,8 @@ function PublishCenterPageInner() {
   const [editCoverImage, setEditCoverImage] = useState("");
   const [editCoverPreviewSrc, setEditCoverPreviewSrc] = useState("");
   const [editReason, setEditReason] = useState("");
+  const [publishEditorStatusVersion, setPublishEditorStatusVersion] = useState(0);
+  const [editEditorStatusVersion, setEditEditorStatusVersion] = useState(0);
   const [editDocumentMeta, setEditDocumentMeta] = useState<DocumentMetadata>(createEmptyDocumentMetadata());
   const autoSlugRef = useRef("");
   const autoSeoRef = useRef({ seoTitle: "", seoKeywords: "", seoDescription: "" });
@@ -711,6 +713,7 @@ function PublishCenterPageInner() {
     replacePreviewUrl("publish", "");
     autoSlugRef.current = "";
     autoSeoRef.current = { seoTitle: "", seoKeywords: "", seoDescription: "" };
+    setPublishEditorStatusVersion((value) => value + 1);
   }, [replacePreviewUrl]);
 
   const resetEditFormState = useCallback(() => {
@@ -731,6 +734,7 @@ function PublishCenterPageInner() {
     autoOpenedEditIdRef.current = "";
     autoEditSlugRef.current = "";
     autoEditSeoRef.current = { seoTitle: "", seoKeywords: "", seoDescription: "" };
+    setEditEditorStatusVersion((value) => value + 1);
   }, [replacePreviewUrl]);
 
   function queuePreviewScroll(target: "publish" | "edit") {
@@ -877,6 +881,7 @@ function PublishCenterPageInner() {
     autoSeoRef.current = { seoTitle: "", seoKeywords: "", seoDescription: "" };
     setSyncToMainSite(false);
     setIsPinned(false);
+    setPublishEditorStatusVersion((value) => value + 1);
     await load();
     setLoading(false);
   }
@@ -1109,6 +1114,7 @@ function PublishCenterPageInner() {
               onImportedTitle={handleImportedPublishTitle}
               minHeight={360}
               placeholder="支持标题分级、表格、图片和条款结构的标准正文编辑。"
+              statusResetKey={`member-publish-standards:${safeTab}:${publishEditorStatusVersion}`}
             />
           </div>
         )}
@@ -1680,7 +1686,7 @@ function PublishCenterPageInner() {
             safeTab !== "awards" && (
             <>
               <label className="block text-sm text-muted">正文</label>
-              <RichEditor value={content} onChange={setContent} onImportedTitle={handleImportedPublishTitle} minHeight={280} placeholder="" allowClipboardImagePaste={canPasteImages} toolbarIcons />
+              <RichEditor value={content} onChange={setContent} onImportedTitle={handleImportedPublishTitle} minHeight={280} placeholder="" allowClipboardImagePaste={canPasteImages} toolbarIcons statusResetKey={`member-publish:${safeTab}:${publishEditorStatusVersion}`} />
             </>
           )}
           {safeTab === "brands" && (
@@ -1834,7 +1840,7 @@ function PublishCenterPageInner() {
             ) : (
               <>
                 <label className="block text-sm text-muted">新正文</label>
-                <RichEditor value={editContent} onChange={setEditContent} onImportedTitle={handleImportedEditTitle} minHeight={260} placeholder="" allowClipboardImagePaste={canPasteImages} />
+                <RichEditor value={editContent} onChange={setEditContent} onImportedTitle={handleImportedEditTitle} minHeight={260} placeholder="" allowClipboardImagePaste={canPasteImages} statusResetKey={`member-edit:${safeTab}:${editingId ?? "none"}:${editEditorStatusVersion}`} />
               </>
             )}
             <label className="block text-sm text-muted">修改说明</label>

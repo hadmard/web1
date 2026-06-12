@@ -350,6 +350,8 @@ export default function AdminContentPage() {
   const [editOwnedEnterpriseId, setEditOwnedEnterpriseId] = useState("");
   const [editOwnedEnterpriseSearch, setEditOwnedEnterpriseSearch] = useState("");
   const [editOwnedEnterpriseOpen, setEditOwnedEnterpriseOpen] = useState(false);
+  const [publishEditorStatusVersion, setPublishEditorStatusVersion] = useState(0);
+  const [editEditorStatusVersion, setEditEditorStatusVersion] = useState(0);
   const [editExcerpt, setEditExcerpt] = useState("");
   const [editContent, setEditContent] = useState("");
   const [editBrandStructured, setEditBrandStructured] = useState<BrandStructuredData>(createDefaultBrandStructuredData());
@@ -518,6 +520,8 @@ export default function AdminContentPage() {
     replacePreviewUrl("edit", "");
     autoEditSlugRef.current = "";
     autoEditSeoRef.current = { seoTitle: "", seoKeywords: "", seoDescription: "" };
+    setPublishEditorStatusVersion((value) => value + 1);
+    setEditEditorStatusVersion((value) => value + 1);
   }, [tab, subOptions]);
 
   useEffect(() => {
@@ -983,6 +987,7 @@ export default function AdminContentPage() {
     setStandardStructured(createDefaultStandardStructuredData());
     setDataStructured(createDefaultDataStructuredData());
     setAwardStructured(createDefaultAwardStructuredData());
+    setPublishEditorStatusVersion((value) => value + 1);
   }
 
   function openEdit(item: ArticleItem) {
@@ -1642,6 +1647,7 @@ export default function AdminContentPage() {
                   minHeight={360}
                   placeholder="支持标题分级、表格、图片和条款结构的标准正文编辑。"
                   allowClipboardImagePaste
+                  statusResetKey={`admin-publish-standards:${tab}:${publishEditorStatusVersion}`}
                 />
               </>
             )}
@@ -1670,7 +1676,7 @@ export default function AdminContentPage() {
             {isRichTextArticleTab(tab) && (
               <>
                 <label className="block text-sm text-muted">正文</label>
-                <RichEditor value={content} onChange={setContent} onImportedTitle={handleImportedPublishTitle} minHeight={300} placeholder="" allowClipboardImagePaste toolbarIcons />
+                <RichEditor value={content} onChange={setContent} onImportedTitle={handleImportedPublishTitle} minHeight={300} placeholder="" allowClipboardImagePaste toolbarIcons statusResetKey={`admin-publish:${tab}:${publishEditorStatusVersion}`} />
               </>
             )}
             {tab === "brands" && (
@@ -2060,6 +2066,7 @@ export default function AdminContentPage() {
                   placeholder="支持标题分级、表格、图片和条款结构的标准正文编辑。"
                   allowClipboardImagePaste
                   toolbarIcons
+                  statusResetKey={`admin-edit-standards:${tab}:${editingId ?? "none"}:${editEditorStatusVersion}`}
                 />
               </>
             ) : tab === "brands" ? (
@@ -2092,7 +2099,7 @@ export default function AdminContentPage() {
             ) : (
               <>
                 <label className="block text-sm text-muted">正文</label>
-                <RichEditor value={editContent} onChange={setEditContent} onImportedTitle={handleImportedEditTitle} minHeight={320} placeholder="" allowClipboardImagePaste toolbarIcons />
+                <RichEditor value={editContent} onChange={setEditContent} onImportedTitle={handleImportedEditTitle} minHeight={320} placeholder="" allowClipboardImagePaste toolbarIcons statusResetKey={`admin-edit:${tab}:${editingId ?? "none"}:${editEditorStatusVersion}`} />
               </>
             )}
             <div className="flex gap-2 flex-wrap">
