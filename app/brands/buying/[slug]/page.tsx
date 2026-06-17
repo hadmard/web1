@@ -10,8 +10,6 @@ import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
 import {
   BUYING_SUMMARY_TITLE,
   findBuyingSummaryArticle,
-  getBuyingSummaryRelatedArticles,
-  hasBuyingArticleLink,
   hasBuyingSummaryLink,
   isBuyingSummaryArticle,
 } from "@/lib/buying-summary";
@@ -154,12 +152,6 @@ export default async function BuyingArticleDetailPage({ params }: Props) {
   const isSummaryPage = isBuyingSummaryArticle(article);
   const summaryArticle = isSummaryPage ? article : await findBuyingSummaryArticle();
   const summaryPath = summaryArticle ? buildBuyingPath(summaryArticle.slug) : null;
-  const relatedBuyingArticles = isSummaryPage
-    ? (await getBuyingSummaryRelatedArticles(article.id, 50)).filter(
-        (item) => !hasBuyingArticleLink(displayContent, item.slug)
-      )
-    : [];
-  const shouldShowSummaryList = isSummaryPage && relatedBuyingArticles.length > 0;
   const shouldShowSummaryBackLink =
     !isSummaryPage &&
     summaryArticle &&
@@ -227,24 +219,6 @@ export default async function BuyingArticleDetailPage({ params }: Props) {
           html={displayContent}
           className="buying-article-content prose prose-neutral max-w-none"
         />
-
-        {shouldShowSummaryList ? (
-          <div className="mt-8 border-t border-[rgba(15,23,42,0.08)] pt-6">
-            <h2 className="text-lg font-semibold text-primary sm:text-xl">更多整木选购常见问题</h2>
-            <ul className="mt-4 space-y-3 text-sm leading-7 text-primary sm:text-[15px]">
-              {relatedBuyingArticles.map((item) => (
-                <li key={item.id}>
-                  <a
-                    href={buildBuyingPath(item.slug)}
-                    className="font-medium text-[#ab8a5e] underline decoration-[rgba(171,138,94,0.42)] underline-offset-4 transition-colors hover:text-[#8b6d45]"
-                  >
-                    {decodeEscapedUnicode(item.title)}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
 
         {shouldShowSummaryBackLink && summaryPath ? (
           <div className="mt-8 border-t border-[rgba(15,23,42,0.08)] pt-6 text-sm leading-7 text-muted sm:text-[15px]">
