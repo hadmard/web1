@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { previewText } from "@/lib/text";
 import { buildNewsPath, getArticleSegment } from "@/lib/share-config";
-import { buildPageMetadata } from "@/lib/seo";
+import { buildPageMetadata, SITE_NAME } from "@/lib/seo";
 import { getArticlesByKeyword, isValidKeywordCandidate } from "@/lib/news-keywords-v2";
 
 type Props = {
@@ -14,10 +14,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { name } = await params;
   const keyword = decodeURIComponent(name);
   return buildPageMetadata({
-    title: `${keyword}相关文章`,
+    title: `${keyword}相关文章_${SITE_NAME}`,
     description: `${keyword}相关文章聚合页`,
     path: `/keyword/${keyword}`,
     type: "website",
+    absoluteTitle: true,
   });
 }
 
