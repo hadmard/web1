@@ -14,11 +14,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { name } = await params;
   const keyword = decodeURIComponent(name);
   return buildPageMetadata({
-    title: `${keyword}相关文章_中华整木网`,
+    title: `${keyword}相关文章`,
     description: `${keyword}相关文章聚合页`,
     path: `/keyword/${keyword}`,
     type: "website",
-    absoluteTitle: true,
   });
 }
 
