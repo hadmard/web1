@@ -13,13 +13,18 @@ type Props = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { name } = await params;
   const keyword = decodeURIComponent(name);
-  return buildPageMetadata({
-    title: `${keyword}相关文章_${SITE_NAME}`,
-    description: `${keyword}相关文章聚合页`,
-    path: `/keyword/${keyword}`,
-    type: "website",
-    absoluteTitle: true,
-  });
+  const title = `${keyword}相关文章_${SITE_NAME}`;
+  return {
+    ...buildPageMetadata({
+      title,
+      description: `${keyword}相关文章聚合页`,
+      path: `/keyword/${keyword}`,
+      type: "website",
+    }),
+    title: {
+      absolute: title,
+    },
+  };
 }
 
 export default async function KeywordPage({ params }: Props) {
