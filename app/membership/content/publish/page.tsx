@@ -2,6 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
+import nextDynamic from "next/dynamic";
 import Link from "next/link";
 import {
   FormEvent,
@@ -20,10 +21,7 @@ import {
   type CategoryOption,
   type ContentTabKey,
 } from "@/lib/content-taxonomy";
-import { ImageCropDialog } from "@/components/ImageCropDialog";
-import { RichEditor } from "@/components/RichEditor";
 import { suggestTagsFromText } from "@/lib/tag-suggest";
-import { BrandStructuredEditor } from "@/components/BrandStructuredEditor";
 import {
   brandStructuredToSearchText,
   buildBrandStructuredHtml,
@@ -31,7 +29,6 @@ import {
   parseBrandStructuredHtml,
   type BrandStructuredData,
 } from "@/lib/brand-structured";
-import { StandardStructuredEditor } from "@/components/StandardStructuredEditor";
 import {
   buildStandardStructuredHtml,
   createDefaultStandardStructuredData,
@@ -39,7 +36,6 @@ import {
   standardStructuredToSearchText,
   type StandardStructuredData,
 } from "@/lib/standard-structured";
-import { DataStructuredEditor } from "@/components/DataStructuredEditor";
 import {
   buildDataStructuredHtml,
   createDefaultDataStructuredData,
@@ -47,7 +43,6 @@ import {
   parseDataStructuredHtml,
   type DataStructuredData,
 } from "@/lib/data-structured";
-import { AwardStructuredEditor } from "@/components/AwardStructuredEditor";
 import {
   awardStructuredToSearchText,
   buildAwardStructuredHtml,
@@ -80,6 +75,59 @@ import {
 import { InlinePageBackLink } from "@/components/InlinePageBackLink";
 import { PUBLIC_CONTACT_PHONE } from "@/lib/public-site-config";
 import { buildDirtyTextErrorMessage } from "@/lib/article-input-guard";
+
+function LazyEditorPlaceholder({ label }: { label: string }) {
+  return (
+    <div className="rounded-xl border border-border bg-surface-elevated p-4 text-sm text-muted">
+      {label}加载中...
+    </div>
+  );
+}
+
+const ImageCropDialog = nextDynamic(
+  () => import("@/components/ImageCropDialog").then((mod) => mod.ImageCropDialog),
+  {
+    ssr: false,
+    loading: () => <LazyEditorPlaceholder label="图片裁剪器" />,
+  }
+);
+
+const RichEditor = nextDynamic(() => import("@/components/RichEditor").then((mod) => mod.RichEditor), {
+  ssr: false,
+  loading: () => <LazyEditorPlaceholder label="富文本编辑器" />,
+});
+
+const BrandStructuredEditor = nextDynamic(
+  () => import("@/components/BrandStructuredEditor").then((mod) => mod.BrandStructuredEditor),
+  {
+    ssr: false,
+    loading: () => <LazyEditorPlaceholder label="品牌结构化编辑器" />,
+  }
+);
+
+const StandardStructuredEditor = nextDynamic(
+  () => import("@/components/StandardStructuredEditor").then((mod) => mod.StandardStructuredEditor),
+  {
+    ssr: false,
+    loading: () => <LazyEditorPlaceholder label="标准结构化编辑器" />,
+  }
+);
+
+const DataStructuredEditor = nextDynamic(
+  () => import("@/components/DataStructuredEditor").then((mod) => mod.DataStructuredEditor),
+  {
+    ssr: false,
+    loading: () => <LazyEditorPlaceholder label="数据结构化编辑器" />,
+  }
+);
+
+const AwardStructuredEditor = nextDynamic(
+  () => import("@/components/AwardStructuredEditor").then((mod) => mod.AwardStructuredEditor),
+  {
+    ssr: false,
+    loading: () => <LazyEditorPlaceholder label="奖项结构化编辑器" />,
+  }
+);
 
 type MemberType = "enterprise_basic" | "enterprise_advanced" | "personal";
 type Status = "draft" | "pending" | "approved" | "rejected";

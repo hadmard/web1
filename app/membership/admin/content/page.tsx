@@ -1,14 +1,10 @@
 ﻿"use client";
 
+import dynamic from "next/dynamic";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ADMIN_PUBLISH_CATEGORY_OPTIONS, CONTENT_TAB_DEFS, resolveTabKeyFromHref, type ContentTabKey } from "@/lib/content-taxonomy";
-import { ManageContentList } from "@/app/membership/admin/content/components/ManageContentListClean";
-import { ReviewPanels } from "@/app/membership/admin/content/components/ReviewPanels";
-import { ImageCropDialog } from "@/components/ImageCropDialog";
-import { RichEditor } from "@/components/RichEditor";
 import { suggestTagsFromText } from "@/lib/tag-suggest";
-import { BrandStructuredEditor } from "@/components/BrandStructuredEditor";
 import {
   brandStructuredToSearchText,
   buildBrandStructuredHtml,
@@ -16,7 +12,6 @@ import {
   parseBrandStructuredHtml,
   type BrandStructuredData,
 } from "@/lib/brand-structured";
-import { StandardStructuredEditor } from "@/components/StandardStructuredEditor";
 import {
   buildStandardStructuredHtml,
   createDefaultStandardStructuredData,
@@ -24,7 +19,6 @@ import {
   standardStructuredToSearchText,
   type StandardStructuredData,
 } from "@/lib/standard-structured";
-import { DataStructuredEditor } from "@/components/DataStructuredEditor";
 import {
   buildDataStructuredHtml,
   createDefaultDataStructuredData,
@@ -32,7 +26,6 @@ import {
   parseDataStructuredHtml,
   type DataStructuredData,
 } from "@/lib/data-structured";
-import { AwardStructuredEditor } from "@/components/AwardStructuredEditor";
 import {
   awardStructuredToSearchText,
   buildAwardStructuredHtml,
@@ -64,6 +57,73 @@ import {
 } from "@/lib/term-structured";
 import { InlinePageBackLink } from "@/components/InlinePageBackLink";
 import { buildDirtyTextErrorMessage } from "@/lib/article-input-guard";
+
+function LazyPanelPlaceholder({ label }: { label: string }) {
+  return (
+    <div className="rounded-xl border border-border bg-surface-elevated p-4 text-sm text-muted">
+      {label}加载中...
+    </div>
+  );
+}
+
+const ManageContentList = dynamic(
+  () => import("@/app/membership/admin/content/components/ManageContentListClean").then((mod) => mod.ManageContentList),
+  {
+    loading: () => <LazyPanelPlaceholder label="内容列表" />,
+  }
+);
+
+const ReviewPanels = dynamic(
+  () => import("@/app/membership/admin/content/components/ReviewPanels").then((mod) => mod.ReviewPanels),
+  {
+    loading: () => <LazyPanelPlaceholder label="审核面板" />,
+  }
+);
+
+const ImageCropDialog = dynamic(
+  () => import("@/components/ImageCropDialog").then((mod) => mod.ImageCropDialog),
+  {
+    ssr: false,
+    loading: () => <LazyPanelPlaceholder label="图片裁剪器" />,
+  }
+);
+
+const RichEditor = dynamic(() => import("@/components/RichEditor").then((mod) => mod.RichEditor), {
+  ssr: false,
+  loading: () => <LazyPanelPlaceholder label="富文本编辑器" />,
+});
+
+const BrandStructuredEditor = dynamic(
+  () => import("@/components/BrandStructuredEditor").then((mod) => mod.BrandStructuredEditor),
+  {
+    ssr: false,
+    loading: () => <LazyPanelPlaceholder label="品牌结构化编辑器" />,
+  }
+);
+
+const StandardStructuredEditor = dynamic(
+  () => import("@/components/StandardStructuredEditor").then((mod) => mod.StandardStructuredEditor),
+  {
+    ssr: false,
+    loading: () => <LazyPanelPlaceholder label="标准结构化编辑器" />,
+  }
+);
+
+const DataStructuredEditor = dynamic(
+  () => import("@/components/DataStructuredEditor").then((mod) => mod.DataStructuredEditor),
+  {
+    ssr: false,
+    loading: () => <LazyPanelPlaceholder label="数据结构化编辑器" />,
+  }
+);
+
+const AwardStructuredEditor = dynamic(
+  () => import("@/components/AwardStructuredEditor").then((mod) => mod.AwardStructuredEditor),
+  {
+    ssr: false,
+    loading: () => <LazyPanelPlaceholder label="奖项结构化编辑器" />,
+  }
+);
 
 type Status = "draft" | "pending" | "approved" | "rejected";
 type Mode = "publish" | "manage" | "review";

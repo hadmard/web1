@@ -1,13 +1,22 @@
 ﻿"use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { RichContent } from "@/components/RichContent";
-import { RichEditor } from "@/components/RichEditor";
 import { containsSuspiciousText, htmlToPlainText, toSummaryText } from "@/lib/brand-content";
 import { MAX_UPLOAD_IMAGE_MB, uploadImageToServer } from "@/lib/client-image";
 import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
+
+const RichEditor = dynamic(() => import("@/components/RichEditor").then((mod) => mod.RichEditor), {
+  ssr: false,
+  loading: () => (
+    <div className="rounded-xl border border-border bg-surface-elevated p-4 text-sm text-muted">
+      富文本编辑器加载中...
+    </div>
+  ),
+});
 
 type BrandDetail = {
   id: string;

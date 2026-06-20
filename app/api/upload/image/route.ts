@@ -26,6 +26,14 @@ const EXTENSION_MIME: Record<string, string> = {
 const LEGACY_UPLOAD_HOSTS = new Set(["cnzhengmu.com", "www.cnzhengmu.com", "jiu.cnzhengmu.com"]);
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
 const PUBLIC_UPLOADS_DIR = path.resolve(process.cwd(), "public", "uploads");
+const LEGACY_FETCH_TIMEOUT_MS = 4000;
+const REMOTE_UPLOAD_TIMEOUT_MS = 8000;
+const LEGACY_FAILURE_TTL_MS = 10 * 60 * 1000;
+const TRANSPARENT_GIF_BUFFER = Buffer.from(
+  "R0lGODlhAQABAPAAAAAAAAAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==",
+  "base64"
+);
+const legacyFailureCache = new Map<string, number>();
 
 function sanitizeFolder(input: string) {
   const cleaned = input
@@ -145,6 +153,40 @@ function resolveExtensionFromUrl(remoteUrl: URL, mimeType: string) {
   return ext || ".png";
 }
 
+function createTimeoutSignal(timeoutMs: number) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  return {
+    signal: controller.signal,
+    clear: () => clearTimeout(timeout),
+  };
+}
+
+function isLegacyFailureCached(uploadPath: string) {
+  const expiresAt = legacyFailureCache.get(uploadPath);
+  if (!expiresAt) return false;
+  if (expiresAt <= Date.now()) {
+    legacyFailureCache.delete(uploadPath);
+    return false;
+  }
+  return true;
+}
+
+function rememberLegacyFailure(uploadPath: string) {
+  legacyFailureCache.set(uploadPath, Date.now() + LEGACY_FAILURE_TTL_MS);
+}
+
+function createFallbackImageResponse(method: "GET" | "HEAD") {
+  return new NextResponse(method === "HEAD" ? null : TRANSPARENT_GIF_BUFFER, {
+    status: 200,
+    headers: {
+      "Content-Type": "image/gif",
+      "Cache-Control": "public, max-age=600, stale-while-revalidate=86400",
+      "X-Zhengmu-Image-Fallback": "missing",
+    },
+  });
+}
+
 async function writeUploadedImage(bytes: Uint8Array, folderRaw: string, ext: string) {
   const folderSegments = sanitizeFolder(folderRaw);
   const safeExt = ext.startsWith(".") ? ext : `.${ext}`;
@@ -167,6 +209,9 @@ async function fetchLegacyUpload(src: string, method: "GET" | "HEAD") {
   const remoteTarget = parseWhitelistedRemoteUploadUrl(src);
   const uploadPath = remoteTarget?.uploadPath ?? normalizeUploadPathFromSrc(src);
   if (!uploadPath) return null;
+  if (isLegacyFailureCached(uploadPath)) {
+    return createFallbackImageResponse(method);
+  }
 
   const candidates = [
     remoteTarget ? `${remoteTarget.parsed.protocol}//${remoteTarget.parsed.host}${uploadPath}` : null,
@@ -176,12 +221,16 @@ async function fetchLegacyUpload(src: string, method: "GET" | "HEAD") {
   ].filter((value, index, items): value is string => Boolean(value) && items.indexOf(value) === index);
 
   for (const candidate of candidates) {
+    const { signal, clear } = createTimeoutSignal(LEGACY_FETCH_TIMEOUT_MS);
     try {
       const response = await fetch(candidate, {
         method,
         headers: { Accept: "image/*,*/*;q=0.8" },
         cache: "force-cache",
+        redirect: "follow",
+        signal,
       });
+      clear();
       if (!response.ok) continue;
       const contentType = (response.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
       if (!contentType.startsWith("image/") || contentType === "image/svg+xml") continue;
@@ -199,11 +248,13 @@ async function fetchLegacyUpload(src: string, method: "GET" | "HEAD") {
         },
       });
     } catch {
+      clear();
       // Try the next legacy origin.
     }
   }
 
-  return null;
+  rememberLegacyFailure(uploadPath);
+  return createFallbackImageResponse(method);
 }
 
 async function buildImageResponse(src: string, method: "GET" | "HEAD") {
@@ -240,6 +291,7 @@ async function uploadRemoteImage(remoteUrlValue: string, folderRaw: string) {
   }
 
   let response: Response;
+  const { signal } = createTimeoutSignal(REMOTE_UPLOAD_TIMEOUT_MS);
   try {
     response = await fetch(remoteUrl, {
       headers: {
@@ -249,6 +301,7 @@ async function uploadRemoteImage(remoteUrlValue: string, folderRaw: string) {
       },
       cache: "no-store",
       redirect: "follow",
+      signal,
     });
   } catch {
     return NextResponse.json({ error: "远程图片下载失败" }, { status: 400 });

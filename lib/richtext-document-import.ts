@@ -26,6 +26,9 @@ const IMAGE_EXTENSIONS: Record<string, string> = {
   "image/png": ".png",
   "image/webp": ".webp",
 };
+const IMPORT_IMAGE_OPTIMIZE_MIN_BYTES = 320 * 1024;
+const IMPORT_IMAGE_MAX_WIDTH = 1600;
+const IMPORT_IMAGE_WEBP_QUALITY = 82;
 const GENERIC_FILENAME_TITLES = new Set(["doc", "docx", "document", "txt", "untitled", "wen-dang"]);
 const MAX_IMPORTED_TITLE_LENGTH = 120;
 
@@ -70,6 +73,62 @@ function normalizeBaseName(fileName: string) {
 
 function buildStoredImageName(ext: string) {
   return `${Date.now()}-${randomUUID().slice(0, 8)}${ext}`;
+}
+
+async function optimizeImportedImage(
+  imageBuffer: Buffer,
+  mimeType: string
+): Promise<{ buffer: Buffer; mimeType: string; ext: string }> {
+  const normalizedMimeType = mimeType.toLowerCase();
+  const originalExt = IMAGE_EXTENSIONS[normalizedMimeType];
+  if (!originalExt) {
+    throw new Error(`鏆備笉鏀寔 ${mimeType} 鍥剧墖鏍煎紡`);
+  }
+
+  if (
+    imageBuffer.byteLength < IMPORT_IMAGE_OPTIMIZE_MIN_BYTES ||
+    !["image/jpeg", "image/png", "image/webp"].includes(normalizedMimeType)
+  ) {
+    return { buffer: imageBuffer, mimeType: normalizedMimeType, ext: originalExt };
+  }
+
+  try {
+    const sharp = (await import("sharp")).default;
+    const metadata = await sharp(imageBuffer, { failOn: "none" }).metadata();
+    const shouldResize = typeof metadata.width === "number" && metadata.width > IMPORT_IMAGE_MAX_WIDTH;
+    const shouldReencode = normalizedMimeType === "image/png" || normalizedMimeType === "image/jpeg";
+
+    if (!shouldResize && !shouldReencode) {
+      return { buffer: imageBuffer, mimeType: normalizedMimeType, ext: originalExt };
+    }
+
+    let pipeline = sharp(imageBuffer, { failOn: "none" });
+    if (shouldResize) {
+      pipeline = pipeline.resize({
+        width: IMPORT_IMAGE_MAX_WIDTH,
+        withoutEnlargement: true,
+      });
+    }
+
+    const optimizedBuffer = await pipeline
+      .webp({
+        quality: IMPORT_IMAGE_WEBP_QUALITY,
+        effort: 4,
+      })
+      .toBuffer();
+
+    if (optimizedBuffer.byteLength >= imageBuffer.byteLength * 0.95 && !shouldResize) {
+      return { buffer: imageBuffer, mimeType: normalizedMimeType, ext: originalExt };
+    }
+
+    return {
+      buffer: optimizedBuffer,
+      mimeType: "image/webp",
+      ext: ".webp",
+    };
+  } catch {
+    return { buffer: imageBuffer, mimeType: normalizedMimeType, ext: originalExt };
+  }
 }
 
 function isDocxFile(file: File) {
@@ -217,7 +276,8 @@ function dedupeLeadingTitleFromHtml(html: string, title: string, titleSource: Im
 }
 
 async function saveImportedImage(imageBuffer: Buffer, mimeType: string) {
-  const ext = IMAGE_EXTENSIONS[mimeType.toLowerCase()];
+  const optimized = await optimizeImportedImage(imageBuffer, mimeType);
+  const ext = optimized.ext;
   if (!ext) {
     throw new Error(`暂不支持 ${mimeType} 图片格式`);
   }
@@ -228,7 +288,7 @@ async function saveImportedImage(imageBuffer: Buffer, mimeType: string) {
   const outputPath = path.join(outputDir, fileName);
 
   await mkdir(outputDir, { recursive: true });
-  await writeFile(outputPath, imageBuffer);
+  await writeFile(outputPath, optimized.buffer);
 
   return `/${relativeDir.replace(/\\/g, "/")}/${fileName}`;
 }

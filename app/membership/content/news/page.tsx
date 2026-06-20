@@ -1,11 +1,20 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useState } from "react";
-import { RichEditor } from "@/components/RichEditor";
 import { NEWS_SUBCATEGORY_OPTIONS } from "@/lib/content-taxonomy";
 import { InlinePageBackLink } from "@/components/InlinePageBackLink";
 import { buildDirtyTextErrorMessage } from "@/lib/article-input-guard";
+
+const RichEditor = dynamic(() => import("@/components/RichEditor").then((mod) => mod.RichEditor), {
+  ssr: false,
+  loading: () => (
+    <div className="rounded-xl border border-border bg-surface-elevated p-4 text-sm text-muted">
+      富文本编辑器加载中...
+    </div>
+  ),
+});
 
 type ArticleItem = {
   id: string;
