@@ -6,12 +6,11 @@ import { INDUSTRY_WHITELIST_SEED } from "../lib/news-keyword-config-v2";
 const prisma = new PrismaClient();
 
 function getRequiredEnv(name: string) {
-  const defaults: Record<string, string> = {
-    ADMIN_ACCOUNT: "yfcccc",
-    ADMIN_PASSWORD: "admin",
-    ADMIN_NAME: "yfcccc",
-  };
-  return process.env[name]?.trim() || defaults[name] || "";
+  const value = process.env[name]?.trim();
+  if (!value) {
+    throw new Error(`${name} is required.`);
+  }
+  return value;
 }
 
 const categoryDefinitions: Record<string, { definitionText: string; versionLabel?: string; versionYear?: number; relatedTermSlugs?: string[]; faqs: { q: string; a: string }[] }> = {

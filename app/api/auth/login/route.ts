@@ -1,6 +1,5 @@
 ﻿import bcrypt from "bcryptjs";
 import { NextRequest, NextResponse } from "next/server";
-import { ensurePrimaryAdminAccount } from "@/lib/admin-bootstrap";
 import { signToken } from "@/lib/auth";
 import { asMemberType, ensureEffectiveMemberType } from "@/lib/member-access";
 import { prisma } from "@/lib/prisma";
@@ -117,17 +116,6 @@ export async function POST(request: NextRequest) {
     console.info("[login] request_received", { account });
     if (!account || !password) {
       return NextResponse.json({ error: "账号与密码必填" }, { status: 400 });
-    }
-
-    stage = "ensure_primary_admin";
-    try {
-      await ensurePrimaryAdminAccount(account);
-      console.info("[login] ensure_primary_admin_ok", { account });
-    } catch (error) {
-      console.warn("[login] ensure_primary_admin_skipped", {
-        account,
-        message: error instanceof Error ? error.message : String(error),
-      });
     }
 
     stage = "find_member";

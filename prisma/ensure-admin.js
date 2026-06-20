@@ -3,20 +3,19 @@ const bcrypt = require("bcryptjs");
 
 const prisma = new PrismaClient();
 
-const DEFAULT_ADMIN_PASSWORD = "admin";
-const PRIMARY_ADMIN = {
-  account: process.env.ADMIN_ACCOUNT?.trim() || "yfcccc",
-  password: process.env.ADMIN_PASSWORD?.trim() || DEFAULT_ADMIN_PASSWORD,
-  name: process.env.ADMIN_NAME?.trim() || "yfcccc",
-};
+function requireEnv(name) {
+  const value = process.env[name]?.trim();
+  if (!value) {
+    throw new Error(`${name} is required for explicit super admin bootstrap.`);
+  }
+  return value;
+}
 
-const LEGACY_ADMINS = [
-  {
-    account: "admin",
-    password: DEFAULT_ADMIN_PASSWORD,
-    name: "Admin",
-  },
-].filter((item) => item.account !== PRIMARY_ADMIN.account);
+const PRIMARY_ADMIN = {
+  account: requireEnv("ADMIN_ACCOUNT"),
+  password: requireEnv("ADMIN_PASSWORD"),
+  name: requireEnv("ADMIN_NAME"),
+};
 
 async function ensureAdmin(config) {
   const passwordHash = await bcrypt.hash(config.password, 10);
@@ -62,13 +61,8 @@ async function ensureAdmin(config) {
 }
 
 async function main() {
-  const prepared = [];
-  for (const config of [PRIMARY_ADMIN, ...LEGACY_ADMINS]) {
-    const admin = await ensureAdmin(config);
-    prepared.push(admin.email);
-  }
-
-  console.log(`管理员账号已准备完成：${prepared.join(", ")} / 默认密码已恢复`);
+  const admin = await ensureAdmin(PRIMARY_ADMIN);
+  console.log(`管理员账号已准备完成：${admin.email}`);
 }
 
 main()

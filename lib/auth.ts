@@ -2,6 +2,7 @@ import { SignJWT, jwtVerify } from "jose";
 
 const JWT_SECRET_MIN_LENGTH = 32;
 const DEV_JWT_SECRET = "dev-secret-change-in-development-only";
+const ADMIN_SESSION_VERSION = 1;
 const encoder = new TextEncoder();
 
 let cachedSecret: Uint8Array | null = null;
@@ -28,10 +29,19 @@ export type TokenPayload = {
   email: string;
   role?: string | null;
   memberType?: string | null;
+  adminSessionVersion?: number | null;
 };
 
+function isAdminRole(role: string | null | undefined) {
+  return role === "SUPER_ADMIN" || role === "ADMIN";
+}
+
 export async function signToken(payload: TokenPayload): Promise<string> {
-  return new SignJWT({ ...payload })
+  const claims = isAdminRole(payload.role)
+    ? { ...payload, adminSessionVersion: ADMIN_SESSION_VERSION }
+    : payload;
+
+  return new SignJWT(claims)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("7d")
@@ -44,11 +54,18 @@ export async function verifyToken(token: string): Promise<TokenPayload | null> {
     const sub = payload.sub as string;
     const email = payload.email as string;
     if (!sub || !email) return null;
+    const role = (payload.role as string) ?? null;
+    const adminSessionVersion =
+      typeof payload.adminSessionVersion === "number" ? payload.adminSessionVersion : null;
+    if (isAdminRole(role) && adminSessionVersion !== ADMIN_SESSION_VERSION) {
+      return null;
+    }
     return {
       sub,
       email,
-      role: (payload.role as string) ?? null,
+      role,
       memberType: (payload.memberType as string) ?? null,
+      adminSessionVersion,
     };
   } catch {
     return null;
