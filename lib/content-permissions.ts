@@ -4,12 +4,19 @@ type OwnerInput = {
   authorMemberId: string | null;
 };
 
+export function hasAdminReviewPermission(session: Session | null): boolean {
+  if (!session) return false;
+  if (session.role === "SUPER_ADMIN") return true;
+  if (session.role !== "ADMIN") return false;
+  return session.canEditAllContent || session.canEditMemberContent;
+}
+
 export function canReviewSubmissions(session: Session | null): boolean {
-  return session?.role === "SUPER_ADMIN" || session?.role === "ADMIN";
+  return hasAdminReviewPermission(session);
 }
 
 export function canChangeReviewStatus(session: Session | null): boolean {
-  return session?.role === "SUPER_ADMIN" || session?.role === "ADMIN";
+  return hasAdminReviewPermission(session);
 }
 
 export function canDirectlyEditArticle(session: Session | null, article: OwnerInput): boolean {

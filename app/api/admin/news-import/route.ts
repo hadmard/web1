@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
 import { importNewsFromList } from "@/lib/news-import";
+import { logRejectedNewsImportUrl } from "@/lib/url-security";
 
 export const dynamic = "force-dynamic";
 
-function isAdmin(session: { role: string | null } | null) {
-  return session?.role === "SUPER_ADMIN" || session?.role === "ADMIN";
+function isSuperAdmin(session: { role: string | null } | null) {
+  return session?.role === "SUPER_ADMIN";
 }
 
 export async function POST(request: NextRequest) {
   const session = await getSession();
-  if (!session || !isAdmin(session)) {
+  if (!session || !isSuperAdmin(session)) {
     return NextResponse.json({ error: "需要管理员权限" }, { status: 403 });
   }
 
@@ -38,6 +39,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : "抓取失败";
-    return NextResponse.json({ error: message }, { status: 500 });
+    if (listUrl) {
+      logRejectedNewsImportUrl(listUrl, message);
+    }
+    const status =
+      message.includes("NEWS_IMPORT_ALLOWED_HOSTS") ||
+      message.includes("导入 URL") ||
+      message.includes("导入域名") ||
+      message.includes("禁止访问") ||
+      message.includes("解析到了受限地址") ||
+      message.includes("无法解析导入域名") ||
+      message.includes("跳转次数超过上限") ||
+      message.includes("抓取内容")
+        ? 400
+        : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

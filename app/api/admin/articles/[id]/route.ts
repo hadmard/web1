@@ -4,7 +4,12 @@ import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { normalizeRichTextField } from "@/lib/brand-content";
 import { writeOperationLog } from "@/lib/operation-log";
-import { canChangeReviewStatus, canDirectlyDeleteArticle, canDirectlyEditArticle, canReviewSubmissions } from "@/lib/content-permissions";
+import {
+  canChangeReviewStatus,
+  canDirectlyDeleteArticle,
+  canDirectlyEditArticle,
+  canReviewSubmissions,
+} from "@/lib/content-permissions";
 import { isValidTermStructuredContent, normalizeTermContent } from "@/lib/term-structured";
 import { findDuplicateArticleByTitle, normalizeArticleTitle } from "@/lib/article-title";
 import { formatKeywordCsv, syncArticleKeywords } from "@/lib/news-keywords-v2";
@@ -21,6 +26,15 @@ function isAdmin(session: { role: string | null } | null) {
 
 function isDictionaryPath(input: string | null | undefined) {
   return typeof input === "string" && input.startsWith("/dictionary");
+}
+
+function canAccessAdminArticleDetail(
+  session: Awaited<ReturnType<typeof getSession>>,
+  article: { authorMemberId: string | null },
+) {
+  if (!session) return false;
+  if (canReviewSubmissions(session)) return true;
+  return article.authorMemberId === session.sub && canDirectlyEditArticle(session, article);
 }
 
 async function revalidateArticlePaths(article: {
@@ -43,8 +57,7 @@ async function revalidateArticlePaths(article: {
     }
   }
 
-  const isNews =
-    article.categoryHref?.startsWith("/news") || article.subHref?.startsWith("/news");
+  const isNews = article.categoryHref?.startsWith("/news") || article.subHref?.startsWith("/news");
   if (isNews) {
     revalidatePath("/news");
     revalidatePath("/news/all");
@@ -77,25 +90,72 @@ async function revalidateArticlePaths(article: {
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await getSession();
-  if (!session || !canReviewSubmissions(session)) {
+  if (!session || !isAdmin(session)) {
     return NextResponse.json({ error: "需要管理员权限" }, { status: 403 });
   }
 
   const { id } = await params;
-  const article = await prisma.article.findUnique({ where: { id } });
-  if (!article) return NextResponse.json({ error: "未找到" }, { status: 404 });
+  const article = await prisma.article.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      authorMemberId: true,
+      title: true,
+      slug: true,
+      sourceType: true,
+      source: true,
+      generationBatchId: true,
+      keywordSeed: true,
+      keywordIntent: true,
+      sourceUrl: true,
+      displayAuthor: true,
+      categoryHref: true,
+      subHref: true,
+      publishedAt: true,
+      excerpt: true,
+      content: true,
+      coverImage: true,
+      tagSlugs: true,
+      keywords: true,
+      manualKeywords: true,
+      recommendIds: true,
+      productRecommendations: true,
+      isPinned: true,
+      status: true,
+      reviewNote: true,
+      reviewedAt: true,
+      reviewedById: true,
+      updatedAt: true,
+      createdAt: true,
+      conceptSummary: true,
+      applicableScenarios: true,
+      versionLabel: true,
+      relatedTermSlugs: true,
+      relatedStandardIds: true,
+      relatedBrandIds: true,
+      ownedEnterpriseId: true,
+      faqJson: true,
+      syncToMainSite: true,
+    },
+  });
+  if (!article) {
+    return NextResponse.json({ error: "未找到" }, { status: 404 });
+  }
+  if (!canAccessAdminArticleDetail(session, article)) {
+    return NextResponse.json({ error: "当前账号没有查看该内容详情的权限" }, { status: 403 });
+  }
   return NextResponse.json(article);
 }
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await getSession();
-  if (!session || !canReviewSubmissions(session)) {
+  if (!session || !isAdmin(session)) {
     return NextResponse.json({ error: "需要管理员权限" }, { status: 403 });
   }
 
@@ -114,9 +174,14 @@ export async function PATCH(
       ownedEnterpriseId: true,
     },
   });
-  if (!target) return NextResponse.json({ error: "未找到" }, { status: 404 });
+  if (!target) {
+    return NextResponse.json({ error: "未找到" }, { status: 404 });
+  }
+  if (!canAccessAdminArticleDetail(session, target)) {
+    return NextResponse.json({ error: "当前账号没有修改该内容的权限" }, { status: 403 });
+  }
 
-  const body = await request.json();
+  const body = await request.json().catch(() => ({}));
   const {
     title,
     slug,
@@ -147,27 +212,43 @@ export async function PATCH(
     productRecommendations,
   } = body;
 
+  const canReview = canReviewSubmissions(session);
+  if (!canReview) {
+    if (typeof status === "string") {
+      return NextResponse.json({ error: "当前账号没有审核或修改状态的权限" }, { status: 403 });
+    }
+    if (typeof reviewNote === "string") {
+      return NextResponse.json({ error: "当前账号没有填写审核备注的权限" }, { status: 403 });
+    }
+  }
+
   const nextCategoryHref =
     typeof categoryHref === "string" ? categoryHref.trim() || null : target.categoryHref;
-  const nextSubHref =
-    typeof subHref === "string" ? subHref.trim() || null : target.subHref;
+  const nextSubHref = typeof subHref === "string" ? subHref.trim() || null : target.subHref;
   const isDictionary = isDictionaryPath(nextCategoryHref) || isDictionaryPath(nextSubHref);
 
   const data: Record<string, unknown> = {};
   if (typeof title === "string") data.title = normalizeArticleTitle(title);
   if (typeof slug === "string") {
-    const s = slug.trim();
-    if (s) {
-      const existing = await prisma.article.findFirst({ where: { slug: s, NOT: { id } } });
-      if (existing) return NextResponse.json({ error: "该 slug 已存在" }, { status: 400 });
-      data.slug = s;
+    const normalizedSlug = slug.trim();
+    if (normalizedSlug) {
+      const existing = await prisma.article.findFirst({
+        where: { slug: normalizedSlug, NOT: { id } },
+        select: { id: true },
+      });
+      if (existing) {
+        return NextResponse.json({ error: "Slug 已存在，请更换一个新的 slug" }, { status: 400 });
+      }
+      data.slug = normalizedSlug;
     }
   }
   if (typeof excerpt === "string") data.excerpt = excerpt.trim() || null;
   if (typeof source === "string") data.source = source.trim() || null;
   if (typeof sourceUrl === "string") data.sourceUrl = sourceUrl.trim() || null;
   if (typeof displayAuthor === "string") data.displayAuthor = displayAuthor.trim() || null;
-  if (typeof content === "string") data.content = isDictionary ? normalizeTermContent(content) : normalizeRichTextField(content) ?? "";
+  if (typeof content === "string") {
+    data.content = isDictionary ? normalizeTermContent(content) : normalizeRichTextField(content) ?? "";
+  }
   if (typeof coverImage === "string") data.coverImage = coverImage.trim() || null;
   if (typeof subHref === "string") data.subHref = subHref.trim() || null;
   if (typeof categoryHref === "string") data.categoryHref = categoryHref.trim() || null;
@@ -191,12 +272,13 @@ export async function PATCH(
     data.ownedEnterpriseId = normalizedOwnedEnterpriseId;
   }
   if (typeof tagSlugs === "string") data.tagSlugs = tagSlugs.trim() || null;
-  if (typeof manualKeywords === "string") data.manualKeywords = formatKeywordCsv(manualKeywords.split(/[,\n，]+/)) || null;
+  if (typeof manualKeywords === "string") {
+    data.manualKeywords = formatKeywordCsv(manualKeywords.split(/[,\n，]+/)) || null;
+  }
   if (typeof recommendIds === "string") data.recommendIds = recommendIds.trim() || null;
   if (typeof productRecommendations === "string") {
     data.productRecommendations = stringifyProductRecommendations(parseProductRecommendations(productRecommendations));
   }
-
   if (typeof faqJson === "string") data.faqJson = faqJson.trim() || null;
   if (typeof isPinned === "boolean") data.isPinned = isPinned;
   if (syncToMainSite !== undefined) data.syncToMainSite = syncToMainSite === true;
@@ -212,7 +294,7 @@ export async function PATCH(
 
   if (typeof status === "string" && ["draft", "pending", "approved", "rejected"].includes(status)) {
     if (!canChangeReviewStatus(session)) {
-      return NextResponse.json({ error: "仅主管理员可执行审核状态变更" }, { status: 403 });
+      return NextResponse.json({ error: "当前账号没有审核状态变更权限" }, { status: 403 });
     }
     data.status = status;
     data.reviewedAt = status === "approved" || status === "rejected" ? new Date() : null;
@@ -222,6 +304,7 @@ export async function PATCH(
     }
   }
   if (typeof reviewNote === "string") data.reviewNote = reviewNote.trim() || null;
+
   if (typeof data.title === "string") {
     const existingTitle = await findDuplicateArticleByTitle(data.title, id);
     if (existingTitle) {
@@ -229,48 +312,34 @@ export async function PATCH(
     }
   }
 
-  if (isDictionary && typeof data.content === "string" && !isValidTermStructuredContent(data.content as string)) {
+  if (isDictionary && typeof data.content === "string" && !isValidTermStructuredContent(data.content)) {
     return NextResponse.json({ error: "词库内容必须按固定小标题分节格式提交" }, { status: 400 });
   }
 
-  /*
   const dirtyTextError = buildDirtyTextErrorMessage([
-    { label: "标题", value: typeof data.title === "string" ? (data.title as string) : null },
-    { label: "摘要", value: typeof data.excerpt === "string" ? (data.excerpt as string) : null },
-    { label: "正文", value: typeof data.content === "string" ? (data.content as string) : null },
-    { label: "作者", value: typeof data.displayAuthor === "string" ? (data.displayAuthor as string) : null },
-    { label: "来源", value: typeof data.source === "string" ? (data.source as string) : null },
-    { label: "概念总结", value: typeof data.conceptSummary === "string" ? (data.conceptSummary as string) : null },
-    { label: "适用场景", value: typeof data.applicableScenarios === "string" ? (data.applicableScenarios as string) : null },
-    { label: "版本标签", value: typeof data.versionLabel === "string" ? (data.versionLabel as string) : null },
-    { label: "手工关键词", value: typeof data.manualKeywords === "string" ? (data.manualKeywords as string) : null },
-  ]);
-  */
-  const dirtyTextError = buildDirtyTextErrorMessage([
-    { label: "\u6807\u9898", value: typeof data.title === "string" ? (data.title as string) : null },
-    { label: "\u6458\u8981", value: typeof data.excerpt === "string" ? (data.excerpt as string) : null },
-    { label: "\u6b63\u6587", value: typeof data.content === "string" ? (data.content as string) : null },
-    { label: "\u4f5c\u8005", value: typeof data.displayAuthor === "string" ? (data.displayAuthor as string) : null },
-    { label: "\u6765\u6e90", value: typeof data.source === "string" ? (data.source as string) : null },
-    { label: "\u6982\u5ff5\u603b\u7ed3", value: typeof data.conceptSummary === "string" ? (data.conceptSummary as string) : null },
-    { label: "\u9002\u7528\u573a\u666f", value: typeof data.applicableScenarios === "string" ? (data.applicableScenarios as string) : null },
-    { label: "\u7248\u672c\u6807\u7b7e", value: typeof data.versionLabel === "string" ? (data.versionLabel as string) : null },
-    { label: "\u624b\u5de5\u5173\u952e\u8bcd", value: typeof data.manualKeywords === "string" ? (data.manualKeywords as string) : null },
+    { label: "标题", value: typeof data.title === "string" ? data.title : null },
+    { label: "摘要", value: typeof data.excerpt === "string" ? data.excerpt : null },
+    { label: "正文", value: typeof data.content === "string" ? data.content : null },
+    { label: "作者", value: typeof data.displayAuthor === "string" ? data.displayAuthor : null },
+    { label: "来源", value: typeof data.source === "string" ? data.source : null },
+    { label: "概念总结", value: typeof data.conceptSummary === "string" ? data.conceptSummary : null },
+    { label: "适用场景", value: typeof data.applicableScenarios === "string" ? data.applicableScenarios : null },
+    { label: "版本标签", value: typeof data.versionLabel === "string" ? data.versionLabel : null },
+    { label: "手工关键词", value: typeof data.manualKeywords === "string" ? data.manualKeywords : null },
   ]);
   if (dirtyTextError) {
     return NextResponse.json({ error: dirtyTextError }, { status: 400 });
   }
-  const nextStatus =
-    typeof data.status === "string"
-      ? data.status
-      : target.status;
-  const nextContent = typeof data.content === "string" ? (data.content as string) : target.content;
+
+  const nextStatus = typeof data.status === "string" ? data.status : target.status;
+  const nextContent = typeof data.content === "string" ? data.content : target.content;
   const nextManualKeywords =
     typeof data.manualKeywords === "string"
-      ? (data.manualKeywords as string)
+      ? data.manualKeywords
       : data.manualKeywords === null
         ? ""
         : target.manualKeywords;
+
   if (nextStatus === "approved" && nextContent) {
     const linkValidation = await validateInternalLinks({
       html: nextContent,
@@ -342,6 +411,7 @@ export async function PATCH(
       syncToMainSite: true,
     },
   });
+
   if (
     typeof data.title === "string" ||
     typeof data.content === "string" ||
@@ -355,7 +425,9 @@ export async function PATCH(
       manualKeywords: article.manualKeywords,
     });
   }
+
   await revalidateArticlePaths(article);
+
   if (typeof data.status === "string") {
     await writeOperationLog({
       actorId: session.sub,
@@ -393,21 +465,25 @@ export async function PATCH(
 
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await getSession();
   if (!session || !isAdmin(session)) {
     return NextResponse.json({ error: "需要管理员权限" }, { status: 403 });
   }
+
   const { id } = await params;
   const target = await prisma.article.findUnique({
     where: { id },
     select: { id: true, authorMemberId: true },
   });
-  if (!target) return NextResponse.json({ error: "未找到" }, { status: 404 });
+  if (!target) {
+    return NextResponse.json({ error: "未找到" }, { status: 404 });
+  }
   if (!canDirectlyDeleteArticle(session, target)) {
     return NextResponse.json({ error: "当前账号没有删除权限" }, { status: 403 });
   }
+
   await prisma.article.delete({ where: { id } });
   return NextResponse.json({ ok: true });
 }

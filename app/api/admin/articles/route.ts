@@ -18,6 +18,7 @@ import { isArticleSourceType } from "@/lib/article-source";
 import { buildDirtyTextErrorMessage } from "@/lib/article-input-guard";
 import { parseProductRecommendations, stringifyProductRecommendations } from "@/lib/news-aftermarket";
 import { validateInternalLinks } from "@/lib/article-links";
+import { canReviewSubmissions } from "@/lib/content-permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -64,6 +65,9 @@ export async function GET(request: NextRequest) {
   const sourceType = searchParams.get("sourceType");
   const q = searchParams.get("q")?.trim();
   const where: any = {};
+  if (!canReviewSubmissions(session)) {
+    where.authorMemberId = session.sub;
+  }
   if (status && ["draft", "pending", "approved", "rejected"].includes(status)) {
     where.status = status;
   }
@@ -180,7 +184,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getSession();
-    if (!session || !isAdmin(session)) {
+    if (!session || !canReviewSubmissions(session)) {
       return NextResponse.json({ error: "需要管理员权限" }, { status: 403 });
     }
 

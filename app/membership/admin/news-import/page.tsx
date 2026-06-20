@@ -63,7 +63,7 @@ export default function AdminNewsImportPage() {
     })();
   }, []);
 
-  const canAccess = role === "SUPER_ADMIN" || role === "ADMIN";
+  const canAccess = role === "SUPER_ADMIN";
   const includePatterns = useMemo(() => parseIncludePatterns(includePatternsText), [includePatternsText]);
 
   async function submitImport(mode: "dryRun" | "import") {

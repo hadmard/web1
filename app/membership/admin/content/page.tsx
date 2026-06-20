@@ -432,7 +432,10 @@ export default function AdminContentPage() {
   const isDocumentTab = tab === "terms" || tab === "standards";
   const documentKind = tab === "standards" ? "standards" : "terms";
   const isSuperAdmin = session?.role === "SUPER_ADMIN";
-  const canReview = session?.role === "SUPER_ADMIN" || session?.role === "ADMIN";
+  const canReview = !!(
+    session &&
+    (session.role === "SUPER_ADMIN" || session.canEditAllContent || session.canEditMemberContent)
+  );
 
   const canEdit = !!(session && (isSuperAdmin || session.canEditAllContent || session.canEditMemberContent || session.canEditOwnContent));
   const canDelete = !!(session && (isSuperAdmin || session.canDeleteAllContent || session.canDeleteMemberContent || session.canDeleteOwnContent));

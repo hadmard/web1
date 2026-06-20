@@ -5,6 +5,7 @@ import { generateUniqueArticleSlug } from "./slug";
 import { syncArticleKeywords } from "./news-keywords-v2";
 import { writeOperationLog } from "./operation-log";
 import { assertNoDirtyText } from "./article-input-guard";
+import { validateNewsImportUrl } from "./url-security";
 
 const DEFAULT_USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36 CNZhengmuNewsImporter/1.0";
@@ -47,6 +48,9 @@ export type NewsImportResult = {
   skipped: Array<{ url: string; reason: string }>;
   failed: Array<{ url: string; reason: string }>;
 };
+
+const MAX_FETCH_REDIRECTS = 5;
+const MAX_FETCH_BYTES = 1_500_000;
 
 function normalizeWhitespace(value: string) {
   return value.replace(/\s+/g, " ").trim();
@@ -235,8 +239,80 @@ async function fetchHtml(url: string, userAgent: string, timeoutMs: number) {
   return await response.text();
 }
 
+async function fetchSecureHtml(url: string, userAgent: string, timeoutMs: number) {
+  const validated = await validateNewsImportUrl(url);
+  let nextUrl = validated.url;
+
+  for (let redirectCount = 0; redirectCount <= MAX_FETCH_REDIRECTS; redirectCount += 1) {
+    const response = await fetch(nextUrl, {
+      headers: {
+        "user-agent": userAgent,
+        accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "accept-language": "zh-CN,zh;q=0.9,en;q=0.8",
+      },
+      signal: AbortSignal.timeout(timeoutMs),
+      cache: "no-store",
+      redirect: "manual",
+    });
+
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get("location");
+      if (!location) {
+        throw new Error(`抓取失败: HTTP ${response.status} 未提供跳转地址`);
+      }
+      const redirectUrl = new URL(location, nextUrl);
+      nextUrl = (await validateNewsImportUrl(redirectUrl.toString())).url;
+      continue;
+    }
+
+    if (!response.ok) {
+      throw new Error(`抓取失败: HTTP ${response.status}`);
+    }
+
+    const contentLength = Number.parseInt(response.headers.get("content-length") ?? "", 10);
+    if (Number.isFinite(contentLength) && contentLength > MAX_FETCH_BYTES) {
+      throw new Error("抓取内容过大，已拒绝处理。");
+    }
+
+    const contentType = (response.headers.get("content-type") ?? "").toLowerCase();
+    if (contentType && !contentType.includes("text/html") && !contentType.includes("application/xhtml+xml")) {
+      throw new Error("目标响应不是可解析的 HTML 页面。");
+    }
+
+    return await readResponseTextWithLimit(response, MAX_FETCH_BYTES);
+  }
+
+  throw new Error(`跳转次数超过上限（${MAX_FETCH_REDIRECTS}）`);
+}
+
+async function readResponseTextWithLimit(response: Response, maxBytes: number) {
+  if (!response.body) {
+    return await response.text();
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let received = 0;
+  let text = "";
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    if (!value) continue;
+
+    received += value.byteLength;
+    if (received > maxBytes) {
+      throw new Error("抓取内容超过大小限制，已中止。");
+    }
+    text += decoder.decode(value, { stream: true });
+  }
+
+  text += decoder.decode();
+  return text;
+}
+
 async function scrapeDetail(url: string, sourceName: string, userAgent: string, timeoutMs: number) {
-  const html = await fetchHtml(url, userAgent, timeoutMs);
+  const html = await fetchSecureHtml(url, userAgent, timeoutMs);
   const title = extractTitle(html);
   const contentText = extractContentText(html);
 
@@ -361,7 +437,7 @@ export async function importNewsFromList(
     failed: [],
   };
 
-  const listHtml = await fetchHtml(listUrl, userAgent, timeoutMs);
+  const listHtml = await fetchSecureHtml(listUrl, userAgent, timeoutMs);
   const links = extractArticleLinks(listHtml, listUrl, includePatterns).slice(0, limit);
   result.scanned = links.length;
 
