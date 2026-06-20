@@ -31,6 +31,10 @@ function main() {
     "AURAWOOD",
     "NORDCARE",
     "Rubio Monocoat",
+    "交付",
+    "交付型整木工厂",
+    "整木交付",
+    "定制交付",
   ];
 
   const invalidKeywords = [

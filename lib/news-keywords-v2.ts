@@ -112,7 +112,6 @@ const KEYWORD_BLOCKED_PREFIXES = [
   "不该",
   "重新",
   "提醒",
-  "交付",
   "欢迎",
   "选择",
   "采用",

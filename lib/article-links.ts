@@ -14,6 +14,10 @@ export type BrokenInternalLink = {
   reason: string;
 };
 
+function buildKeywordHref(keyword: string) {
+  return `/keyword/${encodeURIComponent(keyword)}`;
+}
+
 const STATIC_INTERNAL_PATHS = new Set([
   "/news",
   "/news/all",
@@ -218,8 +222,10 @@ export async function validateInternalLinks(input: { html?: string | null; keywo
     .filter(Boolean);
 
   for (const keyword of keywordValues) {
-    if (!isValidKeywordCandidate(keyword)) {
-      broken.push({ href: `/keyword/${encodeURIComponent(keyword)}`, reason: "invalid_keyword_route" });
+    const href = buildKeywordHref(keyword);
+    const isKeywordHrefResolvable = await isResolvableInternalPath(href);
+    if (!isKeywordHrefResolvable) {
+      broken.push({ href, reason: "invalid_keyword_route" });
     }
   }
 
