@@ -233,10 +233,11 @@ async function fetchLegacyUpload(src: string, method: "GET" | "HEAD") {
         method,
         headers: { Accept: "image/*,*/*;q=0.8" },
         cache: "force-cache",
-        redirect: "follow",
+        redirect: "manual",
         signal,
       });
       clear();
+      if (response.status >= 300 && response.status < 400) continue;
       if (!response.ok) continue;
       const contentType = (response.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
       if (!contentType.startsWith("image/") || contentType === "image/svg+xml") continue;
