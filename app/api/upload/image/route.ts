@@ -4,6 +4,7 @@ import { access, mkdir, readFile, writeFile } from "fs/promises";
 import net from "net";
 import path from "path";
 import { NextResponse } from "next/server";
+import { consumeRateLimit, createRateLimitResponse, getClientIp } from "@/lib/rate-limit";
 import { getSession } from "@/lib/session";
 import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
 
@@ -30,6 +31,9 @@ const LEGACY_FETCH_TIMEOUT_MS = 4000;
 const REMOTE_UPLOAD_TIMEOUT_MS = 8000;
 const MAX_REMOTE_UPLOAD_REDIRECTS = 5;
 const LEGACY_FAILURE_TTL_MS = 10 * 60 * 1000;
+const IMAGE_UPLOAD_WINDOW_MS = 10 * 60 * 1000;
+const IMAGE_UPLOAD_IP_LIMIT = 60;
+const IMAGE_UPLOAD_MEMBER_LIMIT = 80;
 const TRANSPARENT_GIF_BUFFER = Buffer.from(
   "R0lGODlhAQABAPAAAAAAAAAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==",
   "base64"
@@ -392,9 +396,29 @@ export async function HEAD(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const ipLimit = consumeRateLimit({
+    scope: "upload-image:ip",
+    identifier: getClientIp(request),
+    limit: IMAGE_UPLOAD_IP_LIMIT,
+    windowMs: IMAGE_UPLOAD_WINDOW_MS,
+  });
+  if (!ipLimit.allowed) {
+    return createRateLimitResponse(ipLimit.retryAfterSec);
+  }
+
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: "未登录，无法上传图片" }, { status: 401 });
+  }
+
+  const memberLimit = consumeRateLimit({
+    scope: "upload-image:member",
+    identifier: session.sub,
+    limit: IMAGE_UPLOAD_MEMBER_LIMIT,
+    windowMs: IMAGE_UPLOAD_WINDOW_MS,
+  });
+  if (!memberLimit.allowed) {
+    return createRateLimitResponse(memberLimit.retryAfterSec);
   }
 
   const formData = await request.formData().catch(() => null);

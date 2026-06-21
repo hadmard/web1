@@ -2,8 +2,12 @@
 import { prisma } from "@/lib/prisma";
 import { issuePasswordResetForMember } from "@/lib/password-recovery";
 import { writeOperationLog } from "@/lib/operation-log";
+import { consumeRateLimit, createRateLimitResponse, getClientIp } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
+const PASSWORD_FORGOT_WINDOW_MS = 30 * 60 * 1000;
+const PASSWORD_FORGOT_IP_LIMIT = 5;
+const PASSWORD_FORGOT_ACCOUNT_LIMIT = 3;
 
 function normalizeAccount(value: unknown) {
   return typeof value === "string" ? value.trim().toLowerCase() : "";
@@ -13,11 +17,31 @@ const GENERIC_SUCCESS_MESSAGE = "如果账号存在且已配置找回邮箱，�
 
 export async function POST(request: NextRequest) {
   try {
+    const ipLimit = consumeRateLimit({
+      scope: "auth-password-forgot:ip",
+      identifier: getClientIp(request),
+      limit: PASSWORD_FORGOT_IP_LIMIT,
+      windowMs: PASSWORD_FORGOT_WINDOW_MS,
+    });
+    if (!ipLimit.allowed) {
+      return createRateLimitResponse(ipLimit.retryAfterSec);
+    }
+
     const body = await request.json().catch(() => ({}));
     const account = normalizeAccount(body?.account);
 
     if (!account) {
       return NextResponse.json({ error: "请输入账号。" }, { status: 400 });
+    }
+
+    const accountLimit = consumeRateLimit({
+      scope: "auth-password-forgot:account",
+      identifier: account,
+      limit: PASSWORD_FORGOT_ACCOUNT_LIMIT,
+      windowMs: PASSWORD_FORGOT_WINDOW_MS,
+    });
+    if (!accountLimit.allowed) {
+      return createRateLimitResponse(accountLimit.retryAfterSec);
     }
 
     const member = await prisma.member.findUnique({

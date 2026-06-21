@@ -5,8 +5,11 @@ import { normalizeRecoveryEmail } from "@/lib/password-recovery";
 import { prisma } from "@/lib/prisma";
 import { signToken } from "@/lib/auth";
 import { writeOperationLog } from "@/lib/operation-log";
+import { consumeRateLimit, createRateLimitResponse, getClientIp } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
+const REGISTER_WINDOW_MS = 30 * 60 * 1000;
+const REGISTER_IP_LIMIT = 10;
 
 function normalizeAccount(value: string) {
   return value.trim().toLowerCase();
@@ -14,6 +17,16 @@ function normalizeAccount(value: string) {
 
 export async function POST(request: NextRequest) {
   try {
+    const ipLimit = consumeRateLimit({
+      scope: "auth-register:ip",
+      identifier: getClientIp(request),
+      limit: REGISTER_IP_LIMIT,
+      windowMs: REGISTER_WINDOW_MS,
+    });
+    if (!ipLimit.allowed) {
+      return createRateLimitResponse(ipLimit.retryAfterSec);
+    }
+
     const body = await request.json().catch(() => ({}));
     const accountRaw = typeof body?.account === "string" ? body.account : "";
     const password = typeof body?.password === "string" ? body.password : "";

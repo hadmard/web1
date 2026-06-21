@@ -4,9 +4,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { signToken } from "@/lib/auth";
 import { asMemberType, ensureEffectiveMemberType } from "@/lib/member-access";
 import { prisma } from "@/lib/prisma";
+import { consumeRateLimit, createRateLimitResponse, getClientIp } from "@/lib/rate-limit";
 
 const MAX_FAILED_LOGIN = 5;
 const LOCK_MINUTES = 15;
+const LOGIN_WINDOW_MS = 10 * 60 * 1000;
+const LOGIN_IP_LIMIT = 20;
+const LOGIN_ACCOUNT_LIMIT = 10;
 
 function maskAccount(value: string) {
   const normalized = value.trim();
@@ -157,6 +161,26 @@ export async function POST(request: NextRequest) {
     });
     if (!account || !password) {
       return NextResponse.json({ error: "账号与密码必填" }, { status: 400 });
+    }
+
+    const ipLimit = consumeRateLimit({
+      scope: "auth-login:ip",
+      identifier: getClientIp(request),
+      limit: LOGIN_IP_LIMIT,
+      windowMs: LOGIN_WINDOW_MS,
+    });
+    if (!ipLimit.allowed) {
+      return createRateLimitResponse(ipLimit.retryAfterSec);
+    }
+
+    const accountLimit = consumeRateLimit({
+      scope: "auth-login:account",
+      identifier: account,
+      limit: LOGIN_ACCOUNT_LIMIT,
+      windowMs: LOGIN_WINDOW_MS,
+    });
+    if (!accountLimit.allowed) {
+      return createRateLimitResponse(accountLimit.retryAfterSec);
     }
 
     stage = "find_member";
