@@ -1,3 +1,5 @@
+"use client";
+
 import { getContentLocationLabel } from "@/lib/content-taxonomy";
 
 type Status = "draft" | "pending" | "approved" | "rejected";
