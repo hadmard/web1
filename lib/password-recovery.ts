@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from "crypto";
 import nodemailer from "nodemailer";
+import { PUBLIC_SITE_URL } from "@/lib/public-site-config";
 import { prisma } from "@/lib/prisma";
 
 const PASSWORD_RESET_TTL_MS = 30 * 60 * 1000;
@@ -28,8 +29,12 @@ export function canRequestPasswordReset(lastRequestedAt: Date | null | undefined
   return Date.now() - lastRequestedAt.getTime() >= PASSWORD_RESET_COOLDOWN_MS;
 }
 
-export function buildPasswordResetUrl(origin: string, token: string) {
-  return `${origin.replace(/\/$/, "")}/membership/reset-password?token=${encodeURIComponent(token)}`;
+export function getPasswordResetOrigin() {
+  return PUBLIC_SITE_URL.replace(/\/$/, "");
+}
+
+export function buildPasswordResetUrl(token: string) {
+  return `${getPasswordResetOrigin()}/membership/reset-password?token=${encodeURIComponent(token)}`;
 }
 
 type ResettableMember = {
@@ -147,7 +152,6 @@ function buildPasswordResetEmailHtml(input: SendPasswordResetEmailInput) {
 
 export async function issuePasswordResetForMember(input: {
   member: ResettableMember;
-  origin: string;
 }): Promise<PasswordResetIssueResult> {
   const deliveryEmail =
     normalizeRecoveryEmail(input.member.recoveryEmail) ||
@@ -181,7 +185,7 @@ export async function issuePasswordResetForMember(input: {
     },
   });
 
-  const resetUrl = buildPasswordResetUrl(input.origin, token);
+  const resetUrl = buildPasswordResetUrl(token);
   const delivery = await sendPasswordResetEmail(
     {
       to: deliveryEmail,

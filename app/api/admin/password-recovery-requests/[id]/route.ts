@@ -6,17 +6,6 @@ import { writeOperationLog } from "@/lib/operation-log";
 
 export const dynamic = "force-dynamic";
 
-function getRequestOrigin(request: NextRequest) {
-  const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
-  const forwardedProto = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
-  if (forwardedHost && forwardedProto) {
-    return `${forwardedProto}://${forwardedHost}`;
-  }
-  const origin = request.headers.get("origin")?.trim();
-  if (origin) return origin;
-  return request.nextUrl.origin;
-}
-
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -112,7 +101,6 @@ export async function PATCH(
 
       const result = await issuePasswordResetForMember({
         member,
-        origin: getRequestOrigin(request),
       });
 
       if (!result.ok) {

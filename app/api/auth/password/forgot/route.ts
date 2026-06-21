@@ -9,17 +9,6 @@ function normalizeAccount(value: unknown) {
   return typeof value === "string" ? value.trim().toLowerCase() : "";
 }
 
-function getRequestOrigin(request: NextRequest) {
-  const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
-  const forwardedProto = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
-  if (forwardedHost && forwardedProto) {
-    return `${forwardedProto}://${forwardedHost}`;
-  }
-  const origin = request.headers.get("origin")?.trim();
-  if (origin) return origin;
-  return request.nextUrl.origin;
-}
-
 const GENERIC_SUCCESS_MESSAGE = "如果账号存在且已配置找回邮箱，系统会发送密码重置说明。";
 
 export async function POST(request: NextRequest) {
@@ -51,7 +40,6 @@ export async function POST(request: NextRequest) {
 
     const result = await issuePasswordResetForMember({
       member,
-      origin: getRequestOrigin(request),
     });
 
     if (!result.ok) {

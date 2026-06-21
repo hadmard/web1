@@ -28,6 +28,7 @@ const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
 const PUBLIC_UPLOADS_DIR = path.resolve(process.cwd(), "public", "uploads");
 const LEGACY_FETCH_TIMEOUT_MS = 4000;
 const REMOTE_UPLOAD_TIMEOUT_MS = 8000;
+const MAX_REMOTE_UPLOAD_REDIRECTS = 5;
 const LEGACY_FAILURE_TTL_MS = 10 * 60 * 1000;
 const TRANSPARENT_GIF_BUFFER = Buffer.from(
   "R0lGODlhAQABAPAAAAAAAAAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==",
@@ -144,6 +145,11 @@ async function isPublicRemoteHost(hostname: string) {
   } catch {
     return false;
   }
+}
+
+async function isAllowedRemoteImageUrl(remoteUrl: URL) {
+  if (!["http:", "https:"].includes(remoteUrl.protocol)) return false;
+  return await isPublicRemoteHost(remoteUrl.hostname);
 }
 
 function resolveExtensionFromUrl(remoteUrl: URL, mimeType: string) {
@@ -286,25 +292,57 @@ async function uploadRemoteImage(remoteUrlValue: string, folderRaw: string) {
     return NextResponse.json({ error: "远程图片地址无效" }, { status: 400 });
   }
 
-  if (!(await isPublicRemoteHost(remoteUrl.hostname))) {
+  if (!(await isAllowedRemoteImageUrl(remoteUrl))) {
     return NextResponse.json({ error: "仅允许转存公网图片地址" }, { status: 400 });
   }
 
-  let response: Response;
-  const { signal } = createTimeoutSignal(REMOTE_UPLOAD_TIMEOUT_MS);
+  let currentUrl = remoteUrl;
+  let response: Response | null = null;
+  const { signal, clear } = createTimeoutSignal(REMOTE_UPLOAD_TIMEOUT_MS);
   try {
-    response = await fetch(remoteUrl, {
-      headers: {
-        Accept: "image/*,*/*;q=0.8",
-        "User-Agent": "Mozilla/5.0 (compatible; ZhengmuImageFetcher/1.0)",
-        Referer: `${remoteUrl.origin}/`,
-      },
-      cache: "no-store",
-      redirect: "follow",
-      signal,
-    });
+    for (let redirectCount = 0; redirectCount <= MAX_REMOTE_UPLOAD_REDIRECTS; redirectCount += 1) {
+      response = await fetch(currentUrl, {
+        headers: {
+          Accept: "image/*,*/*;q=0.8",
+          "User-Agent": "Mozilla/5.0 (compatible; ZhengmuImageFetcher/1.0)",
+          Referer: `${currentUrl.origin}/`,
+        },
+        cache: "no-store",
+        redirect: "manual",
+        signal,
+      });
+
+      if (response.status >= 300 && response.status < 400) {
+        const location = response.headers.get("location");
+        if (!location) {
+          clear();
+          return NextResponse.json({ error: "远程图片跳转地址无效" }, { status: 400 });
+        }
+
+        const nextUrl = sanitizeRemoteImageUrl(new URL(location, currentUrl).toString());
+        if (!nextUrl || !(await isAllowedRemoteImageUrl(nextUrl))) {
+          clear();
+          return NextResponse.json({ error: "远程图片跳转到了非公网地址" }, { status: 400 });
+        }
+
+        currentUrl = nextUrl;
+        continue;
+      }
+
+      break;
+    }
   } catch {
+    clear();
     return NextResponse.json({ error: "远程图片下载失败" }, { status: 400 });
+  }
+  clear();
+
+  if (!response) {
+    return NextResponse.json({ error: "远程图片下载失败" }, { status: 400 });
+  }
+
+  if (response.status >= 300 && response.status < 400) {
+    return NextResponse.json({ error: "远程图片跳转次数过多" }, { status: 400 });
   }
 
   if (!response.ok) {
@@ -330,7 +368,7 @@ async function uploadRemoteImage(remoteUrlValue: string, folderRaw: string) {
     return NextResponse.json({ error: "远程图片文件过大" }, { status: 400 });
   }
 
-  const payload = await writeUploadedImage(bytes, folderRaw, resolveExtensionFromUrl(remoteUrl, contentType));
+  const payload = await writeUploadedImage(bytes, folderRaw, resolveExtensionFromUrl(currentUrl, contentType));
   return NextResponse.json(payload);
 }
 
