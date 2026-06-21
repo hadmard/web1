@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from "crypto";
+import { createHash, randomBytes, randomUUID } from "crypto";
 import nodemailer from "nodemailer";
 import { PUBLIC_SITE_URL } from "@/lib/public-site-config";
 import { prisma } from "@/lib/prisma";
@@ -48,6 +48,7 @@ type SendPasswordResetEmailInput = {
   to: string;
   account: string;
   resetUrl: string;
+  requestId?: string;
 };
 
 type PasswordResetEmailConfig =
@@ -79,6 +80,34 @@ type PasswordResetIssueResult =
   | { ok: false; reason: "missing_recovery_email" }
   | { ok: false; reason: "cooldown" }
   | { ok: false; reason: "email_service_unavailable"; missingConfig: string[] };
+
+function maskEmail(value: string) {
+  const normalized = value.trim().toLowerCase();
+  const [localPart, domain = ""] = normalized.split("@");
+  if (!localPart) return domain ? `***@${domain}` : "***";
+  const safeLocal =
+    localPart.length <= 2
+      ? `${localPart.slice(0, 1)}***`
+      : `${localPart.slice(0, 1)}***${localPart.slice(-1)}`;
+  return domain ? `${safeLocal}@${domain}` : safeLocal;
+}
+
+function maskAccount(value: string) {
+  const normalized = value.trim();
+  if (!normalized) return "";
+  if (normalized.includes("@")) return maskEmail(normalized);
+  if (normalized.length <= 2) return `${normalized.slice(0, 1)}***`;
+  if (normalized.length <= 4) return `${normalized.slice(0, 1)}***${normalized.slice(-1)}`;
+  return `${normalized.slice(0, 2)}***${normalized.slice(-2)}`;
+}
+
+function logPasswordRecoveryEvent(
+  level: "info" | "warn" | "error",
+  event: string,
+  payload: Record<string, unknown>
+) {
+  console[level](event, payload);
+}
 
 function parseBooleanEnv(value: string | undefined) {
   const normalized = value?.trim().toLowerCase();
@@ -141,8 +170,8 @@ function getPasswordResetEmailConfig(): PasswordResetEmailConfig {
 function buildPasswordResetEmailHtml(input: SendPasswordResetEmailInput) {
   return `
     <div style="font-family:Arial,'PingFang SC','Microsoft YaHei',sans-serif;line-height:1.7;color:#1f2937">
-      <p>您好，</p>
-      <p>我们收到账号 <strong>${escapeHtml(input.account)}</strong> 的密码重置申请。</p>
+      <p>您好：</p>
+      <p>我们收到了账号 <strong>${escapeHtml(input.account)}</strong> 的密码重置申请。</p>
       <p>请在 30 分钟内点击下面的链接重设密码：</p>
       <p><a href="${input.resetUrl}">${input.resetUrl}</a></p>
       <p>如果这不是您的操作，请忽略这封邮件。</p>
@@ -153,6 +182,7 @@ function buildPasswordResetEmailHtml(input: SendPasswordResetEmailInput) {
 export async function issuePasswordResetForMember(input: {
   member: ResettableMember;
 }): Promise<PasswordResetIssueResult> {
+  const requestId = randomUUID();
   const deliveryEmail =
     normalizeRecoveryEmail(input.member.recoveryEmail) ||
     (input.member.email.includes("@") ? normalizeRecoveryEmail(input.member.email) : null);
@@ -191,6 +221,7 @@ export async function issuePasswordResetForMember(input: {
       to: deliveryEmail,
       account: input.member.email,
       resetUrl,
+      requestId,
     },
     emailConfig
   );
@@ -255,10 +286,15 @@ export async function sendPasswordResetEmail(
     throw new Error(`密码重置邮件服务未配置: ${config.missing.join(", ")}`);
   }
 
-  console.info("[password-recovery] debug_reset_link", {
-    account: input.account,
-    to: input.to,
-    resetUrl: input.resetUrl,
+  logPasswordRecoveryEvent("info", "[password-recovery] debug_reset_link", {
+    requestId: input.requestId ?? "n/a",
+    stage: "send_password_reset_email",
+    success: true,
+    mode: config.mode,
+    accountMasked: maskAccount(input.account),
+    deliveryEmailMasked: maskEmail(input.to),
+    resetUrlGenerated: Boolean(input.resetUrl),
+    tokenIncluded: input.resetUrl.includes("token="),
   });
 
   return { mode: "debug", resetUrl: input.resetUrl };

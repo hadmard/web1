@@ -1,4 +1,5 @@
-﻿import bcrypt from "bcryptjs";
+import { randomUUID } from "crypto";
+import bcrypt from "bcryptjs";
 import { NextRequest, NextResponse } from "next/server";
 import { signToken } from "@/lib/auth";
 import { asMemberType, ensureEffectiveMemberType } from "@/lib/member-access";
@@ -7,7 +8,33 @@ import { prisma } from "@/lib/prisma";
 const MAX_FAILED_LOGIN = 5;
 const LOCK_MINUTES = 15;
 
-async function findMemberForLogin(account: string) {
+function maskAccount(value: string) {
+  const normalized = value.trim();
+  if (!normalized) return "";
+
+  if (normalized.includes("@")) {
+    const [localPart, domain = ""] = normalized.split("@");
+    const safeLocal =
+      localPart.length <= 2
+        ? `${localPart.slice(0, 1)}***`
+        : `${localPart.slice(0, 1)}***${localPart.slice(-1)}`;
+    return domain ? `${safeLocal}@${domain}` : safeLocal;
+  }
+
+  if (normalized.length <= 2) return `${normalized.slice(0, 1)}***`;
+  if (normalized.length <= 4) return `${normalized.slice(0, 1)}***${normalized.slice(-1)}`;
+  return `${normalized.slice(0, 2)}***${normalized.slice(-2)}`;
+}
+
+function logLoginEvent(
+  level: "info" | "warn" | "error",
+  event: string,
+  payload: Record<string, unknown>
+) {
+  console[level](event, payload);
+}
+
+async function findMemberForLogin(account: string, requestId: string) {
   try {
     return await prisma.member.findUnique({
       where: { email: account },
@@ -24,8 +51,10 @@ async function findMemberForLogin(account: string) {
       },
     });
   } catch (error) {
-    console.warn("[login] find_member_fallback", {
-      account,
+    logLoginEvent("warn", "[login] find_member_fallback", {
+      requestId,
+      stage: "find_member",
+      accountMasked: maskAccount(account),
       message: error instanceof Error ? error.message : String(error),
     });
     const member = await prisma.member.findUnique({
@@ -50,7 +79,7 @@ async function findMemberForLogin(account: string) {
   }
 }
 
-async function updateLoginFailure(memberId: string, failed: number, shouldLock: boolean, now: Date) {
+async function updateLoginFailure(memberId: string, failed: number, shouldLock: boolean, now: Date, requestId: string) {
   try {
     await prisma.member.update({
       where: { id: memberId },
@@ -60,14 +89,16 @@ async function updateLoginFailure(memberId: string, failed: number, shouldLock: 
       },
     });
   } catch (error) {
-    console.warn("[login] update_failed_login_fallback", {
+    logLoginEvent("warn", "[login] update_failed_login_fallback", {
+      requestId,
+      stage: "update_failed_login_count",
       memberId,
       message: error instanceof Error ? error.message : String(error),
     });
   }
 }
 
-async function updateLoginSuccess(memberId: string, now: Date) {
+async function updateLoginSuccess(memberId: string, now: Date, requestId: string) {
   try {
     await prisma.member.update({
       where: { id: memberId },
@@ -78,7 +109,9 @@ async function updateLoginSuccess(memberId: string, now: Date) {
       },
     });
   } catch (error) {
-    console.warn("[login] update_login_success_fallback", {
+    logLoginEvent("warn", "[login] update_login_success_fallback", {
+      requestId,
+      stage: "update_login_success",
       memberId,
       message: error instanceof Error ? error.message : String(error),
     });
@@ -90,7 +123,9 @@ async function updateLoginSuccess(memberId: string, now: Date) {
         },
       });
     } catch (innerError) {
-      console.warn("[login] update_last_login_failed", {
+      logLoginEvent("warn", "[login] update_last_login_failed", {
+        requestId,
+        stage: "update_last_login_success_fallback",
         memberId,
         message: innerError instanceof Error ? innerError.message : String(innerError),
       });
@@ -99,6 +134,7 @@ async function updateLoginSuccess(memberId: string, now: Date) {
 }
 
 export async function POST(request: NextRequest) {
+  const requestId = randomUUID();
   let stage = "parse_body";
   let account = "";
 
@@ -113,14 +149,25 @@ export async function POST(request: NextRequest) {
     const password = typeof body?.password === "string" ? body.password : "";
 
     account = accountRaw.trim();
-    console.info("[login] request_received", { account });
+    logLoginEvent("info", "[login] request_received", {
+      requestId,
+      stage,
+      success: false,
+      accountMasked: maskAccount(account),
+    });
     if (!account || !password) {
       return NextResponse.json({ error: "账号与密码必填" }, { status: 400 });
     }
 
     stage = "find_member";
-    const member = await findMemberForLogin(account);
-    console.info("[login] find_member_result", { account, found: Boolean(member) });
+    const member = await findMemberForLogin(account, requestId);
+    logLoginEvent("info", "[login] find_member_result", {
+      requestId,
+      stage,
+      success: Boolean(member),
+      found: Boolean(member),
+      accountMasked: maskAccount(account),
+    });
     if (!member) {
       return NextResponse.json({ error: "账号或密码错误" }, { status: 401 });
     }
@@ -132,12 +179,17 @@ export async function POST(request: NextRequest) {
 
     stage = "bcrypt_compare";
     const ok = await bcrypt.compare(password, member.passwordHash);
-    console.info("[login] bcrypt_compare_result", { account, ok });
+    logLoginEvent("info", "[login] bcrypt_compare_result", {
+      requestId,
+      stage,
+      success: ok,
+      accountMasked: maskAccount(account),
+    });
     if (!ok) {
       stage = "update_failed_login_count";
       const failed = (member.failedLoginCount ?? 0) + 1;
       const shouldLock = failed >= MAX_FAILED_LOGIN;
-      await updateLoginFailure(member.id, failed, shouldLock, now);
+      await updateLoginFailure(member.id, failed, shouldLock, now, requestId);
       return NextResponse.json({ error: "账号或密码错误" }, { status: 401 });
     }
 
@@ -152,7 +204,7 @@ export async function POST(request: NextRequest) {
     const memberType = asMemberType(effective.memberType);
 
     stage = "update_login_success";
-    await updateLoginSuccess(member.id, now);
+    await updateLoginSuccess(member.id, now, requestId);
 
     stage = "sign_token";
     const token = await signToken({
@@ -180,12 +232,22 @@ export async function POST(request: NextRequest) {
       path: "/",
     });
 
+    logLoginEvent("info", "[login] auth_issued", {
+      requestId,
+      stage,
+      success: true,
+      accountMasked: maskAccount(account),
+      tokenIssued: Boolean(token),
+    });
+
     return res;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error("[login] fatal_error", {
-      account,
+    logLoginEvent("error", "[login] fatal_error", {
+      requestId,
       stage,
+      success: false,
+      accountMasked: maskAccount(account),
       message,
       stack: error instanceof Error ? error.stack : undefined,
     });
