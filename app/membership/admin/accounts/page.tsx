@@ -11,6 +11,7 @@ type MemberRow = {
   role: string | null;
   memberType: string;
   canManageMembers: boolean;
+  registeredAt: string | null;
   createdAt: string;
   enterprise?: {
     id: string;
@@ -30,6 +31,20 @@ type AdminVisibleRow = {
   enterpriseName?: string | null;
   brandName?: string | null;
 };
+
+function formatRegistrationTime(value: string | null | undefined) {
+  if (!value) return "--";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "--";
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day} ${hours}:${minutes}`;
+}
 
 export default function AdminAccountsPage() {
   const [role, setRole] = useState<string | null>(null);
@@ -431,6 +446,7 @@ export default function AdminAccountsPage() {
                   <th className="text-left py-2">找回邮箱</th>
                   <th className="text-left py-2">角色</th>
                   <th className="text-left py-2">会员类型</th>
+                  <th className="text-left py-2">注册时间</th>
                   <th className="text-left py-2">操作</th>
               </tr>
             </thead>
@@ -460,6 +476,7 @@ export default function AdminAccountsPage() {
                   <td className="py-2 pr-4 text-muted">{m.recoveryEmail || "未设置"}</td>
                   <td className="py-2 pr-4 text-muted">{m.role === "SUPER_ADMIN" ? "主管理员" : m.role === "ADMIN" ? "子管理员" : "会员"}</td>
                   <td className="py-2 pr-4 text-muted">{m.memberType}</td>
+                  <td className="py-2 pr-4 text-muted whitespace-nowrap">{formatRegistrationTime(m.registeredAt)}</td>
                   <td className="py-2 pr-4">
                     <div className="flex gap-3">
                       <button

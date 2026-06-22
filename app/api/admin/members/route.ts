@@ -34,6 +34,7 @@ function serializeMember(
     canEditOwnContent: boolean;
     canEditMemberContent: boolean;
     canEditAllContent: boolean;
+    registeredAt: Date | null;
     createdAt: Date;
     enterprise?: {
       id: string;
@@ -48,6 +49,7 @@ function serializeMember(
     ...merged,
     account: member.email,
     recoveryEmail: member.recoveryEmail ?? null,
+    registeredAt: member.registeredAt ? member.registeredAt.toISOString() : null,
     enterprise: member.enterprise ?? null,
   };
 }
@@ -91,6 +93,7 @@ export async function GET(request: NextRequest) {
       canEditOwnContent: true,
       canEditMemberContent: true,
       canEditAllContent: true,
+      registeredAt: true,
       createdAt: true,
       enterprise: {
         select: {
@@ -216,6 +219,7 @@ export async function POST(request: NextRequest) {
         canEditOwnContent: true,
         canEditMemberContent: true,
         canEditAllContent: true,
+        registeredAt: true,
         createdAt: true,
       },
     });

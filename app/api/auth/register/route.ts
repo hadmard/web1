@@ -83,6 +83,7 @@ export async function POST(request: NextRequest) {
         memberType: "personal",
         rankingWeight: 0,
         passwordHash,
+        registeredAt: new Date(),
       },
       select: {
         id: true,
