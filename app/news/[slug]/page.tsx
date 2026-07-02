@@ -17,6 +17,7 @@ import { prisma } from "@/lib/prisma";
 import { articleOrderByPinnedLatest } from "@/lib/articles";
 import { getRecommendedNews, isValidKeywordCandidate } from "@/lib/news-keywords-v2";
 import { resolveArticleSourceType } from "@/lib/article-source";
+import { decodeHtmlEntities } from "@/lib/brand-content";
 import { decodeEscapedUnicode } from "@/lib/text";
 import { NEWS_AFTERMARKET_SUBCATEGORY, getNewsAftermarketConfig, parseProductRecommendations } from "@/lib/news-aftermarket";
 import {
@@ -125,7 +126,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const displayTitle = decodeEscapedUnicode(article.title || "");
   const displayExcerpt = decodeEscapedUnicode(article.excerpt ?? "");
-  const displayContent = decodeEscapedUnicode(article.content);
+  const displayContent = normalizeNewsArticleContent(article.content);
   const description =
     previewText(displayExcerpt || displayContent, 80) ||
     `${displayTitle.trim()}，整木行业资讯解读`;
@@ -204,6 +205,32 @@ function stripNewsLeadingOverviewHeading(html?: string | null) {
     /^\s*<(h[1-6]|p)[^>]*>\s*(?:概述|导语|摘要|前言|概况)\s*<\/\1>\s*/i,
     "",
   );
+}
+
+const ESCAPED_NEWS_TAG_PATTERN = /&lt;(h1|h2|h3|p|a|img|ul|ol|li)\b/i;
+
+function repairEscapedNewsStructuredHtml(html?: string | null) {
+  const source = (html || "").trim();
+  if (!source) return "";
+
+  const wrappedMatch = source.match(
+    /^\s*<section>\s*<h3>([^<]{1,80})<\/h3>\s*<p>([\s\S]+)<\/p>\s*<\/section>\s*$/i,
+  );
+  if (!wrappedMatch) return source;
+
+  const escapedInnerHtml = (wrappedMatch[2] || "").trim();
+  if (!ESCAPED_NEWS_TAG_PATTERN.test(escapedInnerHtml)) return source;
+
+  const decodedInnerHtml = decodeHtmlEntities(escapedInnerHtml).trim();
+  if (!decodedInnerHtml || !/<(h1|h2|h3|p|a|img|ul|ol|li)\b/i.test(decodedInnerHtml)) {
+    return source;
+  }
+
+  return decodedInnerHtml;
+}
+
+function normalizeNewsArticleContent(rawContent?: string | null) {
+  return repairEscapedNewsStructuredHtml(decodeEscapedUnicode(rawContent || ""));
 }
 
 function normalizeArticleSourceValue(value?: string | null) {
@@ -361,7 +388,7 @@ export default async function ArticlePage({ params, searchParams }: Props) {
   const displayConceptSummary = decodeEscapedUnicode(article.conceptSummary ?? "");
   const displayAuthor = decodeEscapedUnicode(article.displayAuthor ?? "");
   const displaySource = decodeEscapedUnicode(article.source ?? "");
-  const displayContent = decodeEscapedUnicode(article.content);
+  const displayContent = normalizeNewsArticleContent(article.content);
 
   const articleSegment = getArticleSegment(article);
   const currentSegment = normalizeNewsSegment(slug);
