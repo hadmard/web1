@@ -43,7 +43,6 @@ export const metadata: Metadata = {
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
   },
-  alternates: { canonical: absoluteUrl("/") },
   manifest: "/manifest.webmanifest",
   icons: {
     icon: "/icon.png?v=20260316",

@@ -1,8 +1,16 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { JsonLd } from "@/components/JsonLd";
 import { ENGINEER_CATEGORY_LABELS, HUADIAN_DEFINITION } from "@/lib/huadianbang";
 import { getSiteVisualSettings } from "@/lib/site-visual-settings";
+import { buildHuadianMetadata } from "../metadata";
+
+export const metadata: Metadata = buildHuadianMetadata(
+  "华点榜配套商推荐",
+  "华点榜配套商推荐页，展示五金、木皮、板材等配套商分类入口。",
+  "/huadianbang/partner",
+);
 
 export default async function HuadianPartnerPage() {
   const visualSettings = await getSiteVisualSettings();

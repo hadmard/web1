@@ -28,6 +28,14 @@ const sampleLegacyArticleRedirects = [
   { source: "/news/hangye/130005.html", destination: "/news/ye-ji-ni-liu-er-shang-san-ke-shu-jing-li-run-da-zhang-chao-90-fang-shui-cai-liao" },
 ];
 
+function legacyArchiveRedirect(source, destination) {
+  return {
+    source,
+    destination,
+    statusCode: 301,
+  };
+}
+
 const nextConfig = {
   reactStrictMode: true,
   async redirects() {
@@ -42,96 +50,24 @@ const nextConfig = {
         destination,
         statusCode: 301,
       })),
-      {
-        source: "/list-:id.html",
-        destination: "https://jiu.cnzhengmu.com/list-:id.html",
-        permanent: false,
-      },
-      {
-        source: "/list-:id-:page.html",
-        destination: "https://jiu.cnzhengmu.com/list-:id-:page.html",
-        permanent: false,
-      },
-      {
-        source: "/about",
-        destination: "https://jiu.cnzhengmu.com/about/",
-        permanent: false,
-      },
-      {
-        source: "/about/",
-        destination: "https://jiu.cnzhengmu.com/about/",
-        permanent: false,
-      },
-      {
-        source: "/gonggao",
-        destination: "https://jiu.cnzhengmu.com/gonggao/",
-        permanent: false,
-      },
-      {
-        source: "/gonggao/",
-        destination: "https://jiu.cnzhengmu.com/gonggao/",
-        permanent: false,
-      },
-      {
-        source: "/company/:id.html",
-        destination: "https://jiu.cnzhengmu.com/company/:id.html",
-        permanent: false,
-      },
-      {
-        source: "/company/view-:id.html",
-        destination: "https://jiu.cnzhengmu.com/company/:id.html",
-        permanent: false,
-      },
-      {
-        source: "/company/:id",
-        destination: "https://jiu.cnzhengmu.com/company/:id.html",
-        permanent: false,
-      },
-      {
-        source: "/company_introduction/:id.html",
-        destination: "https://jiu.cnzhengmu.com/company_introduction/:id.html",
-        permanent: false,
-      },
-      {
-        source: "/company_video/:id.html",
-        destination: "https://jiu.cnzhengmu.com/company_video/:id.html",
-        permanent: false,
-      },
-      {
-        source: "/company_news/:id.html",
-        destination: "https://jiu.cnzhengmu.com/company_news/:id.html",
-        permanent: false,
-      },
-      {
-        source: "/company_product/:id.html",
-        destination: "https://jiu.cnzhengmu.com/company_product/:id.html",
-        permanent: false,
-      },
-      {
-        source: "/company_investment/:id.html",
-        destination: "https://jiu.cnzhengmu.com/company_investment/:id.html",
-        permanent: false,
-      },
-      {
-        source: "/company_vr/:id.html",
-        destination: "https://jiu.cnzhengmu.com/company_vr/:id.html",
-        permanent: false,
-      },
-      {
-        source: "/company_qualification/:id.html",
-        destination: "https://jiu.cnzhengmu.com/company_qualification/:id.html",
-        permanent: false,
-      },
-      {
-        source: "/company_recruit/:id.html",
-        destination: "https://jiu.cnzhengmu.com/company_recruit/:id.html",
-        permanent: false,
-      },
-      {
-        source: "/company_contact/:id.html",
-        destination: "https://jiu.cnzhengmu.com/company_contact/:id.html",
-        permanent: false,
-      },
+      legacyArchiveRedirect("/list-:id.html", "https://jiu.cnzhengmu.com/list-:id.html"),
+      legacyArchiveRedirect("/list-:id-:page.html", "https://jiu.cnzhengmu.com/list-:id-:page.html"),
+      legacyArchiveRedirect("/about", "https://jiu.cnzhengmu.com/about/"),
+      legacyArchiveRedirect("/about/", "https://jiu.cnzhengmu.com/about/"),
+      legacyArchiveRedirect("/gonggao", "https://jiu.cnzhengmu.com/gonggao/"),
+      legacyArchiveRedirect("/gonggao/", "https://jiu.cnzhengmu.com/gonggao/"),
+      legacyArchiveRedirect("/company/:id.html", "https://jiu.cnzhengmu.com/company/:id.html"),
+      legacyArchiveRedirect("/company/view-:id.html", "https://jiu.cnzhengmu.com/company/:id.html"),
+      legacyArchiveRedirect("/company/:id", "https://jiu.cnzhengmu.com/company/:id.html"),
+      legacyArchiveRedirect("/company_introduction/:id.html", "https://jiu.cnzhengmu.com/company_introduction/:id.html"),
+      legacyArchiveRedirect("/company_video/:id.html", "https://jiu.cnzhengmu.com/company_video/:id.html"),
+      legacyArchiveRedirect("/company_news/:id.html", "https://jiu.cnzhengmu.com/company_news/:id.html"),
+      legacyArchiveRedirect("/company_product/:id.html", "https://jiu.cnzhengmu.com/company_product/:id.html"),
+      legacyArchiveRedirect("/company_investment/:id.html", "https://jiu.cnzhengmu.com/company_investment/:id.html"),
+      legacyArchiveRedirect("/company_vr/:id.html", "https://jiu.cnzhengmu.com/company_vr/:id.html"),
+      legacyArchiveRedirect("/company_qualification/:id.html", "https://jiu.cnzhengmu.com/company_qualification/:id.html"),
+      legacyArchiveRedirect("/company_recruit/:id.html", "https://jiu.cnzhengmu.com/company_recruit/:id.html"),
+      legacyArchiveRedirect("/company_contact/:id.html", "https://jiu.cnzhengmu.com/company_contact/:id.html"),
       {
         source: "/news/baitai/:slug.html",
         destination: "/news/all",
@@ -152,119 +88,47 @@ const nextConfig = {
         destination: "/news/all",
         statusCode: 301,
       },
-      {
-        source: "/news/:section/:id.html",
-        destination: "https://jiu.cnzhengmu.com/news/:section/:id.html",
-        permanent: false,
-      },
+      legacyArchiveRedirect("/news/:section/:id.html", "https://jiu.cnzhengmu.com/news/:section/:id.html"),
       ...legacyNewsStaticSections.flatMap((section) => [
-        {
-          source: `/news/${section}`,
-          destination: `https://jiu.cnzhengmu.com/news/${section}/`,
-          permanent: false,
-        },
-        {
-          source: `/news/${section}/`,
-          destination: `https://jiu.cnzhengmu.com/news/${section}/`,
-          permanent: false,
-        },
+        legacyArchiveRedirect(`/news/${section}`, `https://jiu.cnzhengmu.com/news/${section}/`),
+        legacyArchiveRedirect(`/news/${section}/`, `https://jiu.cnzhengmu.com/news/${section}/`),
       ]),
       ...legacyNewsSectionAliasRedirects.flatMap(({ section, destination }) => [
-        {
-          source: `/news/${section}`,
-          destination,
-          permanent: false,
-        },
-        {
-          source: `/news/${section}/`,
-          destination,
-          permanent: false,
-        },
+        destination.startsWith("https://jiu.cnzhengmu.com")
+          ? legacyArchiveRedirect(`/news/${section}`, destination)
+          : {
+              source: `/news/${section}`,
+              destination,
+              permanent: false,
+            },
+        destination.startsWith("https://jiu.cnzhengmu.com")
+          ? legacyArchiveRedirect(`/news/${section}/`, destination)
+          : {
+              source: `/news/${section}/`,
+              destination,
+              permanent: false,
+            },
       ]),
-      {
-        source: "/news/:id.html",
-        destination: "https://jiu.cnzhengmu.com/news/:id.html",
-        permanent: false,
-      },
-      {
-        source: "/zhanhui",
-        destination: "https://jiu.cnzhengmu.com/zhanhui/",
-        permanent: false,
-      },
-      {
-        source: "/zhanhui/",
-        destination: "https://jiu.cnzhengmu.com/zhanhui/",
-        permanent: false,
-      },
-      {
-        source: "/zhanhui/:section/:id.html",
-        destination: "https://jiu.cnzhengmu.com/zhanhui/:section/:id.html",
-        permanent: false,
-      },
-      {
-        source: "/zhanhui/:section",
-        destination: "https://jiu.cnzhengmu.com/zhanhui/:section/",
-        permanent: false,
-      },
-      {
-        source: "/zhanhui/:section/",
-        destination: "https://jiu.cnzhengmu.com/zhanhui/:section/",
-        permanent: false,
-      },
-      {
-        source: "/shangxueyuan/:section/:id.html",
-        destination: "https://jiu.cnzhengmu.com/shangxueyuan/:section/:id.html",
-        permanent: false,
-      },
-      {
-        source: "/shangxueyuan",
-        destination: "https://jiu.cnzhengmu.com/shangxueyuan/",
-        permanent: false,
-      },
-      {
-        source: "/shangxueyuan/",
-        destination: "https://jiu.cnzhengmu.com/shangxueyuan/",
-        permanent: false,
-      },
+      legacyArchiveRedirect("/news/:id.html", "https://jiu.cnzhengmu.com/news/:id.html"),
+      legacyArchiveRedirect("/zhanhui", "https://jiu.cnzhengmu.com/zhanhui/"),
+      legacyArchiveRedirect("/zhanhui/", "https://jiu.cnzhengmu.com/zhanhui/"),
+      legacyArchiveRedirect("/zhanhui/:section/:id.html", "https://jiu.cnzhengmu.com/zhanhui/:section/:id.html"),
+      legacyArchiveRedirect("/zhanhui/:section", "https://jiu.cnzhengmu.com/zhanhui/:section/"),
+      legacyArchiveRedirect("/zhanhui/:section/", "https://jiu.cnzhengmu.com/zhanhui/:section/"),
+      legacyArchiveRedirect("/shangxueyuan/:section/:id.html", "https://jiu.cnzhengmu.com/shangxueyuan/:section/:id.html"),
+      legacyArchiveRedirect("/shangxueyuan", "https://jiu.cnzhengmu.com/shangxueyuan/"),
+      legacyArchiveRedirect("/shangxueyuan/", "https://jiu.cnzhengmu.com/shangxueyuan/"),
       ...legacyAcademySections.flatMap((section) => [
-        {
-          source: `/shangxueyuan/${section}`,
-          destination: `https://jiu.cnzhengmu.com/shangxueyuan/${section}/`,
-          permanent: false,
-        },
-        {
-          source: `/shangxueyuan/${section}/`,
-          destination: `https://jiu.cnzhengmu.com/shangxueyuan/${section}/`,
-          permanent: false,
-        },
+        legacyArchiveRedirect(`/shangxueyuan/${section}`, `https://jiu.cnzhengmu.com/shangxueyuan/${section}/`),
+        legacyArchiveRedirect(`/shangxueyuan/${section}/`, `https://jiu.cnzhengmu.com/shangxueyuan/${section}/`),
       ]),
-      {
-        source: "/zhuanti",
-        destination: "https://jiu.cnzhengmu.com/zhuanti/shanghaijianbohui/",
-        permanent: false,
-      },
-      {
-        source: "/zhuanti/",
-        destination: "https://jiu.cnzhengmu.com/zhuanti/shanghaijianbohui/",
-        permanent: false,
-      },
+      legacyArchiveRedirect("/zhuanti", "https://jiu.cnzhengmu.com/zhuanti/shanghaijianbohui/"),
+      legacyArchiveRedirect("/zhuanti/", "https://jiu.cnzhengmu.com/zhuanti/shanghaijianbohui/"),
       ...legacyTopicSections.flatMap((section) => [
-        {
-          source: `/zhuanti/${section}`,
-          destination: `https://jiu.cnzhengmu.com/zhuanti/${section}/`,
-          permanent: false,
-        },
-        {
-          source: `/zhuanti/${section}/`,
-          destination: `https://jiu.cnzhengmu.com/zhuanti/${section}/`,
-          permanent: false,
-        },
+        legacyArchiveRedirect(`/zhuanti/${section}`, `https://jiu.cnzhengmu.com/zhuanti/${section}/`),
+        legacyArchiveRedirect(`/zhuanti/${section}/`, `https://jiu.cnzhengmu.com/zhuanti/${section}/`),
       ]),
-      {
-        source: "/platform/:path*",
-        destination: "https://jiu.cnzhengmu.com/platform/:path*",
-        permanent: false,
-      },
+      legacyArchiveRedirect("/platform/:path*", "https://jiu.cnzhengmu.com/platform/:path*"),
     ];
   },
 };

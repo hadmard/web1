@@ -1,11 +1,28 @@
 ﻿import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import type { Metadata } from "next";
 import { JsonLd } from "@/components/JsonLd";
 import { getAnnualBoard, getTop10ByYear, HUADIAN_DEFINITION } from "@/lib/huadianbang";
 import { getSiteVisualSettings } from "@/lib/site-visual-settings";
+import { buildHuadianMetadata } from "../metadata";
 
 type Props = { params: Promise<{ year: string }> };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { year } = await params;
+  const y = Number(year);
+  const annual = Number.isFinite(y) ? getAnnualBoard(y) : undefined;
+  if (!annual) {
+    return buildHuadianMetadata("华点榜年度榜单", "华点榜年度榜单页。", `/huadianbang/${year}`);
+  }
+
+  return buildHuadianMetadata(
+    `华点榜 ${annual.year} 年度榜单`,
+    `${annual.year} 年华点榜年度榜单，展示整木行业推荐品牌、获奖企业与评选维度说明。`,
+    `/huadianbang/${annual.year}`,
+  );
+}
 
 export default async function HuadianAnnualPage({ params }: Props) {
   const { year } = await params;

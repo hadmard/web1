@@ -2,6 +2,7 @@ import { MetadataRoute } from "next";
 import { getSiteUrl } from "@/lib/seo";
 
 const BASE = getSiteUrl();
+const HOST = new URL(BASE).host;
 const DISALLOW_PATHS = ["/api/", "/membership/", "/search"];
 
 export default function robots(): MetadataRoute.Robots {
@@ -23,7 +24,7 @@ export default function robots(): MetadataRoute.Robots {
         disallow: DISALLOW_PATHS,
       },
     ],
-    host: BASE,
+    host: HOST,
     sitemap: `${BASE}/sitemap.xml`,
   };
 }

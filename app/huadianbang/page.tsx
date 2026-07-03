@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { JsonLd } from "@/components/JsonLd";
 import {
@@ -6,6 +7,13 @@ import {
   getLatestHuadianYear,
   HUADIAN_DEFINITION,
 } from "@/lib/huadianbang";
+import { buildHuadianMetadata } from "./metadata";
+
+export const metadata: Metadata = buildHuadianMetadata(
+  "华点榜",
+  "华点榜栏目页，展示整木行业年度榜单、特色奖项与配套商推荐入口。",
+  "/huadianbang",
+);
 
 export default function HuadianbangHomePage() {
   const latestYear = getLatestHuadianYear();

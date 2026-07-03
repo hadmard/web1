@@ -1,12 +1,29 @@
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { JsonLd } from "@/components/JsonLd";
 import {
   ENGINEER_CATEGORY_LABELS,
   getEngineerSupplier,
   HUADIAN_DEFINITION,
 } from "@/lib/huadianbang";
+import { buildHuadianMetadata } from "../../../metadata";
 
 type Props = { params: Promise<{ category: string; slug: string }> };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { category, slug } = await params;
+  const label = ENGINEER_CATEGORY_LABELS[category as keyof typeof ENGINEER_CATEGORY_LABELS];
+  const item = label ? getEngineerSupplier(category, slug) : null;
+  if (!label || !item) {
+    return buildHuadianMetadata("华点榜配套商详情", "华点榜配套商详情页。", `/huadianbang/partner/${category}/${slug}`);
+  }
+
+  return buildHuadianMetadata(
+    `${item.name}｜华点榜${label}`,
+    `华点榜${label}配套商详情页，展示 ${item.name} 的服务类别、核心产品与推荐理由。`,
+    `/huadianbang/partner/${category}/${slug}`,
+  );
+}
 
 export default async function HuadianPartnerDetailPage({ params }: Props) {
   const { category, slug } = await params;

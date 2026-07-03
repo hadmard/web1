@@ -5,7 +5,8 @@ import { annualBoards, engineerSuppliers, specialAwards, getTop10ByYear } from "
 import { absoluteUrl } from "@/lib/seo";
 import { buildBuyingPath, buildNewsPath } from "@/lib/share-config";
 
-const now = new Date();
+const SITEMAP_EXCLUDED_PREFIXES = ["/membership", "/search", "/api/"];
+const STATIC_LASTMOD = new Date("2026-07-02T00:00:00.000Z");
 
 function createEntry(
   path: string,
@@ -30,22 +31,40 @@ function dedupeSitemap(entries: MetadataRoute.Sitemap) {
   });
 }
 
+function isSitemapEligiblePath(path: string) {
+  return !SITEMAP_EXCLUDED_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
+}
+
+function parseDateValue(value?: string | Date | null) {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function pickLastModified(...values: Array<string | Date | null | undefined>) {
+  for (const value of values) {
+    const parsed = parseDateValue(value);
+    if (parsed) return parsed;
+  }
+  return STATIC_LASTMOD;
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticPages: MetadataRoute.Sitemap = [
-    createEntry("/", now, "weekly", 1),
-    createEntry("/news", now, "weekly", 0.9),
-    createEntry("/dictionary", now, "weekly", 0.9),
-    createEntry("/standards", now, "weekly", 0.9),
-    createEntry("/standards/all", now, "weekly", 0.85),
-    createEntry("/brands", now, "weekly", 0.9),
-    createEntry("/brands/all", now, "weekly", 0.85),
-    createEntry("/enterprise", now, "weekly", 0.85),
-    createEntry("/market", now, "weekly", 0.5),
-    createEntry("/awards", now, "weekly", 0.8),
-    createEntry("/huadianbang", now, "weekly", 0.85),
-    createEntry("/huadianbang/feature", now, "weekly", 0.8),
-    createEntry("/huadianbang/partner", now, "weekly", 0.8),
-    createEntry("/tags", now, "weekly", 0.7),
+    createEntry("/", STATIC_LASTMOD, "weekly", 1),
+    createEntry("/news", STATIC_LASTMOD, "weekly", 0.9),
+    createEntry("/dictionary", STATIC_LASTMOD, "weekly", 0.9),
+    createEntry("/standards", STATIC_LASTMOD, "weekly", 0.9),
+    createEntry("/standards/all", STATIC_LASTMOD, "weekly", 0.85),
+    createEntry("/brands", STATIC_LASTMOD, "weekly", 0.9),
+    createEntry("/brands/all", STATIC_LASTMOD, "weekly", 0.85),
+    createEntry("/enterprise", STATIC_LASTMOD, "weekly", 0.85),
+    createEntry("/market", STATIC_LASTMOD, "weekly", 0.5),
+    createEntry("/awards", STATIC_LASTMOD, "weekly", 0.8),
+    createEntry("/huadianbang", STATIC_LASTMOD, "weekly", 0.85),
+    createEntry("/huadianbang/feature", STATIC_LASTMOD, "weekly", 0.8),
+    createEntry("/huadianbang/partner", STATIC_LASTMOD, "weekly", 0.8),
+    createEntry("/tags", STATIC_LASTMOD, "weekly", 0.7),
   ];
 
   let subcategoryUrls: MetadataRoute.Sitemap = [];
@@ -53,9 +72,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const categories = await getCategories();
     subcategoryUrls = categories.flatMap((category) =>
       category.subcategories.map((subcategory) =>
-        createEntry(subcategory.href, now, "weekly", 0.7)
+        createEntry(subcategory.href, pickLastModified(category.updatedAt), "weekly", 0.7)
       )
-    );
+    ).filter((entry) => isSitemapEligiblePath(new URL(entry.url).pathname));
   } catch {
     subcategoryUrls = [];
   }
@@ -129,25 +148,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     );
 
     const huadianAnnualUrls = annualBoards.map((board) =>
-      createEntry(`/huadianbang/${board.year}`, now, "yearly", 0.8)
+      createEntry(`/huadianbang/${board.year}`, STATIC_LASTMOD, "yearly", 0.8)
     );
 
     const huadianAnnualBrandUrls = annualBoards.flatMap((board) =>
       getTop10ByYear(board.year).map((brand) =>
-        createEntry(`/huadianbang/${board.year}/${brand.slug}`, now, "yearly", 0.75)
+        createEntry(`/huadianbang/${board.year}/${brand.slug}`, STATIC_LASTMOD, "yearly", 0.75)
       )
     );
 
     const huadianSpecialUrls = specialAwards.map((award) =>
-      createEntry(`/huadianbang/feature/${award.slug}`, now, "yearly", 0.72)
+      createEntry(`/huadianbang/feature/${award.slug}`, STATIC_LASTMOD, "yearly", 0.72)
     );
 
     const huadianEngineerUrls = Array.from(new Set(engineerSuppliers.map((item) => item.category))).map((category) =>
-      createEntry(`/huadianbang/partner/${category}`, now, "monthly", 0.72)
+      createEntry(`/huadianbang/partner/${category}`, STATIC_LASTMOD, "monthly", 0.72)
     );
 
     const huadianEngineerDetailUrls = engineerSuppliers.map((item) =>
-      createEntry(`/huadianbang/partner/${item.category}/${item.slug}`, now, "monthly", 0.7)
+      createEntry(`/huadianbang/partner/${item.category}/${item.slug}`, STATIC_LASTMOD, "monthly", 0.7)
     );
 
     return dedupeSitemap([

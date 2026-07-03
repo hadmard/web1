@@ -1,11 +1,28 @@
 ﻿import Link from "next/link";
 import Image from "next/image";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { JsonLd } from "@/components/JsonLd";
 import { getBrandAwardHistory, getTopBrand, HUADIAN_DEFINITION } from "@/lib/huadianbang";
 import { getSiteVisualSettings } from "@/lib/site-visual-settings";
+import { buildHuadianMetadata } from "../../metadata";
 
 type Props = { params: Promise<{ year: string; brand: string }> };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { year, brand } = await params;
+  const y = Number(year);
+  const item = Number.isFinite(y) ? getTopBrand(y, brand) : null;
+  if (!item) {
+    return buildHuadianMetadata("华点榜品牌详情", "华点榜品牌详情页。", `/huadianbang/${year}/${brand}`);
+  }
+
+  return buildHuadianMetadata(
+    `${item.name}｜华点榜 ${item.year} 年度榜单`,
+    `华点榜 ${item.year} 年度榜单品牌详情页，展示 ${item.name} 的获奖类别、推荐理由与关联资源。`,
+    `/huadianbang/${year}/${brand}`,
+  );
+}
 
 export default async function HuadianAnnualBrandDetailPage({ params }: Props) {
   const { year, brand } = await params;

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const LEGACY_SITE_URL = "https://jiu.cnzhengmu.com";
+const WWW_HOST = "www.cnzhengmu.com";
+const PRIMARY_HOST = "cnzhengmu.com";
 
 const SHOW_ROUTE_MAP: Record<string, (id: string) => string> = {
   news: (id) => `/news/${encodeURIComponent(id)}`,
@@ -15,6 +17,14 @@ function isValidId(value: string | null) {
 export function middleware(request: NextRequest) {
   const { nextUrl } = request;
 
+  if (nextUrl.hostname === WWW_HOST) {
+    const target = nextUrl.clone();
+    target.protocol = "https:";
+    target.hostname = PRIMARY_HOST;
+    target.port = "";
+    return NextResponse.redirect(target, 301);
+  }
+
   if (nextUrl.pathname !== "/index.php") {
     return NextResponse.next();
   }
@@ -22,6 +32,14 @@ export function middleware(request: NextRequest) {
   const m = nextUrl.searchParams.get("m")?.trim().toLowerCase() ?? "";
   const c = nextUrl.searchParams.get("c")?.trim().toLowerCase() ?? "";
   const id = nextUrl.searchParams.get("id")?.trim() ?? "";
+
+  if (m === "news" && c === "shows" && isValidId(id)) {
+    const target = new URL(`${LEGACY_SITE_URL}/index.php`);
+    nextUrl.searchParams.forEach((value, key) => {
+      target.searchParams.append(key, value);
+    });
+    return NextResponse.redirect(target, 301);
+  }
 
   if (c === "shows" && isValidId(id) && SHOW_ROUTE_MAP[m]) {
     const target = new URL(SHOW_ROUTE_MAP[m](id), nextUrl.origin);
@@ -38,5 +56,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/index.php"],
+  matcher: ["/index.php", "/((?!_next|.*\\..*).*)", "/:path*.html"],
 };

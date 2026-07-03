@@ -1,8 +1,28 @@
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { JsonLd } from "@/components/JsonLd";
 import { getSpecialAward, HUADIAN_DEFINITION } from "@/lib/huadianbang";
+import { buildHuadianMetadata } from "../../metadata";
 
 type Props = { params: Promise<{ award: string }> };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { award } = await params;
+  const item = getSpecialAward(award);
+  if (!item) {
+    return buildHuadianMetadata(
+      "华点榜特色奖项详情",
+      "华点榜特色奖项详情页。",
+      `/huadianbang/feature/${award}`,
+    );
+  }
+
+  return buildHuadianMetadata(
+    `${item.name}｜华点榜特色奖项`,
+    `华点榜特色奖项详情页，展示 ${item.name} 的奖项定义、评选标准与获奖企业。`,
+    `/huadianbang/feature/${award}`,
+  );
+}
 
 export default async function HuadianFeatureDetailPage({ params }: Props) {
   const { award } = await params;
@@ -33,8 +53,8 @@ export default async function HuadianFeatureDetailPage({ params }: Props) {
         <article className="glass-panel p-5">
           <h2 className="text-lg font-semibold text-primary">评选标准</h2>
           <div className="mt-2 space-y-1">
-            {item.criteria.map((x) => (
-              <h3 key={x} className="text-sm text-primary">{x}</h3>
+            {item.criteria.map((value) => (
+              <h3 key={value} className="text-sm text-primary">{value}</h3>
             ))}
           </div>
         </article>
@@ -43,9 +63,9 @@ export default async function HuadianFeatureDetailPage({ params }: Props) {
       <section className="mt-8 glass-panel p-5">
         <h2 className="text-lg font-semibold text-primary">获奖企业</h2>
         <div className="mt-3 flex flex-wrap gap-2">
-          {item.winners.map((x) => (
-            <h3 key={x} className="px-3 py-1.5 rounded-full border border-border text-sm text-primary">
-              {x}
+          {item.winners.map((value) => (
+            <h3 key={value} className="px-3 py-1.5 rounded-full border border-border text-sm text-primary">
+              {value}
             </h3>
           ))}
         </div>
@@ -58,4 +78,3 @@ export default async function HuadianFeatureDetailPage({ params }: Props) {
     </main>
   );
 }
-

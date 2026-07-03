@@ -261,7 +261,7 @@ export default async function ArticlePage({ params, searchParams }: Props) {
   const { slug } = await params;
   const legacyId = getLegacyNewsRedirectId(slug);
   if (legacyId) {
-    redirect(`${LEGACY_SITE_URL}/index.php?m=news&c=shows&id=${encodeURIComponent(legacyId)}`);
+    permanentRedirect(`${LEGACY_SITE_URL}/index.php?m=news&c=shows&id=${encodeURIComponent(legacyId)}`);
   }
 
   if (NEWS_SUB_SLUGS.has(slug)) {

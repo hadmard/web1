@@ -1,6 +1,14 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { JsonLd } from "@/components/JsonLd";
 import { HUADIAN_DEFINITION, specialAwards } from "@/lib/huadianbang";
+import { buildHuadianMetadata } from "../metadata";
+
+export const metadata: Metadata = buildHuadianMetadata(
+  "华点榜特色奖项",
+  "华点榜特色奖项页，展示整木行业特色奖项分类与说明。",
+  "/huadianbang/feature",
+);
 
 export default function HuadianFeaturePage() {
   return (
