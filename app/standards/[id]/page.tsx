@@ -1,6 +1,7 @@
 ﻿import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
+import { ArticleViewTracker } from "@/components/ArticleViewTracker";
 import { ContentHeroImage } from "@/components/ContentHeroImage";
 import { prisma } from "@/lib/prisma";
 import { articleOrderByPinnedLatest } from "@/lib/articles";
@@ -146,6 +147,7 @@ export default async function StandardPage({ params }: Props) {
 
     return (
       <article className="max-w-6xl mx-auto px-4 py-10">
+        <ArticleViewTracker articleId={article.id} />
         <JsonLd data={schema} />
 
         <nav className="mb-6 text-sm text-muted" aria-label="面包屑">

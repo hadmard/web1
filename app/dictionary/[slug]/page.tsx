@@ -1,6 +1,7 @@
 ﻿import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { ArticleViewTracker } from "@/components/ArticleViewTracker";
 import { ContentHeroImage } from "@/components/ContentHeroImage";
 import { prisma } from "@/lib/prisma";
 import { articleOrderByPinnedLatest, articleOrderByPinnedPopular } from "@/lib/articles";
@@ -263,6 +264,7 @@ export default async function TermPage({ params }: Props) {
 
     return (
       <article className="max-w-6xl mx-auto px-4 py-10">
+        <ArticleViewTracker articleId={article.id} />
         <JsonLd data={jsonLd} />
         <JsonLd data={breadcrumbSchema} />
         <header className="glass-panel p-6 sm:p-8">

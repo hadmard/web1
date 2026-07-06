@@ -1,6 +1,7 @@
 ﻿import Link from "next/link";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
 import type { Metadata } from "next";
+import { ArticleViewTracker } from "@/components/ArticleViewTracker";
 import { prisma } from "@/lib/prisma";
 import { buildPageMetadata } from "@/lib/seo";
 import { composeIntentTitle } from "@/lib/compose-intent-title";
@@ -215,6 +216,7 @@ export default async function BrandDetailPage({ params }: Props) {
 
   return (
     <article className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-12">
+      <ArticleViewTracker articleId={article.id} />
       <nav className="mb-6 flex flex-wrap items-center gap-x-2 gap-y-2 text-sm text-muted" aria-label="面包屑">
         <Link href="/" className="hover:text-accent">首页</Link>
         <span>/</span>

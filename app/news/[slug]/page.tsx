@@ -1,11 +1,11 @@
 ﻿import Link from "next/link";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
 import type { Metadata } from "next";
+import { ArticleViewTracker } from "@/components/ArticleViewTracker";
 import { ContentHeroImage } from "@/components/ContentHeroImage";
 import { JsonLd } from "@/components/JsonLd";
 import { previewText } from "@/lib/text";
 import { RichContent } from "@/components/RichContent";
-import { NewsViewTracker } from "./NewsViewTracker";
 import { NewsUrlSync } from "./NewsUrlSync";
 import { buildPageMetadata } from "@/lib/seo";
 import { buildNewsTitle } from "@/lib/seo-title";
@@ -494,7 +494,7 @@ export default async function ArticlePage({ params, searchParams }: Props) {
   return (
     <article id="news-reading-article" className="mx-auto max-w-6xl px-4 pb-6 pt-2 sm:px-6 sm:py-12">
       <NewsUrlSync canonicalPath={buildNewsPath(articleSegment)} />
-      <NewsViewTracker slug={article.slug} />
+      <ArticleViewTracker articleId={article.id} />
       <JsonLd data={articleSchema} />
       <JsonLd data={breadcrumbSchema} />
       {faqSchema ? <JsonLd data={faqSchema} /> : null}
