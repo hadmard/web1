@@ -395,6 +395,9 @@ export async function POST(request: NextRequest) {
     });
 
     if (article.status === "approved" && ((article.categoryHref ?? "").startsWith("/news") || (article.subHref ?? "").startsWith("/news"))) {
+      revalidatePath("/news");
+      revalidatePath("/news/all");
+      if (article.subHref) revalidatePath(article.subHref);
       revalidatePath("/sitemap.xml");
     }
 

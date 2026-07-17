@@ -14,10 +14,15 @@ import { buildArticleShareVersion, buildNewsPath, buildPublicNewsUrl, getArticle
 import { resolveUploadedImageUrl } from "@/lib/uploaded-image";
 import { DEFAULT_NEWS_SHARE_IMAGE, findNewsArticleBySegment, normalizeNewsSegment, resolveArticleShareImage } from "@/lib/news-sharing";
 import { prisma } from "@/lib/prisma";
-import { articleOrderByPinnedLatest } from "@/lib/articles";
+import {
+  getNewsSubcategory,
+  getPublishedNewsSubcategoryPage,
+  NEWS_SUBCATEGORIES,
+} from "@/lib/news-listing";
 import { getRecommendedNews, isValidKeywordCandidate } from "@/lib/news-keywords-v2";
 import { resolveArticleSourceType } from "@/lib/article-source";
 import { decodeHtmlEntities } from "@/lib/brand-content";
+import { NewsPagination } from "@/components/NewsPagination";
 import { decodeEscapedUnicode } from "@/lib/text";
 import { NEWS_AFTERMARKET_SUBCATEGORY, getNewsAftermarketConfig, parseProductRecommendations } from "@/lib/news-aftermarket";
 import {
@@ -33,37 +38,6 @@ export const revalidate = 300;
 export const dynamic = "force-dynamic";
 const LEGACY_SITE_URL = "https://jiu.cnzhengmu.com";
 
-const NEWS_SUBCATEGORY_META: Record<string, { title: string; description: string }> = {
-  trends: {
-    title: "行业趋势",
-    description: "整木资讯行业趋势栏目，聚合木作行业趋势观察与热点动态。",
-  },
-  enterprise: {
-    title: "企业动态",
-    description: "汇聚整木品牌动态、企业新闻与招商信息，了解品牌加盟、企业布局与行业最新动向。",
-  },
-  tech: {
-    title: "技术发展",
-    description: "聚焦整木工艺、板材材料与生产技术升级，解析环保板材、工艺做法与行业技术趋势。",
-  },
-  events: {
-    title: "行业活动",
-    description: "汇集整木展会、设计周与行业论坛信息，获取展会时间、品牌亮相与行业趋势发布。",
-  },
-  aftermarket: {
-    title: NEWS_AFTERMARKET_SUBCATEGORY.label,
-    description: "聚焦木制品清洁、养护、保养与进口护理产品推荐，覆盖木门、木饰面、柜体、护墙板和木家具等护理场景。",
-  },
-};
-
-const NEWS_SUBCATEGORY_HREFS: Record<string, string> = {
-  trends: "/news/trends",
-  enterprise: "/news/enterprise",
-  tech: "/news/tech",
-  events: "/news/events",
-  aftermarket: NEWS_AFTERMARKET_SUBCATEGORY.href,
-};
-
 const NEWS_SECTION_LABELS: Record<string, string> = {
   "/news/trends": "行业趋势",
   "/news/enterprise": "企业动态",
@@ -77,8 +51,6 @@ type Props = {
   params: Promise<{ slug: string }>;
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
-
-const NEWS_SUB_SLUGS = new Set(["trends", "enterprise", "tech", "events", NEWS_AFTERMARKET_SUBCATEGORY.slug]);
 
 function isLegacyNumericNewsId(value: string) {
   return /^\d+$/.test((value || "").trim());
@@ -99,11 +71,11 @@ function isCorruptedNewsTitle(title?: string | null) {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  if (NEWS_SUB_SLUGS.has(slug)) {
-    const subMeta = NEWS_SUBCATEGORY_META[slug];
+  const subMeta = getNewsSubcategory(slug);
+  if (subMeta) {
     return buildPageMetadata({
-      title: `${subMeta?.title ?? "整木资讯"}｜整木行业资讯`,
-      description: subMeta?.description ?? "整木资讯子栏目。",
+      title: `${subMeta.title}｜整木行业资讯`,
+      description: subMeta.description,
       path: `/news/${slug}`,
       type: "website",
       image: DEFAULT_NEWS_SHARE_IMAGE,
@@ -264,30 +236,22 @@ export default async function ArticlePage({ params, searchParams }: Props) {
     permanentRedirect(`${LEGACY_SITE_URL}/index.php?m=news&c=shows&id=${encodeURIComponent(legacyId)}`);
   }
 
-  if (NEWS_SUB_SLUGS.has(slug)) {
-    const subMeta = NEWS_SUBCATEGORY_META[slug];
-    const subHref = NEWS_SUBCATEGORY_HREFS[slug];
-    const siblingLinks = Object.entries(NEWS_SUBCATEGORY_META).map(([key, meta]) => ({
-      href: `/news/${key}`,
-      title: meta.title,
-      active: key === slug,
+  const subMeta = getNewsSubcategory(slug);
+  if (subMeta) {
+    const subHref = subMeta.href;
+    const siblingLinks = NEWS_SUBCATEGORIES.map((item) => ({
+      href: item.href,
+      title: item.title,
+      active: item.slug === slug,
     }));
-    const items = await prisma.article.findMany({
-      where: {
-        status: "approved",
-        OR: [{ subHref }, { categoryHref: subHref }],
-      },
-      orderBy: articleOrderByPinnedLatest,
-      take: 24,
-      select: {
-        id: true,
-        title: true,
-        slug: true,
-        excerpt: true,
-        publishedAt: true,
-        updatedAt: true,
-      },
-    });
+    const resolvedSearchParams = await searchParams;
+    const requestedPage = Math.max(
+      1,
+      Number.parseInt(getSearchParamValue(resolvedSearchParams?.page) ?? "1", 10) || 1,
+    );
+    const listing = await getPublishedNewsSubcategoryPage(subMeta.slug, requestedPage);
+    if (!listing) notFound();
+    const { items, total, totalPages, page } = listing;
 
     return (
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-12">
@@ -312,7 +276,7 @@ export default async function ArticlePage({ params, searchParams }: Props) {
               </p>
               <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="text-xs font-medium uppercase tracking-[0.12em] text-[#9a8560]">
-                  栏目内搜索
+                  共 {total} 篇已发布资讯
                 </div>
                 <Link
                   href={`/news/all?sub=${encodeURIComponent(subHref)}&search=1`}
@@ -373,6 +337,7 @@ export default async function ArticlePage({ params, searchParams }: Props) {
               ))}
             </ul>
           )}
+          <NewsPagination baseHref={subHref} page={page} totalPages={totalPages} />
         </section>
       </div>
     );
