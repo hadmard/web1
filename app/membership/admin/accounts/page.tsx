@@ -2,6 +2,9 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AdminPagination } from "@/components/admin/AdminPagination";
+
+const PAGE_SIZE = 20;
 
 type MemberRow = {
   id: string;
@@ -65,6 +68,9 @@ export default function AdminAccountsPage() {
   const [newRole, setNewRole] = useState<"ADMIN" | "MEMBER">("MEMBER");
   const [searchDraft, setSearchDraft] = useState("");
   const [keyword, setKeyword] = useState("");
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const resultsRef = useRef<HTMLElement | null>(null);
   const shouldScrollToResultsRef = useRef(false);
 
@@ -87,20 +93,23 @@ export default function AdminAccountsPage() {
       setMyRecoveryEmail(typeof recoveryData.recoveryEmail === "string" ? recoveryData.recoveryEmail : "");
     }
 
-    const params = new URLSearchParams();
+    const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
     if (keyword.trim()) params.set("q", keyword.trim());
     const query = params.toString() ? `?${params.toString()}` : "";
     const res = await fetch(`/api/admin/members${query}`, { credentials: "include" });
     if (res.ok) {
       const data = await res.json();
       if (me.role === "SUPER_ADMIN") {
-        setMembers(Array.isArray(data) ? data : []);
+        setMembers(Array.isArray(data.items) ? data.items : []);
       } else {
-        setVisibleRows(Array.isArray(data) ? data : []);
+        setVisibleRows(Array.isArray(data.items) ? data.items : []);
       }
+      setTotal(typeof data.total === "number" ? data.total : 0);
+      setTotalPages(typeof data.totalPages === "number" ? data.totalPages : 1);
+      if (typeof data.page === "number" && data.page !== page) setPage(data.page);
     }
     setLoading(false);
-  }, [keyword]);
+  }, [keyword, page]);
 
   useEffect(() => {
     void load();
@@ -277,6 +286,7 @@ export default function AdminAccountsPage() {
           onSubmit={(e) => {
             e.preventDefault();
             shouldScrollToResultsRef.current = true;
+            setPage(1);
             setKeyword(searchDraft.trim());
           }}
           className="flex flex-col gap-3 md:flex-row md:items-end"
@@ -300,6 +310,7 @@ export default function AdminAccountsPage() {
                 onClick={() => {
                   setKeyword("");
                   setSearchDraft("");
+                  setPage(1);
                 }}
                 className="px-4 py-2 rounded border border-border bg-white text-sm text-primary"
               >
@@ -521,6 +532,7 @@ export default function AdminAccountsPage() {
           </table>
         </section>
       )}
+      <AdminPagination page={page} totalPages={totalPages} total={total} pageSize={PAGE_SIZE} currentCount={isSuperAdmin ? members.length : visibleRows.length} loading={loading} onPageChange={setPage} />
     </div>
   );
 }

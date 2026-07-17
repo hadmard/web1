@@ -62,20 +62,26 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const q = searchParams.get("q")?.trim() ?? "";
+  const requestedPage = Math.max(1, Number.parseInt(searchParams.get("page") ?? "1", 10) || 1);
+  const limit = Math.min(500, Math.max(1, Number.parseInt(searchParams.get("limit") ?? "20", 10) || 20));
+  const where = q
+    ? {
+        OR: [
+          { email: { contains: q } },
+          { recoveryEmail: { contains: q } },
+          { name: { contains: q } },
+          { enterprise: { companyName: { contains: q } } },
+          { enterprise: { companyShortName: { contains: q } } },
+          { enterprise: { brand: { name: { contains: q } } } },
+        ],
+      }
+    : undefined;
+  const total = await prisma.member.count({ where });
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+  const page = Math.min(requestedPage, totalPages);
 
   const members = await prisma.member.findMany({
-    where: q
-      ? {
-          OR: [
-            { email: { contains: q } },
-            { recoveryEmail: { contains: q } },
-            { name: { contains: q } },
-            { enterprise: { companyName: { contains: q } } },
-            { enterprise: { companyShortName: { contains: q } } },
-            { enterprise: { brand: { name: { contains: q } } } },
-          ],
-        }
-      : undefined,
+    where,
     select: {
       id: true,
       email: true,
@@ -111,26 +117,26 @@ export async function GET(request: NextRequest) {
       },
     },
     orderBy: { createdAt: "desc" },
+    skip: (page - 1) * limit,
+    take: limit,
   });
 
-  if (isSuperAdmin(session)) {
-    return NextResponse.json(members.map((m) => serializeMember(m)));
-  }
+  const items = isSuperAdmin(session)
+    ? members.map((m) => serializeMember(m))
+    : members
+        .filter((m) => m.id !== session.sub)
+        .map((m) => ({
+          id: m.id,
+          displayName: m.name?.trim() || m.email,
+          recoveryEmail: m.recoveryEmail ?? null,
+          role: m.role,
+          memberType: m.memberType,
+          enterpriseId: m.enterprise?.id || null,
+          enterpriseName: m.enterprise?.companyShortName || m.enterprise?.companyName || null,
+          brandName: m.enterprise?.brand?.name || null,
+        }));
 
-  return NextResponse.json(
-    members
-      .filter((m) => m.id !== session.sub)
-      .map((m) => ({
-        id: m.id,
-        displayName: m.name?.trim() || m.email,
-        recoveryEmail: m.recoveryEmail ?? null,
-        role: m.role,
-        memberType: m.memberType,
-        enterpriseId: m.enterprise?.id || null,
-        enterpriseName: m.enterprise?.companyShortName || m.enterprise?.companyName || null,
-        brandName: m.enterprise?.brand?.name || null,
-      }))
-  );
+  return NextResponse.json({ items, total, page, limit, totalPages });
 }
 
 export async function POST(request: NextRequest) {
