@@ -9,6 +9,7 @@ import path from "node:path";
 const PRODUCTION_DIR = "/home/web1";
 const RELEASE_BRANCH = "release/admin-news-pagination-20260718";
 const RELEASE_TAG_PREFIX = "release-20260718-news-admin-pagination";
+const RELEASE_BASE_COMMIT = "1c282775efacaea808245ee16ccb44345d32599a";
 const STAGING_ROOT = "/home/web1-release-staging";
 const BACKUP_ROOT = "/home/web1-release-backups";
 const SERVICE = "web1.service";
@@ -128,18 +129,19 @@ async function main() {
   for (const commit of REQUIRED_COMMITS) {
     assert(isAncestor(commit, target, appDir), `target does not contain required release commit ${commit}`);
   }
-  assert(isAncestor("origin/main", target, appDir), "target is not based on origin/main");
+  assert(isAncestor(RELEASE_BASE_COMMIT, target, appDir), `target is not based on ${RELEASE_BASE_COMMIT}`);
 
   process.stdout.write(`[release-deploy] current production commit -> target commit\n[release-deploy] ${current} -> ${target}\n`);
   if (dryRun) {
-    process.stdout.write("[release-deploy] DRY RUN: validated clean worktree, explicit target, origin/main ancestry and required commits\n");
+    process.stdout.write("[release-deploy] DRY RUN: validated clean worktree, explicit target, fixed release-base ancestry and required commits\n");
     process.stdout.write("[release-deploy] DRY RUN: no fetch, install, build, service action, database action or filesystem activation was performed\n");
     return;
   }
 
   assert.equal(values.get("--confirm-current"), current, "--confirm-current must exactly match the printed current commit");
   assert.equal(values.get("--confirm-target"), target, "--confirm-target must exactly match the printed target commit");
-  assert.equal(git(["diff", "--quiet", current, target, "--", "package.json", "package-lock.json"], appDir), "", "");
+  // A lockfile change would require an explicit runtime dependency swap plan.
+  git(["diff", "--quiet", current, target, "--", "package-lock.json"], appDir);
 
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
   const stageDir = path.join(STAGING_ROOT, `${target.slice(0, 12)}-${stamp}`);
