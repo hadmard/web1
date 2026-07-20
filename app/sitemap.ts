@@ -3,10 +3,26 @@ import { prisma } from "@/lib/prisma";
 import { getCategories } from "@/lib/categories";
 import { annualBoards, engineerSuppliers, specialAwards, getTop10ByYear } from "@/lib/huadianbang";
 import { absoluteUrl } from "@/lib/seo";
-import { buildBuyingPath, buildNewsPath } from "@/lib/share-config";
+import { buildBuyingPath, buildDictionaryPath, buildNewsPath } from "@/lib/share-config";
+import dictionaryLegacyAliasMap from "@/scripts/output/dictionary-legacy-alias-map.json";
 
 const SITEMAP_EXCLUDED_PREFIXES = ["/membership", "/search", "/api/"];
 const STATIC_LASTMOD = new Date("2026-07-02T00:00:00.000Z");
+const DICTIONARY_LEGACY_ALIAS_PATHS = new Set(Object.keys(dictionaryLegacyAliasMap));
+
+function decodeDictionarySlug(value: string) {
+  let decoded = value.trim();
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const next = decodeURIComponent(decoded);
+      if (next === decoded) break;
+      decoded = next;
+    } catch {
+      break;
+    }
+  }
+  return decoded;
+}
 
 function createEntry(
   path: string,
@@ -80,6 +96,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   try {
+    const dictionaryArticles = await prisma.article.findMany({
+      where: {
+        status: "approved",
+        OR: [{ categoryHref: { startsWith: "/dictionary" } }, { subHref: { startsWith: "/dictionary" } }],
+      },
+      select: { id: true, slug: true, updatedAt: true },
+    });
+
     const [terms, standards, standardArticles, brandArticles, newsArticles, tags, enterprises] = await Promise.all([
       prisma.term.findMany({ select: { slug: true, updatedAt: true } }),
       prisma.standard.findMany({ select: { id: true, updatedAt: true } }),
@@ -112,9 +136,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       }),
     ]);
 
-    const termUrls = terms.map((term) =>
-      createEntry(`/dictionary/${term.slug}`, term.updatedAt, "monthly", 0.8)
-    );
+    const termUrls = terms
+      .filter((term) => !DICTIONARY_LEGACY_ALIAS_PATHS.has(`/dictionary/${decodeDictionarySlug(term.slug)}`))
+      .map((term) => createEntry(`/dictionary/${term.slug}`, term.updatedAt, "monthly", 0.8));
+
+    const dictionaryArticleUrls = dictionaryArticles
+      .filter((article) => !DICTIONARY_LEGACY_ALIAS_PATHS.has(`/dictionary/${decodeDictionarySlug(article.slug)}`))
+      .map((article) =>
+        createEntry(buildDictionaryPath(article.slug || article.id), article.updatedAt, "monthly", 0.8)
+      );
 
     const standardUrls = standards.map((standard) =>
       createEntry(`/standards/${standard.id}`, standard.updatedAt, "monthly", 0.8)
@@ -173,6 +203,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       ...staticPages,
       ...subcategoryUrls,
       ...termUrls,
+      ...dictionaryArticleUrls,
       ...standardUrls,
       ...standardArticleUrls,
       ...brandUrls,
