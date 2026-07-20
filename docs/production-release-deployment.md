@@ -25,6 +25,12 @@ and tests an isolated Git worktree, and activates only after the preflight smoke
 It never copies `.env`, never runs a database migration/seed/push command, and never
 uses a Codex temporary workspace as source.
 
+The guarded execution order is fixed: `npm ci`, `npx tsc --noEmit`, `npm run build`,
+pre-activation read-only smoke test, source/runtime activation, service restart, and
+production smoke test. The TypeScript exit code is printed and its complete output is
+stored as `typescript-check.log` in the deployment backup directory. A non-zero exit
+stops before the production source, `.next`, or `web1.service` is touched.
+
 Admin smoke authentication is supplied only through the process environment as
 `SMOKE_ADMIN_COOKIE` (preferred) or `SMOKE_ADMIN_BEARER`. Credentials must not be
 written to this repository, shell history, command arguments, logs, or backup files.

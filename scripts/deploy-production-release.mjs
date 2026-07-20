@@ -58,6 +58,35 @@ function run(command, args, options = {}) {
   return options.capture ? (result.stdout || "").trim() : "";
 }
 
+function runTypeScriptCheck(cwd, logPath) {
+  const command = "npx";
+  const args = ["tsc", "--noEmit"];
+  const shown = [command, ...args].join(" ");
+  process.stdout.write(`[release-deploy] $ ${shown}\n`);
+  const result = spawnSync(command, args, {
+    cwd,
+    env: process.env,
+    encoding: "utf8",
+    stdio: "pipe",
+    maxBuffer: 20 * 1024 * 1024,
+  });
+  const stdout = result.stdout || "";
+  const stderr = result.stderr || "";
+  const exitCode = Number.isInteger(result.status) ? result.status : -1;
+  writeFileSync(
+    logPath,
+    `$ ${shown}\nexitCode=${exitCode}\n${stdout}${stderr}`,
+  );
+  if (stdout) process.stdout.write(stdout);
+  if (stderr) process.stderr.write(stderr);
+  process.stdout.write(`[release-deploy] TypeScript check exit code: ${exitCode}\n`);
+  process.stdout.write(`[release-deploy] TypeScript check log: ${logPath}\n`);
+  if (result.error) throw result.error;
+  if (exitCode !== 0) {
+    fail(`TypeScript check failed before production activation; source, .next and ${SERVICE} were not changed`);
+  }
+}
+
 function git(args, cwd, capture = true) {
   return run("git", args, { cwd, capture });
 }
@@ -162,6 +191,7 @@ async function main() {
   try {
     git(["worktree", "add", "--detach", stageDir, target], appDir, false);
     run("npm", ["ci", "--no-audit", "--no-fund"], { cwd: stageDir, capture: false });
+    runTypeScriptCheck(stageDir, path.join(backupDir, "typescript-check.log"));
     run("npm", ["run", "build"], { cwd: stageDir, capture: false });
 
     const preflightPort = process.env.RELEASE_PREFLIGHT_PORT || "3198";
