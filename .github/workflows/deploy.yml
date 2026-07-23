@@ -1,8 +1,6 @@
 name: Deploy to Server
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 concurrency:
@@ -48,6 +46,7 @@ jobs:
   deploy:
     needs: validate
     runs-on: ubuntu-latest
+    environment: production
     timeout-minutes: 20
     env:
       DEPLOY_HOST: "123.60.14.103"
@@ -176,11 +175,42 @@ jobs:
               fi
             }
 
+            stage="workspace-preflight"
+            workspace_status="$(git status --porcelain)"
+            if [ -n "${workspace_status}" ]; then
+              echo "::error::[deploy] production worktree is not clean; refusing to reset or clean"
+              printf '%s\n' "${workspace_status}"
+              exit 1
+            fi
+
+            stage="uploads-preflight"
+            uploads_path="/home/web1/public/uploads"
+            if [ ! -e "${uploads_path}" ]; then
+              echo "::error::[deploy] uploads path does not exist: ${uploads_path}"
+              exit 1
+            fi
+            if [ ! -d "${uploads_path}" ]; then
+              echo "::error::[deploy] uploads path is not a directory: ${uploads_path}"
+              exit 1
+            fi
+            if [ -L "${uploads_path}" ]; then
+              echo "::error::[deploy] uploads path must not be a symbolic link: ${uploads_path}"
+              exit 1
+            fi
+            resolved_uploads_path="$(readlink -f -- "${uploads_path}")"
+            if [ "${resolved_uploads_path}" != "${uploads_path}" ]; then
+              echo "::error::[deploy] uploads path resolved unexpectedly: ${resolved_uploads_path}"
+              exit 1
+            fi
+
             stage="git"
             echo "[deploy] fetching latest main"
             git fetch origin main
             git reset --hard origin/main
-            git clean -fd -e .next -e logs/
+            git clean -fd \
+              -e .next \
+              -e logs/ \
+              -e public/uploads/
 
             stage="install"
             NODE_MAJOR=$(node -v | sed 's/v//' | cut -d. -f1)
@@ -201,15 +231,6 @@ jobs:
             stage="prisma-generate"
             echo "[deploy] generating prisma client"
             npx prisma generate
-
-            stage="prisma-sync"
-            echo "[deploy] syncing prisma schema"
-            if ! npx prisma migrate deploy; then
-              echo "::warning::[deploy] prisma migrate deploy failed, falling back to prisma db push"
-              if ! npx prisma db push; then
-                echo "::warning::[deploy] prisma db push also failed, continuing with existing schema"
-              fi
-            fi
 
             stage="build-prepare"
             echo "[deploy] preparing isolated next build"
@@ -293,6 +314,14 @@ jobs:
               exit 1
             fi
             echo "::notice::[deploy] staged bundle verified"
+
+            stage="prisma-migrate"
+            echo "[deploy] applying Prisma migrations"
+            if ! npx prisma migrate deploy; then
+              echo "::error::[deploy] Prisma migration failed; deployment stopped without changing .next"
+              cleanup_build_worktree
+              exit 1
+            fi
 
             stage="stop-service"
             echo "[deploy] stopping web1 before .next swap"
@@ -413,211 +442,6 @@ jobs:
           });
           NODE
 
-      - name: Install or update production SEO cron
-        run: |
-          ssh -o BatchMode=yes -p "${DEPLOY_PORT}" ${DEPLOY_USER}@${DEPLOY_HOST} <<'EOF'
-            set -euo pipefail
-
-            cd /home/web1
-            sed -i 's/\r$//' /home/web1/scripts/run-seo-news-cron.sh
-
-            if [ -f /home/web1/.env.production ]; then
-              env_file="/home/web1/.env.production"
-            else
-              env_file="/home/web1/.env"
-            fi
-
-            if [ -f "$env_file" ]; then
-              if grep -q '^SEO_NEWS_AUTOGEN_ENABLED=' "$env_file"; then
-                sed -i 's/^SEO_NEWS_AUTOGEN_ENABLED=.*/SEO_NEWS_AUTOGEN_ENABLED=true/' "$env_file"
-              else
-                printf '\nSEO_NEWS_AUTOGEN_ENABLED=true\n' >> "$env_file"
-              fi
-            fi
-
-            cron_tz="CRON_TZ=Asia/Shanghai"
-            cron_entry_generate="30 7 * * * /bin/bash /home/web1/scripts/run-seo-news-cron.sh --count 3"
-            cron_entry_check_740="40 7 * * * /bin/bash /home/web1/scripts/run-seo-news-cron.sh --mode check"
-            cron_entry_check_800="0 8 * * * /bin/bash /home/web1/scripts/run-seo-news-cron.sh --mode check"
-
-            tmp_cron="$(mktemp)"
-            {
-              crontab -l 2>/dev/null | grep -F -v 'CRON_TZ=Asia/Shanghai' | grep -F -v '/home/web1/scripts/run-seo-news-cron.sh' || true
-              echo "$cron_tz"
-              echo "$cron_entry_generate"
-              echo "$cron_entry_check_740"
-              echo "$cron_entry_check_800"
-            } > "$tmp_cron"
-
-            crontab "$tmp_cron"
-            rm -f "$tmp_cron"
-
-            echo "::warning::SEO_CRON_USER=$(whoami)"
-            echo "::warning::SEO_CRON_ENV_FILE=$env_file"
-            echo "::warning::SEO_CRON_AUTOGEN=$(grep '^SEO_NEWS_AUTOGEN_ENABLED=' \"$env_file\" 2>/dev/null || true)"
-            echo "::warning::SEO_CRON_SERVER_TIME=$(date '+%Y-%m-%d %H:%M:%S %Z %z')"
-            echo "::warning::SEO_CRON_TIMEZONE_FILE=$(cat /etc/timezone 2>/dev/null || true)"
-            echo "::warning::SEO_CRON_TIMEDATECTL=$(timedatectl show --property=Timezone --value 2>/dev/null || true)"
-            echo "::warning::SEO_CRON_LOG_FILE=/home/web1/logs/seo-news-cron.log"
-            echo "::warning::SEO_CRON_STATUS_FILE=/home/web1/logs/seo-news-cron-status.json"
-            echo "::warning::SEO_CRON_INSTALLED_BEGIN"
-            crontab -l | while IFS= read -r line; do
-              if [ -n "$line" ]; then
-                echo "::warning::SEO_CRON_LINE=$line"
-              fi
-            done
-            echo "::warning::SEO_CRON_INSTALLED_END"
-          EOF
-
-      - name: Manual production SEO generation validation
-        if: github.event_name == 'workflow_dispatch'
-        continue-on-error: true
-        run: |
-          ssh -o BatchMode=yes -p "${DEPLOY_PORT}" ${DEPLOY_USER}@${DEPLOY_HOST} <<'EOF'
-            set -euo pipefail
-            cd /home/web1
-
-            if [ -f .env.production ]; then
-              set -a
-              . ./.env.production
-              set +a
-            elif [ -f .env ]; then
-              set -a
-              . ./.env
-              set +a
-            fi
-
-            echo "::warning::SEO_MANUAL_COMMAND=/bin/bash /home/web1/scripts/run-seo-news-cron.sh --count 3 --mode manual"
-            echo "::warning::SEO_MANUAL_EFFECTIVE_AUTOGEN=${SEO_NEWS_AUTOGEN_ENABLED:-unset}"
-            start_iso="$(date -Iseconds)"
-            set +e
-            /bin/bash /home/web1/scripts/run-seo-news-cron.sh --count 3 --mode manual
-            manual_exit=$?
-            set -e
-
-            if [ "$manual_exit" -ne 0 ]; then
-              echo "::error::SEO_MANUAL_EXIT=$manual_exit"
-              if [ -f /home/web1/logs/seo-news-cron-status.json ]; then
-                while IFS= read -r line; do
-                  if [ -n "$line" ]; then
-                    echo "::warning::SEO_MANUAL_STATUS=$line"
-                  fi
-                done < /home/web1/logs/seo-news-cron-status.json
-              fi
-              tail -n 80 /home/web1/logs/seo-news-cron.log | while IFS= read -r line; do
-                if [ -n "$line" ]; then
-                  echo "::warning::SEO_MANUAL_LOG=$line"
-                fi
-              done
-              exit "$manual_exit"
-            fi
-
-            if [ ! -f /home/web1/logs/seo-news-cron-status.json ]; then
-              echo "::error::SEO_MANUAL_STATUS_FILE_MISSING=/home/web1/logs/seo-news-cron-status.json"
-              exit 1
-            fi
-
-            while IFS= read -r line; do
-              if [ -n "$line" ]; then
-                echo "::warning::SEO_MANUAL_STATUS=$line"
-              fi
-            done < /home/web1/logs/seo-news-cron-status.json
-
-            verify_line="$(grep 'VERIFY {' /home/web1/logs/seo-news-cron.log | tail -n 1 || true)"
-            if [ -z "$verify_line" ]; then
-              echo "::error::SEO_MANUAL_VERIFY_LINE_MISSING"
-              tail -n 80 /home/web1/logs/seo-news-cron.log | while IFS= read -r line; do
-                if [ -n "$line" ]; then
-                  echo "::warning::SEO_MANUAL_LOG=$line"
-                fi
-              done
-              exit 1
-            fi
-
-            echo "::warning::SEO_MANUAL_VERIFY=$verify_line"
-
-            batch_id="$(sed -n 's/.*"generationBatchId":"\([^"]*\)".*/\1/p' /home/web1/logs/seo-news-cron-status.json | head -n 1)"
-            if [ -z "$batch_id" ]; then
-              echo "::error::SEO_MANUAL_BATCH_ID_MISSING"
-              exit 1
-            fi
-
-            node - "$batch_id" <<'NODE'
-            const { PrismaClient } = require("@prisma/client");
-
-            const prisma = new PrismaClient();
-            const batchId = process.argv[2];
-
-            (async () => {
-              try {
-                const reg = await prisma.$queryRawUnsafe(`SELECT to_regclass('public.baidu_push_jobs') AS name`);
-                let count = 0;
-
-                if (Array.isArray(reg) && reg[0]?.name) {
-                  const rows = await prisma.$queryRawUnsafe(
-                    `SELECT COUNT(*)::int AS count FROM baidu_push_jobs WHERE article_id IN (SELECT id FROM articles WHERE generation_batch_id = '${batchId}')`,
-                  );
-                  count = Number(rows?.[0]?.count || 0);
-                }
-
-                console.log(`::warning::SEO_MANUAL_BAIDU_JOB_COUNT=${count}`);
-              } catch (error) {
-                console.log(`::warning::SEO_MANUAL_BAIDU_JOB_COUNT=unavailable`);
-                console.log(`::warning::SEO_MANUAL_BAIDU_JOB_ERROR=${error instanceof Error ? error.message : String(error)}`);
-              }
-            })()
-              .catch((error) => {
-                console.error(`::error::SEO_MANUAL_BAIDU_CHECK_FAILED=${error instanceof Error ? error.stack || error.message : String(error)}`);
-                process.exit(1);
-              })
-              .finally(async () => {
-                await prisma.$disconnect();
-              });
-            NODE
-          EOF
-
-      - name: Simulate production SEO timer check
-        if: github.event_name == 'workflow_dispatch'
-        run: |
-          ssh -o BatchMode=yes -p "${DEPLOY_PORT}" ${DEPLOY_USER}@${DEPLOY_HOST} <<'EOF'
-            set -euo pipefail
-            cd /home/web1
-
-            /bin/bash /home/web1/scripts/run-seo-news-cron.sh --mode check
-
-            echo "::warning::SEO_CHECK_STATUS_BEGIN"
-            if [ -f /home/web1/logs/seo-news-cron-status.json ]; then
-              while IFS= read -r line; do
-                if [ -n "$line" ]; then
-                  echo "::warning::SEO_CHECK_STATUS=$line"
-                fi
-              done < /home/web1/logs/seo-news-cron-status.json
-            fi
-            echo "::warning::SEO_CHECK_STATUS_END"
-            echo "::warning::SEO_CHECK_LOG_TAIL_BEGIN"
-            tail -n 80 /home/web1/logs/seo-news-cron.log | while IFS= read -r line; do
-              if [ -n "$line" ]; then
-                echo "::warning::SEO_CHECK_LOG=$line"
-              fi
-            done
-            echo "::warning::SEO_CHECK_LOG_TAIL_END"
-          EOF
-
-      - name: Mark today's SEO test drafts to exclude them from dedup
-        if: github.event_name == 'push' && contains(github.event.head_commit.message, '[seo-test-cleanup]')
-        run: |
-          ssh -o BatchMode=yes -p "${DEPLOY_PORT}" ${DEPLOY_USER}@${DEPLOY_HOST} <<'EOF'
-            set -euo pipefail
-            cd /home/web1
-            target_date="$(TZ=Asia/Shanghai date +%F)"
-            cleanup_output="$(npx ts-node --transpile-only -r tsconfig-paths/register -P scripts/tsconfig.scripts.json scripts/mark-seo-test-drafts.ts --date "$target_date")"
-            while IFS= read -r line; do
-              if [ -n "$line" ]; then
-                echo "::warning::SEO_TEST_CLEANUP=$line"
-              fi
-            done <<< "$cleanup_output"
-          EOF
-
       - name: Roll back production assets on failure
         if: failure()
         run: |
@@ -664,64 +488,3 @@ jobs:
               echo "::notice::[deploy] cleaned backup directory ${backup_dir}"
             fi
           EOF
-
-      - name: Sync 10 sample news articles to production database
-        continue-on-error: true
-        run: |
-          echo "sync local: start"
-          echo "sync local: before ssh"
-          ssh -o BatchMode=yes -p "${DEPLOY_PORT}" ${DEPLOY_USER}@${DEPLOY_HOST} <<'EOF'
-          cd /home/web1
-          echo "sync remote: entered"
-          whoami
-          pwd
-          node -v
-          echo "database_url_present=${DATABASE_URL:+yes}"
-          npx ts-node --transpile-only -P scripts/tsconfig.scripts.json scripts/sync-prod-sample-news.ts
-          echo "sync remote: after script"
-          echo "sync remote: end"
-          EOF
-          echo "sync local: after ssh"
-
-      - name: Verify 10 sample news URLs
-        continue-on-error: true
-        run: |
-          sleep 15
-          node - <<'NODE'
-          const samples = [
-            ["https://cnzhengmu.com/news/qiye/129759.html", "https://cnzhengmu.com/news/ju-shi-jiang-cheng-zhi-ling-zheng-zhuang-zhong-guo-fan-jia-ju-chuang-xin-lun-tan"],
-            ["https://cnzhengmu.com/companynews/10665932-182579728.html", "https://cnzhengmu.com/news/si-lu-qi-dian-she-ji-xin-zhang-2025-xi-an-dang-dai-she-ji-zhou-sheng-da-qi-mu"],
-            ["https://cnzhengmu.com/news/qiye/129029.html", "https://cnzhengmu.com/news/ao-mu-zhi-neng-hu-yan-deng-shang-shi-yong-dong-ni-de-dong-tai-zi-ran-guang-da-za"],
-            ["https://cnzhengmu.com/companynews/10665932-182579618.html", "https://cnzhengmu.com/news/20-wan-ren-ci-gong-fu-xi-bu-she-ji-kuang-huan-2025-xi-an-dang-dai-she-ji-zhou-yu"],
-            ["https://cnzhengmu.com/companynews/10665932-182579062.html", "https://cnzhengmu.com/news/ke-ji-yin-ling-xiao-liang-ling-xian-an-ji-er-shang-yong-zhi-ji-xi-lie-xin-pin-fa"],
-            ["https://cnzhengmu.com/news/shichang/130093.html", "https://cnzhengmu.com/news/2025-nian-shi-jie-lin-mu-ye-da-hui-ji-2025-nian-guang-xi-guo-ji-lin-chan-pin-ji-"],
-            ["https://cnzhengmu.com/companynews/10665932-182579200.html", "https://cnzhengmu.com/news/ao-shi-mi-si-hei-ke-ji-tu-po-quan-shi-gao-shui-xiao-heng-jing-xi-tong-zhong-su-b"],
-            ["https://cnzhengmu.com/news/qiye/129235.html", "https://cnzhengmu.com/news/ma-lai-xi-ya-guo-ji-jia-ju-zhan-zhun-bei-jiu-xu-wei-2025-nian-ya-zhou-cai-gou-ji"],
-            ["https://cnzhengmu.com/news/qiye/129331.html", "https://cnzhengmu.com/news/chun-zhan-xin-pian-shou-zhan-gao-jie-wu-han-zheng-zhuang-ding-zhi-jia-ju-zhan-yu"],
-            ["https://cnzhengmu.com/news/hangye/130005.html", "https://cnzhengmu.com/news/ye-ji-ni-liu-er-shang-san-ke-shu-jing-li-run-da-zhang-chao-90-fang-shui-cai-liao"],
-          ];
-
-          function pick(html, pattern) {
-            const match = html.match(pattern);
-            return match ? match[1] : "";
-          }
-
-          (async () => {
-            for (const [oldUrl, newUrl] of samples) {
-              const oldRes = await fetch(oldUrl, { redirect: "manual" });
-              const newRes = await fetch(newUrl, { redirect: "manual" });
-              const html = newRes.status === 200 ? await newRes.text() : "";
-              const title = pick(html, /<title>([^<]*)<\/title>/i);
-              const description = pick(html, /<meta[^>]+name="description"[^>]+content="([^"]*)"/i);
-              const canonical = pick(html, /<link[^>]+rel="canonical"[^>]+href="([^"]*)"/i);
-
-              console.log(`::warning::VERIFY old=${oldUrl} old_status=${oldRes.status} location=${oldRes.headers.get("location") || ""}`);
-              console.log(`::warning::VERIFY new=${newUrl} new_status=${newRes.status} title=${title}`);
-              console.log(`::warning::VERIFY meta description=${description}`);
-              console.log(`::warning::VERIFY meta canonical=${canonical}`);
-            }
-          })().catch((error) => {
-            console.error(error);
-            process.exit(1);
-          });
-          NODE
